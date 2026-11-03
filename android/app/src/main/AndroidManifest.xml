@@ -72,6 +72,9 @@
     <!-- Android 10 and older: downloaded songs are saved to Music/Mural on the phone's storage (mobile/shims/store.js;
          asked for on the first download). Android 11+ needs no permission for the files the app saves there.
          requestLegacyExternalStorage above makes such paths writable on Android 10; newer versions ignore it. -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+    <!-- the songs already on the phone, listed in My files (DeviceMusicPlugin): "Music and audio" on Android 13+,
+         storage access before that (Android 10 and older also use it for downloads, above) -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
 </manifest>

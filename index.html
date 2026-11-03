@@ -670,7 +670,7 @@
                 </svg>
                 <span>Advanced</span>
               </button>
-              <button class="settings-nav-btn" data-cat="plugins">
+              <button class="settings-nav-btn desktop-only" data-cat="plugins">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"/></svg>
                 <span>Plugins</span>
               </button>
@@ -715,7 +715,7 @@
                 </div>
                 <div class="settings-group-title" data-i18n>Layout &amp; size</div>
                 <div class="m3-group" data-group="layout">
-            <div class="setting-item">
+            <div class="setting-item desktop-only">
               <div class="setting-item-top">
                 <span class="setting-name">UI scale</span>
                 <span class="setting-value" id="settings-val-scale">100%</span>
@@ -782,7 +782,7 @@
                 <button class="effect-switch-btn" id="btn-hide-titlebar"><span class="thumb"></span></button>
               </div>
             </div>
-            <div class="setting-item">
+            <div class="setting-item desktop-only">
               <div class="setting-item-top" style="align-items: center;">
                 <div style="display: flex; flex-direction: column; gap: 2px;">
                   <span class="setting-name">No-Hand cursor</span>
@@ -972,7 +972,7 @@
                 <button class="effect-switch-btn active" id="btn-progress-bg"><span class="thumb"></span></button>
               </div>
             </div>
-            <div class="setting-item">
+            <div class="setting-item desktop-only">
               <div class="setting-item-top" style="align-items: center;">
                 <span class="setting-name">Show wave visualizer in bottom bar</span>
                 <button class="effect-switch-btn active" id="btn-bar-wave"><span class="thumb"></span></button>
@@ -1016,9 +1016,9 @@
               </div>
             </div>
                 </div>
-                <div class="settings-group-title" data-i18n>Visualizer</div>
-                <div class="m3-group" data-group="visualizer">
-            <div class="setting-item">
+                <div class="settings-group-title desktop-only" data-i18n>Visualizer</div>
+                <div class="m3-group desktop-only" data-group="visualizer">
+            <div class="setting-item desktop-only">
               <div class="setting-item-top" style="align-items: center;">
                 <div style="display: flex; flex-direction: column; gap: 2px;">
                   <span class="setting-name">Visualizer in full karaoke mode</span>
@@ -1027,7 +1027,7 @@
                 <button class="effect-switch-btn active" id="btn-tvk-visualizer-setting"><span class="thumb"></span></button>
               </div>
             </div>
-            <div class="setting-item">
+            <div class="setting-item desktop-only">
               <div class="setting-item-top" style="align-items: center;">
                 <div style="display: flex; flex-direction: column; gap: 2px;">
                   <span class="setting-name">Visualizer with lyrics</span>
@@ -1036,7 +1036,7 @@
                 <button class="effect-switch-btn" id="btn-tvk-visualizer-lyrics-setting"><span class="thumb"></span></button>
               </div>
             </div>
-            <div class="setting-item">
+            <div class="setting-item desktop-only">
               <div class="setting-item-top" style="align-items: center;">
                 <div style="display: flex; flex-direction: column; gap: 2px;">
                   <span class="setting-name">Visualizer opacity</span>
@@ -1046,7 +1046,7 @@
               </div>
               <input type="range" class="pill-range" id="slider-tvk-vis-opacity-setting" min="10" max="100" step="5" value="85" style="width: 100%; margin-top: 8px;">
             </div>
-            <div class="setting-item">
+            <div class="setting-item desktop-only">
               <div class="setting-item-top" style="align-items: center;">
                 <div style="display: flex; flex-direction: column; gap: 2px;">
                   <span class="setting-name">Visualizer smoothness</span>
@@ -1056,7 +1056,7 @@
               </div>
               <input type="range" class="pill-range" id="slider-viz-smooth" min="0" max="95" step="1" value="70" style="width: 100%; margin-top: 8px;">
             </div>
-            <div class="setting-item">
+            <div class="setting-item desktop-only">
               <div class="setting-item-top" style="align-items: center;">
                 <div style="display: flex; flex-direction: column; gap: 2px;">
                   <span class="setting-name">Visualizer sensitivity</span>
@@ -1108,7 +1108,7 @@
                 </div>
               </div>
 
-              <div class="settings-section" data-cat="plugins">
+              <div class="settings-section desktop-only" data-cat="plugins">
                 <div class="ct-head"><div><div class="settings-section-title">Plugins</div><div class="setting-hint"><span class="plugins-warn">Plugins are JavaScript files with full access to Mural.</span> Only add plugins you trust. They live in the plugins folder: delete a file and the plugin is gone. Ctrl+Shift+R turns every plugin off.</div></div><div class="ct-actions"><button class="btn-outline-pill" id="btn-plugins-folder">Open folder</button><button class="btn-outline-pill" id="btn-plugins-reload">Reload list</button><button class="btn-pill-primary" id="btn-add-plugin">Add</button></div></div>
                 <div class="ct-list m3-group" id="plugins-list"></div>
               </div>
@@ -1358,7 +1358,7 @@
               <input type="range" class="pill-range" id="slider-crossfade" min="0" max="12" step="1" value="0">
               <div class="setting-hints"><span>Off</span><span>6s</span><span>12s</span></div>
             </div>
-            <div class="setting-item" id="setting-audio-output-row" hidden>
+            <div class="setting-item desktop-only" id="setting-audio-output-row" hidden>
               <div class="setting-item-top" style="align-items: center;">
                 <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
                   <span class="setting-name">Output device</span>
@@ -1373,7 +1373,7 @@
                 </div>
               </div>
             </div>
-            <div class="setting-item">
+            <div class="setting-item desktop-only">
               <div class="setting-item-top" style="align-items: center;">
                 <span class="setting-name">Smooth preset transitions</span>
                 <button class="effect-switch-btn active" id="btn-smooth-presets"><span class="thumb"></span></button>
@@ -1607,7 +1607,7 @@
                 </div>
               </div>
             </div>
-            <div class="setting-item" id="setting-discord-row" style="display: none;">
+            <div class="setting-item desktop-only" id="setting-discord-row" style="display: none;">
               <div class="setting-item-top" style="align-items: center;">
                 <div style="display: flex; flex-direction: column; gap: 2px;">
                   <span class="setting-name" data-i18n>Show on Discord</span>
@@ -1714,6 +1714,27 @@
 
 
           <div class="settings-section" data-cat="storage">
+                <div class="settings-group-title" data-i18n>Music on this device</div>
+                <div class="m3-group" data-group="device-music">
+            <div class="setting-item">
+              <div class="setting-item-top" style="align-items: center;">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <span class="setting-name">Find music on this device</span>
+                  <span id="device-music-status" style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);">Songs already on this device show up in My files and play from where they are</span>
+                </div>
+                <button class="effect-switch-btn active" id="toggle-device-music"><span class="thumb"></span></button>
+              </div>
+            </div>
+            <div class="setting-item" id="device-music-hidden-row" hidden>
+              <div class="setting-item-top" style="align-items: center; justify-content: space-between;">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <span class="setting-name">Removed songs</span>
+                  <span id="device-music-hidden" data-i18n style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);"></span>
+                </div>
+                <button class="btn-outline-pill" id="btn-device-music-unhide" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1));">Show again</button>
+              </div>
+            </div>
+                </div>
                 <div class="settings-group-title" data-i18n>Offline songs</div>
                 <div class="m3-group" data-group="offline">
             <div class="setting-item" id="offline-storage-item">
@@ -1759,7 +1780,7 @@
                     <span id="music-folder-path" style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline); word-break: break-all;">Calculating...</span>
                   </div>
                 </div>
-                <button class="btn-outline-pill" id="btn-change-music-folder" data-i18n style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1)); flex-shrink: 0;">Change</button>
+                <button class="btn-outline-pill desktop-only" id="btn-change-music-folder" data-i18n style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1)); flex-shrink: 0;">Change</button>
               </div>
             </div>
             <div class="setting-item" id="download-folder-item">
@@ -1854,7 +1875,7 @@
                 <button class="effect-switch-btn active" data-adv="light_thumbs"><span class="thumb"></span></button>
               </div>
             </div>
-            <div class="setting-item">
+            <div class="setting-item desktop-only">
               <div class="setting-item-top" style="align-items: center;">
                 <div style="display: flex; flex-direction: column; gap: 2px;">
                   <span class="setting-name">Free memory in background</span>
@@ -1863,7 +1884,7 @@
                 <button class="effect-switch-btn active" data-adv="trim_bg"><span class="thumb"></span></button>
               </div>
             </div>
-            <div class="setting-item">
+            <div class="setting-item desktop-only">
               <div class="setting-item-top" style="align-items: center; justify-content: space-between;">
                 <div style="display: flex; flex-direction: column; gap: 2px;">
                   <span class="setting-name">Visualizer frame rate</span>
@@ -1876,7 +1897,7 @@
                 </div>
               </div>
             </div>
-            <div class="setting-item">
+            <div class="setting-item desktop-only">
               <div class="setting-item-top" style="align-items: center;">
                 <div style="display: flex; flex-direction: column; gap: 2px;">
                   <span class="setting-name">Hardware acceleration</span>
@@ -1888,7 +1909,7 @@
                 </div>
                 <div class="settings-group-title" data-i18n>System</div>
                 <div class="m3-group" data-group="system">
-            <div class="setting-item">
+            <div class="setting-item desktop-only">
                     <div class="setting-item-top" style="align-items: center;">
                       <div style="display: flex; flex-direction: column; gap: 2px;">
                         <span class="setting-name">Minimize to tray on close</span>
@@ -1897,7 +1918,7 @@
                       <button class="effect-switch-btn active" id="btn-tray-on-close"><span class="thumb"></span></button>
                     </div>
                   </div>
-            <div class="setting-item" id="setting-win-media-keys" style="display: none;">
+            <div class="setting-item windows-only" id="setting-win-media-keys" style="display: none;">
                     <div class="setting-item-top" style="align-items: center;">
                       <div style="display: flex; flex-direction: column; gap: 2px;">
                         <span class="setting-name">Legacy media key capture (Windows)</span>
@@ -1906,7 +1927,7 @@
                       <button class="effect-switch-btn" id="btn-win-media-keys"><span class="thumb"></span></button>
                     </div>
                   </div>
-            <div class="setting-item" id="tools-row">
+            <div class="setting-item desktop-only" id="tools-row">
               <div class="setting-item-top" style="align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                   <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--md-sys-color-surface-container-high); display: flex; align-items: center; justify-content: center; color: var(--md-sys-color-primary);">
@@ -1971,7 +1992,7 @@
               </div>
             </div>
 
-            <div class="setting-item">
+            <div class="setting-item desktop-only">
               <div class="setting-item-top" style="align-items: center; justify-content: space-between;">
                 <span class="setting-name">Keyboard shortcuts</span>
                 <button class="btn-outline-pill" id="btn-open-shortcuts" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1));">Keyboard shortcuts</button>
@@ -1985,7 +2006,7 @@
               </div>
             </div>
 
-            <div class="setting-item">
+            <div class="setting-item desktop-only">
               <div class="setting-item-top" style="align-items: center; justify-content: space-between;">
                 <span class="setting-name">Logs</span>
                 <button class="btn-outline-pill" id="btn-open-logs" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1));">Open logs folder</button>
@@ -3380,7 +3401,7 @@
         </div>
         <input type="range" class="pill-range" id="tvk-speed" min="150" max="900" step="25" value="900">
       </div>
-      <div class="tvk-row tvk-row-toggle">
+      <div class="tvk-row tvk-row-toggle desktop-only">
         <span class="tvk-label">No-lyrics visualizer</span>
         <button type="button" class="effect-switch-btn active" id="btn-tvk-visualizer"><span class="thumb"></span></button>
       </div>
@@ -3388,11 +3409,11 @@
         <span class="tvk-label" data-i18n>Connected wave style</span>
         <button type="button" class="effect-switch-btn" id="btn-tvk-viz-connected"><span class="thumb"></span></button>
       </div>
-      <div class="tvk-row tvk-row-toggle">
+      <div class="tvk-row tvk-row-toggle desktop-only">
         <span class="tvk-label">Visualizer with lyrics</span>
         <button type="button" class="effect-switch-btn" id="btn-tvk-visualizer-lyrics"><span class="thumb"></span></button>
       </div>
-      <div class="tvk-row">
+      <div class="tvk-row desktop-only">
         <div class="tvk-row-header">
           <span class="tvk-label">Visualizer opacity</span>
           <span class="tvk-val" id="val-tvk-vis-opacity">85%</span>

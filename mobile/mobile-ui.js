@@ -370,11 +370,6 @@
     });
   }
 
-  // settings that only make sense on desktop
-  ['btn-hw-accel', 'btn-tray-on-close', 'btn-media-keys'].forEach((id) => {
-    const row = document.getElementById(id) && document.getElementById(id).closest('.setting-item');
-    if (row) row.style.display = 'none';
-  });
 })();
 
 // a write to the phone's storage failed (usually: storage full); say so instead of losing it silently

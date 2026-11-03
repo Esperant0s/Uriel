@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         // plugins that live in the app itself (not in an npm package) are registered by hand
         registerPlugin(MediaControlsPlugin.class);
         registerPlugin(AppUpdaterPlugin.class);
+        registerPlugin(DeviceMusicPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

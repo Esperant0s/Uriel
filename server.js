@@ -323,6 +323,53 @@ function saveLibraryIndex() {
   } catch (e) {}
 }
 
+// ---- music already on the device (device-library.js) ----
+// Listed in the library next to imported songs and played from where they are. On computers this server scans
+// the Music folder and the downloads folder and watches them; phones hand their list over (setDeviceSongs).
+const deviceLibrary = require('./device-library');
+const DEVICE_MUSIC_PATH = path.join(DATA_DIR, 'device-music.json');
+// enabled: Settings → Local files. hidden: found songs taken out of the library (their files stay).
+// durations: measured once by the page, kept so a rescan doesn't forget them.
+const deviceMusic = { enabled: true, hidden: [], durations: {}, ...readJsonFile(DEVICE_MUSIC_PATH) };
+let deviceIndex = {};
+let deviceStopWatching = null;
+function saveDeviceMusic() {
+  try { writeJsonFile(DEVICE_MUSIC_PATH, deviceMusic); } catch (e) {}
+}
+function setDeviceSongs(list) {
+  const hidden = new Set(deviceMusic.hidden);
+  const next = {};
+  for (const song of Array.isArray(list) ? list : []) {
+    if (!song || typeof song.id !== 'string' || !/^local_[a-f0-9]{12}$/.test(song.id) || hidden.has(song.id)) continue;
+    if (typeof song.path !== 'string' && typeof song.vpath !== 'string') continue;
+    next[song.id] = { ...song, duration: Number(song.duration) || Number(deviceMusic.durations[song.id]) || 0, addedAt: Number(song.addedAt) || 0 };
+  }
+  deviceIndex = next;
+}
+// an imported song, or a found one that is still in the library
+function libraryItem(id) {
+  if (typeof id !== 'string') return null;
+  if (hasOwn(libraryIndex, id)) return libraryIndex[id];
+  return deviceMusic.enabled && hasOwn(deviceIndex, id) ? deviceIndex[id] : null;
+}
+const libraryFilePath = (item) => item.path || path.join(LIBRARY_DIR, item.file);
+function deviceFolders() {
+  let music = path.join(os.homedir(), 'Music');
+  try { music = require('electron').app.getPath('music') || music; } catch (e) {}
+  const downloads = getDownloadsDir();
+  const folders = [{ dir: music, deep: true, source: 'music' }];
+  if (path.resolve(downloads) !== path.resolve(music)) folders.push({ dir: downloads, deep: false, source: 'downloads' });
+  return folders;
+}
+async function rescanDeviceMusic() {
+  if (STREAM_VIA_CACHE) return;
+  if (deviceStopWatching) { deviceStopWatching(); deviceStopWatching = null; }
+  if (!deviceMusic.enabled) { deviceIndex = {}; return; }
+  const folders = deviceFolders();
+  setDeviceSongs(await deviceLibrary.scanFolders(folders));
+  deviceStopWatching = deviceLibrary.watchFolders(folders, () => { rescanDeviceMusic().catch(() => {}); });
+}
+
 const searchCache = new Map();
 const streamUrlCache = new Map();
 const lyricsCache = new Map();
@@ -2781,13 +2828,19 @@ const LIBRARY_MIME_TYPES = {
 };
 
 async function handleLibraryFile(req, res, trackId) {
-  const item = hasOwn(libraryIndex, trackId) ? libraryIndex[trackId] : null;
-  if (!item || !item.file) {
+  const item = libraryItem(trackId);
+  if (!item || (!item.file && !item.path && !item.vpath)) {
+    res.writeHead(404);
+    return res.end('File not found in library');
+  }
+  // a phone's own song: the app hands the WebView a URL for the file itself (mobile/shims/store.js)
+  if (item.vpath) {
+    if (typeof res.__pipeFile === 'function') return res.__pipeFile(item.vpath);
     res.writeHead(404);
     return res.end('File not found in library');
   }
 
-  const filePath = path.join(LIBRARY_DIR, item.file);
+  const filePath = libraryFilePath(item);
   try {
     const stat = await fs.promises.stat(filePath);
     const fileSize = stat.size;
@@ -3144,11 +3197,11 @@ async function processLocalCovers() {
   try {
     while (localCoverQueue.length) {
       const id = localCoverQueue.shift();
-      const item = libraryIndex[id];
+      const item = libraryItem(id);
       if (!item) continue;
       const dest = localCoverPath(id);
       if (fs.existsSync(dest)) continue;
-      let ok = await extractEmbeddedCover(path.join(LIBRARY_DIR, item.file), dest);
+      let ok = !item.vpath && await extractEmbeddedCover(libraryFilePath(item), dest);
       if (!ok) {
         // iTunes allows only a few lookups per minute, so space them out
         const wait = 4000 - (Date.now() - lastOnlineCoverLookup);
@@ -3173,7 +3226,7 @@ function queueLocalCovers(ids) {
 
 function handleLocalCover(req, res, parsedUrl) {
   const id = String(parsedUrl.query.id || '');
-  const file = /^[\w-]{1,64}$/.test(id) && hasOwn(libraryIndex, id) ? localCoverPath(id) : '';
+  const file = /^[\w-]{1,64}$/.test(id) && libraryItem(id) ? localCoverPath(id) : '';
   if (!file || !fs.existsSync(file)) {
     res.writeHead(404);
     return res.end();
@@ -3774,6 +3827,7 @@ const TOKEN_PROTECTED_ROUTES = new Set([
   '/api/library-add',
   '/api/library-update',
   '/api/library-remove',
+  '/api/device-music',
   '/api/offline-library',
   '/api/offline-delete',
   '/api/clear-offline-library',
@@ -6746,6 +6800,10 @@ const server = http.createServer(guardHandler(async (req, res) => {
         if (typeof id === 'string' && hasOwn(libraryIndex, id) && typeof duration === 'number' && !isNaN(duration)) {
           libraryIndex[id].duration = duration;
           saveLibraryIndex();
+        } else if (libraryItem(id) && typeof duration === 'number' && duration > 0) {
+          deviceIndex[id].duration = duration;
+          deviceMusic.durations[id] = duration;
+          saveDeviceMusic();
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true }));
@@ -6757,8 +6815,38 @@ const server = http.createServer(guardHandler(async (req, res) => {
     return;
   }
 
+  // Settings → Local files: whether music on the device is found, and where it is looked for
+  if (parsedUrl.pathname === '/api/device-music') {
+    const answer = () => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        enabled: deviceMusic.enabled,
+        count: deviceMusic.enabled ? Object.keys(deviceIndex).filter((id) => !hasOwn(libraryIndex, id)).length : 0,
+        hidden: deviceMusic.hidden.length,
+        folders: STREAM_VIA_CACHE ? [] : deviceFolders().map((f) => f.dir),
+      }));
+    };
+    if (req.method !== 'POST') return answer();
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; if (body.length > 4096) req.destroy(); });
+    req.on('end', async () => {
+      const payload = safeJsonParse(body, {});
+      if (typeof payload.enabled === 'boolean') deviceMusic.enabled = payload.enabled;
+      // "Show removed songs again"
+      if (payload.unhide === true) deviceMusic.hidden = [];
+      saveDeviceMusic();
+      try { await rescanDeviceMusic(); } catch (e) {}
+      answer();
+    });
+    return;
+  }
+
   if (parsedUrl.pathname === '/api/library') {
-    const items = Object.values(libraryIndex).sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+    // imported songs first (newest first), then the ones found on the device, by artist and title
+    const found = deviceMusic.enabled ? Object.values(deviceIndex).filter((d) => !hasOwn(libraryIndex, d.id))
+      .sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0) || String(a.artist).localeCompare(String(b.artist)) || String(a.title).localeCompare(String(b.title))) : [];
+    const items = Object.values(libraryIndex).sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0)).concat(found);
     queueLocalCovers(items.map(item => item.id));
     const list = items.map(item => ({
         id: item.id,
@@ -6766,6 +6854,8 @@ const server = http.createServer(guardHandler(async (req, res) => {
         title: item.title,
         artist: item.artist,
         duration: Number(item.duration) || 0,
+        // 'imported' (copied into Mural) or where a found song is: 'music', 'downloads', 'device', 'files'
+        source: item.source || 'imported',
         thumbnail: fs.existsSync(localCoverPath(item.id)) ? withToken(`${serverOrigin()}/api/local-cover?id=${encodeURIComponent(item.id)}`) : ''
       }));
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -6798,6 +6888,11 @@ const server = http.createServer(guardHandler(async (req, res) => {
           }
           delete libraryIndex[id];
           saveLibraryIndex();
+        } else if (libraryItem(id)) {
+          // a song found on the device: never deleted, only left out of the library from now on
+          if (!deviceMusic.hidden.includes(id)) deviceMusic.hidden.push(id);
+          delete deviceIndex[id];
+          saveDeviceMusic();
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true }));
@@ -6962,6 +7057,7 @@ function startServer(port = PORT) {
       const bound = address && typeof address === 'object' ? address.port : port;
       console.log(`devsize internal server running on http://127.0.0.1:${bound}`);
       require('./tools').updateYtDlpIfManaged().catch(() => {});
+      if (!process.env.NODE_TEST_CONTEXT) rescanDeviceMusic().catch(() => {});
       resolve(bound);
     }).on('error', (err) => {
       if (err.code === 'EADDRINUSE') {
@@ -6969,6 +7065,7 @@ function startServer(port = PORT) {
           const p = server.address().port;
           console.log(`devsize internal server running on fallback port http://127.0.0.1:${p}`);
           require('./tools').updateYtDlpIfManaged().catch(() => {});
+          if (!process.env.NODE_TEST_CONTEXT) rescanDeviceMusic().catch(() => {});
           resolve(p);
         });
       } else {
@@ -6979,6 +7076,7 @@ function startServer(port = PORT) {
 }
 
 function stopServer() {
+  if (deviceStopWatching) { deviceStopWatching(); deviceStopWatching = null; }
   return new Promise((resolve) => {
     if (!server.listening) return resolve();
     server.close(() => resolve());
@@ -6986,7 +7084,7 @@ function stopServer() {
   });
 }
 
-module.exports = { startServer, stopServer, PORT, getServerToken };
+module.exports = { startServer, stopServer, PORT, getServerToken, setDeviceSongs, rescanDeviceMusic };
 
 if (require.main === module) {
   startServer();

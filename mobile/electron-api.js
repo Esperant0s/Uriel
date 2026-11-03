@@ -3,6 +3,7 @@
 const crypto = require('./shims/crypto');
 const store = require('./shims/store');
 const { Capacitor } = require('@capacitor/core');
+const ANDROID = Capacitor.getPlatform() === 'android';
 const { Share } = require('@capacitor/share');
 const { Filesystem, Directory, Encoding } = require('@capacitor/filesystem');
 
@@ -98,9 +99,9 @@ module.exports = function electronAPI({ ready, port, fs, fileUrlFor }) {
       await fs._flush();
       return true;
     },
-    getDataDir: async () => ({ dir: 'On this iPhone (Files → Mural)', defaultDir: '/data', isCustom: false }),
+    getDataDir: async () => ({ dir: ANDROID ? "In Mural's storage on this phone" : 'On this iPhone (Files → Mural)', defaultDir: '/data', isCustom: false }),
     pickDataDir: async () => null,
-    setDataDir: async () => ({ success: false, error: 'The music folder is fixed on iPhone' }),
+    setDataDir: async () => ({ success: false, error: ANDROID ? 'The music folder is fixed on Android' : 'The music folder is fixed on iPhone' }),
     // fixed on phones (Settings hides Change): Files → Mural → Downloads on iOS, Music/Mural on Android (shims/store.js)
     async getDownloadDir() {
       if (Capacitor.getPlatform() !== 'android') return { dir: 'Files → Mural → Downloads', isCustom: false };
@@ -122,7 +123,7 @@ module.exports = function electronAPI({ ready, port, fs, fileUrlFor }) {
     onMediaCommand: noop, // lock-screen controls come from navigator.mediaSession in app.js
     welcomeFinish: noop,
     onWelcomeResult: noop,
-    getLauncherInfo: async () => ({ platform: 'ios', canInstall: false, installed: true }),
+    getLauncherInfo: async () => ({ platform: ANDROID ? 'android' : 'ios', canInstall: false, installed: true }),
     fileUrl: async (vpath) => { await ready; return fs.existsSync(vpath) ? fileUrlFor(vpath) : null; },
     // playlist files and profile backups (backup.js): written to the app's cache, then handed to the share sheet,
     // where "Save to Files" / Drive / Mail take it. In a desktop browser (dev harness) it's a plain download.

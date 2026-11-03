@@ -8700,6 +8700,12 @@ body.perf #playlist-detail-desc.playlist-inline-desc { transition: none !importa
 
 /* [E] for explicit songs (Settings > Tracks > Show explicit tag) */
 .track-row-artist-wrap { display: flex; align-items: center; min-width: 0; max-width: 100%; }
+/* "Available offline": a small filled arrow before the artist, like Spotify's (app.js checkOffline) */
+.offline-badge { display: inline-flex; width: 14px; height: 14px; min-width: 14px; margin-right: 6px; flex-shrink: 0; }
+.offline-badge[hidden] { display: none; }
+.offline-badge svg { width: 100%; height: 100%; }
+.offline-badge circle { fill: var(--md-sys-color-primary); }
+.offline-badge path { stroke: var(--md-sys-color-on-primary, #fff); }
 .track-row-artist-wrap .track-row-artist { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .explicit-badge { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; min-width: 14px; margin-right: 6px; border-radius: 3px; font-size: 9px; font-weight: 800; line-height: 1; flex-shrink: 0; vertical-align: middle; user-select: none; background: var(--md-sys-color-on-surface-variant); color: var(--md-sys-color-surface-container-low, #121212) !important; }
 body.hide-explicit-badges .explicit-badge { display: none !important; }
@@ -8963,3 +8969,12 @@ body.mini #btn-playbar-radio { display: none !important; }
 .queue-radio-label[hidden] { display: none; }
 .queue-radio-label svg { flex-shrink: 0; }
 .queue-radio-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* Controls that belong to some builds only (index.html): phones get .is-mobile plus .is-ios or .is-android
+   (mobile/bridge.js), computers .platform-win32 / -darwin / -linux (preload.js). A control that would do nothing
+   here isn't shown at all. */
+html.is-mobile .desktop-only,
+html:not(.is-mobile) .phone-only,
+html:not(.is-android) .android-only,
+html:not(.is-ios) .ios-only,
+html:not(.platform-win32) .windows-only { display: none !important; }

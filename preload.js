@@ -87,6 +87,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveTextFile: (payload) => ipcRenderer.invoke('save-text-file', payload),
 });
 
+// which computer this is, for controls that belong to one only (.windows-only in styles.css)
+window.addEventListener('DOMContentLoaded', () => document.documentElement.classList.add(`platform-${process.platform}`));
+
 // macOS uses the native traffic lights instead of the drawn window buttons: tag the page so CSS hides the drawn
 // minimize/maximize/close, and hide the traffic lights whenever the titlebar itself is hidden
 if (process.platform === 'darwin') {

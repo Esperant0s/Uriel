@@ -1095,6 +1095,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const coverAnalysisCache = new Map();
   // drop the oldest entries of an in-memory cache past n, so long sessions don't grow without end
   function capMap(m, n) { while (m.size > n) m.delete(m.keys().next().value); }
+  // "Available offline" marks (checkOffline, further down): kept up here, playTrack can run before that part
+  const OFFLINE_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8"/><path d="M8 3.6v6.2M5.2 7.4 8 10.2l2.8-2.8M5 12h6" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const offlineKnown = new Map(); // offlineKey -> true / false
+  let offlinePending = new Map();
+  let offlineTimer = 0;
 
   function analyzeCover(imgSrc) {
     return new Promise((resolve) => {
@@ -3767,6 +3772,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     resetLevelWatcher();
     vizPrev = null;
     if (state.currentTrack && state.currentTrack.id !== track.id && !navigatingBack) pushPlayHistory(state.currentTrack);
+    if (state.currentTrack) offlineChanged(state.currentTrack);
     // a new list that isn't My Wave's ends My Wave: it isn't topped up with wave songs, and its skips don't count
     if (queueList && queueList !== state.queue && context !== 'wave') state.myWaveActive = false;
 
@@ -7780,6 +7786,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     return query ? all.filter(t => matchesTrackQuery(t, query)) : all;
   }
 
+  // ---- "Available offline": the small arrow before a song's artist, like Spotify's ----
+  // A song plays without internet when it's a local file, in the Downloads folder, or in the offline cache (songs
+  // kept from playing them). Local songs are marked at once; for the others server.js is asked in one batch per
+  // drawn list, and the answer is remembered until something changes (a download, a cleared cache).
+  const offlineKey = (t) => (t ? (getTrackCanonicalId(t) || `${t.artist || ''}|${t.title || ''}`) : '');
+  const offlineState = (t) => !!t && (t.platform === 'local' || offlineKnown.get(offlineKey(t)) === true);
+  function checkOffline(tracks) {
+    for (const t of tracks || []) {
+      if (!t || t.platform === 'local') continue;
+      const key = offlineKey(t);
+      if (key && !offlineKnown.has(key)) offlinePending.set(key, t);
+    }
+    if (!offlinePending.size || offlineTimer || !state.serverPort) return;
+    // one request for everything drawn in this moment (several lists can render together)
+    offlineTimer = setTimeout(async () => {
+      offlineTimer = 0;
+      const batch = [...offlinePending.entries()].slice(0, 200);
+      batch.forEach(([k]) => offlinePending.delete(k));
+      try {
+        const res = await fetch(`http://127.0.0.1:${state.serverPort}/api/downloaded-status`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tracks: batch.map(([, t]) => ({ id: t.id || '', title: t.title || '', artist: t.artist || '' })) }),
+        });
+        const data = await res.json();
+        if (data && data.success && Array.isArray(data.downloaded)) {
+          batch.forEach(([k], i) => { offlineKnown.set(k, !!data.downloaded[i]); if (data.downloaded[i]) showOfflineBadges(k, true); });
+          capMap(offlineKnown, 5000);
+        }
+      } catch (e) {}
+      if (offlinePending.size) checkOffline([]);
+    }, 60);
+  }
+  function showOfflineBadges(key, on) {
+    document.querySelectorAll('.offline-badge[data-offline-key]').forEach((b) => { if (b.dataset.offlineKey === key) b.hidden = !on; });
+  }
+  // something changed: this song (downloaded, removed) or everything (offline library cleared)
+  function offlineChanged(track, on) {
+    if (!track) { offlineKnown.clear(); document.querySelectorAll('.offline-badge[data-offline-key]').forEach((b) => { b.hidden = !b.hasAttribute('data-local'); }); return; }
+    const key = offlineKey(track);
+    if (on === undefined) offlineKnown.delete(key); else { offlineKnown.set(key, on); showOfflineBadges(key, on); }
+  }
+
   function createTrackRow(track, idx, currentCanonicalId, context, tracks, container) {
       const row = document.createElement('div');
       row.className = 'track-row';
@@ -7822,6 +7870,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const showArtist = isAlbum ? (Boolean(trackArtist) && Boolean(albumArtist) && trackArtist !== albumArtist) : true;
       // [E] before the artist (Settings > Tracks > Show explicit tag hides it)
       const explicitTag = window.MurielLibrary && window.MurielLibrary.isTrackExplicit(track) ? '<span class="explicit-badge" title="Explicit">E</span>' : '';
+      // the "plays without internet" mark (offlineBadge): shown now for local songs, after a check for the others
+      const offline = offlineState(track);
+      const offlineTag = `<span class="offline-badge" title="Available offline" data-i18n-attr="title" data-offline-key="${escapeHtml(offlineKey(track))}"${track.platform === 'local' ? ' data-local' : ''}${offline ? '' : ' hidden'}>${OFFLINE_ICON}</span>`;
       const artistSpan = showArtist ? `<span class="track-row-artist" title="view artist profile" data-i18n-attr="title">${escapeHtml(track.artist || 'unknown artist')}</span>` : '';
 
       row.innerHTML = `
@@ -7829,7 +7880,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       ${!isAlbum ? `<img class="track-row-thumb" src="${escapeHtml(listThumb(rowThumb) || '')}" data-full="${escapeHtml(rowThumb || '')}" data-saved="${escapeHtml(track.thumbnail || '')}" data-art="${escapeHtml(JSON.stringify(trackArtCandidates(track)))}" alt="" loading="lazy" decoding="async" onerror="${THUMB_FALLBACK}">` : ''}
       <div class="track-row-info">
       <span class="track-row-title">${escapeHtml(track.title || 'untitled')}</span>
-      ${explicitTag ? `<span class="track-row-artist-wrap">${explicitTag}${artistSpan}</span>` : artistSpan}
+      <span class="track-row-artist-wrap">${offlineTag}${explicitTag}${artistSpan}</span>
       </div>
       <span class="track-row-duration">${formatDuration(track.duration)}</span>
       <div class="track-row-actions">
@@ -7843,7 +7894,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
       </button>
       ${track.platform === 'local' ? `
-      <button class="btn-icon-pill btn-row-remove-local delete-btn" title="Remove from library">
+      <button class="btn-icon-pill btn-row-remove-local delete-btn" title="${track.source && track.source !== 'imported' ? 'Remove from My files (the file stays on this device)' : 'Remove from library'}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
       </button>` : `
       <button class="btn-icon-pill btn-row-more" title="download & options">
@@ -8227,6 +8278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       container.appendChild(fragment);
       container._hasInitialRendered = true;
       highlightPlayingRow();
+      checkOffline(tracks.slice(startIndex, endIndex));
     }
     
     container._vScrollHandler = () => {
@@ -10105,6 +10157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             enterSettings();
             renderBlockedSettings(); // a linked device may have changed it
             updateOfflineStorageUI();
+            updateDeviceMusicUI();
             updateMusicFolderUI();
   updateDownloadFolderUI();
   updateDownloadCaptionPath();
@@ -16215,6 +16268,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           try { data = JSON.parse(text); } catch (e) { throw Object.assign(new Error(text || 'server error'), { status: res.status }); }
           if (!data.success) throw Object.assign(new Error(data.error || 'Failed to download'), { status: res.status });
           if (data.directory) lastDir = data.directory;
+          offlineChanged(t, true);
         };
         const result = tracks.length ? await window.MurielDownloadBatch.runDownloadBatch(tracks, downloadOne, {
           concurrency: 2, signal: batchAbort.signal, onProgress: setProgress,
@@ -16301,6 +16355,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const r = await fetch(`http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(t.url || '')}&id=${encodeURIComponent(t.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${selectedFormat}&quality=${selectedQuality}`, { signal: singleAbort.signal });
           const d = await r.json();
           if (!d.success) throw new Error(d.error || 'Download failed');
+          offlineChanged(t, true);
           showToast(Tm('Download complete: saved as {0}', d.filename), 'info');
           if (el.downloadModal && downloadAbort === singleAbort) closeModal(el.downloadModal);
           return;
@@ -16393,6 +16448,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (!dataEncode.success) throw new Error(dataEncode.error || 'Failed to encode');
 
+        offlineChanged(t, true);
         showToast(Tm('Download complete: saved to {0}', `${dataEncode.directory ? dataEncode.directory + '/' : ''}${dataEncode.filename}`), 'info');
         if (el.downloadModal && downloadAbort === singleAbort) closeModal(el.downloadModal);
       } catch (err) {
@@ -18364,6 +18420,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         showToast(Tm("Couldn't clear the cache"), 'error');
         return;
       }
+      offlineChanged();
       await cacheWait(Math.max(0, 1500 - (Date.now() - startedAt)));
 
       cacheModalCard.classList.add('finishing');
@@ -18380,6 +18437,46 @@ document.addEventListener('DOMContentLoaded', async () => {
       closeCacheModal();
     });
   }
+
+  // Settings → Storage → Music on this device (server.js /api/device-music, device-library.js)
+  async function updateDeviceMusicUI(change) {
+    const toggle = document.getElementById('toggle-device-music');
+    const status = document.getElementById('device-music-status');
+    const hiddenRow = document.getElementById('device-music-hidden-row');
+    const hiddenText = document.getElementById('device-music-hidden');
+    if (!toggle || !state.serverPort) return;
+    try {
+      const res = await fetch(`http://127.0.0.1:${state.serverPort}/api/device-music`, change
+        ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(change) } : undefined);
+      const data = await res.json();
+      if (!data || !data.success) return;
+      toggle.classList.toggle('active', !!data.enabled);
+      if (status) {
+        const where = data.folders && data.folders.length ? Tf(' in {0}', data.folders.join(', ')) : '';
+        status.textContent = data.enabled
+          ? (data.count ? Tf('{0} songs found', data.count) + where : T('No songs found yet') + where)
+          : T('Off: only songs you add yourself are in My files');
+      }
+      if (hiddenRow) hiddenRow.hidden = !data.hidden;
+      if (hiddenText) hiddenText.textContent = Tf('{0} found songs taken out of My files', data.hidden);
+      if (change && state.currentView === 'local') renderLocalView(true);
+    } catch (e) {}
+  }
+  const toggleDeviceMusic = document.getElementById('toggle-device-music');
+  if (toggleDeviceMusic) toggleDeviceMusic.addEventListener('click', async () => {
+    const enabled = !toggleDeviceMusic.classList.contains('active');
+    await updateDeviceMusicUI({ enabled });
+    // phones: turning it on asks for the permission again (if Android still can) and looks at the music now
+    if (enabled && window.MuralDeviceMusic) {
+      await window.MuralDeviceMusic.rescan(true);
+      updateDeviceMusicUI();
+      if (state.currentView === 'local') renderLocalView(true);
+    }
+  });
+  // a phone's first look at its music finishes after the app has started
+  window.addEventListener('mural:device-music', () => { if (state.currentView === 'local') renderLocalView(true); });
+  const btnDeviceMusicUnhide = document.getElementById('btn-device-music-unhide');
+  if (btnDeviceMusicUnhide) btnDeviceMusicUnhide.addEventListener('click', () => updateDeviceMusicUI({ unhide: true }));
 
   async function updateOfflineStorageUI() {
     const elSize = document.getElementById('offline-library-size');
@@ -18535,6 +18632,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       try {
         const r = await fetch(`http://127.0.0.1:${state.serverPort}/api/offline-delete?id=${encodeURIComponent(trackToDownload.id)}`, { method: 'POST' });
         if (!r.ok) throw new Error(`offline-delete answered ${r.status}`);
+        offlineChanged(trackToDownload, false);
         showToast(Tm('Track removed from offline cache'));
         updateOfflineStorageUI();
         if (el.downloadModal) closeModal(el.downloadModal);
@@ -18564,6 +18662,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       try {
         const r = await fetch(`http://127.0.0.1:${state.serverPort}/api/clear-offline-library`, { method: 'POST' });
         if (!r.ok) throw new Error(`clear-offline-library answered ${r.status}`);
+        offlineChanged();
         showToast(Tm('Offline library cleared'));
         updateOfflineStorageUI();
       } catch (e) {

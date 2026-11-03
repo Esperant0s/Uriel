@@ -245,6 +245,8 @@ module.exports = {
 
   // A URL the WebView can load directly (same origin, so Web Audio can process it).
   async fileUrl(vpath, mime) {
+    // a song found on the phone (mobile/device-music.js): /device + its real path, played from where it is
+    if (vpath.startsWith('/device/')) return Capacitor.convertFileSrc('file://' + vpath.slice('/device'.length));
     const loc = where(vpath);
     if (isDownload(vpath)) inUse.add(vpath);
     if (Capacitor.isNativePlatform()) {
