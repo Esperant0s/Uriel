@@ -2,11 +2,26 @@
 
 A lightweight desktop music player for Windows, Linux and macOS. Stream from YouTube, YouTube Music and SoundCloud, download for offline listening, and keep a local library — no account, no subscription.
 
-Muriel is based on [Riff](https://github.com/rootscripts/riff) by rootscripts (MIT).
+This is a fork of [Muriel](https://github.com/cloverscripts/riff-muriel) by cloverscripts, which is based on
+[Riff](https://github.com/rootscripts/riff) by rootscripts (MIT). It adds in-app updates and a round of bug fixes.
 
 > Muriel is an independent, non-commercial open-source project and is not affiliated with YouTube, Google,
 > SoundCloud, Spotify or Apple. It hosts no music. Use it for private listening and only download music you
 > have the right to. See [LEGAL.md](LEGAL.md) (also for rights holders).
+
+## Download
+
+Get the latest version from the [Releases page](https://github.com/Esperant0s/riff-muriel/releases).
+
+| Device | Download | How to install |
+|---|---|---|
+| **Android** | [Muriel.apk](https://github.com/Esperant0s/riff-muriel/releases/download/android-latest/Muriel.apk) | Open it on your phone and allow installs from your browser if asked. Uninstall the original Muriel first if you have it. |
+| **iPhone** | [Muriel.ipa](https://github.com/Esperant0s/riff-muriel/releases/download/ios-latest/Muriel.ipa) | Install with SideStore, AltStore or Sideloadly (iOS 16.2 or newer). |
+| **Windows** | [Muriel.exe](https://github.com/Esperant0s/riff-muriel/releases/download/windows-latest/Muriel.exe) (portable) or the installer on the [latest release](https://github.com/Esperant0s/riff-muriel/releases/latest) | If SmartScreen warns: More info → Run anyway. |
+| **macOS** | `.dmg` on the [latest release](https://github.com/Esperant0s/riff-muriel/releases/latest) (Apple Silicon or Intel) | If macOS blocks it: System Settings → Privacy & Security → Open Anyway. |
+| **Linux** | `.AppImage` on the [latest release](https://github.com/Esperant0s/riff-muriel/releases/latest) | Make it executable and run it (needs FUSE 2). |
+
+Once installed, Muriel checks for updates when it opens and can download and install them itself.
 
 ## Features
 
@@ -23,7 +38,7 @@ Muriel is based on [Riff](https://github.com/rootscripts/riff) by rootscripts (M
 Requires Node.js 18 or newer.
 
 ```bash
-git clone https://github.com/cloverscripts/riff-muriel.git
+git clone https://github.com/Esperant0s/riff-muriel.git
 cd riff-muriel
 npm install
 npm start

@@ -1,6 +1,6 @@
 {
   "name": "muriel",
-  "version": "1.3.10",
+  "version": "1.4.0",
   "main": "main.js",
   "bin": {
     "muriel": "./cli.js"
@@ -127,7 +127,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "cloverscripts",
+        "owner": "Esperant0s",
         "repo": "riff-muriel",
         "releaseType": "release"
       }
