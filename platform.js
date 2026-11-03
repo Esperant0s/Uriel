@@ -81,6 +81,12 @@ const METADATA_PATH = path.join(DATA_DIR, 'metadata.json');
 const LIBRARY_DIR = path.join(DATA_DIR, 'library');
 const LIBRARY_PATH = path.join(DATA_DIR, 'library.json');
 const BIN_DIR = path.join(DATA_DIR, 'bin');
+const LEGACY_BIN_DIRS = (IS_WIN
+  ? ['Muriel', 'Riff'].map((n) => path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), n, 'bin'))
+  : process.platform === 'darwin'
+  ? ['Muriel', 'Riff'].map((n) => path.join(os.homedir(), 'Library', 'Application Support', n, 'bin'))
+  : ['muriel', 'riff'].map((n) => path.join(os.homedir(), '.cache', n, 'bin'))
+).filter((d) => d !== BIN_DIR);
 const TUTORIAL_MARKER = IS_WIN ? 'C:\\Mural\\.murieltutorial' : path.join(os.homedir(), '.murieltutorial');
 const TUTORIAL_MARKER_FALLBACK = path.join(DATA_DIR, '.murieltutorial');
 const STARTUP_PATH = path.join(DATA_DIR, 'startup.json');
@@ -139,10 +145,27 @@ function isExecutableFile(p) {
   }
 }
 
+// Where package managers put programs. An app started from the desktop menu or Finder gets a much shorter PATH
+// than a terminal does, so a yt-dlp or ffmpeg that is already installed was missed and the install prompt came up.
+function systemBinDirs(env = process.env, platform = process.platform, home = os.homedir()) {
+  if (platform === 'win32') {
+    const local = env.LOCALAPPDATA || path.join(home, 'AppData', 'Local');
+    return [
+      path.join(local, 'Microsoft', 'WinGet', 'Links'),
+      path.join(home, 'scoop', 'shims'),
+      path.join(env.ProgramData || 'C:\\ProgramData', 'chocolatey', 'bin'),
+      path.join(env.ProgramFiles || 'C:\\Program Files', 'ffmpeg', 'bin')
+    ];
+  }
+  const dirs = ['/usr/local/bin', '/usr/bin', '/bin', path.join(home, '.local', 'bin')];
+  if (platform === 'darwin') return ['/opt/homebrew/bin', '/opt/local/bin', ...dirs];
+  return [...dirs, '/snap/bin', '/home/linuxbrew/.linuxbrew/bin', path.join(home, '.nix-profile', 'bin'), '/run/current-system/sw/bin', '/var/lib/flatpak/exports/bin'];
+}
+
 function findInPath(name, env = process.env, platform = process.platform) {
   const win = platform === 'win32';
   const dirs = (env.PATH || env.Path || '').split(win ? ';' : ':').filter(Boolean);
-  const extra = platform === 'darwin' ? ['/opt/homebrew/bin', '/usr/local/bin'] : [];
+  const extra = systemBinDirs(env, platform);
   const exts = win ? ['.exe', '.cmd', '.bat', ''] : [''];
   for (const dir of dirs.concat(extra)) {
     for (const ext of exts) {
@@ -155,8 +178,12 @@ function findInPath(name, env = process.env, platform = process.platform) {
 
 const binaryCache = {};
 
+// a miss is looked up again after a while, so a tool installed with a package manager while Mural is open counts
+const MISS_TTL = 30000;
+const missedAt = {};
+
 function resolveBinary(name) {
-  if (name in binaryCache) return binaryCache[name];
+  if (name in binaryCache && (binaryCache[name] || Date.now() - missedAt[name] < MISS_TTL)) return binaryCache[name];
   const exe = IS_WIN ? `${name}.exe` : name;
   const envKey = `MURIEL_${name.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
   const candidates = [
@@ -165,12 +192,11 @@ function resolveBinary(name) {
     process.resourcesPath && path.join(process.resourcesPath, 'bin', exe),
     path.join(__dirname, 'bin', exe)
   ].filter(Boolean);
-  let found = candidates.find(isExecutableFile) || findInPath(name);
-  if (!found && !IS_WIN) {
-    const local = path.join(os.homedir(), '.local', 'bin', exe);
-    if (isExecutableFile(local)) found = local;
-  }
+  // then the copies Muriel (or Riff) downloaded before the rename: they were skipped when the Mural folder
+  // already existed, and the app offered to download ~400 MB it already had
+  const found = candidates.find(isExecutableFile) || findInPath(name) || LEGACY_BIN_DIRS.map((d) => path.join(d, exe)).find(isExecutableFile);
   binaryCache[name] = found || null;
+  if (!found) missedAt[name] = Date.now();
   return binaryCache[name];
 }
 
@@ -180,7 +206,9 @@ function ytDlpCommand(args) {
     throw new Error('yt-dlp not found. Put yt-dlp and ffmpeg into the bin folder next to the app, or add them to PATH.');
   }
   const ffmpeg = resolveBinary('ffmpeg');
-  const extra = ffmpeg && !findInPath('ffmpeg') ? ['--ffmpeg-location', path.dirname(ffmpeg)] : [];
+  // told where ffmpeg is unless it's on the PATH yt-dlp itself sees (one found in a package manager's folder may not be)
+  const pathDirs = (process.env.PATH || process.env.Path || '').split(IS_WIN ? ';' : ':');
+  const extra = ffmpeg && !pathDirs.includes(path.dirname(ffmpeg)) ? ['--ffmpeg-location', path.dirname(ffmpeg)] : [];
   // YouTube's player checks need a JavaScript runtime, and without one yt-dlp sees fewer (lower quality)
   // formats. Electron runs as plain Node when ELECTRON_RUN_AS_NODE is set, so the app is the runtime.
   const js = process.versions && process.versions.electron && process.execPath ? ['--js-runtimes', `node:${process.execPath}`] : [];
@@ -193,9 +221,9 @@ function clearBinaryCache() {
 
 module.exports = {
   clearBinaryCache,
-  IS_WIN, DATA_DIR, DEFAULT_DATA_DIR, CONFIG_PATH, BIN_DIR, CACHE_DIR, CUSTOM_LYRICS_DIR, LYRICS_DIR, THUMBNAILS_DIR, METADATA_PATH,
+  IS_WIN, DATA_DIR, DEFAULT_DATA_DIR, CONFIG_PATH, BIN_DIR, LEGACY_BIN_DIRS, CACHE_DIR, CUSTOM_LYRICS_DIR, LYRICS_DIR, THUMBNAILS_DIR, METADATA_PATH,
   LIBRARY_DIR, LIBRARY_PATH, STARTUP_PATH,
-  findInPath, resolveBinary, ytDlpCommand,
+  findInPath, systemBinDirs, resolveBinary, ytDlpCommand,
   tutorialDone, markTutorialDone,
   readStartupConfig, writeStartupConfig,
   readConfig, resolveDataDir, setDataDir, resolveDownloadDir, setDownloadDir, copyDirContents, removeDirContents, MURIEL_DATA_ENTRIES

@@ -211,8 +211,24 @@
   let peer = null, peerRetry = null, dialTimer = null;
   const conns = new Map(); // deviceId -> { conn, ok }
 
+  // PeerJS and the QR code maker load the first time sync needs them, not on every start of the app
+  const libs = {};
+  const loadLib = (src) => libs[src] || (libs[src] = new Promise((resolve, reject) => {
+    const tag = document.createElement('script');
+    tag.src = src;
+    tag.onload = resolve;
+    tag.onerror = () => { delete libs[src]; tag.remove(); reject(new Error(`${src} did not load`)); };
+    document.head.appendChild(tag);
+  }));
+  // true when PeerJS is here; otherwise loads it and runs `then` once it is
+  const havePeer = (then) => {
+    if (typeof window.Peer === 'function') return true;
+    loadLib('assets/peerjs.min.js').then(then, () => {});
+    return false;
+  };
+
   function startPeer() {
-    if (peer || !active() || typeof window.Peer !== 'function') return;
+    if (peer || !active() || !havePeer(startPeer)) return;
     try { peer = new window.Peer(peerId(device.id), serverOpts()); } catch (e) { peer = null; return; }
     peer.on('open', () => { dialAll(); });
     peer.on('connection', (conn) => accept(conn, false));
@@ -329,7 +345,7 @@
   }
 
   function startLinking() {
-    if (typeof window.Peer !== 'function') return;
+    if (!havePeer(startLinking)) return;
     stopLinking();
     ensureGroup();
     startPeer();
@@ -367,7 +383,7 @@
   function joinWithCode(raw) {
     const code = cleanCode(raw);
     if (code.length !== 8) { joining = { error: 'The code has 8 letters and numbers, like K7M2-9QXP.' }; render(); return; }
-    if (typeof window.Peer !== 'function') return;
+    if (!havePeer(() => joinWithCode(raw))) return;
     joining = { code, busy: true };
     render();
     const tp = new window.Peer(`muriel-j-${hex(12)}`, serverOpts());
@@ -499,7 +515,7 @@
   // phones hand outside links to the browser; the desktop app opens https links in the default browser
   const openUrl = (u) => { if (platform === 'ios' || platform === 'android') location.href = u; else window.open(u, '_blank'); };
   const qrSvg = (text) => {
-    if (typeof window.qrcode !== 'function') return '';
+    if (typeof window.qrcode !== 'function') { loadLib('assets/qrcode.js').then(render, () => {}); return ''; }
     const q = window.qrcode(0, 'M');
     q.addData(text);
     q.make();

@@ -17,7 +17,7 @@ const BIN_DIR = path.join(DATA_DIR, 'bin');
 const noop = () => {};
 module.exports = {
   clearBinaryCache: noop,
-  IS_WIN: false, DATA_DIR, DEFAULT_DATA_DIR: DATA_DIR, CONFIG_PATH, BIN_DIR, CACHE_DIR, CUSTOM_LYRICS_DIR, LYRICS_DIR,
+  IS_WIN: false, DATA_DIR, DEFAULT_DATA_DIR: DATA_DIR, CONFIG_PATH, BIN_DIR, LEGACY_BIN_DIRS: [], CACHE_DIR, CUSTOM_LYRICS_DIR, LYRICS_DIR,
   THUMBNAILS_DIR, METADATA_PATH, LIBRARY_DIR, LIBRARY_PATH, STARTUP_PATH, DOWNLOADS_DIR,
   findInPath: () => null,
   resolveBinary: (name) => name,

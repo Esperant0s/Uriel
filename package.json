@@ -16,7 +16,7 @@
   "keywords": [],
   "author": "cloverscripts",
   "license": "MIT",
-  "description": "Muriel - a lightweight music player.",
+  "description": "Mural - a lightweight music player.",
   "devDependencies": {
     "@capacitor/android": "^8.5.3",
     "@capacitor/app": "^8.1.2",

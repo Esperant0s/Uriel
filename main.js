@@ -226,7 +226,7 @@ function runGUI() {
       height: initialBounds.height,
       minWidth: 360,
                                    minHeight: 500,
-                                   backgroundColor: firstRun ? '#8d5ef2' : '#000000',
+                                   backgroundColor: firstRun ? '#0A0A0A' : '#000000',
                                    title: 'Mural',
                                    icon: path.join(__dirname, 'assets', 'icon.png'),
                                    // macOS keeps its frame so the native traffic lights, rounded corners and shadow are

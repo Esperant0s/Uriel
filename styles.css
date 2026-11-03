@@ -136,9 +136,9 @@ button, .chip-btn, .mix-card, .track-row, .rail-icon-btn, .theme-mode-btn,
 .theme-swatch, .nav-item, .titlebar-btn, .format-chip, .quality-chip, .hq-preset-chip {
   touch-action: manipulation;
   transform-origin: center;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+  /* no translateZ(0) / backface-visibility here: they made every button, song row and chip a GPU layer of its
+     own (hundreds per page; 195 of the 228 layers on the Settings page), and sorting them every frame is what
+     made view, drawer and dialog animations stutter. The browser layers an element while it animates anyway. */
   image-rendering: -webkit-optimize-contrast;
   transition: background-color var(--transition-hover-out), color var(--transition-hover-out), transform 0.12s cubic-bezier(0.2, 0, 0, 1), border-radius 0.15s cubic-bezier(0.2, 0, 0, 1), opacity var(--transition-fast), filter var(--transition-fast);
 }
@@ -412,6 +412,14 @@ body.is-playing .shape-triangle {
 .top-nav.search-pos-right .search-box-wrapper {
   left: calc(100% - 24px - var(--engine-w, 435px) - var(--engine-gap, 16px));
   transform: translateY(-50%) translateX(-100%);
+  width: min(560px, calc(100% - 48px - var(--engine-w, 435px) - var(--engine-gap, 16px)));
+}
+
+/* too narrow to centre the search box between the edges and the engine buttons (app.js sets .search-crowded):
+   it moves to the left, where it ran under the YouTube / SoundCloud buttons before */
+.top-nav.search-crowded:not(.search-pos-right) .search-box-wrapper {
+  left: 24px;
+  transform: translateY(-50%) translateX(0);
   width: min(560px, calc(100% - 48px - var(--engine-w, 435px) - var(--engine-gap, 16px)));
 }
 
@@ -2859,16 +2867,20 @@ html:not(.is-mobile) body:not(.mini) #btn-next { margin-right: 8px; }
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
-  transform: translateZ(0);
-  will-change: opacity;
-  transition: opacity 250ms cubic-bezier(0.2, 0, 0, 1), visibility 0s 250ms;
+  transition: opacity 250ms cubic-bezier(0.2, 0, 0, 1), visibility 0s 250ms, backdrop-filter 0s 250ms;
 }
 .modal-backdrop.visible {
   opacity: 1;
   pointer-events: auto;
   visibility: visible;
-  transition: opacity 250ms cubic-bezier(0.2, 0, 0, 1), visibility 0s 0s;
+  will-change: opacity;
+  transition: opacity 250ms cubic-bezier(0.2, 0, 0, 1), visibility 0s 0s, backdrop-filter 0s 0s;
 }
+/* A closed dialog (there are ~20 in the page) keeps no blur and no will-change: each one held a full-window GPU
+   layer with a blur behind it, all the time, and every animation in the app paid for them. The blur goes once
+   the fade-out is over (backdrop-filter 0s 250ms above), so closing looks the same. */
+.modal-backdrop:not(.visible) { backdrop-filter: none; -webkit-backdrop-filter: none; }
+.modal-backdrop:not(.visible) :is(.settings-card, .dialog-card, .modal-card) { backdrop-filter: none; -webkit-backdrop-filter: none; will-change: auto; }
 
 .modal-backdrop.hidden {
   display: flex !important;
@@ -2899,14 +2911,14 @@ html:not(.is-mobile) body:not(.mini) #btn-next { margin-right: 8px; }
   transform: scale(0.96);
   opacity: 0;
   will-change: transform, opacity;
-  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1), opacity 180ms cubic-bezier(0.2, 0, 0, 1), background-color var(--transition-emphasized);
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1), opacity 180ms cubic-bezier(0.2, 0, 0, 1), background-color var(--transition-emphasized), backdrop-filter 0s 250ms;
 }
 .modal-backdrop.visible .settings-card,
 .modal-backdrop.visible .dialog-card,
 .modal-backdrop.visible .modal-card {
   transform: scale(1);
   opacity: 1;
-  transition: transform 250ms cubic-bezier(0.2, 0, 0, 1), opacity 250ms cubic-bezier(0.2, 0, 0, 1), background-color var(--transition-emphasized);
+  transition: transform 250ms cubic-bezier(0.2, 0, 0, 1), opacity 250ms cubic-bezier(0.2, 0, 0, 1), background-color var(--transition-emphasized), backdrop-filter 0s 0s;
 }
 .settings-card-header, .dialog-header, .modal-header {
   display: flex;
@@ -3199,6 +3211,59 @@ body.perf #sleep-timer-status.active::before {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* Settings → Theme → Website themes (app.js renderSiteThemeCards) */
+.site-theme-desc {
+  font-size: calc(12px * var(--font-scale, 1));
+  color: var(--md-sys-color-outline);
+}
+.site-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.site-theme-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: none;
+  border-radius: var(--md-shape-corner-m, 16px);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  text-align: left;
+  cursor: pointer;
+}
+.site-theme-card:hover { background: var(--md-sys-color-surface-container-highest); }
+.site-theme-card.active {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: -2px;
+  background: var(--md-sys-color-primary-container);
+}
+.site-theme-strip {
+  display: flex;
+  width: 100%;
+  height: 14px;
+  margin-bottom: 6px;
+  border-radius: 7px;
+  overflow: hidden;
+}
+.site-theme-strip > span { flex: 1; }
+.site-theme-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: calc(13px * var(--font-scale, 1));
+  font-weight: 600;
+}
+.site-theme-tag {
+  font-size: calc(11px * var(--font-scale, 1));
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .theme-palette-picker {
@@ -4183,7 +4248,8 @@ body.perf #sleep-timer-status.active::before {
 
 .toast-container {
   position: fixed;
-  top: 48px;
+  /* below the title bar and the search bar (40 + 64): at 48px a message covered the search box */
+  top: 116px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 99999;
@@ -4442,8 +4508,9 @@ body.perf #sleep-timer-status.active::before {
 .full-width { width: 100%; }
 
 .btn-icon-pill, .pill-btn, button[class*="pill"] {
-  will-change: border-radius, transform;
-  transform: translateZ(0);
+  /* (no will-change / translateZ here: they gave every pill button its own GPU layer, hundreds in a song list,
+     and sorting those layers every frame is what made view and drawer animations stutter. A button that
+     animates gets a layer from the browser for as long as it animates.) */
 }
 
 button:not(select):not(.m3-dropdown-trigger):not(.m3-dropdown-option) {
@@ -4462,8 +4529,7 @@ button:not(select):not(.m3-dropdown-trigger):not(.m3-dropdown-option):active:not
 button svg, button img, button i, .btn-icon-pill svg, .btn-row-fav svg, .action-btn svg, .nav-item svg, .rail-icon-btn svg {
   transform-origin: center;
   transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+  /* (no backface-visibility: hidden: it made each icon a GPU layer, and the decorations overlapping them too) */
   image-rendering: -webkit-optimize-contrast;
 }
 
@@ -8417,7 +8483,7 @@ body.glass.glass-lite :is(.sidebar, .main-content, #right-panel, .playbar, .sear
 .artwork-wrapper > .artwork-fallback { position: absolute; inset: 0; width: auto; height: auto; }
 
 /* ---- Mural: "Update available" banner (update-notifier.js) ---- */
-.update-banner { position: fixed; left: 50%; top: max(64px, calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 14px)); z-index: 9000; display: flex; align-items: center; gap: 12px; width: max-content; max-width: min(560px, calc(100vw - 24px)); padding: 10px 10px 10px 16px; border-radius: 22px; background: var(--md-sys-color-surface-container-high-solid, var(--md-sys-color-surface-container-high, #2a2630)); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); color: var(--md-sys-color-on-surface, #fff); opacity: 0; transform: translate(-50%, -24px); transition: transform 0.35s cubic-bezier(0.2, 0, 0, 1), opacity 0.25s ease; }
+.update-banner { position: fixed; left: 50%; top: 116px; z-index: 9000; display: flex; align-items: center; gap: 12px; width: max-content; max-width: min(560px, calc(100vw - 24px)); padding: 10px 10px 10px 16px; border-radius: 22px; background: var(--md-sys-color-surface-container-high-solid, var(--md-sys-color-surface-container-high, #2a2630)); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3); color: var(--md-sys-color-on-surface, #fff); opacity: 0; transform: translate(-50%, -24px); transition: transform 0.35s cubic-bezier(0.2, 0, 0, 1), opacity 0.25s ease; }
 .update-banner.show { opacity: 1; transform: translate(-50%, 0); }
 .update-banner-star { width: 24px; height: 24px; flex: none; fill: var(--md-sys-color-primary); }
 .update-banner-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
@@ -8978,3 +9044,9 @@ html:not(.is-mobile) .phone-only,
 html:not(.is-android) .android-only,
 html:not(.is-ios) .ios-only,
 html:not(.platform-win32) .windows-only { display: none !important; }
+
+/* toasts and the update banner stay out of the top bar: with the title bar hidden it's only the search bar,
+   and the mini player has neither */
+body.hide-titlebar:not(.mini) .toast-container { top: 76px; }
+body.mini .toast-container { top: 12px; }
+body.hide-titlebar:not(.mini) .update-banner { top: 76px; }

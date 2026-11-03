@@ -4,7 +4,7 @@ const path = require('path');
 const https = require('https');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
-const { IS_WIN, BIN_DIR, resolveBinary, clearBinaryCache } = require('./platform');
+const { IS_WIN, BIN_DIR, LEGACY_BIN_DIRS, resolveBinary, clearBinaryCache } = require('./platform');
 const logger = require('./logger');
 
 const state = { status: 'idle', tool: '', percent: 0, error: '' };
@@ -242,7 +242,8 @@ async function ensureTools() {
 
 async function updateYtDlpIfManaged() {
   const bin = resolveBinary('yt-dlp');
-  if (!bin || path.dirname(bin) !== BIN_DIR) return false;
+  // only the copies Mural (or Muriel before it) downloaded: one from a package manager is that manager's to update
+  if (!bin || ![BIN_DIR, ...LEGACY_BIN_DIRS].includes(path.dirname(bin))) return false;
   if (hasSlowMacYtDlp()) {
     try {
       await installYtDlp();

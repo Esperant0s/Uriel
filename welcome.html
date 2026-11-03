@@ -10,22 +10,22 @@
 
   <style>
     :root {
-      --bg-color: #8d5ef2;
-      --container-fill: #d8ceed;
-      --container-fill-hover: #e3d9f4;
-      --card-bg: #c8bddd;
-      --card-bg-hover: #bfb2d8;
-      --text-color: #211f24;
-      --hero-text: #ffffff;
+      --bg-color: #0A0A0A;
+      --container-fill: #1A121A;
+      --container-fill-hover: #241824;
+      --card-bg: #2B172B;
+      --card-bg-hover: #3D1A3D;
+      --text-color: #F7EBDD;
+      --hero-text: #FFB627;
 
-      --btn-bg: #ffffff;
-      --btn-text: #211f24;
-      --btn-bg-hover: #f5effe;
-      --btn-secondary-bg: #c4b8dc;
-      --btn-secondary-hover: #baaecd;
+      --btn-bg: #FFB627;
+      --btn-text: #1A0F00;
+      --btn-bg-hover: #FFC659;
+      --btn-secondary-bg: #3D1A3D;
+      --btn-secondary-hover: #4A214A;
 
-      --slider-track: #b8abd0;
-      --ripple-color: rgba(33, 31, 36, 0.24);
+      --slider-track: #3D1A3D;
+      --ripple-color: rgba(10, 10, 10, 0.3);
       --font-google-sans: 'Google Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
@@ -253,7 +253,6 @@
     .muriel-title span:nth-child(3) { animation-delay: 1.2s; }
     .muriel-title span:nth-child(4) { animation-delay: 1.35s; }
     .muriel-title span:nth-child(5) { animation-delay: 1.5s; }
-    .muriel-title span:nth-child(6) { animation-delay: 1.65s; }
 
     body:not(.intro) #step1 .stacked-group {
       opacity: 0;
@@ -447,11 +446,12 @@
       --m-subtle: #383a40;
       --m-accent: #5865f2;
     }
-    .mockup-window.mock-light-purple-vibrant {
-      background-color: #7943ea;
-      --m-surface: #c7b6e9;
-      --m-subtle: #b19ddc;
-      --m-accent: #ffffff;
+    /* Halloween Glow, the default theme of esperant0s.github.io (and of Mural: app.js SITE_THEMES) */
+    .mockup-window.mock-halloween {
+      background-color: #0A0A0A;
+      --m-surface: #1A121A;
+      --m-subtle: #3D1A3D;
+      --m-accent: #FFB627;
     }
 
     .mock-topbar {
@@ -1026,7 +1026,7 @@
           </div>
         </div>
         <h1 class="muriel-title">
-          <span>M</span><span>u</span><span>r</span><span>i</span><span>e</span><span>l</span>
+          <span>M</span><span>u</span><span>r</span><span>a</span><span>l</span>
         </h1>
       </div>
 
@@ -1094,8 +1094,8 @@
               <span class="theme-card-name">Discord</span>
             </div>
 
-            <div class="theme-card active" data-preset="light-purple-vibrant">
-              <div class="mockup-window mock-light-purple-vibrant">
+            <div class="theme-card active" data-preset="halloween">
+              <div class="mockup-window mock-halloween">
                 <div class="mock-topbar"><div class="mock-search"></div></div>
                 <div class="mock-body">
                   <div class="mock-sidebar"><div class="mock-item accent"></div><div class="mock-item"></div><div class="mock-item"></div></div>
@@ -1104,7 +1104,7 @@
                 </div>
                 <div class="mock-bottombar"><div class="mock-controls"></div></div>
               </div>
-              <span class="theme-card-name">Light Purple</span>
+              <span class="theme-card-name">Halloween Glow</span>
             </div>
           </div>
         </div>
@@ -1502,7 +1502,7 @@
     const satVal = document.getElementById('satVal');
     const themeCards = document.querySelectorAll('.theme-card');
 
-    const themeState = { preset: 'light-purple-vibrant', h: 260, b: 66, s: 85 };
+    const themeState = { preset: 'halloween', h: 40, b: 4, s: 100 };
 
     function syncSlider(input) {
       const v = (input.value - input.min) / (input.max - input.min);
@@ -1620,14 +1620,14 @@
           '--btn-secondary-hover': '#4a4d55', '--ripple-color': 'rgba(255, 255, 255, 0.18)'
         }
       },
-      'light-purple-vibrant': {
-        h: 260, b: 66, s: 85,
+      'halloween': {
+        h: 40, b: 4, s: 100,
         vars: {
-          '--bg-color': '#8d5ef2', '--container-fill': '#d8ceed', '--container-fill-hover': '#e3d9f4',
-          '--card-bg': '#c8bddd', '--card-bg-hover': '#bfb2d8', '--slider-track': '#b8abd0',
-          '--text-color': '#211f24', '--hero-text': '#ffffff', '--btn-bg': '#ffffff',
-          '--btn-text': '#211f24', '--btn-bg-hover': '#f5effe', '--btn-secondary-bg': '#c4b8dc',
-          '--btn-secondary-hover': '#baaecd', '--ripple-color': 'rgba(33, 31, 36, 0.24)'
+          '--bg-color': '#0A0A0A', '--container-fill': '#1A121A', '--container-fill-hover': '#241824',
+          '--card-bg': '#2B172B', '--card-bg-hover': '#3D1A3D', '--slider-track': '#3D1A3D',
+          '--text-color': '#F7EBDD', '--hero-text': '#FFB627', '--btn-bg': '#FFB627',
+          '--btn-text': '#1A0F00', '--btn-bg-hover': '#FFC659', '--btn-secondary-bg': '#3D1A3D',
+          '--btn-secondary-hover': '#4A214A', '--ripple-color': 'rgba(10, 10, 10, 0.3)'
         }
       }
     };
@@ -1859,7 +1859,7 @@
 
     Promise.race([document.fonts.ready, new Promise((resolve) => setTimeout(resolve, 1200))]).then(scheduleIntro, scheduleIntro);
 
-    applyPreset('light-purple-vibrant');
+    applyPreset('halloween');
 
     const SWITCH_HTML = '<span class="sw-thumb"><svg viewBox="0 0 24 24"><path class="sw-icon"/></svg></span>';
     document.querySelectorAll('.sw').forEach((sw) => { sw.innerHTML = SWITCH_HTML; });

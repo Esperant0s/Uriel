@@ -549,6 +549,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     meshBrightness: parseInt(localStorage.getItem('muriel_mesh_brightness') || '100', 10),
     themeAccent: localStorage.getItem('muriel_theme_accent') || '#6750A4',
     themeIntensity: parseInt(localStorage.getItem('muriel_theme_intensity') || '0'),
+    // one of SITE_THEMES ('' = none: the palette comes from the accent alone). Never chosen yet: Halloween Glow
+    siteTheme: localStorage.getItem('muriel_site_theme') ?? 'halloween',
     themeBrightness: parseInt(localStorage.getItem('muriel_theme_brightness') || '50'),
     trEnabled: localStorage.getItem('muriel_tr_enabled') === 'true',
     trLang: localStorage.getItem('muriel_tr_lang') || 'en',
@@ -894,6 +896,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     '--md-sys-color-on-surface-variant'
   ]);
 
+  // The preset themes of Majd's website (Esperant0s.github.io, js/themes.js and style.css): the same seven base
+  // colors, and Mural's surfaces, text and accents are worked out from them. All of them are dark themes.
+  const SITE_THEMES = [
+    { id: 'halloween', name: 'Halloween Glow', tag: 'Fall · default', bg: '#0A0A0A', bg2: '#1A121A', bg3: '#3D1A3D', text: '#F7EBDD', accent: '#FFB627', accent2: '#FF6700', pop: '#9B1D20' },
+    { id: 'synthwave', name: 'Synthwave Night', tag: 'Neon', bg: '#240046', bg2: '#3C096C', bg3: '#7209B7', text: '#FCE7F3', accent: '#FFD60A', accent2: '#F72585', pop: '#B57BE8' },
+    { id: 'luxury-gold', name: 'Luxury Gold', tag: 'Gold', bg: '#0B0B10', bg2: '#1A1A2E', bg3: '#16213E', text: '#F5E6C4', accent: '#C9A227', accent2: '#F5E6C4', pop: '#C9A227' },
+    { id: 'midnight-jewel', name: 'Midnight Jewel', tag: 'Deep · moody', bg: '#03071E', bg2: '#1A0618', bg3: '#370617', text: '#F6E0D6', accent: '#DC2F02', accent2: '#9D0208', pop: '#EE9780', accentText: '#E35935' },
+    { id: 'noir-neon', name: 'Noir Neon', tag: 'Neon · synthwave', bg: '#0D0C1D', bg2: '#1B1B3A', bg3: '#693668', text: '#F5E3F0', accent: '#F84AA7', accent2: '#A74482', pop: '#FBA4D3' },
+    { id: 'devtool-dark', name: 'Devtool Dark', tag: 'Developer', bg: '#0A0E14', bg2: '#1F2430', bg3: '#2A3142', text: '#E6E1CF', accent: '#FFD580', accent2: '#5FB3B3', pop: '#BBE67E' },
+    { id: 'github-dim', name: 'GitHub Dim', tag: 'Developer', bg: '#22272E', bg2: '#2D333B', bg3: '#373E47', text: '#CDD9E5', accent: '#539BF5', accent2: '#768390', pop: '#CDD9E5', accentText: '#6DABF7' },
+    { id: 'midnight-violet', name: 'Midnight Violet', tag: 'Purple', bg: '#0B0B1A', bg2: '#1A1635', bg3: '#2D2456', text: '#EDE9FE', accent: '#C4B5FD', accent2: '#7C3AED', pop: '#A078F5' },
+    { id: 'midnight-teal', name: 'Midnight Teal', tag: 'Green · cool', bg: '#021F25', bg2: '#053E44', bg3: '#0D6E6F', text: '#E6FBF5', accent: '#A7F0D4', accent2: '#22B8A3', pop: '#7FE3C9' },
+    { id: 'midnight-rose', name: 'Midnight Rose', tag: 'Pink · moody', bg: '#190A17', bg2: '#3A132D', bg3: '#7A2348', text: '#FFE4E8', accent: '#FF9AA2', accent2: '#C44569', pop: '#E07A95' },
+    { id: 'midnight-amber', name: 'Midnight Amber', tag: 'Amber · warm', bg: '#0C0A09', bg2: '#1C1917', bg3: '#451A03', text: '#FFF1E2', accent: '#FED7AA', accent2: '#EA580C', pop: '#FB923C' },
+    { id: 'cyberpunk', name: 'Cyberpunk Glow', tag: 'Neon · cyberpunk', bg: '#0D0221', bg2: '#190B34', bg3: '#3A0F6E', text: '#EAFBFF', accent: '#04FFE6', accent2: '#FB04EB', pop: '#A64DFF' },
+    { id: 'noir-cinema', name: 'Noir Cinema', tag: 'Monochrome', bg: '#000000', bg2: '#1A1A1A', bg3: '#4D4D4D', text: '#F0E6D2', accent: '#F0E6D2', accent2: '#999999', pop: '#F0E6D2' }
+  ];
+  // the chosen website theme, while it applies: not in auto (cover colors) or light mode
+  function activeSiteTheme() {
+    if (!state.siteTheme || state.themeMode === 'auto' || state.themeMode === 'light') return null;
+    return SITE_THEMES.find((t) => t.id === state.siteTheme) || null;
+  }
+
+  // a website theme's colors over the generated palette: brightness 50% is the website as it is, lower is darker
+  function applySiteThemeTokens(t, br, setToken, setSurfaceToken) {
+    const shade = (c) => br < 0.5 ? mixHex(c, '#000000', (0.5 - br) * 1.2) : mixHex(c, '#FFFFFF', (br - 0.5) * 0.4);
+    const primary = t.accentText || t.accent;
+    const p = hexToRgb(primary);
+    setToken('--md-sys-color-primary', primary);
+    setToken('--md-sys-color-on-primary', relLuminance(primary) > 0.3 ? mixHex(t.bg, '#000000', 0.3) : '#FFFFFF');
+    setToken('--md-sys-color-primary-container', `rgba(${p.r}, ${p.g}, ${p.b}, 0.18)`);
+    setToken('--md-sys-color-on-primary-container', primary);
+    setToken('--md-sys-color-secondary', t.accent2);
+    setSurfaceToken('--md-sys-color-secondary-container', shade(mixHex(t.bg2, t.accent2, 0.25)));
+    setToken('--md-sys-color-on-secondary-container', mixHex(t.text, t.accent2, 0.2));
+    setToken('--md-sys-color-tertiary', t.pop);
+    setSurfaceToken('--md-sys-color-tertiary-container', shade(mixHex(t.bg2, t.pop, 0.25)));
+    setToken('--md-sys-color-background', shade(t.bg));
+    setToken('--md-sys-color-surface', shade(mixHex(t.bg, t.bg2, 0.15)));
+    setToken('--md-sys-color-surface-dim', shade(t.bg));
+    setToken('--md-sys-color-surface-bright', shade(t.bg3));
+    setToken('--md-sys-color-surface-container-lowest', shade(mixHex(t.bg, '#000000', 0.25)));
+    setToken('--md-sys-color-surface-container-low', shade(mixHex(t.bg, t.bg2, 0.5)));
+    setToken('--md-sys-color-surface-container', shade(t.bg2));
+    setToken('--md-sys-color-surface-container-high', shade(mixHex(t.bg2, t.bg3, 0.3)));
+    setToken('--md-sys-color-surface-container-highest', shade(mixHex(t.bg2, t.bg3, 0.55)));
+    setToken('--md-sys-color-on-surface', t.text);
+    setToken('--md-sys-color-on-surface-variant', mixHex(t.text, t.bg, 0.3));
+    setToken('--md-sys-color-outline', mixHex(t.text, t.bg, 0.5));
+    setSurfaceToken('--md-sys-color-outline-variant', mixHex(t.bg2, t.text, 0.15));
+  }
+
   function generateM3Palette(hexColor, mode, intensity, brightness) {
     if (!hexColor) hexColor = '#6750A4';
     const rgb = hexToRgb(hexColor);
@@ -1051,6 +1105,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         setToken('--md-sys-color-outline-variant', '#282a33');
       }
     }
+    const site = mode === 'dark' && activeSiteTheme();
+    if (site) applySiteThemeTokens(site, br, setToken, setSurfaceToken);
   }
 
   function extractDominantColor(imgSrc) {
@@ -1521,15 +1577,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function applyTheme(hexColor, mode, intensity = state.themeIntensity, brightness = state.themeBrightness, accent2 = null, isAuto = false) {
     currentEffectiveMode = mode;
+    const site = !isAuto && mode === 'dark' ? activeSiteTheme() : null;
+    if (site) { hexColor = site.accent; accent2 = site.accent2; }
     generateM3Palette(hexColor, mode, intensity, brightness);
     const themeAccent = document.documentElement.style.getPropertyValue('--md-sys-color-primary')?.trim() || hexColor;
-    applyButtonAccent(themeAccent, mode, intensity < 8);
+    // a website theme is never the gray one, whatever the intensity slider says
+    const mono = !site && intensity < 8;
+    applyButtonAccent(themeAccent, mode, mono);
     document.body.classList.toggle('theme-light', mode === 'light');
     document.body.classList.toggle('theme-dark', mode === 'dark');
-    document.body.classList.toggle('intensity-zero', state.themeIntensity < 8);
+    document.body.classList.toggle('intensity-zero', mono);
+    syncSiteThemeCards();
     onEffectiveModeChanged(mode);
     if (el.themeSwatches) {
-      el.themeSwatches.forEach(sw => sw.classList.toggle('active', !!(state.themeAccent && sw.dataset.color && sw.dataset.color.toLowerCase() === state.themeAccent.toLowerCase())));
+      el.themeSwatches.forEach(sw => sw.classList.toggle('active', !site && !!(state.themeAccent && sw.dataset.color && sw.dataset.color.toLowerCase() === state.themeAccent.toLowerCase())));
     }
     // not while the picker is open: that reset the picker under the pointer
     if (el.customColorInput && document.activeElement !== el.customColorInput) el.customColorInput.value = hexColor;
@@ -1561,7 +1622,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       resolvedAccent2 = hslToHex(h2, hsl.s, hsl.l);
     }
 
-    const mono = intensity < 8;
     updateMeshGradient(mono ? '#9E9E9E' : hexColor, mono ? '#757575' : resolvedAccent2, mode);
     refreshCachedThemeColors();
   }
@@ -2267,6 +2327,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     return isPhoneApp ? cur / dur > 0.5 : cur >= 10 || dur - cur <= 45;
   }
   window.addEventListener('muriel:storage-full', () => showToast(Tm('Storage is full: some changes could not be saved'), 'error'));
+  // a library only some features need, added to the page the first time one asks for it
+  const scriptLoads = {};
+  function loadScriptOnce(src) {
+    return scriptLoads[src] || (scriptLoads[src] = new Promise((resolve, reject) => {
+      const tag = document.createElement('script');
+      tag.src = src;
+      tag.onload = resolve;
+      tag.onerror = () => { delete scriptLoads[src]; tag.remove(); reject(new Error(`${src} did not load`)); };
+      document.head.appendChild(tag);
+    }));
+  }
+
   // <audio>/<img> can't send the token header the fetch wrapper adds, so local-server media URLs carry it
   const tokenUrl = (u) => {
     const t = window.electronAPI && window.electronAPI.serverToken;
@@ -2700,6 +2772,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let lastDisplayedSec = -1;
 
   let lastFrameTime = 0;
+  // Settings → frame rate, read once instead of from storage on every frame of renderLoop (the Settings buttons update it)
+  var userFpsCap = parseInt(localStorage.getItem('muriel_fps_cap') || '0', 10) || 0;
   function startVisualizers() {
     if (!state.isWindowVisible) return;
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
@@ -2742,7 +2816,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       animationFrameId = requestAnimationFrame(renderLoop);
 
-      const fpsCap = document.body.classList.contains('perf') ? 30 : isPhoneApp ? 20 : (parseInt(localStorage.getItem('muriel_fps_cap') || '0', 10) || 0);
+      const fpsCap = document.body.classList.contains('perf') ? 30 : isPhoneApp ? 20 : userFpsCap;
       if (fpsCap && timestamp - lastFrameTime < 1000 / fpsCap - 1) return;
       lastFrameTime = timestamp;
 
@@ -3951,6 +4025,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     el.nativeAudio.preload = 'auto';
 
+    // hls.js (600 KB) loads with the first HLS stream instead of with the app
+    if (data.isHls && !window.Hls) {
+      await loadScriptOnce('assets/hls.min.js').catch(() => {});
+      if (currentToken !== state.loadToken) return false;
+    }
     if (data.isHls && window.Hls && Hls.isSupported()) {
       hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 30, maxMaxBufferLength: 60, maxBufferSize: 30 * 1000 * 1000 });
       hlsInstance.loadSource(data.streamUrl);
@@ -10164,7 +10243,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             checkToolsStatus(false);
           }
 
-          updateNavIndicator(true);
+          // next frame: the new view gets laid out once, then the indicator reads where the item is
+          requestAnimationFrame(() => updateNavIndicator(true));
 
           highlightPlayingRow();
           if (typeof syncHomeAmbientVisibility === 'function') syncHomeAmbientVisibility();
@@ -10227,8 +10307,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (r && parseFloat(r) > 0) return r;
     return getComputedStyle(document.documentElement).getPropertyValue('--stack-mid').trim() || '14px';
   }
+  // (the nav's stacked corners are refreshStacks' job, run by stackObserver when the nav changes: calling it here
+  // measured every nav item right after a view switch, forcing an extra layout of the page)
   function updateNavIndicator(animate) {
-    refreshStacks();
     const ind = el.navActiveIndicator;
     if (!ind) return;
     const active = document.querySelector('.sidebar-nav .nav-item.active');
@@ -11358,11 +11439,63 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   init10BandEqUI();
 
+  // Settings → Theme → Website themes: one card per SITE_THEMES entry, with its colors as a strip
+  function renderSiteThemeCards() {
+    const grid = document.getElementById('site-theme-grid');
+    if (!grid || grid.childElementCount) return;
+    const frag = document.createDocumentFragment();
+    SITE_THEMES.forEach((t) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'site-theme-card';
+      card.dataset.siteTheme = t.id;
+      card.setAttribute('aria-pressed', 'false');
+      card.innerHTML = '<span class="site-theme-strip" aria-hidden="true"></span><span class="site-theme-name"></span><span class="site-theme-tag"></span>';
+      card.querySelector('.site-theme-strip').append(...[t.bg, t.bg3, t.accent2, t.accent, t.pop].map((c) => {
+        const sw = document.createElement('span');
+        sw.style.background = c;
+        return sw;
+      }));
+      card.querySelector('.site-theme-name').textContent = t.name;
+      card.querySelector('.site-theme-tag').textContent = t.tag;
+      card.addEventListener('click', () => setSiteTheme(t.id));
+      frag.appendChild(card);
+    });
+    grid.appendChild(frag);
+    syncSiteThemeCards();
+  }
+  function syncSiteThemeCards() {
+    const site = activeSiteTheme();
+    document.querySelectorAll('.site-theme-card').forEach((c) => {
+      const on = !!site && c.dataset.siteTheme === site.id;
+      c.classList.toggle('active', on);
+      c.setAttribute('aria-pressed', String(on));
+    });
+  }
+  // id '' goes back to the accent-only palette; `apply` false when the caller repaints the theme itself
+  function setSiteTheme(id, apply = true) {
+    const t = SITE_THEMES.find((x) => x.id === id);
+    state.siteTheme = t ? t.id : '';
+    try { localStorage.setItem('muriel_site_theme', state.siteTheme); } catch (e) {}
+    if (!t || !apply) return;
+    state.themeAccent = t.accent;
+    localStorage.setItem('muriel_theme_accent', t.accent);
+    if (state.themeMode !== 'dark') {
+      state.themeMode = 'dark';
+      localStorage.setItem('muriel_theme_mode', 'dark');
+    }
+    smoothThemeSwap(updateThemeFromState);
+  }
+  window.setSiteTheme = setSiteTheme;
+  renderSiteThemeCards();
+
   if (el.themeModeBtns) {
     el.themeModeBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         state.themeMode = btn.dataset.themeMode;
         localStorage.setItem('muriel_theme_mode', state.themeMode);
+        // the website themes are all dark: light or auto (cover colors) leaves them
+        if (state.themeMode !== 'dark') setSiteTheme('', false);
         updateThemeFromState();
       });
     });
@@ -11373,6 +11506,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       sw.addEventListener('click', () => {
         state.themeAccent = sw.dataset.color;
         localStorage.setItem('muriel_theme_accent', state.themeAccent);
+        setSiteTheme('', false);
         if (state.themeMode === 'auto') {
           const targetMode = currentEffectiveMode || 'dark';
           state.themeMode = targetMode;
@@ -11389,6 +11523,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!/^#[0-9a-f]{6}$/i.test(e.target.value || '')) return;
       state.themeAccent = e.target.value.toLowerCase();
       localStorage.setItem('muriel_theme_accent', state.themeAccent);
+      setSiteTheme('', false);
       if (state.themeMode === 'auto') {
         const targetMode = currentEffectiveMode || 'dark';
         state.themeMode = targetMode;
@@ -11412,6 +11547,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (el.valHue) el.valHue.textContent = h + '°';
       state.themeAccent = hslToHex(h, 55, 50);
       localStorage.setItem('muriel_theme_accent', state.themeAccent);
+      setSiteTheme('', false);
       if (state.themeMode === 'auto') {
         const targetMode = currentEffectiveMode || 'dark';
         state.themeMode = targetMode;
@@ -11497,6 +11633,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   applyFont(state.riffFont);
+
+  // A window too narrow to centre the search box beside the engine buttons: .search-crowded moves it to the left
+  // (styles.css), where it ran under the buttons before. Checked on resize and when the buttons change size.
+  (() => {
+    const topNav = document.querySelector('.top-nav');
+    if (!topNav || !window.ResizeObserver || isPhoneApp) return;
+    const fit = () => {
+      const engine = parseFloat(getComputedStyle(document.body).getPropertyValue('--engine-w')) || 0;
+      topNav.classList.toggle('search-crowded', topNav.clientWidth - (engine + 36) * 2 < 260);
+    };
+    new ResizeObserver(fit).observe(topNav);
+    new MutationObserver(fit).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    fit();
+  })();
 
   function applySearchPos(pos) {
     if (!['left', 'middle', 'right'].includes(pos)) pos = 'middle';
@@ -12204,7 +12354,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const cur = localStorage.getItem('muriel_fps_cap') || '0';
     fpsBtns.forEach(b => b.classList.toggle('active', b.dataset.fpsCap === cur));
   };
-  fpsBtns.forEach(b => b.addEventListener('click', () => { localStorage.setItem('muriel_fps_cap', b.dataset.fpsCap); syncFpsBtns(); }));
+  fpsBtns.forEach(b => b.addEventListener('click', () => { localStorage.setItem('muriel_fps_cap', b.dataset.fpsCap); userFpsCap = parseInt(b.dataset.fpsCap, 10) || 0; syncFpsBtns(); }));
   syncFpsBtns();
 
   const btnHwAccel = document.getElementById('btn-hw-accel');
@@ -12867,7 +13017,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try { localStorage.setItem('muriel_settings_cat', cat); } catch (e) {}
     if (cat === 'custom-themes' && typeof renderThemeCards === 'function') renderThemeCards();
     if (cat === 'plugins' && typeof reloadPluginsList === 'function') reloadPluginsList();
-    refreshStacks();
+    // the corners of the category buttons follow from stackObserver (it sees the 'active' class change)
   }
   window.showSettingsCategory = showSettingsCategory;
   // a group whose rows are all hidden here (desktop-only rows on a phone, Windows-only rows) hides its title too
@@ -12880,9 +13030,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       g.classList.toggle('group-empty', !any);
     });
   }
+  // in the next frame: reading scrollTop right after the category's sections were shown and hidden made the
+  // browser lay out the whole Settings page a second time, mid-animation (the stutter when opening Settings)
   function settingsScrollTop() {
-    let n = settingsView && settingsView.parentElement;
-    while (n && n !== document.body) { if (n.scrollTop) n.scrollTop = 0; n = n.parentElement; }
+    requestAnimationFrame(() => {
+      let n = settingsView && settingsView.parentElement;
+      while (n && n !== document.body) { if (n.scrollTop) n.scrollTop = 0; n = n.parentElement; }
+    });
   }
   // phones: back to the list of categories (the last one stays marked)
   function showSettingsList() {
@@ -13419,7 +13573,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   function applyWelcomeResult(d) {
     if (!d) return;
     function setSwitch(btn, on) { if (btn && btn.classList.contains('active') !== !!on) btn.click(); }
-    if (d.theme) {
+    if (d.theme && SITE_THEMES.some((t) => t.id === d.theme.preset)) {
+      setSiteTheme(d.theme.preset);
+    } else if (d.theme) {
       const modeBtn = document.querySelector(`.theme-mode-btn[data-theme-mode="${d.theme.b < 50 ? 'dark' : 'light'}"]`);
       if (modeBtn) modeBtn.click();
       const sH = document.getElementById('slider-theme-hue');
@@ -18705,7 +18861,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (status === 'error') {
       if (tool === 'yt-dlp') {
         ytdlpStatus = 'error';
-        ffmpegStatus = 'pending';
+        ffmpegStatus = data.ffmpeg ? 'done' : 'pending';
       } else if (tool === 'ffmpeg') {
         ytdlpStatus = 'done';
         ffmpegStatus = 'error';
@@ -18716,7 +18872,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (status === 'downloading') {
       if (tool === 'yt-dlp') {
         ytdlpStatus = 'downloading';
-        ffmpegStatus = 'pending';
+        ffmpegStatus = data.ffmpeg ? 'done' : 'pending';
         activeTool = 'yt-dlp';
         activePercent = pct;
       } else if (tool === 'ffmpeg') {
@@ -18886,6 +19042,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else if (promptUser && (!data.ytDlp || !data.ffmpeg)) {
         if (!sessionStorage.getItem('muriel_tools_prompt_dismissed')) {
           const modal = document.getElementById('tools-install-modal');
+          // name only what is missing: a tool already on this computer (in PATH, a package manager's folder or
+          // Muriel's old folder) is shown as Ready and isn't downloaded again
+          const desc = document.getElementById('tools-modal-desc');
+          if (desc) {
+            if (!data.ytDlp && !data.ffmpeg) I18N.text(desc, 'Mural needs yt-dlp and ffmpeg to play and save tracks (~400 MB).');
+            else if (!data.ytDlp) I18N.text(desc, 'Mural needs yt-dlp to play and save tracks. ffmpeg is already installed.');
+            else I18N.text(desc, 'Mural needs ffmpeg to save tracks. yt-dlp is already installed.');
+          }
           if (modal) openModal(modal);
         }
       }
@@ -20877,7 +21041,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderFollowedArtists();
         if (state.currentView === 'artist') updateFollowButton();
       }
-      if (['muriel_theme_mode', 'muriel_theme_accent', 'muriel_theme_intensity', 'muriel_theme_brightness', 'muriel_palette_style'].some(has)) {
+      if (['muriel_theme_mode', 'muriel_theme_accent', 'muriel_theme_intensity', 'muriel_theme_brightness', 'muriel_palette_style', 'muriel_site_theme'].some(has)) {
+        state.siteTheme = localStorage.getItem('muriel_site_theme') ?? 'halloween';
         state.themeMode = localStorage.getItem('muriel_theme_mode') || 'dark';
         state.themeAccent = localStorage.getItem('muriel_theme_accent') || '#6750A4';
         state.themeIntensity = parseInt(localStorage.getItem('muriel_theme_intensity') || '0', 10);

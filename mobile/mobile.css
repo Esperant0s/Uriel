@@ -332,6 +332,8 @@ html.is-mobile .toast-container {
   left: 12px !important; right: 12px !important; transform: none !important; align-items: center !important; z-index: 6000 !important;
 }
 html.is-mobile body.np-open .toast-container { bottom: calc(var(--safe-bottom) + 250px) !important; }
+/* the update banner too: at the top it covered the search box */
+html.is-mobile .update-banner { top: auto !important; bottom: calc(var(--tabbar-h) + var(--mini-h) + var(--safe-bottom) + 18px) !important; }
 /* sheet: hints sit at the very bottom, under the popup content rather than on it */
 html.is-mobile body.np-open .toast-container { bottom: calc(var(--safe-bottom) + 12px) !important; }
 /* sync popup header stays on one line: title shrinks, close button keeps its spot */
