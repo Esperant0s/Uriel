@@ -1226,7 +1226,7 @@
                 <span class="setting-name">Interface opacity</span>
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <span class="setting-value" id="val-ui-alpha">100%</span>
-                  <button class="btn-outline-pill" id="btn-reset-ui-alpha" style="padding: 2px 10px; font-size: calc(12px * var(--font-scale, 1));">Reset</button>
+                  <button class="btn-outline-pill btn-compact" id="btn-reset-ui-alpha">Reset</button>
                 </div>
               </div>
               <input type="range" class="pill-range" id="slider-ui-alpha" min="20" max="100" step="1" value="20">
@@ -1237,7 +1237,7 @@
                 <span class="setting-name">Text opacity</span>
                 <div style="display: flex; align-items: center; gap: 8px;">
                   <span class="setting-value" id="val-text-alpha">100%</span>
-                  <button class="btn-outline-pill" id="btn-reset-text-alpha" style="padding: 2px 10px; font-size: calc(12px * var(--font-scale, 1));">Reset</button>
+                  <button class="btn-outline-pill btn-compact" id="btn-reset-text-alpha">Reset</button>
                 </div>
               </div>
               <input type="range" class="pill-range" id="slider-text-alpha" min="1" max="100" step="1" value="100">
@@ -1345,7 +1345,7 @@
                           <span class="setting-name" data-i18n>App icon on Home button</span>
                           <span class="setting-hint" data-i18n>Choose the icon displayed on the Home button</span>
                         </div>
-                        <button type="button" class="btn-outline-pill" id="btn-pick-custom-home-icon" style="height: 32px; padding: 0 14px; font-size: calc(12px * var(--font-scale, 1)); flex-shrink: 0;" data-i18n>Custom icon...</button>
+                        <button type="button" class="btn-outline-pill" id="btn-pick-custom-home-icon" style="flex-shrink: 0;" data-i18n>Custom icon...</button>
                       </div>
                       <div class="app-icon-picker-grid" id="app-icon-picker-grid"></div>
                     </div>
@@ -1609,7 +1609,7 @@
                   </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
-                  <button type="button" class="btn-outline-pill" id="btn-lastfm-open-modal" style="padding: 4px 14px; font-size: calc(12px * var(--font-scale, 1)); height: 32px;" data-i18n>Connect</button>
+                  <button type="button" class="btn-outline-pill" id="btn-lastfm-open-modal" data-i18n>Connect</button>
                   <button type="button" class="effect-switch-btn" id="btn-lastfm-toggle" title="Scrobble to Last.fm" aria-label="Scrobble to Last.fm"><span class="thumb"></span></button>
                 </div>
               </div>
@@ -1744,13 +1744,13 @@
                 <button class="effect-switch-btn active" id="toggle-device-music"><span class="thumb"></span></button>
               </div>
             </div>
-            <div class="setting-item" id="device-music-hidden-row" hidden>
+            <div class="setting-item hidden" id="device-music-hidden-row">
               <div class="setting-item-top" style="align-items: center; justify-content: space-between;">
                 <div style="display: flex; flex-direction: column; gap: 2px;">
                   <span class="setting-name">Removed songs</span>
                   <span id="device-music-hidden" data-i18n style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);"></span>
                 </div>
-                <button class="btn-outline-pill" id="btn-device-music-unhide" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1));">Show again</button>
+                <button class="btn-outline-pill" id="btn-device-music-unhide">Show again</button>
               </div>
             </div>
                 </div>
@@ -1767,7 +1767,7 @@
                     <span id="offline-library-size" data-i18n style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);">Calculating...</span>
                   </div>
                 </div>
-                <button class="btn-outline-pill" id="btn-clear-offline" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1));">Clear</button>
+                <button class="btn-outline-pill" id="btn-clear-offline">Clear</button>
               </div>
             </div>
             <div class="setting-item clickable clear-cache-row" id="btn-open-clear-cache">
@@ -1799,7 +1799,7 @@
                     <span id="music-folder-path" style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline); word-break: break-all;">Calculating...</span>
                   </div>
                 </div>
-                <button class="btn-outline-pill desktop-only" id="btn-change-music-folder" data-i18n style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1)); flex-shrink: 0;">Change</button>
+                <button class="btn-outline-pill desktop-only" id="btn-change-music-folder" data-i18n style="flex-shrink: 0;">Change</button>
               </div>
             </div>
             <div class="setting-item" id="download-folder-item">
@@ -1814,8 +1814,8 @@
                   </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
-                  <button class="btn-outline-pill hidden" id="btn-reset-download-folder" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1));">Reset</button>
-                  <button class="btn-outline-pill" id="btn-change-download-folder" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1));">Change</button>
+                  <button class="btn-outline-pill hidden" id="btn-reset-download-folder">Reset</button>
+                  <button class="btn-outline-pill" id="btn-change-download-folder">Change</button>
                 </div>
               </div>
             </div>
@@ -1833,7 +1833,7 @@
                     <span id="export-account-hint" style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);" data-i18n>Playlists, favorites, history, Encore and settings in one file</span>
                   </div>
                 </div>
-                <button class="btn-outline-pill" id="btn-export-account" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1)); flex-shrink: 0;" data-i18n>Export</button>
+                <button class="btn-outline-pill" id="btn-export-account" style="flex-shrink: 0;" data-i18n>Export</button>
               </div>
             </div>
             <div class="setting-item" id="import-account-item">
@@ -1847,7 +1847,7 @@
                     <span style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);" data-i18n>Replaces this profile's playlists, favorites, history and settings. Also reads Riff account files (.rfacc)</span>
                   </div>
                 </div>
-                <button class="btn-outline-pill" id="btn-import-account" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1)); flex-shrink: 0;" data-i18n>Import</button>
+                <button class="btn-outline-pill" id="btn-import-account" style="flex-shrink: 0;" data-i18n>Import</button>
               </div>
             </div>
             <div class="setting-item" id="export-all-playlists-item">
@@ -1861,7 +1861,7 @@
                     <span style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);" data-i18n>Every playlist in one JSON file, readable by Mural and Riff</span>
                   </div>
                 </div>
-                <button class="btn-outline-pill" id="btn-export-all-playlists" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1)); flex-shrink: 0;" data-i18n>Export</button>
+                <button class="btn-outline-pill" id="btn-export-all-playlists" style="flex-shrink: 0;" data-i18n>Export</button>
               </div>
             </div>
             <div class="setting-item" id="import-json-playlists-item">
@@ -1875,7 +1875,7 @@
                     <span style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);" data-i18n>From a JSON file exported by Mural or Riff</span>
                   </div>
                 </div>
-                <button class="btn-outline-pill" id="btn-import-json-playlists" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1)); flex-shrink: 0;" data-i18n>Import</button>
+                <button class="btn-outline-pill" id="btn-import-json-playlists" style="flex-shrink: 0;" data-i18n>Import</button>
               </div>
             </div>
                 </div>
@@ -1958,7 +1958,7 @@
                     <span id="tools-status-text" data-i18n style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);"></span>
                   </div>
                 </div>
-                <button class="btn-pill-primary" id="btn-install-tools" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1));">Download</button>
+                <button class="btn-pill-primary" id="btn-install-tools">Download</button>
               </div>
             </div>
             <div class="setting-item" id="setting-stream-timeout-row">
@@ -2014,21 +2014,21 @@
             <div class="setting-item desktop-only">
               <div class="setting-item-top" style="align-items: center; justify-content: space-between;">
                 <span class="setting-name">Keyboard shortcuts</span>
-                <button class="btn-outline-pill" id="btn-open-shortcuts" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1));">Keyboard shortcuts</button>
+                <button class="btn-outline-pill" id="btn-open-shortcuts">Keyboard shortcuts</button>
               </div>
             </div>
 
             <div class="setting-item">
               <div class="setting-item-top" style="align-items: center; justify-content: space-between;">
                 <span class="setting-name">Diagnostics</span>
-                <button class="btn-outline-pill" id="btn-copy-diagnostics" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1));">Copy diagnostics</button>
+                <button class="btn-outline-pill" id="btn-copy-diagnostics">Copy diagnostics</button>
               </div>
             </div>
 
             <div class="setting-item desktop-only">
               <div class="setting-item-top" style="align-items: center; justify-content: space-between;">
                 <span class="setting-name">Logs</span>
-                <button class="btn-outline-pill" id="btn-open-logs" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1));">Open logs folder</button>
+                <button class="btn-outline-pill" id="btn-open-logs">Open logs folder</button>
               </div>
             </div>
 
@@ -2038,7 +2038,7 @@
                   <span class="setting-name">Legal</span>
                   <span style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);">Mural is a free, independent player and hosts no music. Use it for private listening and only download music you have the right to.</span>
                 </div>
-                <a class="btn-outline-pill" href="https://github.com/Esperant0s/riff-muriel/blob/main/LEGAL.md" target="_blank" rel="noopener" style="padding: 6px 14px; font-size: calc(12px * var(--font-scale, 1)); text-decoration: none; white-space: nowrap;">Read</a>
+                <a class="btn-outline-pill" href="https://github.com/Esperant0s/riff-muriel/blob/main/LEGAL.md" target="_blank" rel="noopener" style="text-decoration: none; white-space: nowrap;">Read</a>
               </div>
             </div>
             </div>

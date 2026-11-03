@@ -18658,7 +18658,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           ? (data.count ? Tf('{0} songs found', data.count) + where : T('No songs found yet') + where)
           : T('Off: only songs you add yourself are in My files');
       }
-      if (hiddenRow) hiddenRow.hidden = !data.hidden;
+      if (hiddenRow) hiddenRow.classList.toggle('hidden', !data.hidden);
       if (hiddenText) hiddenText.textContent = Tf('{0} found songs taken out of My files', data.hidden);
       if (change && state.currentView === 'local') renderLocalView(true);
     } catch (e) {}
@@ -20104,6 +20104,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   function setHomeAppIcon(val) {
     localStorage.setItem('muriel_app_icon', val);
     applyHomeAppIcon(val);
+    syncAppIcon(val, true);
+  }
+  // The app's own icon follows the Home button's: on computers the window, taskbar and Dock icon (any picture,
+  // set again at every start), on phones the home-screen icon (one of the styles: phones can't use a picked
+  // image, mobile/app-icon.js). Phones only when picked: iOS says "You have changed the icon" each time.
+  async function syncAppIcon(val, picked) {
+    if (window.MuralAppIcon) {
+      if (!picked) return;
+      if (await window.MuralAppIcon.set(val) === 'custom') showToast(Tm('Your own picture shows on the Home button; the phone keeps one of the styles as its app icon'), 'info');
+      return;
+    }
+    const api = window.electronAPI;
+    if (!api || !api.setAppIcon) return;
+    const src = homeIconSrc(val);
+    if (!src) { api.setAppIcon(null); return; }
+    if (/^file:/.test(src)) { api.setAppIcon(src); return; }
+    try {
+      const png = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 256; c.getContext('2d').drawImage(img, 0, 0, 256, 256); resolve(c.toDataURL('image/png')); };
+        img.onerror = reject;
+        img.src = src;
+      });
+      api.setAppIcon(png);
+    } catch (e) { api.setAppIcon(null); }
   }
   (function setupHomeIconPicker() {
     const grid = document.getElementById('app-icon-picker-grid');
@@ -20123,6 +20148,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
     applyHomeAppIcon(localStorage.getItem('muriel_app_icon') || 'classic');
+    syncAppIcon(localStorage.getItem('muriel_app_icon') || 'classic', false);
   })();
 
   // ---- playbar visualizer: compact (right of the bar) or wide behind the bar; bars or one liquid wave ----

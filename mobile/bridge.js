@@ -236,6 +236,7 @@ window.electronAPI = electronAPI({ ready, port: PORT, fs, fileUrlFor });
 require('./live-activity')();
 require('./media-controls')();
 require('./device-music')(() => server);
+require('./app-icon')();
 require('./app-updater')();
 require('./background-audio')();
 require('./audio-interruption')();

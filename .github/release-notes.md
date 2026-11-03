@@ -1,4 +1,4 @@
-## Mural 1.5.1
+## Mural 1.5.2
 
 Mural is the new name of the Esperant0s fork of [Muriel](https://github.com/cloverscripts/riff-muriel) by cloverscripts, itself based on [Riff](https://github.com/rootscripts/riff) by rootscripts (MIT). It is its own app now and installs next to Muriel.
 
@@ -8,6 +8,13 @@ Mural is the new name of the Esperant0s fork of [Muriel](https://github.com/clov
 - **Windows:** installer below, or the portable exe on [windows-latest](https://github.com/Esperant0s/riff-muriel/releases/tag/windows-latest). Windows SmartScreen may warn because the files are unsigned: More info → Run anyway.
 - **macOS:** `.dmg` / `.zip` below, for Apple Silicon and Intel. The app is unsigned: if macOS blocks it, open System Settings → Privacy & Security → Open Anyway.
 - **Linux:** `.AppImage` below (needs FUSE 2: `fuse2` / `libfuse2`)
+
+**New in 1.5.2**
+- **The app icon changes too:** picking an icon in Settings → Theme → App icon now changes Mural's own icon, not just the Home button: the phone's home-screen icon (one of the 12 styles; Android and iPhone can't use your own picture there) and, on computers, the window, taskbar and Dock icon (your own picture works too). iPhone shows a short "You have changed the icon" message; that's iOS.
+
+**Fixed in 1.5.2**
+- **Buttons are one size:** buttons in Settings no longer mix two sizes, and labels don't wrap or sit cramped inside them.
+- **Toggles:** no thin coloured ring around the switch when it's on.
 
 **New in 1.5.1**
 - **Play with your YouTube sign-in** (computers): when YouTube answers "Sign in to confirm you're not a bot" and songs won't play, turn on Settings → Integrations → YouTube → Play with my YouTube sign-in. Your sign-in stays on this computer; a spare Google account is the safer choice, since YouTube can limit accounts used this way.

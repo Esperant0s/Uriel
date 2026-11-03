@@ -2777,6 +2777,7 @@ html:not(.is-mobile) body:not(.mini) #btn-next { margin-right: 8px; }
   gap: 8px;
   height: 40px;
   transition: background-color 0.3s ease, color 0.3s ease;
+  white-space: nowrap;
 }
 .btn-pill-primary:hover {
   background: var(--btn-primary-hover, var(--md-sys-color-primary));
@@ -2794,8 +2795,15 @@ html:not(.is-mobile) body:not(.mini) #btn-next { margin-right: 8px; }
   height: 40px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  /* one size for every Settings button: 17 of them set a smaller font and padding of their own, so buttons beside
+     each other differed and some words sat cramped in a small pill. A label never wraps inside the pill. */
+  white-space: nowrap;
+  flex-shrink: 0;
 }
+/* the small kind, for a button inside a slider's heading line (Reset) */
+.btn-outline-pill.btn-compact { height: 28px; padding: 0 12px; font-size: calc(12.5px * var(--font-scale, 1)); }
 .btn-outline-pill:hover {
   background: var(--md-sys-color-surface-container-highest);
   color: var(--md-sys-color-on-surface);
@@ -6793,9 +6801,13 @@ body.mini.mini-lyrics-on #btn-mini-lyrics {
 .nav-item:hover { background-image: none !important; }
 
 .effect-switch-btn .thumb { position: relative; display: grid; place-items: center; color: var(--md-sys-color-on-surface-variant); }
-.effect-switch-btn .thumb { position: absolute; width: 24px; height: 24px; top: -1px; left: -1px; }
+/* the thumb sits 2px inside the track: at the track's full size (top/left -1px) its round edge lay exactly on the
+   track's, and the track colour showed through both soft edges as a thin ring around it when on. The track's own
+   colour stays inside its border too (it showed under the see-through border as a darker rim). */
+.effect-switch-btn { background-clip: padding-box; }
+.effect-switch-btn .thumb { position: absolute; width: 18px; height: 18px; top: 2px; left: 2px; }
 .effect-switch-btn.active .thumb { transform: translateX(20px); color: var(--md-sys-color-primary); }
-.effect-switch-btn .thumb svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; transform: none !important; }
+.effect-switch-btn .thumb svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; transform: none !important; }
 .sw-icon { d: path("M8 8 L16 16 M16 8 L8 16"); transition: d .18s cubic-bezier(.2, 0, 0, 1); }
 .effect-switch-btn.active .sw-icon { d: path("M7.5 12.5 L10.5 15.5 M10.5 15.5 L16.5 8.5"); }
 .effect-switch-btn.pressed .sw-icon, .effect-switch-btn:active .sw-icon { d: path("M7 12 L17 12 M12 12 L12 12"); }

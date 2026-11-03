@@ -70,6 +70,7 @@ class MurielBridgeViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(MurielLiveActivityPlugin())
         bridge?.registerPluginInstance(MurielAudioSessionPlugin())
+        bridge?.registerPluginInstance(MuralAppIconPlugin())
     }
 }
 
@@ -121,5 +122,28 @@ public class MurielAudioSessionPlugin: CAPPlugin, CAPBridgedPlugin {
         guard awake != .invalid else { return }
         UIApplication.shared.endBackgroundTask(awake)
         awake = .invalid
+    }
+}
+
+// The home-screen icon (Settings → Theme → App icon, mobile/app-icon.js): the styles are alternate app icons
+// (Assets.xcassets/AppIcon-<name>, made by tools/render-app-icons.js). iOS shows its own short "You have changed
+// the icon" message; apps can't leave that out.
+@objc(MuralAppIconPlugin)
+public class MuralAppIconPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "MuralAppIconPlugin"
+    public let jsName = "MuralAppIcon"
+    public let pluginMethods: [CAPPluginMethod] = [CAPPluginMethod(name: "set", returnType: CAPPluginReturnPromise)]
+    static let icons: Set<String> = ["mural", "default", "editor", "orbit", "vinyl", "cosmos", "aurora", "sunset", "amethyst", "y2k_disc", "cassette", "invincible"]
+
+    @objc func set(_ call: CAPPluginCall) {
+        let name = call.getString("name") ?? ""
+        let iconName: String? = MuralAppIconPlugin.icons.contains(name) ? "AppIcon-\(name)" : nil
+        DispatchQueue.main.async {
+            guard UIApplication.shared.supportsAlternateIcons else { call.reject("This iPhone can't change app icons"); return }
+            if UIApplication.shared.alternateIconName == iconName { call.resolve(["name": name]); return }
+            UIApplication.shared.setAlternateIconName(iconName) { error in
+                if let error = error { call.reject(error.localizedDescription) } else { call.resolve(["name": iconName == nil ? "" : name]) }
+            }
+        }
     }
 }

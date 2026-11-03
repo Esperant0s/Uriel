@@ -20,11 +20,6 @@
             android:launchMode="singleTask"
             android:exported="true">
 
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
             <!-- muriel://link?code=… from the QR code in Settings → Sync (opens the app and links it) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -36,6 +31,166 @@
             </intent-filter>
 
         </activity>
+
+        <!-- The home-screen icon (Settings → Theme → App icon, AppIconPlugin): Android can only switch between icons
+             the app ships with, so each style is a launcher entry of its own and one of them is on at a time.
+             The PNGs come from tools/render-app-icons.js. -->
+        <activity-alias
+            android:name=".LauncherDefault"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherIcon_mural"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_mural_mural"
+            android:roundIcon="@mipmap/ic_mural_mural"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherIcon_default"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_mural_default"
+            android:roundIcon="@mipmap/ic_mural_default"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherIcon_editor"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_mural_editor"
+            android:roundIcon="@mipmap/ic_mural_editor"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherIcon_orbit"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_mural_orbit"
+            android:roundIcon="@mipmap/ic_mural_orbit"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherIcon_vinyl"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_mural_vinyl"
+            android:roundIcon="@mipmap/ic_mural_vinyl"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherIcon_cosmos"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_mural_cosmos"
+            android:roundIcon="@mipmap/ic_mural_cosmos"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherIcon_aurora"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_mural_aurora"
+            android:roundIcon="@mipmap/ic_mural_aurora"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherIcon_sunset"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_mural_sunset"
+            android:roundIcon="@mipmap/ic_mural_sunset"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherIcon_amethyst"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_mural_amethyst"
+            android:roundIcon="@mipmap/ic_mural_amethyst"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherIcon_y2k_disc"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_mural_y2k_disc"
+            android:roundIcon="@mipmap/ic_mural_y2k_disc"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherIcon_cassette"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_mural_cassette"
+            android:roundIcon="@mipmap/ic_mural_cassette"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherIcon_invincible"
+            android:targetActivity=".MainActivity"
+            android:icon="@mipmap/ic_mural_invincible"
+            android:roundIcon="@mipmap/ic_mural_invincible"
+            android:exported="true"
+            android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- keeps the music going in the background and carries the playback notification (MediaControlsPlugin) -->
         <service

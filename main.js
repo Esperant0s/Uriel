@@ -396,6 +396,20 @@ function runGUI() {
       ipcMain.handle('get-gpu-compositing', () => { try { return String(app.getGPUFeatureStatus().gpu_compositing || ''); } catch (e) { return ''; } });
       ipcMain.handle('launcher-info', () => getLauncherInfo());
       ipcMain.handle('get-app-version', () => app.getVersion());
+      // Settings → Theme → App icon: the window, taskbar and Dock icon follow it (shortcuts and the Start menu keep the
+      // installed icon: they're files the system owns). A PNG drawn by the page, a picked image's path, or null for
+      // the app's own icon.
+      ipcMain.handle('set-app-icon', (e, src) => {
+        let img = null;
+        try {
+          if (typeof src === 'string' && src.startsWith('data:image/png;base64,') && src.length < 4e6) img = nativeImage.createFromDataURL(src);
+          else if (typeof src === 'string' && src.startsWith('file:')) img = nativeImage.createFromPath(fileURLToPath(src));
+        } catch (err) { img = null; }
+        if (!img || img.isEmpty()) img = nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png'));
+        try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setIcon(img); } catch (err) {}
+        try { if (process.platform === 'darwin' && app.dock) app.dock.setIcon(img); } catch (err) {}
+        return !img.isEmpty();
+      });
       ipcMain.handle('get-audio-output-info', async () => getSystemAudioOutputInfo());
       require('./plugins').register(() => mainWindow);
       require('./discord-presence').register(() => mainWindow);
