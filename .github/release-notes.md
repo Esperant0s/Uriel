@@ -15,6 +15,7 @@ Mural is the new name of the Esperant0s fork of [Muriel](https://github.com/clov
 **Fixed in 1.5.2**
 - **Buttons are one size:** buttons in Settings no longer mix two sizes, and labels don't wrap or sit cramped inside them.
 - **Toggles:** no thin coloured ring around the switch when it's on.
+- **Sync:** linking devices no longer tries PeerJS's old relay servers, which no longer exist and filled the log with errors.
 
 **New in 1.5.1**
 - **Play with your YouTube sign-in** (computers): when YouTube answers "Sign in to confirm you're not a bot" and songs won't play, turn on Settings → Integrations → YouTube → Play with my YouTube sign-in. Your sign-in stays on this computer; a spare Google account is the safer choice, since YouTube can limit accounts used this way.

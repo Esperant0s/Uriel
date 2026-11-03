@@ -207,7 +207,11 @@
   // Peer ids on the public PeerJS server. Only the device with the smaller id dials, so two devices never
   // open two connections to each other.
   const peerId = (id) => `muriel-${id}`;
-  const serverOpts = () => ({ debug: 0, ...(read('muriel_sync_server') || {}) });
+  // PeerJS's built-in TURN relays (eu-0 / us-0.turn.peerjs.com) no longer exist: their names don't resolve, and every
+  // connection logged a burst of "Failed to resolve address" errors trying them. Google's STUN servers find the
+  // route between two devices; a sync server set in muriel_sync_server (with its own config) still wins.
+  const ICE_SERVERS = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+  const serverOpts = () => ({ debug: 0, config: { iceServers: ICE_SERVERS }, ...(read('muriel_sync_server') || {}) });
   let peer = null, peerRetry = null, dialTimer = null;
   const conns = new Map(); // deviceId -> { conn, ok }
 

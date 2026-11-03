@@ -98,3 +98,9 @@ test('old removals are forgotten, recent ones kept', () => {
   const m = { a: [100, 'f'], b: [100, '', 1], c: [9000, '', 1] };
   assert.deepStrictEqual(Object.keys(C.pruneMeta(m, 10000, 5000)).sort(), ['a', 'c']);
 });
+
+test("sync doesn't try PeerJS's TURN relays, which no longer exist", () => {
+  const src = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'sync.js'), 'utf8');
+  assert.match(src, /config: \{ iceServers: ICE_SERVERS \}/);
+  assert.equal(/turn\.peerjs\.com:/.test(src.replace(/\/\/.*$/gm, '')), false);
+});
