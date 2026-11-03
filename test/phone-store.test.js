@@ -42,34 +42,34 @@ test('a 40 MB file goes over in small pieces and arrives byte for byte', async (
   assert.ok(biggest <= 1.05 * MB, `largest piece was ${biggest} base64 chars`);
   assert.strictEqual(calls[0][0], 'write');
   assert.ok(calls.slice(1).every((c) => c[0] === 'append'));
-  assert.ok(disk.get('Muriel/library/local_abc.flac').equals(bytes));
+  assert.ok(disk.get('Mural/library/local_abc.flac').equals(bytes));
 });
 
 test('byte arrays are written in pieces too, small ones in one go', async () => {
   const { store, disk, calls } = setup();
   const big = flacLike(3 * MB);
   await store.writeBytes('/data/tracks/x.m4a', big);
-  assert.ok(disk.get('Muriel/tracks/x.m4a').equals(big));
+  assert.ok(disk.get('Mural/tracks/x.m4a').equals(big));
   assert.ok(calls.length > 1);
   calls.length = 0;
   const small = flacLike(5000);
   await store.writeBytes('/data/thumbnails/t.jpg', small);
   assert.deepStrictEqual(calls.map((c) => c[0]), ['write']);
-  assert.ok(disk.get('Muriel/thumbnails/t.jpg').equals(small));
+  assert.ok(disk.get('Mural/thumbnails/t.jpg').equals(small));
   calls.length = 0;
   await store.writeBytes('/data/empty.bin', new Uint8Array(0));
   assert.deepStrictEqual(calls.map((c) => c[0]), ['write']);
-  assert.strictEqual(disk.get('Muriel/empty.bin').length, 0);
+  assert.strictEqual(disk.get('Mural/empty.bin').length, 0);
 });
 
 test('a write that fails half-way leaves no half file behind', async () => {
   const { store, disk, calls } = setup({ failAt: 3 });
   await assert.rejects(store.writeBlob('/data/library/local_x.flac', new Blob([flacLike(5 * MB)])), /No space/);
-  assert.strictEqual(disk.has('Muriel/library/local_x.flac'), false);
+  assert.strictEqual(disk.has('Mural/library/local_x.flac'), false);
   assert.strictEqual(calls[calls.length - 1][0], 'delete');
 });
 
-// ---- Android: downloads go to Music/Muriel, where people (and their music apps) find them ----
+// ---- Android: downloads go to Music/Mural, where people (and their music apps) find them ----
 
 // a small in-memory phone: "DIRECTORY:path" -> { dir } or { size }
 function phone({ platform = 'android', perm = 'granted', answer = 'granted', hold = false, files = [], refuse = () => false } = {}) {
@@ -130,57 +130,57 @@ function phone({ platform = 'android', perm = 'granted', answer = 'granted', hol
 }
 
 const settle = async () => { for (let i = 0; i < 30; i++) await new Promise((r) => setImmediate(r)); };
-const OLD = ['DATA', 'Muriel/Downloads/Old Artist - Old Song.m4a', 4000];
-const CACHED = ['DATA', 'Muriel/tracks/abc123.webm', 5000];
+const OLD = ['DATA', 'Mural/Downloads/Old Artist - Old Song.m4a', 4000];
+const CACHED = ['DATA', 'Mural/tracks/abc123.webm', 5000];
 
-test('Android: a downloaded song lands in Music/Muriel (Opus as .mka) and music apps are told', async (t) => {
+test('Android: a downloaded song lands in Music/Mural (Opus as .mka) and music apps are told', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
-  const { store, disk, scans, asked } = phone({ files: [CACHED, ['EXTERNAL_STORAGE', 'Music/Muriel/Someone - Earlier.mka', 300]] });
+  const { store, disk, scans, asked } = phone({ files: [CACHED, ['EXTERNAL_STORAGE', 'Music/Mural/Someone - Earlier.mka', 300]] });
   const listed = (await store.list()).map((e) => e.vpath);
-  assert.strictEqual(store.downloadsFolder(), 'Music/Muriel');
-  assert.ok(listed.includes('/data/Downloads/Someone - Earlier.webm'), 'songs already in Music/Muriel are known to the app');
+  assert.strictEqual(store.downloadsFolder(), 'Music/Mural');
+  assert.ok(listed.includes('/data/Downloads/Someone - Earlier.webm'), 'songs already in Music/Mural are known to the app');
   assert.ok(listed.includes('/data/tracks/abc123.webm'));
 
   await store.copy('/data/tracks/abc123.webm', '/data/Downloads/Artist - Song.webm');
-  assert.ok(disk.has('EXTERNAL_STORAGE:Music/Muriel/Artist - Song.mka'));
-  assert.ok(!disk.has('DATA:Muriel/Downloads/Artist - Song.webm'));
-  assert.ok(disk.has('DATA:Muriel/tracks/abc123.webm'), 'the cache stays private');
+  assert.ok(disk.has('EXTERNAL_STORAGE:Music/Mural/Artist - Song.mka'));
+  assert.ok(!disk.has('DATA:Mural/Downloads/Artist - Song.webm'));
+  assert.ok(disk.has('DATA:Mural/tracks/abc123.webm'), 'the cache stays private');
   await settle();
-  assert.deepStrictEqual(scans, ['file:///EXTERNAL_STORAGE/Music/Muriel/Artist - Song.mka']);
-  assert.strictEqual(await store.fileUrl('/data/Downloads/Artist - Song.webm'), 'app:file:///EXTERNAL_STORAGE/Music/Muriel/Artist - Song.mka');
-  assert.strictEqual(await store.fileUrl('/data/Downloads/Someone - Earlier.webm'), 'app:file:///EXTERNAL_STORAGE/Music/Muriel/Someone - Earlier.mka');
-  assert.strictEqual(await store.fileUrl('/data/tracks/abc123.webm'), 'app:file:///DATA/Muriel/tracks/abc123.webm');
+  assert.deepStrictEqual(scans, ['file:///EXTERNAL_STORAGE/Music/Mural/Artist - Song.mka']);
+  assert.strictEqual(await store.fileUrl('/data/Downloads/Artist - Song.webm'), 'app:file:///EXTERNAL_STORAGE/Music/Mural/Artist - Song.mka');
+  assert.strictEqual(await store.fileUrl('/data/Downloads/Someone - Earlier.webm'), 'app:file:///EXTERNAL_STORAGE/Music/Mural/Someone - Earlier.mka');
+  assert.strictEqual(await store.fileUrl('/data/tracks/abc123.webm'), 'app:file:///DATA/Mural/tracks/abc123.webm');
   assert.strictEqual(asked.length, 0, 'Android 11+ never asks');
 });
 
-test('Android: songs downloaded before move from private storage to Music/Muriel once', async (t) => {
+test('Android: songs downloaded before move from private storage to Music/Mural once', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
-  const PLAYED = ['DATA', 'Muriel/Downloads/Old Artist - Played.m4a', 4000];
+  const PLAYED = ['DATA', 'Mural/Downloads/Old Artist - Played.m4a', 4000];
   const { store, disk, scans } = phone({ files: [OLD, PLAYED, CACHED] });
   const listed = await store.list();
   assert.ok(listed.some((e) => e.vpath === '/data/Downloads/Old Artist - Old Song.m4a'));
   // played before the move: the app holds on to its file URL, so this one stays put until the next launch
-  assert.strictEqual(await store.fileUrl('/data/Downloads/Old Artist - Played.m4a'), 'app:file:///DATA/Muriel/Downloads/Old Artist - Played.m4a');
+  assert.strictEqual(await store.fileUrl('/data/Downloads/Old Artist - Played.m4a'), 'app:file:///DATA/Mural/Downloads/Old Artist - Played.m4a');
   t.mock.timers.tick(10000);
   await settle();
-  assert.ok(disk.has('EXTERNAL_STORAGE:Music/Muriel/Old Artist - Old Song.m4a'));
-  assert.ok(!disk.has('DATA:Muriel/Downloads/Old Artist - Old Song.m4a'));
-  assert.ok(disk.has('DATA:Muriel/tracks/abc123.webm'));
-  assert.strictEqual(await store.fileUrl('/data/Downloads/Old Artist - Old Song.m4a'), 'app:file:///EXTERNAL_STORAGE/Music/Muriel/Old Artist - Old Song.m4a');
-  assert.deepStrictEqual(scans, ['file:///EXTERNAL_STORAGE/Music/Muriel/Old Artist - Old Song.m4a']);
-  assert.ok(disk.has('DATA:Muriel/Downloads/Old Artist - Played.m4a'));
-  assert.strictEqual(await store.fileUrl('/data/Downloads/Old Artist - Played.m4a'), 'app:file:///DATA/Muriel/Downloads/Old Artist - Played.m4a');
+  assert.ok(disk.has('EXTERNAL_STORAGE:Music/Mural/Old Artist - Old Song.m4a'));
+  assert.ok(!disk.has('DATA:Mural/Downloads/Old Artist - Old Song.m4a'));
+  assert.ok(disk.has('DATA:Mural/tracks/abc123.webm'));
+  assert.strictEqual(await store.fileUrl('/data/Downloads/Old Artist - Old Song.m4a'), 'app:file:///EXTERNAL_STORAGE/Music/Mural/Old Artist - Old Song.m4a');
+  assert.deepStrictEqual(scans, ['file:///EXTERNAL_STORAGE/Music/Mural/Old Artist - Old Song.m4a']);
+  assert.ok(disk.has('DATA:Mural/Downloads/Old Artist - Played.m4a'));
+  assert.strictEqual(await store.fileUrl('/data/Downloads/Old Artist - Played.m4a'), 'app:file:///DATA/Mural/Downloads/Old Artist - Played.m4a');
 });
 
 test('Android: a private copy left behind by an earlier move is deleted, the public one wins', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
-  const { store, disk } = phone({ files: [OLD, ['EXTERNAL_STORAGE', 'Music/Muriel/Old Artist - Old Song.m4a', 4000]] });
+  const { store, disk } = phone({ files: [OLD, ['EXTERNAL_STORAGE', 'Music/Mural/Old Artist - Old Song.m4a', 4000]] });
   await store.list();
-  assert.strictEqual(await store.fileUrl('/data/Downloads/Old Artist - Old Song.m4a'), 'app:file:///EXTERNAL_STORAGE/Music/Muriel/Old Artist - Old Song.m4a');
+  assert.strictEqual(await store.fileUrl('/data/Downloads/Old Artist - Old Song.m4a'), 'app:file:///EXTERNAL_STORAGE/Music/Mural/Old Artist - Old Song.m4a');
   t.mock.timers.tick(10000);
   await settle();
-  assert.ok(!disk.has('DATA:Muriel/Downloads/Old Artist - Old Song.m4a'));
-  assert.ok(disk.has('EXTERNAL_STORAGE:Music/Muriel/Old Artist - Old Song.m4a'));
+  assert.ok(!disk.has('DATA:Mural/Downloads/Old Artist - Old Song.m4a'));
+  assert.ok(disk.has('EXTERNAL_STORAGE:Music/Mural/Old Artist - Old Song.m4a'));
 });
 
 test('Android: a song the public folder refuses is kept in the app instead of being lost', async (t) => {
@@ -188,17 +188,17 @@ test('Android: a song the public folder refuses is kept in the app instead of be
   const { store, disk } = phone({ files: [CACHED], refuse: (dir) => dir === 'EXTERNAL_STORAGE' });
   await store.list();
   await store.copy('/data/tracks/abc123.webm', '/data/Downloads/Artist - Song.webm');
-  assert.ok(disk.has('DATA:Muriel/Downloads/Artist - Song.webm'));
-  assert.strictEqual(await store.fileUrl('/data/Downloads/Artist - Song.webm'), 'app:file:///DATA/Muriel/Downloads/Artist - Song.webm');
+  assert.ok(disk.has('DATA:Mural/Downloads/Artist - Song.webm'));
+  assert.strictEqual(await store.fileUrl('/data/Downloads/Artist - Song.webm'), 'app:file:///DATA/Mural/Downloads/Artist - Song.webm');
 });
 
-test('Android: Music not usable, Documents/Muriel instead', async (t) => {
+test('Android: Music not usable, Documents/Mural instead', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] });
   const { store, disk } = phone({ files: [CACHED, ['EXTERNAL_STORAGE', 'Music', 1]] }); // a file called Music: no folder there
   await store.list();
-  assert.strictEqual(store.downloadsFolder(), 'Documents/Muriel');
+  assert.strictEqual(store.downloadsFolder(), 'Documents/Mural');
   await store.copy('/data/tracks/abc123.webm', '/data/Downloads/Artist - Song.webm');
-  assert.ok(disk.has('EXTERNAL_STORAGE:Documents/Muriel/Artist - Song.mka'));
+  assert.ok(disk.has('EXTERNAL_STORAGE:Documents/Mural/Artist - Song.mka'));
 });
 
 test('Android 10 and older: no question at launch, one when the first song is saved (not waited for)', async (t) => {
@@ -207,22 +207,22 @@ test('Android 10 and older: no question at launch, one when the first song is sa
   await store.list();
   assert.strictEqual(asked.length, 0);
   assert.ok(![...disk.keys()].some((k) => k.startsWith('EXTERNAL_STORAGE:')), 'shared storage untouched before the permission');
-  assert.strictEqual(store.downloadsFolder(), 'Music/Muriel');
-  // the question is still open (Muriel in the background, say): saving doesn't wait for it
+  assert.strictEqual(store.downloadsFolder(), 'Music/Mural');
+  // the question is still open (Mural in the background, say): saving doesn't wait for it
   await store.copy('/data/tracks/abc123.webm', '/data/Downloads/A - One.webm');
   await store.copy('/data/tracks/abc123.webm', '/data/Downloads/A - Two.webm');
   assert.strictEqual(asked.length, 1);
-  assert.ok(disk.has('DATA:Muriel/Downloads/A - One.webm'));
+  assert.ok(disk.has('DATA:Mural/Downloads/A - One.webm'));
   answerQuestion();
   await settle();
-  assert.strictEqual(store.downloadsFolder(), 'Music/Muriel');
+  assert.strictEqual(store.downloadsFolder(), 'Music/Mural');
   t.mock.timers.tick(10000);
   await settle();
-  assert.ok(disk.has('EXTERNAL_STORAGE:Music/Muriel/A - One.mka'));
-  assert.ok(disk.has('EXTERNAL_STORAGE:Music/Muriel/A - Two.mka'));
-  assert.ok(!disk.has('DATA:Muriel/Downloads/A - One.webm'));
+  assert.ok(disk.has('EXTERNAL_STORAGE:Music/Mural/A - One.mka'));
+  assert.ok(disk.has('EXTERNAL_STORAGE:Music/Mural/A - Two.mka'));
+  assert.ok(!disk.has('DATA:Mural/Downloads/A - One.webm'));
   await store.copy('/data/tracks/abc123.webm', '/data/Downloads/A - Three.webm');
-  assert.ok(disk.has('EXTERNAL_STORAGE:Music/Muriel/A - Three.mka'), 'from now on straight to Music/Muriel');
+  assert.ok(disk.has('EXTERNAL_STORAGE:Music/Mural/A - Three.mka'), 'from now on straight to Music/Mural');
 });
 
 test('Android 10 and older, permission refused: downloads stay in the app as before, asked once', async (t) => {
@@ -233,18 +233,18 @@ test('Android 10 and older, permission refused: downloads stay in the app as bef
   await store.copy('/data/tracks/abc123.webm', '/data/Downloads/A - Two.webm');
   assert.strictEqual(asked.length, 1);
   assert.strictEqual(store.downloadsFolder(), null);
-  assert.ok(disk.has('DATA:Muriel/Downloads/A - One.webm'));
-  assert.ok(disk.has('DATA:Muriel/Downloads/A - Two.webm'));
-  assert.ok(disk.has('DATA:Muriel/Downloads/Old Artist - Old Song.m4a'));
+  assert.ok(disk.has('DATA:Mural/Downloads/A - One.webm'));
+  assert.ok(disk.has('DATA:Mural/Downloads/A - Two.webm'));
+  assert.ok(disk.has('DATA:Mural/Downloads/Old Artist - Old Song.m4a'));
 });
 
-test('iPhone: downloads stay in Documents/Muriel/Downloads, nothing is asked or renamed', async () => {
-  const { store, disk, asked, scans } = phone({ platform: 'ios', files: [['DOCUMENTS', 'Muriel/tracks/abc123.webm', 5000]] });
-  disk.set('DOCUMENTS:Muriel/Downloads', { dir: true });
+test('iPhone: downloads stay in Documents/Mural/Downloads, nothing is asked or renamed', async () => {
+  const { store, disk, asked, scans } = phone({ platform: 'ios', files: [['DOCUMENTS', 'Mural/tracks/abc123.webm', 5000]] });
+  disk.set('DOCUMENTS:Mural/Downloads', { dir: true });
   const listed = (await store.list()).map((e) => e.vpath);
   assert.ok(listed.includes('/data/tracks/abc123.webm'));
   await store.copy('/data/tracks/abc123.webm', '/data/Downloads/Artist - Song.webm');
-  assert.ok(disk.has('DOCUMENTS:Muriel/Downloads/Artist - Song.webm'));
+  assert.ok(disk.has('DOCUMENTS:Mural/Downloads/Artist - Song.webm'));
   assert.ok(![...disk.keys()].some((k) => k.startsWith('EXTERNAL_STORAGE:')));
   assert.strictEqual(asked.length, 0);
   assert.deepStrictEqual(scans, []);

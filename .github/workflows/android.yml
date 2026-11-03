@@ -1,6 +1,6 @@
 name: Android build
 
-# Builds a signed Muriel.apk and publishes it to the rolling "android-latest" release.
+# Builds a signed Mural.apk and publishes it to the rolling "android-latest" release.
 # Signed with the same release key every time (GitHub secrets), so new builds install as updates.
 on:
   push:
@@ -59,13 +59,13 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
-          cp app/build/outputs/apk/release/app-release.apk ../Muriel.apk
-          ls -lh ../Muriel.apk
+          cp app/build/outputs/apk/release/app-release.apk ../Mural.apk
+          ls -lh ../Mural.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Muriel-apk
-          path: Muriel.apk
+          name: Mural-apk
+          path: Mural.apk
 
       - name: Publish to the android-latest release
         if: github.ref == 'refs/heads/main'
@@ -78,11 +78,11 @@ jobs:
           if [ "$head" != "$GITHUB_SHA" ]; then echo "main is at ${head::7} now; not publishing ${GITHUB_SHA::7}"; exit 0; fi
           # downloads so far, kept across builds (GitHub resets the count when the file is replaced; the
           # website adds this to the new file's count). 3530 = downloads counted before this existed
-          before="$(bash .github/carry-downloads.sh android-latest Muriel.apk 3530)"
+          before="$(bash .github/carry-downloads.sh android-latest Mural.apk 0)"
           ver="$(node -p "require('./package.json').version")"
           gh release delete android-latest --cleanup-tag --yes 2>/dev/null || true
-          gh release create android-latest Muriel.apk \
+          gh release create android-latest Mural.apk \
             --prerelease \
             --target "$GITHUB_SHA" \
-            --title "Muriel for Android (latest build)" \
-            --notes "Muriel $ver. Build of ${GITHUB_SHA::7} (run ${{ github.run_number }}). Download Muriel.apk on your phone and open it to install. Allow installs from your browser/files app if Android asks.<!-- muriel-downloads-before: $before --><!-- muriel-version: $ver -->"
+            --title "Mural for Android (latest build)" \
+            --notes "Mural $ver. Build of ${GITHUB_SHA::7} (run ${{ github.run_number }}). Download Mural.apk on your phone and open it to install. Allow installs from your browser/files app if Android asks.<!-- muriel-downloads-before: $before --><!-- muriel-version: $ver -->"

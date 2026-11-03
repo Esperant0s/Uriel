@@ -45,11 +45,11 @@
     else window.open(url, '_blank');
   }
 
-  // "Muriel 1.2.4" when the new build is a new version, else its build number
+  // "Mural 1.2.4" when the new build is a new version, else its build number
   function label(update) {
-    if (update.version && update.version !== build.version) return `Muriel ${update.version}`;
+    if (update.version && update.version !== build.version) return `Mural ${update.version}`;
     if (update.run && build.run && update.run > build.run) return `Build ${update.run}`;
-    return 'A newer Muriel build';
+    return 'A newer Mural build';
   }
 
   // ---------- the in-app update: idle → downloading → ready (or failed, which falls back to the browser) ----------
@@ -76,7 +76,7 @@
 
   async function finishUpdate() {
     const result = await installer.install().catch((e) => ({ ok: false, error: e && e.message }));
-    // Android: the first install needs "Install unknown apps" allowed for Muriel; install() opened that setting
+    // Android: the first install needs "Install unknown apps" allowed for Mural; install() opened that setting
     if (result && result.error === 'permission') { failure = 'permission'; changed(); }
     else if (!result || !result.ok) { phase = 'failed'; failure = (result && result.error) || ''; changed(); }
   }
@@ -127,9 +127,9 @@
         title.textContent = 'Downloading update';
         sub.textContent = `${label(update)} · ${percent}%`;
       } else {
-        title.textContent = failure === 'permission' ? 'Allow Muriel to install apps' : 'Update ready';
+        title.textContent = failure === 'permission' ? 'Allow Mural to install apps' : 'Update ready';
         sub.textContent = failure === 'permission' ? 'Then tap Install again'
-          : isAndroid ? `${label(update)} is downloaded` : `${label(update)} installs when Muriel restarts`;
+          : isAndroid ? `${label(update)} is downloaded` : `${label(update)} installs when Mural restarts`;
         go.textContent = isAndroid ? 'Install' : 'Restart now';
       }
     };
@@ -139,7 +139,7 @@
       else if (phase === 'ready') finishUpdate();
     });
     // before downloading: snooze this build. While or after downloading: just hide; a downloaded update still goes
-    // in when Muriel quits (the computer) or from Settings > About (Android)
+    // in when Mural quits (the computer) or from Settings > About (Android)
     later.addEventListener('click', () => {
       if (phase === 'idle') store.set('muriel_update_snooze', { sha: update.sha, until: Date.now() + SNOOZE });
       hideBanner();
@@ -165,7 +165,7 @@
     const inApp = canInstall && current;
     statusEl.textContent = !inApp || phase === 'idle' ? found
       : phase === 'downloading' ? `Downloading ${label(current)} · ${percent}%`
-        : phase === 'ready' ? (failure === 'permission' ? 'Allow Muriel to install apps, then tap Install' : `${label(current)} is ready to install`)
+        : phase === 'ready' ? (failure === 'permission' ? 'Allow Mural to install apps, then tap Install' : `${label(current)} is ready to install`)
           : `Update failed${failure && failure !== 'permission' ? `: ${failure}` : ''}`;
     statusEl.classList.toggle('has-update', !!current);
     if (!checkBtn) return;
@@ -203,7 +203,7 @@
       if (phase === 'ready') return finishUpdate();
     });
   }
-  if (statusEl) setStatus(enabled ? `${build.version ? `Muriel ${build.version} · ` : ''}Build ${build.run || '?'} · ${String(build.sha).slice(0, 7)}` : 'Development build');
+  if (statusEl) setStatus(enabled ? `${build.version ? `Mural ${build.version} · ` : ''}Build ${build.run || '?'} · ${String(build.sha).slice(0, 7)}` : 'Development build');
 
   // first check a little after start-up, then whenever the app comes back to the foreground
   setTimeout(() => check(false), 8000);

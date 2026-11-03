@@ -1,22 +1,22 @@
-// Muriel in other languages (Settings → Interface → Language). Muriel's own words (menus, buttons, settings,
+// Mural in other languages (Settings → Interface → Language). Mural's own words (menus, buttons, settings,
 // messages) are machine-translated through server.js (/api/i18n-batch, the service the lyrics translation uses)
 // the first time each one is needed, and then kept: on disk per language (the data dir; on phones the app's
 // storage), in memory here, and a copy of the open language's words in localStorage, so a restart shows them
 // translated straight away instead of flashing English first. English costs nothing: no requests, nothing watched.
 //
-// Only text Muriel itself wrote is ever sent, never anything from the library (song titles, artists, playlist
+// Only text Mural itself wrote is ever sent, never anything from the library (song titles, artists, playlist
 // names) or typed by someone:
 //  - the page as index.html has it, before app.js fills anything in: every text node, and the title, placeholder
 //    and aria-label attributes. A node or attribute app.js changes later is app.js's from then on.
 //  - elements marked data-i18n: their own text, also when app.js changes it later (labels it updates), and the
-//    attributes named in data-i18n-attr="title aria-label". Only for elements whose text is always Muriel's own.
+//    attributes named in data-i18n-attr="title aria-label". Only for elements whose text is always Mural's own.
 //  - T('English') and Tf('{0} songs in {1}', n, name) in code: what goes into {0}, {1} is filled in after
 //    translating, so it never reaches the translator. Tm(...) is the same kept as a message: a toast (or
 //    MurielI18n.text) shows it and updates it when the words come in or the language changes.
 // Translations only ever go into text nodes and attribute values; Th(...), for HTML built as a string, escapes them.
 // data-no-i18n (or translate="no") keeps a whole subtree as it is: the language list, brand names, user content.
 //
-// Right-to-left languages keep Muriel's layout as it is (mirroring a layout built left to right breaks more than
+// Right-to-left languages keep Mural's layout as it is (mirroring a layout built left to right breaks more than
 // it fixes); the translated text itself is laid out right to left (unicode-bidi: plaintext, styles.css), so
 // punctuation lands where it belongs. test/i18n.test.js runs the pure part in Node.
 (function (root) {
@@ -29,9 +29,9 @@
   const RTL = new Set(['ar', 'he', 'iw', 'fa', 'ur', 'ps', 'sd', 'ug', 'yi', 'dv', 'ckb']);
   const MAX_LEN = 500;
   // names that stay as they are in every language
-  const KEEP = new Set(['muriel', 'encore', 'youtube', 'youtube music', 'soundcloud', 'spotify', 'apple music', 'deezer', 'itunes',
+  const KEEP = new Set(['mural', 'muriel', 'encore', 'youtube', 'youtube music', 'soundcloud', 'spotify', 'apple music', 'deezer', 'itunes',
     'last.fm', 'lrclib', 'musixmatch', 'genius', 'netease', 'google sans', 'sf pro', 'peerjs', 'yt-dlp', 'ffmpeg', 'github',
-    'android', 'ios', 'iphone', 'windows', 'macos', 'linux', 'electron', 'material 3', 'material you', 'riff', 'muriel encore',
+    'android', 'ios', 'iphone', 'windows', 'macos', 'linux', 'electron', 'material 3', 'material you', 'riff', 'muriel encore', 'mural encore',
     'rootscripts', 'cloverscripts', 'ctrl', 'shift', 'alt', 'esc', 'cmd', 'tab', 'enter']);
   const UNIT = /^[\d\s.,:;/+\-–—×x%°]*(ms|s|sec|min|h|x|db|hz|khz|px|kb|mb|gb|kbps|bpm|fps|lufs)?[\d\s.,:;/+\-–—×x%°]*$/i;
 

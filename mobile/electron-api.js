@@ -98,12 +98,12 @@ module.exports = function electronAPI({ ready, port, fs, fileUrlFor }) {
       await fs._flush();
       return true;
     },
-    getDataDir: async () => ({ dir: 'On this iPhone (Files → Muriel)', defaultDir: '/data', isCustom: false }),
+    getDataDir: async () => ({ dir: 'On this iPhone (Files → Mural)', defaultDir: '/data', isCustom: false }),
     pickDataDir: async () => null,
     setDataDir: async () => ({ success: false, error: 'The music folder is fixed on iPhone' }),
-    // fixed on phones (Settings hides Change): Files → Muriel → Downloads on iOS, Music/Muriel on Android (shims/store.js)
+    // fixed on phones (Settings hides Change): Files → Mural → Downloads on iOS, Music/Mural on Android (shims/store.js)
     async getDownloadDir() {
-      if (Capacitor.getPlatform() !== 'android') return { dir: 'Files → Muriel → Downloads', isCustom: false };
+      if (Capacitor.getPlatform() !== 'android') return { dir: 'Files → Mural → Downloads', isCustom: false };
       await ready;
       return { dir: store.downloadsFolder() || "Inside the app (other apps can't see it)", isCustom: false };
     },

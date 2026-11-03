@@ -47,8 +47,8 @@ test('downloads only come from GitHub', async () => {
 
 test('only stamped, packaged builds that can replace themselves update in the app', () => {
   const build = (channel) => ({ sha: 'abc', channel });
-  const appImage = path.join(tmp, 'Muriel.AppImage');
-  assert.equal(updater.installKind({ build: build('windows'), platform: 'win32', env: { PORTABLE_EXECUTABLE_FILE: 'C:\\Muriel.exe' } }), 'portable');
+  const appImage = path.join(tmp, 'Mural.AppImage');
+  assert.equal(updater.installKind({ build: build('windows'), platform: 'win32', env: { PORTABLE_EXECUTABLE_FILE: 'C:\\Mural.exe' } }), 'portable');
   assert.equal(updater.installKind({ build: build('windows'), platform: 'win32', env: {} }), null);
   assert.equal(updater.installKind({ build: build('windows-setup'), platform: 'win32', env: {} }), 'nsis');
   assert.equal(updater.installKind({ build: build('linux'), platform: 'linux', env: { APPIMAGE: appImage } }), 'appimage');
@@ -56,15 +56,15 @@ test('only stamped, packaged builds that can replace themselves update in the ap
   assert.equal(updater.installKind({ build: { sha: 'dev', channel: 'linux' }, platform: 'linux', env: { APPIMAGE: appImage } }), null);
   assert.equal(updater.installKind({ build: build('linux'), platform: 'linux', env: { APPIMAGE: appImage }, packaged: false }), null);
   const apps = path.join(tmp, 'Applications');
-  fs.mkdirSync(path.join(apps, 'Muriel.app', 'Contents', 'MacOS'), { recursive: true });
-  assert.equal(updater.installKind({ build: build('mac'), platform: 'darwin', env: {}, exePath: path.join(apps, 'Muriel.app', 'Contents', 'MacOS', 'Muriel') }), 'mac');
-  assert.equal(updater.installKind({ build: build('mac'), platform: 'darwin', env: {}, exePath: '/private/var/folders/x/AppTranslocation/y/d/Muriel.app/Contents/MacOS/Muriel' }), null);
+  fs.mkdirSync(path.join(apps, 'Mural.app', 'Contents', 'MacOS'), { recursive: true });
+  assert.equal(updater.installKind({ build: build('mac'), platform: 'darwin', env: {}, exePath: path.join(apps, 'Mural.app', 'Contents', 'MacOS', 'Mural') }), 'mac');
+  assert.equal(updater.installKind({ build: build('mac'), platform: 'darwin', env: {}, exePath: '/private/var/folders/x/AppTranslocation/y/d/Mural.app/Contents/MacOS/Mural' }), null);
 });
 
 test('the new AppImage starts without the old one\'s mount in its environment', () => {
   const mount = '/tmp/.mount_MurielAbc';
   const env = updater.appImageEnv({
-    APPDIR: mount, APPIMAGE: '/apps/Muriel.AppImage', ARGV0: './Muriel.AppImage', OWD: '/apps', HOME: '/home/me',
+    APPDIR: mount, APPIMAGE: '/apps/Mural.AppImage', ARGV0: './Mural.AppImage', OWD: '/apps', HOME: '/home/me',
     PATH: `${mount}:${mount}/usr/sbin:/usr/bin`, LD_LIBRARY_PATH: `${mount}/usr/lib`,
     XDG_DATA_DIRS: `${mount}/usr/share/:/usr/share`, GSETTINGS_SCHEMA_DIR: `${mount}/usr/share/glib-2.0/schemas`,
   });
@@ -81,8 +81,8 @@ test('the build stamp is read from build-info.js', () => {
 
 test('the Mac swap script puts the new app in place and keeps the old one if that fails', { skip: process.platform === 'win32' }, () => {
   const dir = path.join(tmp, 'mac');
-  const app = path.join(dir, 'Applications', 'Muriel.app');
-  const next = path.join(dir, 'update', 'Muriel.app');
+  const app = path.join(dir, 'Applications', 'Mural.app');
+  const next = path.join(dir, 'update', 'Mural.app');
   fs.mkdirSync(app, { recursive: true });
   fs.mkdirSync(next, { recursive: true });
   fs.writeFileSync(path.join(app, 'version'), 'old');
@@ -93,11 +93,11 @@ test('the Mac swap script puts the new app in place and keeps the old one if tha
   execFileSync('/bin/sh', [script, '999999', next, app, '0']);
   assert.equal(fs.readFileSync(path.join(app, 'version'), 'utf8'), 'new');
   assert.equal(fs.existsSync(next), false);
-  assert.deepEqual(fs.readdirSync(path.dirname(app)), ['Muriel.app']);
+  assert.deepEqual(fs.readdirSync(path.dirname(app)), ['Mural.app']);
   // the download is gone: the installed app stays as it was
   assert.throws(() => execFileSync('/bin/sh', [script, '999999', next, app, '0'], { stdio: 'ignore' }));
   assert.equal(fs.readFileSync(path.join(app, 'version'), 'utf8'), 'new');
-  assert.deepEqual(fs.readdirSync(path.dirname(app)), ['Muriel.app']);
+  assert.deepEqual(fs.readdirSync(path.dirname(app)), ['Mural.app']);
 });
 
 test('the update banner offers the in-app update before the browser one', () => {

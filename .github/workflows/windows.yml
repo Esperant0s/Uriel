@@ -1,6 +1,6 @@
 name: Windows build
 
-# Builds a portable Muriel.exe (no installer, runs from anywhere) and publishes it to the
+# Builds a portable Mural.exe (no installer, runs from anywhere) and publishes it to the
 # rolling "windows-latest" release.
 on:
   push:
@@ -37,14 +37,14 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: |
           node tools/build-info.mjs build-info.js windows
-          npx electron-builder --win portable --x64 --publish never -c.artifactName='Muriel.${ext}'
+          npx electron-builder --win portable --x64 --publish never -c.artifactName='Mural.${ext}'
           ls -la dist
-          cp dist/Muriel.exe Muriel.exe
+          cp dist/Mural.exe Mural.exe
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Muriel-exe
-          path: Muriel.exe
+          name: Mural-exe
+          path: Mural.exe
 
       - name: Publish to the windows-latest release
         if: github.ref == 'refs/heads/main'
@@ -58,11 +58,11 @@ jobs:
           if [ "$head" != "$GITHUB_SHA" ]; then echo "main is at ${head::7} now; not publishing ${GITHUB_SHA::7}"; exit 0; fi
           # downloads so far, kept across builds (GitHub resets the count when the file is replaced; the
           # website adds this to the new file's count). 6 = downloads counted before this existed
-          before="$(bash .github/carry-downloads.sh windows-latest Muriel.exe 6)"
+          before="$(bash .github/carry-downloads.sh windows-latest Mural.exe 0)"
           ver="$(node -p "require('./package.json').version")"
           gh release delete windows-latest --cleanup-tag --yes 2>/dev/null || true
-          gh release create windows-latest Muriel.exe \
+          gh release create windows-latest Mural.exe \
             --prerelease \
             --target "$GITHUB_SHA" \
-            --title "Muriel for Windows (latest build)" \
-            --notes "Muriel $ver. Portable build of ${GITHUB_SHA::7} (run ${{ github.run_number }}). No install needed: download Muriel.exe and run it. Windows SmartScreen may warn because the exe is unsigned: More info -> Run anyway.<!-- muriel-downloads-before: $before --><!-- muriel-version: $ver -->"
+            --title "Mural for Windows (latest build)" \
+            --notes "Mural $ver. Portable build of ${GITHUB_SHA::7} (run ${{ github.run_number }}). No install needed: download Mural.exe and run it. Windows SmartScreen may warn because the exe is unsigned: More info -> Run anyway.<!-- muriel-downloads-before: $before --><!-- muriel-version: $ver -->"

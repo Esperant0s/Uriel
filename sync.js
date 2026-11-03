@@ -1,6 +1,6 @@
-// Muriel sync (free, no account): link your devices with a code or a QR code, and playlists,
+// Mural sync (free, no account): link your devices with a code or a QR code, and playlists,
 // favorites, history, Encore stats, the look of the app and what you're listening to stay the same on all of
-// them. There is no Muriel server and no account: every device keeps its own data, and linked devices talk to
+// them. There is no Mural server and no account: every device keeps its own data, and linked devices talk to
 // each other directly (WebRTC, encrypted) whenever they're open at the same time. A public PeerJS server only
 // introduces them to each other; it never sees the data. Merging (who wins when both changed) is in sync-core.js.
 (() => {
@@ -372,7 +372,7 @@
     render();
     const tp = new window.Peer(`muriel-j-${hex(12)}`, serverOpts());
     const done = (error) => { clearTimeout(timer); try { tp.destroy(); } catch (e) {} joining = error ? { code, error } : null; render(); };
-    const timer = setTimeout(() => done("No device answered. Check the code, and that Muriel shows it on the other device."), 20000);
+    const timer = setTimeout(() => done("No device answered. Check the code, and that Mural shows it on the other device."), 20000);
     tp.on('error', (err) => done(err && err.type === 'peer-unavailable' ? 'No device is showing that code right now.' : "Couldn't reach the link service. Check your internet connection."));
     tp.on('open', () => {
       const conn = tp.connect(`muriel-link-${code.toLowerCase()}`, { reliable: true });
@@ -495,7 +495,7 @@
   // ---------- Settings → Sync ----------
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const toast = (m) => { try { window.MurielCore && window.MurielCore.toast(m, 'info'); } catch (e) {} };
-  // UI language (i18n.js): data-i18n marks Muriel's own words in the HTML below; names only ever go into {0} slots
+  // UI language (i18n.js): data-i18n marks Mural's own words in the HTML below; names only ever go into {0} slots
   // phones hand outside links to the browser; the desktop app opens https links in the default browser
   const openUrl = (u) => { if (platform === 'ios' || platform === 'android') location.href = u; else window.open(u, '_blank'); };
   const qrSvg = (text) => {

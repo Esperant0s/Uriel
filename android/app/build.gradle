@@ -4,7 +4,7 @@ android {
     namespace = "io.github.cloverscripts.muriel"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "io.github.cloverscripts.muriel"
+        applicationId "io.github.esperant0s.mural"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // CI passes the run number so every build installs as an update

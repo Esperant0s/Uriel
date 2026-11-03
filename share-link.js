@@ -20,7 +20,7 @@
     return m ? m[1] : '';
   };
 
-  // a Muriel track -> a compact row, or null when it can't be shared
+  // a Mural track -> a compact row, or null when it can't be shared
   function packTrack(t) {
     if (!t || t.platform === 'local' || t.isLocal) return null;
     const meta = [clip(t.title, 140), clip(t.artist, 80), Math.max(0, Math.round(Number(t.duration) || 0))];
@@ -94,7 +94,7 @@
     return { payload, count: rows.length };
   }
 
-  // payload string -> { name, tracks } (throws on anything that isn't a Muriel playlist)
+  // payload string -> { name, tracks } (throws on anything that isn't a Mural playlist)
   async function decode(payload) {
     const p = String(payload || '').trim();
     if (p.length < 2 || p.length > 400000) throw new Error('not a playlist link');

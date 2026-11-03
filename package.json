@@ -1,5 +1,5 @@
 {
-  "name": "muriel",
+  "name": "mural",
   "version": "1.4.0",
   "main": "main.js",
   "bin": {
@@ -40,7 +40,7 @@
     "hls.js": "^1.7.1",
     "tone": "^15.1.22"
   },
-  "productName": "Muriel",
+  "productName": "Mural",
   "homepage": "https://github.com/cloverscripts/riff-muriel",
   "repository": {
     "type": "git",
@@ -50,8 +50,8 @@
     "url": "https://github.com/cloverscripts/riff-muriel/issues"
   },
   "build": {
-    "appId": "io.github.cloverscripts.muriel",
-    "productName": "Muriel",
+    "appId": "io.github.esperant0s.mural",
+    "productName": "Mural",
     "artifactName": "${name}-${version}-${os}-${arch}.${ext}",
     "directories": {
       "output": "dist"

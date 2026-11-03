@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to Muriel - Setup</title>
+  <title>Welcome to Mural - Setup</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
@@ -985,7 +985,7 @@
       to { transform: scale(3.5); opacity: 0; }
     }
   
-/* ---- Muriel logo: a sparkle that twinkles while music plays ---- */
+/* ---- Mural logo: a sparkle that twinkles while music plays ---- */
 .logo-star path { transform-box: fill-box; transform-origin: 50% 50%; }
 @keyframes sparkleMain { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(45deg) scale(0.78); } 100% { transform: rotate(90deg) scale(1); } }
 @keyframes sparkleBlink { 0%, 100% { transform: scale(1); opacity: 1; } 45% { transform: scale(0.25); opacity: 0.35; } 62% { transform: scale(1.15); opacity: 1; } }
@@ -1022,7 +1022,7 @@
             <g class="shape-spin"><path class="shape-path" id="shapePath" d=""/></g>
           </svg>
           <div class="icon-tint">
-            <svg class="muriel-icon logo-star dancing" viewBox="0 0 1024 1024" fill="#FFFFFF" role="img" aria-label="Muriel"><path class="s1" d="M500 160Q543.2 476.8 860 520Q543.2 563.2 500 880Q456.8 563.2 140 520Q456.8 476.8 500 160Z"/><path class="s2" d="M780 154Q791.5 238.5 876 250Q791.5 261.5 780 346Q768.5 261.5 684 250Q768.5 238.5 780 154Z"/></svg>
+            <svg class="muriel-icon logo-star dancing" viewBox="0 0 1024 1024" fill="#FFFFFF" role="img" aria-label="Mural"><path class="s1" d="M500 160Q543.2 476.8 860 520Q543.2 563.2 500 880Q456.8 563.2 140 520Q456.8 476.8 500 160Z"/><path class="s2" d="M780 154Q791.5 238.5 876 250Q791.5 261.5 780 346Q768.5 261.5 684 250Q768.5 238.5 780 154Z"/></svg>
           </div>
         </div>
         <h1 class="muriel-title">
@@ -1032,7 +1032,7 @@
 
       <div class="stacked-group">
         <div class="stacked-container top">
-          <h2 class="step-header-title">Welcome to Muriel.</h2>
+          <h2 class="step-header-title">Welcome to Mural.</h2>
           <p class="step-header-subtitle">Let's get started.</p>
         </div>
 
@@ -1241,8 +1241,8 @@
       <div class="stacked-group">
 
         <div class="stacked-container stacked-3-top">
-          <h2 class="step-header-title">Add Muriel to your launcher</h2>
-          <p class="step-header-subtitle" id="launcherSub">Open Muriel in one click from your Start menu or applications menu.</p>
+          <h2 class="step-header-title">Add Mural to your launcher</h2>
+          <p class="step-header-subtitle" id="launcherSub">Open Mural in one click from your Start menu or applications menu.</p>
         </div>
 
         <div class="stacked-container stacked-3-middle launcher-preview">
@@ -1250,7 +1250,7 @@
             <svg viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
           </div>
           <div>
-            <div class="launcher-name">Muriel</div>
+            <div class="launcher-name">Mural</div>
             <div class="launcher-desc">Music player</div>
           </div>
         </div>
@@ -1261,7 +1261,7 @@
           </div>
           <div class="row-text">
             <div class="row-title" id="launcherTitle">Start menu shortcut</div>
-            <div class="row-sub" id="launcherRowSub">Add Muriel with its icon so you can find it by searching</div>
+            <div class="row-sub" id="launcherRowSub">Add Mural with its icon so you can find it by searching</div>
           </div>
           <button class="sw on" role="switch" aria-checked="true" id="launcherSwitch"></button>
         </div>
@@ -1293,7 +1293,7 @@
           <p class="step-header-subtitle">Optional. You can skip this and set it up whenever you like.</p>
         </div>
 
-        <!-- Muriel has no Discord Rich Presence, so the upstream switch is left out -->
+        <!-- Mural has no Discord Rich Presence, so the upstream switch is left out -->
 
         <div class="stacked-container stacked-3-middle">
           <div class="row">
@@ -1302,7 +1302,7 @@
             </div>
             <div class="row-text">
               <div class="row-title">Import a Spotify playlist</div>
-              <div class="row-sub">Paste a public playlist link and it becomes a Muriel playlist</div>
+              <div class="row-sub">Paste a public playlist link and it becomes a Mural playlist</div>
             </div>
           </div>
           <div class="field-row">
@@ -1406,14 +1406,14 @@
 
       async spotifyLookup(url) {
         const port = await this.serverPort();
-        if (!port) return { success: false, error: 'Muriel server is not available here' };
+        if (!port) return { success: false, error: 'Mural server is not available here' };
         try {
           const res = await fetch(`http://127.0.0.1:${port}/api/spotify-import?url=${encodeURIComponent(url)}`, {
             headers: { 'X-Muriel-Token': this.api?.serverToken || '' }
           });
           return await res.json();
         } catch (e) {
-          return { success: false, error: 'Could not reach the Muriel server' };
+          return { success: false, error: 'Could not reach the Mural server' };
         }
       }
     };
@@ -1925,16 +1925,16 @@
 
       if (platform === 'win32') {
         launcherTitle.textContent = 'Start menu shortcut';
-        launcherSub.textContent = 'Pin Muriel to the Start menu so you can open it by searching.';
-        launcherRowSub.textContent = 'Adds Muriel with its icon to the Start menu';
+        launcherSub.textContent = 'Pin Mural to the Start menu so you can open it by searching.';
+        launcherRowSub.textContent = 'Adds Mural with its icon to the Start menu';
       } else {
         launcherTitle.textContent = 'Applications menu entry';
-        launcherSub.textContent = 'Add Muriel to your applications menu with its icon and description.';
+        launcherSub.textContent = 'Add Mural to your applications menu with its icon and description.';
         launcherRowSub.textContent = 'Creates a launcher that starts the AppImage';
       }
 
       if (!info) return;
-      if (info.installed) setLauncherUnavailable('Muriel is already in your launcher');
+      if (info.installed) setLauncherUnavailable('Mural is already in your launcher');
       else if (!info.canInstall) setLauncherUnavailable(info.reason || 'Not available here');
     }
 

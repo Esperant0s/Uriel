@@ -5,16 +5,16 @@ const path = require('path');
 const IS_WIN = process.platform === 'win32';
 
 const DEFAULT_DATA_DIR = IS_WIN
-  ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Muriel')
+  ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Mural')
   : process.platform === 'darwin'
-  ? path.join(os.homedir(), 'Library', 'Application Support', 'Muriel')
-  : path.join(os.homedir(), '.cache', 'muriel');
+  ? path.join(os.homedir(), 'Library', 'Application Support', 'Mural')
+  : path.join(os.homedir(), '.cache', 'mural');
 
 const CONFIG_DIR = IS_WIN
-  ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Muriel')
+  ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Mural')
   : process.platform === 'darwin'
-  ? path.join(os.homedir(), 'Library', 'Application Support', 'Muriel')
-  : path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'muriel');
+  ? path.join(os.homedir(), 'Library', 'Application Support', 'Mural')
+  : path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'mural');
 const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');
 
 function readConfig() {
@@ -81,7 +81,7 @@ const METADATA_PATH = path.join(DATA_DIR, 'metadata.json');
 const LIBRARY_DIR = path.join(DATA_DIR, 'library');
 const LIBRARY_PATH = path.join(DATA_DIR, 'library.json');
 const BIN_DIR = path.join(DATA_DIR, 'bin');
-const TUTORIAL_MARKER = IS_WIN ? 'C:\\Muriel\\.murieltutorial' : path.join(os.homedir(), '.murieltutorial');
+const TUTORIAL_MARKER = IS_WIN ? 'C:\\Mural\\.murieltutorial' : path.join(os.homedir(), '.murieltutorial');
 const TUTORIAL_MARKER_FALLBACK = path.join(DATA_DIR, '.murieltutorial');
 const STARTUP_PATH = path.join(DATA_DIR, 'startup.json');
 function readStartupConfig() { try { return JSON.parse(fs.readFileSync(STARTUP_PATH, 'utf8')) || {}; } catch (e) { return {}; } }
@@ -100,7 +100,7 @@ function markTutorialDone() {
   return false;
 }
 
-// what Muriel itself keeps in its music folder (moving the folder copies and then deletes only these)
+// what Mural itself keeps in its music folder (moving the folder copies and then deletes only these)
 const MURIEL_DATA_ENTRIES = ['tracks', 'custom-lyrics', 'lyrics', 'thumbnails', 'library', 'bin', 'plugins', 'logs', 'metadata.json', 'library.json', 'startup.json', 'spotify-auth.enc', 'lastfm-auth.enc', '.murieltutorial', 'i18n'];
 
 // `only`: names to take at the top level (deeper levels take everything under them)

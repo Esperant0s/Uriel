@@ -48,7 +48,7 @@ import java.util.concurrent.Executors;
 
 /**
  * The phone's "now playing" controls for Android: a media session plus a playback notification, so
- * Muriel shows up in the notification shade, on the lock screen and in the quick-settings media
+ * Mural shows up in the notification shade, on the lock screen and in the quick-settings media
  * player, and headset / Bluetooth buttons work. Android's WebView doesn't do this for the page's
  * navigator.mediaSession the way iOS does. The page (mobile/media-controls.js) sends the song and
  * play state; button presses come back as "action" events.
@@ -68,7 +68,7 @@ public class MediaControlsPlugin extends Plugin {
     static final String CHANNEL = "playback";
     static final int NOTIFICATION_ID = 7041;
     // The island at the top of the screen. vivo's Origin Island and OPPO's Fluid Cloud show music only from apps on
-    // the maker's own list, hard-coded in the system, so Muriel's media notification never gets in there. What they
+    // the maker's own list, hard-coded in the system, so Mural's media notification never gets in there. What they
     // do take from any app is an Android 16 "Live Update" (a promoted ongoing notification, which can't be a media
     // one), so while a song plays one is posted beside the playback notification. Elsewhere it is a chip in the
     // status bar. Xiaomi's Super Island and Samsung's Now Bar show the playback notification by themselves.
@@ -137,7 +137,7 @@ public class MediaControlsPlugin extends Plugin {
         }
         // one left by an app that was stopped without cleaning up
         try { ctx.getSystemService(NotificationManager.class).cancel(ISLAND_ID); } catch (Exception ignored) {}
-        session = new MediaSessionCompat(ctx, "Muriel");
+        session = new MediaSessionCompat(ctx, "Mural");
         session.setCallback(new MediaSessionCompat.Callback() {
             @Override public void onPlay() { start("play"); }
             @Override public void onPause() { send("pause", -1); }
@@ -169,7 +169,7 @@ public class MediaControlsPlugin extends Plugin {
     }
 
     // play / next / previous from the notification, the lock screen or a headset: each starts a song.
-    // Paused for a while, Muriel may no longer be in the foreground, and Android 15+ only lets apps in the
+    // Paused for a while, Mural may no longer be in the foreground, and Android 15+ only lets apps in the
     // foreground play (the song stopped again right away). Such a button press may bring the app back into
     // the foreground, so that happens first.
     void start(String action) {
@@ -343,7 +343,7 @@ public class MediaControlsPlugin extends Plugin {
         backgroundStatus(call);
     }
 
-    // A song saved to Music/Muriel (mobile/shims/store.js) goes into the phone's media index right away, so music
+    // A song saved to Music/Mural (mobile/shims/store.js) goes into the phone's media index right away, so music
     // apps list it: Android 10 and older only find new files at their next full scan. Takes a path or file:// URI.
     @PluginMethod
     public void scanFile(PluginCall call) {
@@ -369,14 +369,14 @@ public class MediaControlsPlugin extends Plugin {
         Context app = getContext().getApplicationContext();
         try {
             if (wakeLock == null) {
-                wakeLock = app.getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Muriel:playback");
+                wakeLock = app.getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Mural:playback");
                 wakeLock.setReferenceCounted(false);
             }
             wakeLock.acquire(WAKE_LOCK_MS);
         } catch (Exception ignored) {}
         try {
             if (wifiLock == null) {
-                wifiLock = ((WifiManager) app.getSystemService(Context.WIFI_SERVICE)).createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "Muriel:playback");
+                wifiLock = ((WifiManager) app.getSystemService(Context.WIFI_SERVICE)).createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "Mural:playback");
                 wifiLock.setReferenceCounted(false);
             }
             if (!wifiLock.isHeld()) wifiLock.acquire();

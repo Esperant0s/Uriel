@@ -1,8 +1,8 @@
 // YouTube / YouTube Music library import (desktop): log in to Google in a separate window, then read the liked
 // songs and playlists of that account. Registered by main.js.
-// The Google login lives in its own persistent browser storage, one per Muriel profile ("persist:muriel-google"
-// for the first one), apart from the app's own pages: Muriel's window never gets the Google cookies, and the
-// login window gets neither Muriel's preload API nor its server token. Only "logged in or not" and the songs
+// The Google login lives in its own persistent browser storage, one per Mural profile ("persist:muriel-google"
+// for the first one), apart from the app's own pages: Mural's window never gets the Google cookies, and the
+// login window gets neither Mural's preload API nor its server token. Only "logged in or not" and the songs
 // (checked and capped here) go back to the page.
 const { BrowserWindow, ipcMain, session, shell } = require('electron');
 const crypto = require('crypto');

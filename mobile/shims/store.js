@@ -1,11 +1,11 @@
 // Persistent storage behind the fs shim. Virtual paths under /data map to Capacitor Filesystem paths under
-// Muriel/ (IndexedDB in a browser): in Documents on iOS, visible in the Files app; in the app's private storage
-// on Android, except the songs people download, which go to Music/Muriel (see "Android: downloads" below).
+// Mural/ (IndexedDB in a browser): in Documents on iOS, visible in the Files app; in the app's private storage
+// on Android, except the songs people download, which go to Music/Mural (see "Android: downloads" below).
 const path = require('path');
 const { Filesystem, Directory, Encoding } = require('@capacitor/filesystem');
 const { Capacitor } = require('@capacitor/core');
 
-const ROOT = 'Muriel';
+const ROOT = 'Mural';
 const ANDROID = Capacitor.getPlatform() === 'android';
 // iOS: Documents (shown in the Files app). Android: app-private storage; public Documents needs permissions.
 const DIR = ANDROID ? Directory.Data : Directory.Documents;
@@ -15,14 +15,14 @@ const toVirtual = (rpath) => '/data' + rpath.slice(ROOT.length);
 const priv = (vpath) => ({ path: toReal(vpath), directory: DIR });
 
 // ---- Android: downloads ----
-// Songs saved with Download (/data/Downloads) go to Music/Muriel on the phone's shared storage (Documents/Muriel
+// Songs saved with Download (/data/Downloads) go to Music/Mural on the phone's shared storage (Documents/Mural
 // if Music can't be used), where file managers and music apps find them. The song cache and the rest stay private.
 // Android 11+ lets an app save files there without asking. Android 10 and older need the storage permission
 // (AndroidManifest.xml); it's asked for when the first song is saved, and without it downloads stay private.
 const DOWNLOADS = '/data/Downloads';
 const PUBLIC = Directory.ExternalStorage;
-const PUBLIC_ROOTS = ['Music/Muriel', 'Documents/Muriel'];
-let pub = null; // the public folder in use, e.g. 'Music/Muriel'
+const PUBLIC_ROOTS = ['Music/Mural', 'Documents/Mural'];
+let pub = null; // the public folder in use, e.g. 'Music/Mural'
 let mayAsk = false; // Android 10 and older: storage permission not given, but may be
 let asked = false;
 // where each download really is: found at launch, or saved this session (a download from before: private)
@@ -45,7 +45,7 @@ function where(vpath) {
 }
 
 // where a file being saved goes. On Android 10 and older the first download asks for the permission, without
-// waiting for the answer: with Muriel in the background the question waits for its return, and the music (which
+// waiting for the answer: with Mural in the background the question waits for its return, and the music (which
 // waits for files to be saved) would too. Songs saved meanwhile stay private and move once it's given.
 function saveTo(vpath) {
   if (isDownload(vpath) && !pub && mayAsk && !asked) {

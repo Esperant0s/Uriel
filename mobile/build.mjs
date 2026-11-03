@@ -1,4 +1,4 @@
-// Builds the iOS web bundle into www/: Muriel's desktop frontend + server.js running in-app.
+// Builds the iOS web bundle into www/: Mural's desktop frontend + server.js running in-app.
 import { build } from 'esbuild';
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';

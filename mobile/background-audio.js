@@ -1,6 +1,6 @@
-// iPhone: keeps Muriel running in the background between two songs.
+// iPhone: keeps Mural running in the background between two songs.
 // iOS lets an app run in the background only while it plays something. Between two songs nothing does:
-// the next one is still downloading, or one that can't play is being skipped. iOS then suspended Muriel
+// the next one is still downloading, or one that can't play is being skipped. iOS then suspended Mural
 // within seconds, and the next song didn't start until the app was opened again. So while a song is on
 // its way (app.js `state.trackLoading`), a second <audio> element loops a second of silence.
 const { Capacitor } = require('@capacitor/core');
