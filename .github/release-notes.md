@@ -1,4 +1,4 @@
-## Mural 1.5.0
+## Mural 1.5.1
 
 Mural is the new name of the Esperant0s fork of [Muriel](https://github.com/cloverscripts/riff-muriel) by cloverscripts, itself based on [Riff](https://github.com/rootscripts/riff) by rootscripts (MIT). It is its own app now and installs next to Muriel.
 
@@ -9,7 +9,19 @@ Mural is the new name of the Esperant0s fork of [Muriel](https://github.com/clov
 - **macOS:** `.dmg` / `.zip` below, for Apple Silicon and Intel. The app is unsigned: if macOS blocks it, open System Settings → Privacy & Security → Open Anyway.
 - **Linux:** `.AppImage` below (needs FUSE 2: `fuse2` / `libfuse2`)
 
-**New**
+**New in 1.5.1**
+- **Play with your YouTube sign-in** (computers): when YouTube answers "Sign in to confirm you're not a bot" and songs won't play, turn on Settings → Integrations → YouTube → Play with my YouTube sign-in. Your sign-in stays on this computer; a spare Google account is the safer choice, since YouTube can limit accounts used this way.
+- **New themes:** 13 presets in Settings → Theme, with Halloween Glow as the default.
+- **Finds yt-dlp and ffmpeg** you already have (package managers, Muriel's old folder) instead of downloading them again.
+
+**Fixed in 1.5.1**
+- **Songs that won't play fail in seconds, not half a minute:** while YouTube is blocking lookups, Mural stops retrying it and goes straight to SoundCloud.
+- **Smoother animations** when switching pages and opening dialogs: far fewer GPU layers, no blur on closed dialogs.
+- **The search bar** is no longer covered by messages or the update banner, and doesn't run under the YouTube / SoundCloud buttons in narrow windows.
+- **The player bar** fits narrow windows; the volume no longer runs off the edge.
+- **Faster start:** parts of the app load only when first needed.
+
+**New in 1.5.0**
 - **Mural:** a new name and its own app. On computers, the first start brings over your Muriel playlists, favorites, settings, library and offline songs (Muriel itself is left as it is). Phones start fresh.
 - **Finds the music already on your device:** the Music and Downloads folders on computers (and keeps watching them), the phone's music library on Android, and Mural's folder in the Files app on iPhone. Songs play from where they are, nothing is copied, and removing one from My files never deletes the file. Settings → Storage → Music on this device.
 - **"Available offline" mark:** a small arrow before the artist on every song that plays without internet (local files, downloads and songs kept from playing them).
