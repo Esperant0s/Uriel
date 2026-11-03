@@ -45,6 +45,20 @@ function noteYtDlpError(e) {
   if (e && YT_BOT_RE.test(String(e.message || e))) ytBotBlockedUntil = Date.now() + YT_BOT_PAUSE;
 }
 
+// Settings → Integrations → YouTube: "Play with my YouTube sign-in" (google-library.js writes the cookies.txt).
+// Every yt-dlp run then goes as that signed-in user, which is what gets past "confirm you're not a bot".
+let ytDlpCookiesFile = null;
+function setYtDlpCookies(file) {
+  ytDlpCookiesFile = file && fs.existsSync(file) ? file : null;
+  // signed in now: YouTube may let yt-dlp in again, so stop skipping it
+  if (ytDlpCookiesFile) ytBotBlockedUntil = 0;
+}
+function withYtDlpCookies(args) {
+  if (!ytDlpCookiesFile || !Array.isArray(args) || args.includes('--cookies')) return args;
+  const at = args[0] === '--no-config' ? 1 : 0;
+  return [...args.slice(0, at), '--cookies', ytDlpCookiesFile, ...args.slice(at)];
+}
+
 async function fastYouTubeStream(trackUrl, id) {
   const vid = ytFast.videoId(id) || ytFast.videoId(trackUrl);
   if (!vid) return null;
@@ -1659,7 +1673,7 @@ function executeYtDlp(args, timeoutMs = 25000, opts = {}) {
 
 function runYtDlpNow(args, timeoutMs, opts, priority) {
   return new Promise((resolve, reject) => {
-    const cmd = ytDlpCommand(args);
+    const cmd = ytDlpCommand(withYtDlpCookies(args));
     const proc = spawnYtDlp(cmd, priority, opts.reason);
     if (opts && typeof opts.onChild === 'function') {
       try { opts.onChild(proc); } catch (_) {}
@@ -1761,7 +1775,7 @@ async function downloadTrackToDisk(trackUrl, trackId, platform, meta = {}, prior
   }
 
   let cmd;
-  try { cmd = ytDlpCommand(args); } catch (e) { downloadingSet.delete(cleanId); try { logger.error('Download command error: ' + (meta.title || trackId), e); } catch (_) {} return; }
+  try { cmd = ytDlpCommand(withYtDlpCookies(args)); } catch (e) { downloadingSet.delete(cleanId); try { logger.error('Download command error: ' + (meta.title || trackId), e); } catch (_) {} return; }
 
   const findTemp = () => {
     if (fs.existsSync(tempPath)) return tempPath;
@@ -7107,7 +7121,7 @@ function stopServer() {
   });
 }
 
-module.exports = { startServer, stopServer, PORT, getServerToken, setDeviceSongs, rescanDeviceMusic };
+module.exports = { startServer, stopServer, PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, _test: { withYtDlpCookies } };
 
 if (require.main === module) {
   startServer();

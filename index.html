@@ -1650,6 +1650,18 @@
                 <button class="btn-pill-primary btn-open-link-import" id="btn-open-link-import" data-platform="youtube" type="button">Import</button>
               </div>
             </div>
+            <div class="setting-item desktop-only" id="card-yt-signin">
+              <div class="setting-item-top" style="align-items: center; justify-content: space-between;">
+                <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+                  <span class="setting-name">Play with my YouTube sign-in</span>
+                  <span id="yt-signin-status" style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);">For when YouTube says "Sign in to confirm you're not a bot" and songs won't play. Your sign-in stays on this computer. YouTube can limit accounts used this way, so a spare Google account is the safer choice.</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                  <button class="btn-outline-pill" id="btn-yt-signin" type="button" hidden>Sign in</button>
+                  <button class="effect-switch-btn" id="toggle-yt-signin" type="button"><span class="thumb"></span></button>
+                </div>
+              </div>
+            </div>
             <div class="setting-item" id="card-ytm-import">
               <div class="setting-item-top" style="align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 10px;">

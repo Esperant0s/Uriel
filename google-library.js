@@ -6,6 +6,8 @@
 // (checked and capped here) go back to the page.
 const { BrowserWindow, ipcMain, session, shell } = require('electron');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 const PROFILE_RE = /^(?:default|[a-z0-9]{4,16})$/;
 const YT_ID = /^[A-Za-z0-9_-]{11}$/;
@@ -271,13 +273,86 @@ function login(parent, profile) {
   });
 }
 
+// ---- playing with the YouTube sign-in (Settings → Integrations → YouTube) ----
+// When YouTube asks yt-dlp to "confirm you're not a bot", every song from this address fails until a signed-in
+// request is made. With this on, the same Google login as the library import goes to yt-dlp as a cookies.txt in
+// the data folder (readable by this user only). It's written when the login happens or when the file is missing,
+// never over an existing one: yt-dlp writes the cookies Google rotates back into it, and an older copy from the
+// login window could undo that. The setting is kept in startup.json: { enabled, profile }.
+const YT_COOKIE_DOMAIN = /(^|\.)(youtube|google)\.com$/;
+
+function netscapeCookies(cookies) {
+  const lines = ['# Netscape HTTP Cookie File', '# Written by Mural for yt-dlp. It holds your YouTube sign-in: keep it private.', ''];
+  for (const c of cookies || []) {
+    const domain = String((c && c.domain) || '');
+    if (!c || !YT_COOKIE_DOMAIN.test(domain.replace(/^\./, '')) || /[\t\r\n]/.test(`${c.name}${c.value}${c.path}`)) continue;
+    const host = c.hostOnly ? domain.replace(/^\./, '') : (domain.startsWith('.') ? domain : `.${domain}`);
+    lines.push([host, c.hostOnly ? 'FALSE' : 'TRUE', c.path || '/', c.secure ? 'TRUE' : 'FALSE', Math.floor(Number(c.expirationDate) || 0), c.name, c.value].join('\t'));
+  }
+  return `${lines.join('\n')}\n`;
+}
+
+async function writeYoutubeCookies(profile, file) {
+  const s = googleSession(profile);
+  if (!(await sapisid(s))) return false;
+  const tmp = `${file}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, netscapeCookies(await s.cookies.get({})), { mode: 0o600 });
+  fs.renameSync(tmp, file);
+  return true;
+}
+
+function playbackSignin() {
+  const { readStartupConfig, writeStartupConfig, DATA_DIR } = require('./platform');
+  const file = path.join(DATA_DIR, 'youtube-cookies.txt');
+  const server = () => require('./server');
+  const get = () => { const v = readStartupConfig().ytPlaybackSignin; return v && typeof v === 'object' ? v : {}; };
+  const use = (on) => { try { server().setYtDlpCookies(on && fs.existsSync(file) ? file : null); } catch (e) {} };
+  const drop = () => { use(false); try { fs.rmSync(file, { force: true }); } catch (e) {} };
+  // at start: the file from last time (yt-dlp keeps it fresh), or a new one from the login if it went missing
+  (async () => {
+    const cfg = get();
+    if (!cfg.enabled) return;
+    if (!fs.existsSync(file)) { try { await writeYoutubeCookies(cfg.profile, file); } catch (e) {} }
+    use(true);
+  })();
+  return {
+    async status(profile) {
+      const cfg = get();
+      return { enabled: !!cfg.enabled, profile: cfg.profile || 'default', loggedIn: !!(await sapisid(googleSession(cfg.enabled ? cfg.profile : profile))) };
+    },
+    async set(enabled, profile) {
+      if (!enabled) { writeStartupConfig({ ytPlaybackSignin: { enabled: false } }); drop(); return this.status(profile); }
+      if (!PROFILE_RE.test(String(profile || ''))) profile = 'default';
+      let ok = false;
+      try { ok = await writeYoutubeCookies(profile, file); } catch (e) {}
+      writeStartupConfig({ ytPlaybackSignin: { enabled: ok, profile } });
+      use(ok);
+      return { ...(await this.status(profile)), error: ok ? '' : 'Sign in to YouTube first' };
+    },
+    // a new login (or logout) of the profile that plays: its cookies replace the old ones
+    async loginChanged(profile, loggedIn) {
+      const cfg = get();
+      if (!cfg.enabled || (cfg.profile || 'default') !== (profile || 'default')) return;
+      if (!loggedIn) { writeStartupConfig({ ytPlaybackSignin: { enabled: false } }); drop(); return; }
+      try { if (await writeYoutubeCookies(profile, file)) use(true); } catch (e) {}
+    },
+  };
+}
+
 function register(getMainWindow) {
-  for (const ch of ['google-auth-status', 'google-login', 'google-logout', 'google-import-library']) ipcMain.removeHandler(ch);
+  for (const ch of ['google-auth-status', 'google-login', 'google-logout', 'google-import-library', 'yt-signin-status', 'yt-signin-set']) ipcMain.removeHandler(ch);
+  const signin = playbackSignin();
   ipcMain.handle('google-auth-status', async (e, profile) => ({ loggedIn: !!(await sapisid(googleSession(profile))) }));
-  ipcMain.handle('google-login', (e, profile) => login(BrowserWindow.fromWebContents(e.sender) || getMainWindow(), profile));
-  ipcMain.handle('google-logout', async (e, profile) => {
-    try { await googleSession(profile).clearStorageData(); return { success: true }; } catch (err) { return { success: false, error: 'Logout failed' }; }
+  ipcMain.handle('google-login', async (e, profile) => {
+    const r = await login(BrowserWindow.fromWebContents(e.sender) || getMainWindow(), profile);
+    if (r && r.loggedIn) await signin.loginChanged(profile, true);
+    return r;
   });
+  ipcMain.handle('google-logout', async (e, profile) => {
+    try { await googleSession(profile).clearStorageData(); await signin.loginChanged(profile, false); return { success: true }; } catch (err) { return { success: false, error: 'Logout failed' }; }
+  });
+  ipcMain.handle('yt-signin-status', (e, profile) => signin.status(profile));
+  ipcMain.handle('yt-signin-set', (e, opts) => signin.set(!!(opts && opts.enabled), opts && opts.profile));
   let running = false;
   ipcMain.handle('google-import-library', async (e, opts) => {
     if (running) return { success: false, error: 'An import is already running' };
@@ -286,4 +361,4 @@ function register(getMainWindow) {
   });
 }
 
-module.exports = { register, partitionFor, _test: { tracksIn, playlistsIn, continuationOf, toTrack } };
+module.exports = { register, partitionFor, _test: { tracksIn, playlistsIn, continuationOf, toTrack, netscapeCookies } };

@@ -10237,6 +10237,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderBlockedSettings(); // a linked device may have changed it
             updateOfflineStorageUI();
             updateDeviceMusicUI();
+            if (typeof refreshYtSignin === 'function') refreshYtSignin(); // signed in or out from the import window
             updateMusicFolderUI();
   updateDownloadFolderUI();
   updateDownloadCaptionPath();
@@ -15731,6 +15732,50 @@ document.addEventListener('DOMContentLoaded', async () => {
   // (google-library.js), one per profile; this page only learns whether it is logged in and gets the songs back
   const googleApi = () => (window.electronAPI && typeof window.electronAPI.googleImportLibrary === 'function' && !window.electronAPI.isMobile ? window.electronAPI : null);
   const googleProfile = () => (window.MurielProfiles && window.MurielProfiles.id) || 'default';
+
+  // Settings → Integrations → YouTube → "Play with my YouTube sign-in" (computers: yt-dlp uses the Google login of
+  // the library import, so songs play while YouTube is asking this address to prove it isn't a bot)
+  const ytSigninToggle = document.getElementById('toggle-yt-signin');
+  const ytSigninBtn = document.getElementById('btn-yt-signin');
+  const ytSigninStatus = document.getElementById('yt-signin-status');
+  const YT_SIGNIN_HINT = ytSigninStatus ? ytSigninStatus.textContent : '';
+  function showYtSignin(st) {
+    if (!ytSigninToggle || !st) return;
+    ytSigninToggle.classList.toggle('active', !!st.enabled);
+    if (ytSigninBtn) ytSigninBtn.hidden = !!st.loggedIn;
+    if (ytSigninStatus) {
+      I18N.text(ytSigninStatus, st.error || (st.enabled ? 'On: songs are looked up with your YouTube sign-in' : YT_SIGNIN_HINT));
+    }
+  }
+  async function refreshYtSignin() {
+    const api = window.electronAPI;
+    if (!ytSigninToggle || !api || !api.ytSigninStatus) return;
+    try { showYtSignin(await api.ytSigninStatus(googleProfile())); } catch (e) {}
+  }
+  if (ytSigninToggle && window.electronAPI && window.electronAPI.ytSigninSet) {
+    ytSigninToggle.addEventListener('click', async () => {
+      const api = window.electronAPI;
+      const enabled = !ytSigninToggle.classList.contains('active');
+      // turning it on without a sign-in: sign in first (the same Google window as the library import)
+      if (enabled) {
+        const st = await api.ytSigninStatus(googleProfile()).catch(() => null);
+        if (!st || !st.loggedIn) {
+          const r = await api.googleLogin(googleProfile()).catch(() => null);
+          if (!r || !r.loggedIn) { refreshYtSignin(); return; }
+        }
+      }
+      try {
+        const st = await api.ytSigninSet({ enabled, profile: googleProfile() });
+        showYtSignin(st);
+        if (enabled && st && st.enabled) showToast(Tm('Songs now play with your YouTube sign-in'), 'success');
+      } catch (e) { refreshYtSignin(); }
+    });
+    if (ytSigninBtn) ytSigninBtn.addEventListener('click', async () => {
+      await window.electronAPI.googleLogin(googleProfile()).catch(() => null);
+      refreshYtSignin();
+    });
+    refreshYtSignin();
+  }
 
   function setLinkStatus(text, isError) {
     if (!linkImportStatus) return;

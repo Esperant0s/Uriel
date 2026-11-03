@@ -83,6 +83,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   googleLogin: (profile) => ipcRenderer.invoke('google-login', profile),
   googleLogout: (profile) => ipcRenderer.invoke('google-logout', profile),
   googleAuthStatus: (profile) => ipcRenderer.invoke('google-auth-status', profile),
+  // Settings → Integrations → YouTube: yt-dlp plays with that Google login (google-library.js)
+  ytSigninStatus: (profile) => ipcRenderer.invoke('yt-signin-status', profile),
+  ytSigninSet: (opts) => ipcRenderer.invoke('yt-signin-set', opts),
   googleImportLibrary: (opts) => ipcRenderer.invoke('google-import-library', opts),
   saveTextFile: (payload) => ipcRenderer.invoke('save-text-file', payload),
 });
