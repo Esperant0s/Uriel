@@ -37,12 +37,14 @@ function rememberStreamHeaders(url, headers) {
 // (every player client gets the same answer), so the other yt-dlp YouTube tries are skipped until then and a song
 // goes straight to the fast lookup and the fallbacks. Before, a blocked song tried yt-dlp three more times and
 // failed only after ~30 seconds.
+// (the pause lives in the shared health board of stream-resolver.js: 'youtube-ytdlp', 'youtube-fast', 'soundcloud')
 const YT_BOT_RE = /confirm you.?re not a bot/i;
-const YT_BOT_PAUSE = 10 * 60 * 1000;
-let ytBotBlockedUntil = 0;
-const ytBotBlocked = () => Date.now() < ytBotBlockedUntil;
+const { createHealth, createResolver } = require('./stream-resolver');
+const streamHealth = createHealth();
+const isStreamBlock = (e) => !!e && (YT_BOT_RE.test(String(e.message || e)) || /HTTP Error 429/.test(String(e.message || e)));
+const ytBotBlocked = () => streamHealth.blocked('youtube-ytdlp');
 function noteYtDlpError(e) {
-  if (e && YT_BOT_RE.test(String(e.message || e))) ytBotBlockedUntil = Date.now() + YT_BOT_PAUSE;
+  if (isStreamBlock(e)) streamHealth.block('youtube-ytdlp');
 }
 
 // Settings → Integrations → YouTube: "Play with my YouTube sign-in" (google-library.js writes the cookies.txt).
@@ -51,7 +53,7 @@ let ytDlpCookiesFile = null;
 function setYtDlpCookies(file) {
   ytDlpCookiesFile = file && fs.existsSync(file) ? file : null;
   // signed in now: YouTube may let yt-dlp in again, so stop skipping it
-  if (ytDlpCookiesFile) ytBotBlockedUntil = 0;
+  if (ytDlpCookiesFile) streamHealth.reset('youtube-ytdlp');
 }
 function withYtDlpCookies(args) {
   if (!ytDlpCookiesFile || !Array.isArray(args) || args.includes('--cookies')) return args;
@@ -1846,6 +1848,8 @@ async function downloadTrackToDisk(trackUrl, trackId, platform, meta = {}, prior
         } catch (e) {}
       } else {
         const reason = (errText.match(/ERROR:[^\n]*/g) || []).pop();
+        downloadFailures.set(cleanId, reason || errText.slice(-300));
+        trimCache(downloadFailures, 200);
         try { logger.error('Download failure: ' + (meta.title || trackId) + ' (exit code ' + code + ')' + (reason ? ': ' + reason.slice(0, 300) : '')); } catch (_) {}
         if (found) try { await fs.promises.unlink(found); } catch (e) {}
         forbidden = /HTTP Error 403/i.test(errText);
@@ -2428,6 +2432,113 @@ async function handleSongRadio(req, res, payload) {
 
 // shown to the listener as is: by now every other upload and SoundCloud were tried too
 const STREAM_FAILED = "Couldn't play this song. Try another version from search";
+const STREAM_BLOCKED = STREAM_VIA_CACHE
+  ? "YouTube is asking to confirm you're not a bot, so this song can't play right now. Try again later"
+  : "YouTube is asking to confirm you're not a bot. Settings → Integrations → YouTube → Play with my YouTube sign-in lets songs play again";
+// why the last download of a song failed (phones: the in-app extractor's message), so a block can be told apart
+const downloadFailures = new Map();
+
+// ---- finding a stream: one resolver, the strategies this platform has (stream-resolver.js) ----
+async function ytDlpLookup(url, clients, timeoutMs, reason) {
+  const args = ['--no-config', ...streamSource.LOOKUP_PRINT_ARGS, '--no-warnings', '--no-playlist', '--prefer-free-formats', '-f', 'bestaudio/best'];
+  if (clients) args.push('--extractor-args', clients);
+  args.push('--', url);
+  const found = streamSource.parseLookup(await executeYtDlp(args, timeoutMs, { key: `g:${url}`, priority: 'play', reason }));
+  if (found.url) rememberStreamHeaders(found.url, found.headers);
+  return found.url || null;
+}
+const fastTurnedAway = () => new Error("YouTube's fast lookup: confirm you're not a bot");
+
+// computers: a stream URL, played through the audio proxy
+const DESKTOP_STRATEGIES = [
+  { name: 'fast', source: 'youtube-fast', maxMs: 10000, canHandle: (s) => s.safe && s.youtube,
+    async attempt(s) {
+      const url = await fastYouTubeStream(s.trackUrl, s.cleanId);
+      if (url) return { url };
+      if (ytFast.botBlocked()) throw fastTurnedAway();
+      return null;
+    } },
+  { name: 'ytDlp', source: (s) => (s.youtube ? 'youtube-ytdlp' : null), maxMs: 25000, canHandle: (s) => s.safe,
+    async attempt(s) {
+      const url = await ytDlpLookup(s.trackUrl, s.youtube ? YT_PLAYER_CLIENTS : null, 25000, 'stream');
+      return url ? { url } : null;
+    } },
+  // other YouTube uploads of the song: the fast lookup first, yt-dlp while YouTube lets it in
+  // (no search for them at all while both YouTube routes are turned away: it cost a second for nothing)
+  { name: 'otherUploads', source: null, maxMs: 20000,
+    canHandle: (s, health) => s.platform !== 'local' && !!(s.title || s.artist) && !(health.blocked('youtube-fast') && health.blocked('youtube-ytdlp')),
+    async attempt(s, { health, signal }) {
+      for (const alt of await alternativeUploads(s.cleanId, s.title, s.artist, s.duration)) {
+        if (signal && signal.aborted) return null;
+        if (health.blocked('youtube-fast') && health.blocked('youtube-ytdlp')) return null;
+        if (!health.blocked('youtube-fast')) {
+          const url = await fastYouTubeStream(alt, null);
+          if (url) return { url };
+          if (ytFast.botBlocked()) health.block('youtube-fast');
+        }
+        if (health.blocked('youtube-ytdlp')) continue;
+        try {
+          const url = await ytDlpLookup(alt, 'youtube:player_client=default,android', 18000, 'stream-alternative');
+          if (url) return { url };
+        } catch (e) {
+          if (isStreamBlock(e)) health.block('youtube-ytdlp');
+          try { logger.error('Stream resolve alternative error: ' + alt, e); } catch (_) {}
+        }
+      }
+      return null;
+    } },
+  { name: 'soundcloud', source: 'soundcloud', maxMs: 20000, canHandle: (s) => !!(s.title || s.artist),
+    async attempt(s) {
+      const sc = await soundcloudFallback(s.title, s.artist, s.duration);
+      if (!sc) return null;
+      const raw = await executeYtDlp(['--no-config', '-g', '--no-warnings', '--no-playlist', '--prefer-free-formats', '-f', 'bestaudio/best', '--', sc], 15000, { key: `g:${sc}`, priority: 'play', reason: 'stream-soundcloud' });
+      const url = raw.trim().split('\n').map((l) => l.trim()).find((l) => l.startsWith('http'));
+      return url ? { url } : null;
+    } },
+];
+
+// phones: the song is downloaded into the cache by the in-app extractor and played from there
+async function downloadInto(s, url, platform) {
+  downloadFailures.delete(s.cleanId);
+  await downloadTrackToDisk(url, s.cleanId, platform, s.meta, 'play');
+  if (await findCachedFile(s.cleanId)) return { local: true };
+  const why = downloadFailures.get(s.cleanId);
+  if (why && isStreamBlock(why)) throw new Error(why);
+  return null;
+}
+const PHONE_STRATEGIES = [
+  { name: 'download', source: (s) => (s.youtube ? 'youtube-fast' : null), maxMs: 60000, canHandle: (s) => !!s.cleanId,
+    attempt: (s) => downloadInto(s, s.trackUrl, s.platform) },
+  // any song that won't play (SoundCloud and YouTube Music included) tries other YouTube uploads of it
+  { name: 'otherUploads', source: 'youtube-fast', maxMs: 90000, canHandle: (s) => !!s.cleanId && s.platform !== 'local' && !!(s.title || s.artist),
+    async attempt(s, { signal }) {
+      for (const alt of await alternativeUploads(s.cleanId, s.title, s.artist, s.duration)) {
+        if (signal && signal.aborted) return null;
+        try { logger.log('warn', `stream: ${s.cleanId} unavailable, trying another upload ${alt}`); } catch (_) {}
+        const got = await downloadInto(s, alt, 'youtube');
+        if (got) return got;
+      }
+      return null;
+    } },
+  { name: 'soundcloud', source: 'soundcloud', maxMs: 60000, canHandle: (s) => !!s.cleanId && !!(s.title || s.artist),
+    async attempt(s) {
+      const sc = await soundcloudFallback(s.title, s.artist, s.duration);
+      return sc ? downloadInto(s, sc, 'soundcloud') : null;
+    } },
+];
+
+const streamResolver = createResolver({
+  strategies: STREAM_VIA_CACHE ? PHONE_STRATEGIES : DESKTOP_STRATEGIES,
+  health: streamHealth,
+  isBlocked: isStreamBlock,
+  log: (song, tried) => {
+    const ok = tried.some((t) => t.outcome === 'ok');
+    if (ok && !YTDLP_DEBUG) return;
+    const steps = tried.map((t) => `${t.name} ${t.outcome}${t.ms != null ? ` ${t.ms}ms` : ''}`).join(', ');
+    try { logger.log(ok ? 'info' : 'error', `Stream ${ok ? 'resolved' : 'resolve failed'}: ${song.title || song.trackUrl} (${steps})`); } catch (_) {}
+  },
+});
+function streamHealthStats() { return streamHealth.stats(); }
 
 // YouTube refuses some uploads outright ("This video is not available": blocked in the listener's country,
 // taken down, age-gated). The same song is usually up several more times, so before giving up (or falling back
@@ -2536,26 +2647,18 @@ async function handleStreamInfo(req, res, trackUrl, trackId, platform = 'youtube
       const proc = downloadProcs.get(cleanId);
       if (proc) { try { proc.kill(); } catch (e) {} }
     });
-    await downloadTrackToDisk(trackUrl, cleanId, platform, meta, 'play');
+    const skip = { aborted: false };
+    req.on('close', () => { if (gone) skip.aborted = true; });
+    let blocked = false;
+    try {
+      await streamResolver.resolve({ id: cleanId, cleanId, trackUrl, platform, title, artist, duration, meta, youtube: ytTarget.youtube }, { reason: 'play', deadlineMs: 180000, signal: skip });
+    } catch (e) { blocked = e && e.code === 'blocked'; }
     if (gone) { resolveLookup({ success: false, error: 'cancelled' }); if (cacheKey && streamUrlCache.get(cacheKey) === inFlightEntry) streamUrlCache.delete(cacheKey); return; }
-    // any song that won't play (SoundCloud and YouTube Music included) tries other YouTube uploads of it
-    if (!await findCachedFile(cleanId) && platform !== 'local' && (title || artist)) {
-      for (const alt of await alternativeUploads(cleanId, title, artist, duration)) {
-        try { logger.log('warn', `stream: ${cleanId} unavailable, trying another upload ${alt}`); } catch (_) {}
-        await downloadTrackToDisk(alt, cleanId, 'youtube', meta, 'play');
-        if (await findCachedFile(cleanId)) break;
-      }
-    }
-    if (!await findCachedFile(cleanId) && (title || artist)) {
-      // same SoundCloud fallback as the streaming path below
-      const sc = await soundcloudFallback(title, artist, duration);
-      if (sc) await downloadTrackToDisk(sc, cleanId, 'soundcloud', meta, 'play');
-    }
     // settle the in-flight entry so concurrent lookups for this track don't wait forever,
     // and drop it so later prefetches don't mistake it for a cached stream URL
     const outcome = await findCachedFile(cleanId)
       ? { success: true, isLocal: true, streamUrl: withToken(`${serverOrigin()}/api/local-track?id=${encodeURIComponent(cleanId)}`) }
-      : { success: false, error: STREAM_FAILED };
+      : { success: false, error: blocked ? STREAM_BLOCKED : STREAM_FAILED, blocked };
     resolveLookup(outcome);
     if (cacheKey && streamUrlCache.get(cacheKey) === inFlightEntry) streamUrlCache.delete(cacheKey);
     res.writeHead(outcome.success ? 200 : 500, { 'Content-Type': 'application/json' });
@@ -2563,60 +2666,14 @@ async function handleStreamInfo(req, res, trackUrl, trackId, platform = 'youtube
   }
 
   let streamUrl = null;
-
-  if (isSafeMediaUrl(trackUrl) && ytTarget.youtube) streamUrl = await fastYouTubeStream(trackUrl, cleanId);
-
-  if (!streamUrl && isSafeMediaUrl(trackUrl) && !(ytTarget.youtube && ytBotBlocked())) {
-    try {
-      const args = ['--no-config', ...streamSource.LOOKUP_PRINT_ARGS, '--no-warnings', '--no-playlist', '--prefer-free-formats', '-f', 'bestaudio/best'];
-      if (ytTarget.youtube) args.push('--extractor-args', YT_PLAYER_CLIENTS);
-      args.push('--', trackUrl);
-      const raw = await executeYtDlp(args, 25000, { key: `g:${trackUrl}`, priority: 'play', reason: 'stream' });
-      const found = streamSource.parseLookup(raw);
-      if (found.url) { streamUrl = found.url; rememberStreamHeaders(found.url, found.headers); }
-    } catch (e) {
-      noteYtDlpError(e);
-      try { logger.error('Stream resolve primary error: ' + (title || trackUrl), e); } catch (_) {}
-    }
-  }
-
-  if (!streamUrl && platform !== 'local' && (title || artist)) {
-    for (const alt of await alternativeUploads(cleanId, title, artist, duration)) {
-      // another upload of the song: the fast lookup first (one request), yt-dlp only while YouTube lets it in.
-      // Both turned away as a bot: the other uploads would be too, so on to SoundCloud
-      if (ytBotBlocked() && ytFast.botBlocked()) break;
-      streamUrl = await fastYouTubeStream(alt, null);
-      if (streamUrl) break;
-      if (ytBotBlocked()) continue;
-      try {
-        const raw = await executeYtDlp(['--no-config', ...streamSource.LOOKUP_PRINT_ARGS, '--no-warnings', '--no-playlist', '--prefer-free-formats', '-f', 'bestaudio/best', '--extractor-args', 'youtube:player_client=default,android', '--', alt], 18000, { key: `g:${alt}`, priority: 'play', reason: 'stream-alternative' });
-        const found = streamSource.parseLookup(raw);
-        streamUrl = found.url;
-        rememberStreamHeaders(found.url, found.headers);
-        if (streamUrl) break;
-      } catch (e) {
-        noteYtDlpError(e);
-        try { logger.error('Stream resolve alternative error: ' + alt, e); } catch (_) {}
-      }
-    }
-  }
-
-  if (!streamUrl && (title || artist)) {
-    try {
-      const sc = await soundcloudFallback(title, artist, duration);
-      if (!sc) throw new Error('no full-length SoundCloud upload');
-      const scArgs = ['--no-config', '-g', '--no-warnings', '--no-playlist', '--prefer-free-formats', '-f', 'bestaudio/best', '--', sc];
-      const scRaw = await executeYtDlp(scArgs, 15000, { key: `g:${sc}`, priority: 'play', reason: 'stream-soundcloud' });
-      const scLines = scRaw.trim().split('\n').map(l => l.trim()).filter(l => l.startsWith('http'));
-      if (scLines.length > 0) streamUrl = scLines[0];
-    } catch (e) {
-      try { logger.error('Stream resolve fallback error: ' + (title || trackUrl), e); } catch (_) {}
-    }
-  }
+  let blocked = false;
+  try {
+    const found = await streamResolver.resolve({ id: cleanId || trackUrl, cleanId, trackUrl, platform, title, artist, duration, safe: isSafeMediaUrl(trackUrl), youtube: ytTarget.youtube }, { reason: 'play' });
+    streamUrl = found.url;
+  } catch (e) { blocked = e && e.code === 'blocked'; }
 
   if (!streamUrl) {
-    try { logger.error('Stream resolve failed: ' + (title || trackUrl)); } catch (_) {}
-    const failure = { success: false, error: STREAM_FAILED };
+    const failure = { success: false, error: blocked ? STREAM_BLOCKED : STREAM_FAILED, blocked };
     resolveLookup(failure);
     if (cacheKey && streamUrlCache.get(cacheKey) === inFlightEntry) {
       streamUrlCache.delete(cacheKey);
@@ -7127,7 +7184,7 @@ function stopServer() {
   });
 }
 
-module.exports = { startServer, stopServer, PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, _test: { withYtDlpCookies } };
+module.exports = { startServer, stopServer, PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, streamHealthStats, _test: { withYtDlpCookies } };
 
 if (require.main === module) {
   startServer();

@@ -1,6 +1,6 @@
 # Playback resolution: one stream resolver for every platform
 
-**Status:** Proposed (follows ADR-0001, action item 2)
+**Status:** Implemented in `stream-resolver.js` (desktop and phones), follows ADR-0001 action item 2
 **Date:** 2026-11-03
 
 How Mural turns "play this song" into an audio URL, today two separate pipelines (desktop `server.js`, phones
@@ -21,10 +21,10 @@ How Mural turns "play this song" into an audio URL, today two separate pipelines
 |---|---|---|
 | Start a cached or local song | < 100 ms | 2-3 ms |
 | Start a song YouTube serves normally | < 2 s | lookup 0.7 s + first audio 0.3-0.5 s |
-| Start a song only SoundCloud has | < 5 s | ~4 s |
-| Give up when nothing works | < 5 s | ~2 s (was 27-30 s before the bot pause) |
+| Start a song only SoundCloud has | < 5 s | 2.1 s once a block is known, 7.4 s for the first song after it |
+| Give up when nothing works | < 5 s | 0.3 s once a block is known (27-30 s before the resolver) |
 | Requests to YouTube per start | ≤ 3 when blocked, ≤ 2 normally | up to 8 before the bot pause |
-| Same behaviour on phones | yes | no: phones have their own rules |
+| Same behaviour on phones | yes | yes: same resolver, the phone strategy list |
 
 ### Constraints
 - One maintainer; JavaScript only; must run in Node (desktop server) and in a WebView through shims (phones).

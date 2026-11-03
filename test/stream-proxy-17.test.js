@@ -52,7 +52,9 @@ test('app.js uses the same proxy rule and falls back to the proxy before a fresh
 
 test('server lookups record the headers and the proxy uses them', () => {
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
-  assert.equal((server.match(/rememberStreamHeaders\(/g) || []).length, 5);
+  // the fast lookup, the shared yt-dlp lookup of the stream resolver, prefetch and its fast path
+  assert.equal((server.match(/rememberStreamHeaders\(/g) || []).length, 4);
+  assert.match(server, /async function ytDlpLookup[\s\S]{0,600}?rememberStreamHeaders\(found\.url, found\.headers\)/);
   assert.match(server, /streamHeaders\.get\(targetUrl\)/);
   assert.doesNotMatch(server, /'-g', '--no-warnings', '--no-playlist', '--prefer-free-formats', '-f', 'bestaudio\/best'\];\n\s+if \((ytTarget|target)\.youtube\)/);
 });

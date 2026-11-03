@@ -385,6 +385,11 @@ function runGUI() {
         const bin = resolveBinary(name);
         lines.push(`${name}: ${bin || 'NOT FOUND'}`);
       }
+      // how each stream source has been doing this session (stream-resolver.js): "youtube-ytdlp: 2 ok, 6 blocked"
+      try {
+        const stats = require('./server').streamHealthStats();
+        for (const [src, st] of Object.entries(stats)) lines.push(`stream ${src}: ${st.ok} ok, ${st.blocked} blocked, ${st.failed} failed${st.waiting ? `, skipped for ${Math.ceil(st.waiting / 60000)} more min` : ''}`);
+      } catch (e) {}
       lines.push('--- last log lines ---', ...tail(60));
       return lines.join('\n');
     });

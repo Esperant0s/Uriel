@@ -22,18 +22,23 @@ test('video ids come from links and bare ids only', () => {
   assert.equal(ytFast.videoId('soundcloud:123'), null);
 });
 
-test('song start and next-song lookups try the fast way before yt-dlp', () => {
+test('song start, the next song and other uploads try the fast way before yt-dlp', () => {
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
-  // song start, the next-song lookup and the other uploads of a song that wouldn't play
-  assert.equal((server.match(/await fastYouTubeStream\(/g) || []).length, 3);
-  assert.ok(server.indexOf('streamUrl = await fastYouTubeStream(alt, null);') < server.indexOf("reason: 'stream-alternative' }"));
-  assert.ok(server.indexOf('await fastYouTubeStream(trackUrl, cleanId);') < server.indexOf("reason: 'stream' }"));
+  const order = (list) => list.map((name) => server.indexOf(name, server.indexOf('const DESKTOP_STRATEGIES')));
+  // the resolver's computer strategies, in this order
+  const [fast, ytDlp, other, sc] = order(["name: 'fast'", "name: 'ytDlp'", "name: 'otherUploads'", "name: 'soundcloud'"]);
+  assert.ok(fast > 0 && fast < ytDlp && ytDlp < other && other < sc);
+  // other uploads: the fast lookup before yt-dlp
+  assert.ok(server.indexOf('await fastYouTubeStream(alt, null)') < server.indexOf("'stream-alternative'"));
+  // the next song (prefetch) too
+  const pre = server.indexOf('async function prefetchTrack');
+  assert.ok(server.indexOf('await fastYouTubeStream(trackUrl, cleanId)', pre) < server.indexOf("reason: 'prefetch'", pre));
 });
 
-test("YouTube's \"confirm you're not a bot\" pauses the yt-dlp tries instead of repeating them for every upload", () => {
+test("YouTube's \"confirm you're not a bot\" is a block for the shared stream health, and a sign-in clears it", () => {
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
   assert.match(server, /const YT_BOT_RE = \/confirm you\.\?re not a bot\/i;/);
   assert.ok("ERROR: [youtube] sBzrzS1Ag_g: Sign in to confirm you’re not a bot.".match(/confirm you.?re not a bot/i));
-  assert.match(server, /isSafeMediaUrl\(trackUrl\) && !\(ytTarget\.youtube && ytBotBlocked\(\)\)/);
-  assert.match(server, /if \(ytBotBlocked\(\)\) continue;/);
+  assert.match(server, /isBlocked: isStreamBlock/);
+  assert.match(server, /streamHealth\.reset\('youtube-ytdlp'\)/);
 });
