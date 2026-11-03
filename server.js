@@ -33,6 +33,18 @@ function rememberStreamHeaders(url, headers) {
 }
 // The fast way to a YouTube stream (yt-fast.js, one API request instead of a yt-dlp run); null when
 // YouTube doesn't give this song out that way, and the caller then asks yt-dlp
+// YouTube asking yt-dlp to "confirm you're not a bot": it asks that for every video from this address for a while
+// (every player client gets the same answer), so the other yt-dlp YouTube tries are skipped until then and a song
+// goes straight to the fast lookup and the fallbacks. Before, a blocked song tried yt-dlp three more times and
+// failed only after ~30 seconds.
+const YT_BOT_RE = /confirm you.?re not a bot/i;
+const YT_BOT_PAUSE = 10 * 60 * 1000;
+let ytBotBlockedUntil = 0;
+const ytBotBlocked = () => Date.now() < ytBotBlockedUntil;
+function noteYtDlpError(e) {
+  if (e && YT_BOT_RE.test(String(e.message || e))) ytBotBlockedUntil = Date.now() + YT_BOT_PAUSE;
+}
+
 async function fastYouTubeStream(trackUrl, id) {
   const vid = ytFast.videoId(id) || ytFast.videoId(trackUrl);
   if (!vid) return null;
@@ -1862,6 +1874,8 @@ async function prefetchTrack(trackUrl, trackId, platform, meta = null, priority 
     trackUrl = target.url;
     if (!isSafeMediaUrl(trackUrl)) return;
     let streamUrl = target.youtube ? await fastYouTubeStream(trackUrl, cleanId) : null;
+    // YouTube is turning yt-dlp away for now: preparing the next song that way would only add to it
+    if (!streamUrl && target.youtube && ytBotBlocked()) return;
     if (!streamUrl) {
       const args = ['--no-config', ...streamSource.LOOKUP_PRINT_ARGS, '--no-warnings', '--no-playlist', '--prefer-free-formats', '-f', 'bestaudio/best'];
       if (target.youtube) args.push('--extractor-args', YT_PLAYER_CLIENTS);
@@ -1890,6 +1904,7 @@ async function prefetchTrack(trackUrl, trackId, platform, meta = null, priority 
       trimCache(streamUrlCache, 300);
     }
   } catch (e) {
+    noteYtDlpError(e);
   } finally {
     prefetchingSet.delete(cacheKey);
   }
@@ -2531,7 +2546,7 @@ async function handleStreamInfo(req, res, trackUrl, trackId, platform = 'youtube
 
   if (isSafeMediaUrl(trackUrl) && ytTarget.youtube) streamUrl = await fastYouTubeStream(trackUrl, cleanId);
 
-  if (!streamUrl && isSafeMediaUrl(trackUrl)) {
+  if (!streamUrl && isSafeMediaUrl(trackUrl) && !(ytTarget.youtube && ytBotBlocked())) {
     try {
       const args = ['--no-config', ...streamSource.LOOKUP_PRINT_ARGS, '--no-warnings', '--no-playlist', '--prefer-free-formats', '-f', 'bestaudio/best'];
       if (ytTarget.youtube) args.push('--extractor-args', YT_PLAYER_CLIENTS);
@@ -2540,12 +2555,19 @@ async function handleStreamInfo(req, res, trackUrl, trackId, platform = 'youtube
       const found = streamSource.parseLookup(raw);
       if (found.url) { streamUrl = found.url; rememberStreamHeaders(found.url, found.headers); }
     } catch (e) {
+      noteYtDlpError(e);
       try { logger.error('Stream resolve primary error: ' + (title || trackUrl), e); } catch (_) {}
     }
   }
 
   if (!streamUrl && platform !== 'local' && (title || artist)) {
     for (const alt of await alternativeUploads(cleanId, title, artist, duration)) {
+      // another upload of the song: the fast lookup first (one request), yt-dlp only while YouTube lets it in.
+      // Both turned away as a bot: the other uploads would be too, so on to SoundCloud
+      if (ytBotBlocked() && ytFast.botBlocked()) break;
+      streamUrl = await fastYouTubeStream(alt, null);
+      if (streamUrl) break;
+      if (ytBotBlocked()) continue;
       try {
         const raw = await executeYtDlp(['--no-config', ...streamSource.LOOKUP_PRINT_ARGS, '--no-warnings', '--no-playlist', '--prefer-free-formats', '-f', 'bestaudio/best', '--extractor-args', 'youtube:player_client=default,android', '--', alt], 18000, { key: `g:${alt}`, priority: 'play', reason: 'stream-alternative' });
         const found = streamSource.parseLookup(raw);
@@ -2553,6 +2575,7 @@ async function handleStreamInfo(req, res, trackUrl, trackId, platform = 'youtube
         rememberStreamHeaders(found.url, found.headers);
         if (streamUrl) break;
       } catch (e) {
+        noteYtDlpError(e);
         try { logger.error('Stream resolve alternative error: ' + alt, e); } catch (_) {}
       }
     }

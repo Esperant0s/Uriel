@@ -64,6 +64,11 @@ function pickFormats(player) {
 
 const videoId = (u) => { const m = String(u || '').match(/(?:v=|youtu\.be\/|\/shorts\/|^)([\w-]{11})(?:[&?#]|$)/); return m ? m[1] : null; };
 
+// while YouTube asks this address to prove it isn't a bot, looking up other uploads of a song this way is pointless
+const BOT_PAUSE = 10 * 60 * 1000;
+let botUntil = 0;
+const botBlocked = () => Date.now() < botUntil;
+
 async function lookup(id) {
   if (!/^[\w-]{11}$/.test(String(id || ''))) return null;
   for (const force of [false, true]) {
@@ -75,6 +80,8 @@ async function lookup(id) {
     try { player = JSON.parse(r.body); } catch (_) { return null; }
     const status = player && player.playabilityStatus && player.playabilityStatus.status;
     if (status === 'LOGIN_REQUIRED' && !force) continue;
+    // "Sign in to confirm you're not a bot": YouTube turns this address away for a while, for every video
+    if (status === 'LOGIN_REQUIRED' && /not a bot/i.test(String(player.playabilityStatus.reason || ''))) botUntil = Date.now() + BOT_PAUSE;
     if (status !== 'OK') return null;
     // YouTube lists links it then refuses (403) for some songs: check the first one answers before using it
     for (const f of pickFormats(player).slice(0, 2)) {
@@ -88,4 +95,4 @@ async function lookup(id) {
   return null;
 }
 
-module.exports = { lookup, videoId, pickFormats, VOS_UA };
+module.exports = { lookup, videoId, pickFormats, botBlocked, VOS_UA };

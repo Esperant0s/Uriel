@@ -24,6 +24,16 @@ test('video ids come from links and bare ids only', () => {
 
 test('song start and next-song lookups try the fast way before yt-dlp', () => {
   const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
-  assert.equal((server.match(/await fastYouTubeStream\(/g) || []).length, 2);
+  // song start, the next-song lookup and the other uploads of a song that wouldn't play
+  assert.equal((server.match(/await fastYouTubeStream\(/g) || []).length, 3);
+  assert.ok(server.indexOf('streamUrl = await fastYouTubeStream(alt, null);') < server.indexOf("reason: 'stream-alternative' }"));
   assert.ok(server.indexOf('await fastYouTubeStream(trackUrl, cleanId);') < server.indexOf("reason: 'stream' }"));
+});
+
+test("YouTube's \"confirm you're not a bot\" pauses the yt-dlp tries instead of repeating them for every upload", () => {
+  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(server, /const YT_BOT_RE = \/confirm you\.\?re not a bot\/i;/);
+  assert.ok("ERROR: [youtube] sBzrzS1Ag_g: Sign in to confirm you’re not a bot.".match(/confirm you.?re not a bot/i));
+  assert.match(server, /isSafeMediaUrl\(trackUrl\) && !\(ytTarget\.youtube && ytBotBlocked\(\)\)/);
+  assert.match(server, /if \(ytBotBlocked\(\)\) continue;/);
 });

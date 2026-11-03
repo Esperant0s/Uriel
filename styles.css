@@ -8395,6 +8395,14 @@ body.perf .art-in { animation: none; }
 
 /* Player bar: give the track title room */
 .playbar { grid-template-columns: minmax(280px, 1fr) minmax(320px, 600px) minmax(280px, 1fr) !important; }
+/* ...but those minimums add up to more than a narrow window (880px + padding): below 1000px the right side, the
+   volume with it, ran off the edge. The sides may shrink there, and the right side's controls draw closer. */
+@media (max-width: 1000px) and (min-width: 601px) {
+  .playbar { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) !important; }
+  .playbar-right { gap: 4px; padding-right: 12px; min-width: 0; }
+  .playbar-right #visualizer-container { display: none; }
+  .playbar-right .volume-slider-wrapper, .playbar-right #volume-slider { width: 56px; min-width: 56px; }
+}
 #btn-toggle-queue { position: relative; }
 .playbar-left .track-meta { flex: 0 1 auto !important; max-width: 220px; }
 .playbar-badge {
