@@ -275,11 +275,13 @@ function login(parent, profile) {
 
 // ---- playing with the YouTube sign-in (Settings → Integrations → YouTube) ----
 // When YouTube asks yt-dlp to "confirm you're not a bot", every song from this address fails until a signed-in
-// request is made. With this on, the same Google login as the library import goes to yt-dlp as a cookies.txt in
+// request is made. With this on, the YouTube cookies of the library import's Google login go to yt-dlp as a cookies.txt in
 // the data folder (readable by this user only). It's written when the login happens or when the file is missing,
 // never over an existing one: yt-dlp writes the cookies Google rotates back into it, and an older copy from the
 // login window could undo that. The setting is kept in startup.json: { enabled, profile }.
-const YT_COOKIE_DOMAIN = /(^|\.)(youtube|google)\.com$/;
+// youtube.com cookies only: they're what yt-dlp signs in with. The google.com ones together are a whole Google
+// account session, which a file on disk has no reason to hold.
+const YT_COOKIE_DOMAIN = /(^|\.)youtube\.com$/;
 
 function netscapeCookies(cookies) {
   const lines = ['# Netscape HTTP Cookie File', '# Written by Mural for yt-dlp. It holds your YouTube sign-in: keep it private.', ''];

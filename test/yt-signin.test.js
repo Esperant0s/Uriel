@@ -14,7 +14,7 @@ test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const { netscapeCookies } = require('../google-library')._test;
 
-test('only YouTube and Google cookies go into the file, in the format yt-dlp reads', () => {
+test("only YouTube's cookies go into the file (not the Google account's), in the format yt-dlp reads", () => {
   const text = netscapeCookies([
     { domain: '.youtube.com', hostOnly: false, path: '/', secure: true, expirationDate: 1893456000.5, name: 'SAPISID', value: 'abc' },
     { domain: 'accounts.google.com', hostOnly: true, path: '/', secure: true, expirationDate: 0, name: 'LSID', value: 'x' },
@@ -24,7 +24,7 @@ test('only YouTube and Google cookies go into the file, in the format yt-dlp rea
   const lines = text.trim().split('\n');
   assert.equal(lines[0], '# Netscape HTTP Cookie File');
   assert.ok(lines.includes('.youtube.com\tTRUE\t/\tTRUE\t1893456000\tSAPISID\tabc'));
-  assert.ok(lines.includes('accounts.google.com\tFALSE\t/\tTRUE\t0\tLSID\tx'));
+  assert.equal(text.includes('LSID'), false, 'google.com account cookies stay out');
   assert.equal(text.includes('example.com'), false);
   assert.equal(text.includes('bad'), false);
 });

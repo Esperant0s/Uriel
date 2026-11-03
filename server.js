@@ -387,12 +387,18 @@ function deviceFolders() {
   if (path.resolve(downloads) !== path.resolve(music)) folders.push({ dir: downloads, deep: false, source: 'downloads' });
   return folders;
 }
+// Only the newest scan installs its watchers: a change during a scan starts another one, and when the older scan
+// finished last it used to put a second set of watchers next to the newer one's, never closed.
+let deviceScanGen = 0;
 async function rescanDeviceMusic() {
   if (STREAM_VIA_CACHE) return;
+  const gen = ++deviceScanGen;
   if (deviceStopWatching) { deviceStopWatching(); deviceStopWatching = null; }
   if (!deviceMusic.enabled) { deviceIndex = {}; return; }
   const folders = deviceFolders();
-  setDeviceSongs(await deviceLibrary.scanFolders(folders));
+  const songs = await deviceLibrary.scanFolders(folders);
+  if (gen !== deviceScanGen) return;
+  setDeviceSongs(songs);
   deviceStopWatching = deviceLibrary.watchFolders(folders, () => { rescanDeviceMusic().catch(() => {}); });
 }
 

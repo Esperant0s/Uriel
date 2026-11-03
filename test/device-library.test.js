@@ -80,6 +80,20 @@ test('taking a found song out of the library keeps the file, and it stays out af
   assert.equal((await library()).some((s) => s.id === lucky.id), true, '"show removed songs again" brings it back');
 });
 
+test('rescans started together leave one set of folder watchers, not one per scan', async () => {
+  const realWatch = fs.watch;
+  let open = 0;
+  fs.watch = (...args) => { const w = realWatch(...args); open++; const close = w.close.bind(w); w.close = () => { open--; return close(); }; return w; };
+  try {
+    // (recursive watching opens one watcher per subfolder here, so the baseline is what one scan leaves)
+    await rescanDeviceMusic();
+    const one = open;
+    await Promise.all([rescanDeviceMusic(), rescanDeviceMusic(), rescanDeviceMusic()]);
+    assert.ok(one > 0);
+    assert.equal(open, one, `three scans at once leave ${open} watchers, one scan ${one}`);
+  } finally { fs.watch = realWatch; }
+});
+
 test('turning it off empties the found songs', async () => {
   await call('/api/device-music', { enabled: false });
   assert.equal((await library()).length, 0);
