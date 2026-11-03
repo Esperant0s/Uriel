@@ -22,6 +22,8 @@ concurrency:
 
 jobs:
   deploy:
+    # site/ is the original Muriel's download page (its links and counts): forks such as Mural don't publish it
+    if: github.repository == 'cloverscripts/riff-muriel'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
