@@ -9070,3 +9070,10 @@ html:not(.platform-win32) .windows-only { display: none !important; }
 body.hide-titlebar:not(.mini) .toast-container { top: 76px; }
 body.mini .toast-container { top: 12px; }
 body.hide-titlebar:not(.mini) .update-banner { top: 76px; }
+
+/* Things you read and choose from sit on a solid surface whatever Interface opacity is set to: at the old default
+   (20%) a dialog, menu or message over a bright album cover or wallpaper was 80% see-through and hard to read.
+   Phones did this for toasts and menus already (mobile.css). Panels still follow the setting. */
+:is(.settings-card, .dialog-card, .modal-card, .m3-dropdown-menu, .track-context-menu, .profile-menu, .muriel-toast) {
+  background-color: var(--md-sys-color-surface-container-high-solid) !important;
+}

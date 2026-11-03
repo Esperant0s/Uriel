@@ -1151,6 +1151,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const coverAnalysisCache = new Map();
   // drop the oldest entries of an in-memory cache past n, so long sessions don't grow without end
   function capMap(m, n) { while (m.size > n) m.delete(m.keys().next().value); }
+  // Interface opacity when it was never set: panels mostly solid, so text stays readable over busy backgrounds and
+  // album colours (Riff's 20% made every panel 80% see-through). Menus and dialogs are solid whatever it is (styles.css).
+  const DEFAULT_UI_ALPHA = '85';
   // "Available offline" marks (checkOffline, further down): kept up here, playTrack can run before that part
   const OFFLINE_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8"/><path d="M8 3.6v6.2M5.2 7.4 8 10.2l2.8-2.8M5 12h6" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const offlineKnown = new Map(); // offlineKey -> true / false
@@ -1551,7 +1554,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem('muriel_ui_alpha', '100');
         document.documentElement.style.setProperty('--ui-alpha', '100%');
         document.getElementById('slider-ui-alpha').value = 100;
-        localStorage.setItem('muriel_ui_alpha_light_prev', '20');
+        localStorage.setItem('muriel_ui_alpha_light_prev', DEFAULT_UI_ALPHA);
         localStorage.setItem('muriel_ui_alpha_light_auto', '100');
       }
       lastEffectiveMode = mode;
@@ -1987,7 +1990,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   applyBannerFit(savedBannerFit);
 
   function applyUiOpacity() {
-    const rawUi = parseInt(localStorage.getItem('muriel_ui_alpha') || '20', 10);
+    const rawUi = parseInt(localStorage.getItem('muriel_ui_alpha') || DEFAULT_UI_ALPHA, 10);
     const rawText = parseInt(localStorage.getItem('muriel_text_alpha') || '100', 10);
     const uiAlpha = Math.max(20, Math.min(100, isNaN(rawUi) ? 100 : rawUi));
     const textAlpha = Math.max(1, Math.min(100, isNaN(rawText) ? 100 : rawText));
@@ -12386,7 +12389,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else if (key === 'glass_blur') {
         applyGlass();
         // glass over a fully opaque UI does nothing, so make it see-through the first time
-        if (newVal && parseInt(localStorage.getItem('muriel_ui_alpha') || '20', 10) >= 100) {
+        if (newVal && parseInt(localStorage.getItem('muriel_ui_alpha') || DEFAULT_UI_ALPHA, 10) >= 100) {
           localStorage.setItem('muriel_ui_alpha', '60');
           applyUiOpacity();
           showToast(Tm('Interface opacity set to 60% so the glass shows'), 'info');
