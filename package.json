@@ -66,6 +66,7 @@
       "!ios/**",
       "!android/**",
       "!tools/**",
+      "!docs/**",
       "!capacitor.config.json",
       "!.claude/**",
       "!vendor/**",
