@@ -1,4 +1,4 @@
-## Mural 1.5.2
+## Mural 1.5.3
 
 Mural is the new name of the Esperant0s fork of [Muriel](https://github.com/cloverscripts/riff-muriel) by cloverscripts, itself based on [Riff](https://github.com/rootscripts/riff) by rootscripts (MIT). It is its own app now and installs next to Muriel.
 
@@ -8,6 +8,14 @@ Mural is the new name of the Esperant0s fork of [Muriel](https://github.com/clov
 - **Windows:** installer below, or the portable exe on [windows-latest](https://github.com/Esperant0s/riff-muriel/releases/tag/windows-latest). Windows SmartScreen may warn because the files are unsigned: More info → Run anyway.
 - **macOS:** `.dmg` / `.zip` below, for Apple Silicon and Intel. The app is unsigned: if macOS blocks it, open System Settings → Privacy & Security → Open Anyway.
 - **Linux:** `.AppImage` below (needs FUSE 2: `fuse2` / `libfuse2`)
+
+**New in 1.5.3**
+- **Easier to read:** panels start 85% solid instead of see-through, and dialogs, menus and messages are always solid, whatever the opacity setting.
+- **One way to find songs on every device:** computers and phones now share the same rules for finding a playable stream. When YouTube is turning lookups away, a song that can't play says so in under a second, songs that SoundCloud has start in about 2 seconds, and the message points to Play with my YouTube sign-in.
+
+**Fixed in 1.5.3**
+- **YouTube sign-in:** the file Mural gives yt-dlp now holds only YouTube's cookies, not the rest of your Google account's.
+- **Music folders:** rescanning your music no longer leaves old folder watchers running in the background.
 
 **New in 1.5.2**
 - **The app icon changes too:** picking an icon in Settings → Theme → App icon now changes Mural's own icon, not just the Home button: the phone's home-screen icon (one of the 12 styles; Android and iPhone can't use your own picture there) and, on computers, the window, taskbar and Dock icon (your own picture works too). iPhone shows a short "You have changed the icon" message; that's iOS.
