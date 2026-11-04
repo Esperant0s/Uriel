@@ -113,7 +113,7 @@
       if (!audioElement) return;
 
       if (this.ctx) {
-        if (!audioElement.paused && this.ctx.state === 'suspended') {
+        if (!audioElement.paused && this.needsResume()) {
           this.ctx.resume().catch(() => {});
         }
       } else {
@@ -573,12 +573,19 @@
       }, delayMs);
     }
 
+    // iPhone: another app's sound leaves the context 'interrupted', not 'suspended'. Only 'suspended' was
+    // resumed, so after the interruption every play (the lock screen's too) went into a silent context, iOS saw
+    // nothing playing and dropped the controls, and the song came back only once the app was opened (#26)
+    needsResume() {
+      return !!this.ctx && (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted');
+    }
+
     resumeAudioContext() {
       if (this._suspendTimer) {
         clearTimeout(this._suspendTimer);
         this._suspendTimer = null;
       }
-      if (this.ctx && this.ctx.state === 'suspended') {
+      if (this.needsResume()) {
         return this.ctx.resume().catch(() => {});
       }
     }

@@ -641,3 +641,42 @@ html.is-mobile body.np-open #btn-playbar-radio { grid-column: 2; }
 html.is-mobile body.np-open #btn-toggle-queue { grid-column: 3; }
 html.is-mobile body.np-open #btn-open-settings { grid-column: 4; }
 
+
+/* ---------- player: centred controls and title, lyrics tools behind one button ---------- */
+/* mini player: the play button is a real circle in a wrapper of its own size. The desktop wrapper is 70px wide
+   and the button kept the desktop 48px min-height, so it was a 44x48 oval sitting off-centre before Next. */
+html.is-mobile .play-pause-wrapper { width: 48px !important; height: 48px !important; min-height: 48px !important; max-height: 48px !important; }
+html.is-mobile .btn-play-pause,
+html.is-mobile .btn-play-pause.playing { width: 44px !important; height: 44px !important; min-height: 44px !important; max-height: 44px !important; border-radius: 22px !important; }
+/* full player: a 64px circle, a rounded square while playing (it was 64x48 for the same reason) */
+html.is-mobile body.np-open .play-pause-wrapper { width: 76px !important; height: 64px !important; min-height: 64px !important; max-height: 64px !important; }
+html.is-mobile body.np-open .btn-play-pause { width: 64px !important; height: 64px !important; min-height: 64px !important; max-height: 64px !important; border-radius: 32px !important; }
+html.is-mobile body.np-open .btn-play-pause.playing { width: 76px !important; border-radius: 22px !important; }
+/* the play triangle's weight sits left of its box: nudge it so it looks centred in the circle */
+html.is-mobile .btn-play-pause #play-icon { transform: translateX(1.5px); }
+
+/* Now playing / Queue: centred, clear of the grab handle and the screen edge; the lyrics tools button on the
+   left and Close on the right balance each other */
+html.is-mobile #right-panel .drawer-tabs { position: relative !important; justify-content: center !important; gap: 8px !important; min-height: 44px !important; margin: 14px 0 4px !important; padding: 0 52px !important; }
+html.is-mobile #right-panel .drawer-tab { padding: 9px 20px !important; }
+html.is-mobile #right-panel .drawer-tabs #btn-close-right-panel,
+html.is-mobile #right-panel .drawer-tabs #np-tools-toggle { position: absolute !important; top: 50% !important; margin: -20px 0 0 !important; width: 40px !important; height: 40px !important; }
+html.is-mobile #right-panel .drawer-tabs #btn-close-right-panel { right: 0 !important; }
+html.is-mobile #right-panel .drawer-tabs #np-tools-toggle { left: 0 !important; display: grid !important; place-items: center !important; border-radius: 50% !important; }
+html.is-mobile #right-panel .drawer-tabs #np-tools-toggle.active { background: var(--md-sys-color-secondary-container) !important; color: var(--md-sys-color-on-secondary-container) !important; }
+/* only for the Now playing page */
+html.is-mobile #right-panel .drawer-tabs:has(.drawer-tab[data-drawer-tab="queue"].active) #np-tools-toggle { visibility: hidden !important; }
+
+/* lyrics tools (edit, sync, translate, fullscreen, Line/Word): hidden until the tools button is tapped, then
+   one centred row */
+html.is-mobile #right-panel:not(.np-tools-open) .right-panel-header { display: none !important; }
+html.is-mobile #right-panel.np-tools-open .right-panel-header-actions { justify-content: center !important; }
+html.is-mobile #right-panel.np-tools-open .np-tools-moved { margin-right: 0 !important; }
+
+/* big cover: title and artist centred under it. The like button sat in the title's row and pushed the title
+   left of the artist line; it now floats at the row's right with the same room kept free on the left. */
+html.is-mobile #right-panel.lyrics-empty .right-panel-meta { width: 100% !important; align-items: center !important; text-align: center !important; }
+html.is-mobile #right-panel.lyrics-empty .right-panel-title-row { position: relative !important; justify-content: center !important; width: 100% !important; box-sizing: border-box !important; padding: 0 44px !important; }
+html.is-mobile #right-panel.lyrics-empty .right-panel-title { flex: 0 1 auto !important; text-align: center !important; }
+html.is-mobile #right-panel.lyrics-empty .right-panel-artist { display: block !important; width: 100% !important; text-align: center !important; padding: 0 44px !important; box-sizing: border-box !important; }
+html.is-mobile #right-panel.lyrics-empty #np-like { position: absolute !important; right: 0 !important; top: 50% !important; margin-top: -20px !important; }

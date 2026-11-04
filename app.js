@@ -2377,7 +2377,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function initAudioContext() {
     audioEngine.init(el.nativeAudio);
     
-    if (audioEngine.ctx && audioEngine.ctx.state === 'suspended') {
+    if (audioEngine.ctx && audioEngine.needsResume()) {
       audioEngine.ctx.resume().catch(() => {});
     }
     
@@ -3716,10 +3716,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       t.preload = 'auto';
       if (a.crossOrigin) t.crossOrigin = a.crossOrigin;
       t.volume = 0;
-      t.playbackRate = a.playbackRate;
-      if ('preservesPitch' in a) t.preservesPitch = a.preservesPitch;
+      // loading the song resets playbackRate to defaultPlaybackRate (1), so the tail played at normal speed and
+      // pitch however the song was set (#36): set both, and again once it has loaded (WebKit resets it late)
+      const matchRate = () => {
+        const rate = a.playbackRate || 1;
+        t.defaultPlaybackRate = rate;
+        t.playbackRate = rate;
+        if ('preservesPitch' in a) t.preservesPitch = a.preservesPitch;
+        if ('webkitPreservesPitch' in a) t.webkitPreservesPitch = a.webkitPreservesPitch;
+      };
+      matchRate();
+      p.matchRate = matchRate;
       if (a.sinkId && typeof t.setSinkId === 'function') t.setSinkId(a.sinkId).catch(() => {});
-      t.addEventListener('loadedmetadata', () => { try { t.currentTime = point; } catch (e) {} }, { once: true });
+      t.addEventListener('loadedmetadata', () => { matchRate(); try { t.currentTime = point; } catch (e) {} }, { once: true });
       t.addEventListener('seeked', () => { if (xfade.prep === p) p.ready = true; }, { once: true });
       t.addEventListener('error', () => { if (xfade.prep === p) dropCrossfadePrep(); }, { once: true });
       t.src = a.currentSrc;
@@ -3757,6 +3766,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const t = p.el;
     const level = tailLevel();
     try { t.currentTime = Math.min(p.end, a.currentTime + 0.02); } catch (e) {}
+    if (p.matchRate) p.matchRate(); // the speed may have changed since the tail was opened
     t.volume = 0; // silent until the main player lets go, or the two would play the same seconds twice
     const played = t.play();
     Promise.resolve(played).then(() => {
@@ -6296,7 +6306,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (xfade.tail && xfade.tail.el.paused) resumeCrossfadeTail();
     initAudioContext();
-    if (audioEngine && audioEngine.ctx && audioEngine.ctx.state === 'suspended') {
+    if (audioEngine && audioEngine.ctx && audioEngine.needsResume()) {
       // in a backgrounded WebView resume() can hang until the app is opened; don't let it hold play() back (#24).
       // The 'play' / 'playing' handlers ask the context to resume again.
       await Promise.race([audioEngine.ctx.resume().catch(() => {}), new Promise((r) => setTimeout(r, 400))]);
@@ -8390,9 +8400,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const itemHeight = 64;
+    // the row height is measured, not assumed: phone rows are 60px, and with a fixed 64 the drawn slice drifted
+    // 4px per row away from the screen, so a long playlist showed blank space while scrolling (#40)
+    let itemHeight = container._rowHeight || 64;
     const overscan = 15;
-    
+    function measureRowHeight() {
+      const rows = container.querySelectorAll('.track-row');
+      if (rows.length < 2) return 0;
+      const step = rows[1].offsetTop - rows[0].offsetTop;
+      return step > 20 && step < 200 ? step : 0;
+    }
+
     function renderChunk() {
       if (!scrollParent || container._isDraggingReorder) return;
       const parentRect = scrollParent.getBoundingClientRect();
@@ -8427,6 +8445,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       container.style.paddingBottom = `${(tracks.length - endIndex) * itemHeight}px`;
       container.appendChild(fragment);
       container._hasInitialRendered = true;
+      const measured = measureRowHeight();
+      if (measured && Math.abs(measured - itemHeight) > 0.5) {
+        itemHeight = measured;
+        container._rowHeight = measured;
+        container._lastStartIndex = -1;
+        container._lastEndIndex = -1;
+        renderChunk();
+        return;
+      }
       highlightPlayingRow();
       checkOffline(tracks.slice(startIndex, endIndex));
     }
@@ -9220,11 +9247,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     if ((p === 'youtube' || p === 'ytmusic' || p === 'yt' || (!p && !track.url)) && /^[\w-]{11}$/.test(String(track.id || ''))) return String(track.id);
     return '';
   }
+  // YouTube's 4:3 frames (hqdefault, sddefault, default, 0-3) have black bars baked in above and below the 16:9
+  // video, and a square cover showed them, around the video's own side panels (#31). The 16:9 frames have no
+  // bars, and their middle square is the artwork of an album-art video: maxresdefault, else mqdefault (always there).
+  const YT_BOXED = /^https?:\/\/i\d?\.ytimg\.com\/vi(?:_webp)?\/([\w-]{11})\/(?:hqdefault|sddefault|default|[0-3])\.(?:jpg|webp)(?:\?.*)?$/;
+  function unboxedYt(url) {
+    const m = typeof url === 'string' ? url.match(YT_BOXED) : null;
+    return m ? `https://i.ytimg.com/vi/${m[1]}/maxresdefault.jpg` : url;
+  }
+  // a missing maxresdefault is YouTube's 120x90 grey stand-in, which loads fine (no error): use mqdefault
+  document.addEventListener('load', (e) => {
+    const img = e.target;
+    if (!img || img.tagName !== 'IMG' || img.naturalWidth > 120) return;
+    const m = (img.getAttribute('src') || '').match(/^https?:\/\/i\d?\.ytimg\.com\/vi(?:_webp)?\/([\w-]{11})\/(?:maxresdefault|sddefault)\./);
+    if (m) img.src = `https://i.ytimg.com/vi/${m[1]}/mqdefault.jpg`;
+  }, true);
   // other sizes of a cover we already have (YouTube frames, SoundCloud artwork)
   function artVariants(url) {
     if (!url || typeof url !== 'string') return [];
     const yt = url.match(YT_THUMB);
-    if (yt) return ['hqdefault', 'mqdefault', 'default'].map((s) => `https://i.ytimg.com/vi/${yt[1]}/${s}.jpg`);
+    if (yt) return ['maxresdefault', 'mqdefault'].map((s) => `https://i.ytimg.com/vi/${yt[1]}/${s}.jpg`);
     if (/sndcdn\.com\/.*-(t500x500|original|large|crop|t300x300)\./.test(url)) return ['t500x500', 'large', 't300x300'].map((s) => url.replace(/-(t500x500|original|large|crop|t300x300)\./, `-${s}.`));
     return [];
   }
@@ -9236,7 +9278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function trackArtCandidates(track) {
     if (!track) return [];
     const out = [];
-    const add = (u) => { if (u && typeof u === 'string' && !out.includes(u)) out.push(u); };
+    const add = (raw) => { const u = unboxedYt(raw); if (u && typeof u === 'string' && !out.includes(u)) out.push(u); };
     [getTrackArt(track).cover, track.localThumbnail, track.thumbnail, track.cover, track.image, track.artworkUrl].forEach((u) => { add(u); artVariants(u).forEach(add); });
     derivedTrackArt(track).forEach(add);
     // last: the same picture through the in-app server (kept on disk, so a blocked or dead cover host costs one
@@ -9267,7 +9309,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const o = getTrackArt(track).cover;
     if (o) return o;
     if (track.localThumbnail) return track.localThumbnail;
-    return track.thumbnail || track.cover || track.image || track.artworkUrl || derivedTrackArt(track)[0] || '';
+    return unboxedYt(track.thumbnail || track.cover || track.image || track.artworkUrl || derivedTrackArt(track)[0] || '');
   }
 
   // A song's cover that loaded in place of its saved (missing or dead) one is saved with the song.
@@ -21248,6 +21290,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     thumb: (t) => getTrackThumbUrl(t),
     playTrack: (track, list, index) => playTrack(track, list || null, typeof index === 'number' ? index : -1),
     togglePlay: () => togglePlayPause(),
+    resumeAudio: () => audioEngine && audioEngine.resumeAudioContext && audioEngine.resumeAudioContext(),
     next: () => playNext(),
     prev: () => playPrev(),
     seek: (sec) => { if (isFinite(sec)) el.nativeAudio.currentTime = Math.max(0, sec); },

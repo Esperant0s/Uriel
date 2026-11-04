@@ -140,6 +140,30 @@
   const topRow = panel.querySelector('.right-panel-header-actions');
   if (tools && topRow) { topRow.prepend(tools); tools.classList.add('np-tools-moved'); }
 
+  // ...and that row (the tools and Line/Word) stays out of sight until the lyrics button in the tab row is
+  // tapped, so the cover and the song have the screen to themselves
+  const tabsRow = panel.querySelector('.drawer-tabs');
+  const toolsHeader = panel.querySelector('.right-panel-header');
+  if (tabsRow && toolsHeader) {
+    const toggle = document.createElement('button');
+    toggle.id = 'np-tools-toggle';
+    toggle.type = 'button';
+    toggle.className = 'btn-icon-pill';
+    toggle.setAttribute('aria-label', 'Lyrics settings');
+    toggle.setAttribute('data-i18n-attr', 'aria-label');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="7" cy="18" r="2" fill="currentColor"/></svg>';
+    const setOpen = (open) => {
+      panel.classList.toggle('np-tools-open', open);
+      toggle.classList.toggle('active', open);
+      toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+    toggle.addEventListener('click', () => setOpen(!panel.classList.contains('np-tools-open')));
+    tabsRow.prepend(toggle);
+    // closed again each time the sheet closes
+    new MutationObserver(() => { if (panel.classList.contains('hidden')) setOpen(false); }).observe(panel, { attributes: true, attributeFilter: ['class'] });
+  }
+
   // like button next to the title in Now Playing (the player bar's heart is hidden on phones);
   // it presses the real one and mirrors its state
   const realFav = document.getElementById('btn-toggle-fav');

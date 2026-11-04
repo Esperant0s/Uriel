@@ -70,5 +70,29 @@ function pickStreamSrc(data, isMobile) {
   return data.streamUrl;
 }
 
-const api = { LOOKUP_PRINT_ARGS, parseLookup, upstreamHeaders, downstreamHeaders, isGoogleVideoUrl, pickStreamSrc };
+// #17: for some videos googlevideo refuses an open-ended Range ("bytes=0-", what the audio element sends) with
+// HTTP 403 while it serves bounded ones, which is how yt-dlp downloads (and why the background download worked).
+// The proxy asks for the stream in bounded chunks and hands the player one continuous answer.
+const YT_CHUNK_BYTES = 10 * 1024 * 1024;
+
+// "bytes=N-" -> N; anything else (no Range, a bounded or suffix Range) -> -1
+function openRangeStart(range) {
+  const m = /^bytes=\s*(\d+)\s*-\s*$/i.exec(String(range || '').trim());
+  return m ? Number(m[1]) : -1;
+}
+
+// the bounded Range for the chunk starting at `start` (inside `total` when it is known)
+function chunkRange(start, total) {
+  const end = start + YT_CHUNK_BYTES - 1;
+  return `bytes=${start}-${total > 0 ? Math.min(total - 1, end) : end}`;
+}
+
+// "bytes 0-1023/4096" -> { start, end, total } (total 0 when the server sent "*")
+function parseContentRange(value) {
+  const m = /^bytes\s+(\d+)-(\d+)\/(\d+|\*)$/i.exec(String(value || '').trim());
+  if (!m) return null;
+  return { start: Number(m[1]), end: Number(m[2]), total: m[3] === '*' ? 0 : Number(m[3]) };
+}
+
+const api = { LOOKUP_PRINT_ARGS, parseLookup, upstreamHeaders, downstreamHeaders, isGoogleVideoUrl, pickStreamSrc, YT_CHUNK_BYTES, openRangeStart, chunkRange, parseContentRange };
 if (typeof module !== 'undefined' && module.exports) module.exports = api;

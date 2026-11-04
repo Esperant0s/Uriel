@@ -25,6 +25,9 @@ module.exports = function audioInterruption() {
         return;
       }
       if (type !== 'ended') return;
+      // the song plays through the effects chain, whose audio context the interruption left 'interrupted': start
+      // it again first, or a play (ours or the lock screen's) stays silent until the app is opened (#26)
+      if (c.resumeAudio) c.resumeAudio();
       const resume = resumeAfterInterruption({ wasPlaying, shouldResume: !!shouldResume, pausedByUser: !!c.state.pausedByUser, paused: a.paused, ended: a.ended, hasTrack: !!c.state.currentTrack });
       wasPlaying = false;
       if (!resume) return;

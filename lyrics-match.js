@@ -71,12 +71,24 @@
     return n / Math.min(A.size, B.size);
   }
 
-  // lrclib search results -> the best one for this song, or null when nothing really matches
+  // Timed lyrics fit only the cut they were timed on: a music video with an intro (or a longer outro) is longer
+  // than the studio song lrclib lists, and its lyrics then ran ahead of the singing (#33). Further apart than
+  // this, a result's words can still show, untimed.
+  const SYNC_TOLERANCE_S = 6;
+  function syncedFits(item, duration) {
+    const len = Number(item && item.duration) || 0;
+    return !(duration > 0 && len > 0 && Math.abs(len - duration) > SYNC_TOLERANCE_S);
+  }
+
+  // lrclib search results -> the best one for this song, or null when nothing really matches. A result whose
+  // length is too far off for its timing comes back with its plain lyrics only.
   function pickBest(list, want, duration) {
     if (!Array.isArray(list)) return null;
     let best = null, bestScore = 0;
-    for (const item of list) {
-      if (!item || (!item.syncedLyrics && !item.plainLyrics) || item.instrumental) continue;
+    for (const raw of list) {
+      if (!raw || raw.instrumental) continue;
+      const item = raw.syncedLyrics && !syncedFits(raw, duration) ? { ...raw, syncedLyrics: null } : raw;
+      if (!item.syncedLyrics && !item.plainLyrics) continue;
       const t = Math.max(...want.titles.map((w) => overlap(w, item.trackName || item.name)));
       const a = Math.max(0, ...want.artists.map((w) => overlap(w, item.artistName)));
       const d = duration > 0 && item.duration > 0 ? Math.abs(item.duration - duration) : null;
@@ -89,7 +101,7 @@
     return best;
   }
 
-  const api = { parseForLyrics, pickBest, cleanTitle, cleanArtist, splitArtists, norm };
+  const api = { parseForLyrics, pickBest, syncedFits, cleanTitle, cleanArtist, splitArtists, norm };
   if (typeof module !== 'undefined') module.exports = api;
   else window.UrielLyricsMatch = api; // the page uses it to show clean song names (Encore)
 })();

@@ -3046,6 +3046,10 @@ async function handleAudioProxy(req, res, targetUrl) {
     // to a request that looks like that client, not to Chromium's own User-Agent
     const ytHeaders = streamHeaders.get(targetUrl) || null;
     const headers = streamSource.upstreamHeaders(req.headers, ytHeaders, { googlevideo: streamSource.isGoogleVideoUrl(targetUrl) });
+    // #17: googlevideo refuses an open-ended Range ("bytes=0-") with 403 for some videos and serves bounded
+    // ones, so the stream is fetched in bounded chunks and handed to the player as one answer (pipeChunks)
+    const chunkFrom = req.method === 'GET' && streamSource.isGoogleVideoUrl(targetUrl) ? streamSource.openRangeStart(headers.range) : -1;
+    if (chunkFrom >= 0) headers.range = streamSource.chunkRange(chunkFrom, 0);
     const host = (() => { try { return parsed.host; } catch (_) { return '?'; } })();
     let clientGone = false;
     let proxyReq = null;
@@ -3063,6 +3067,43 @@ async function handleAudioProxy(req, res, targetUrl) {
       if (!res.headersSent) { res.writeHead(code); res.end(text); } else { try { res.destroy(); } catch (err) {} }
     };
 
+    // the rest of a chunked stream (#17): each chunk's bytes go to the player as they come, then the next chunk
+    // is asked for from where the last one really ended, until the end of the file
+    const pipeChunks = (chunkRes, chunkStart, total, conn) => {
+      let got = 0;
+      chunkRes.on('data', (b) => { got += b.length; });
+      chunkRes.on('error', () => { try { res.destroy(); } catch (e) {} });
+      chunkRes.on('end', () => {
+        if (clientGone || res.destroyed) return;
+        const from = chunkStart + got;
+        if (from >= total) { res.end(); return; }
+        if (!got) { try { res.destroy(); } catch (e) {} return; } // an empty chunk would loop forever
+        proxyReq = conn.client.request(conn.url, {
+          lookup: conn.lookup,
+          method: 'GET',
+          headers: { ...headers, range: streamSource.chunkRange(from, total), host: conn.host }
+        }, (next) => {
+          if (clientGone) { next.destroy(); return; }
+          const cr = next.statusCode === 206 ? streamSource.parseContentRange(next.headers['content-range']) : null;
+          if (!cr || cr.start !== from) {
+            try { logger.log('warn', `audio-proxy ${host}: chunk at ${from} answered HTTP ${next.statusCode} ${next.headers['content-range'] || '-'}`); } catch (_) {}
+            if (next.statusCode === 403 || next.statusCode === 410) forgetStreamUrl(targetUrl);
+            next.resume();
+            try { res.destroy(); } catch (e) {}
+            return;
+          }
+          pipeChunks(next, from, total, conn);
+        });
+        proxyReq.setTimeout(60000, () => { proxyReq.destroy(new Error('Proxy timeout')); });
+        proxyReq.on('error', (e) => {
+          try { logger.log('warn', `audio-proxy ${host}: ${e && e.message}`); } catch (_) {}
+          try { res.destroy(); } catch (err) {}
+        });
+        proxyReq.end();
+      });
+      chunkRes.pipe(res, { end: false });
+    };
+
     // googlevideo answers some requests with a redirect to another rr server; follow it (each hop is
     // checked like the first) instead of handing the audio element a redirect to a host it then fetches
     // with its own headers
@@ -3074,9 +3115,10 @@ async function handleAudioProxy(req, res, targetUrl) {
       if (!target) return fail(403, 'Blocked target');
       if (clientGone) return;
       const client = hopParsed.protocol === 'https:' ? https : http;
+      // connect to the address checked above instead of resolving the name a second time
+      const lookup = (hostname, opts, cb) => (opts && opts.all ? cb(null, [target]) : cb(null, target.address, target.family));
       proxyReq = client.request(hopUrl, {
-        // connect to the address checked above instead of resolving the name a second time
-        lookup: (hostname, opts, cb) => (opts && opts.all ? cb(null, [target]) : cb(null, target.address, target.family)),
+        lookup,
         method: req.method,
         headers: { ...headers, host: hopParsed.host }
       }, (proxyRes) => {
@@ -3098,7 +3140,18 @@ async function handleAudioProxy(req, res, targetUrl) {
         if (status === 403 || status === 410) forgetStreamUrl(targetUrl);
         // the audio element loads with crossorigin="anonymous": googlevideo's own CORS answer (for youtube.com)
         // must not replace ours, or the element refuses the stream it just got
-        res.writeHead(status, streamSource.downstreamHeaders(proxyRes.headers));
+        const out = streamSource.downstreamHeaders(proxyRes.headers);
+        // a chunked request (#17): the player asked for everything from chunkFrom on, so it is told about all of
+        // it at once and gets the following chunks in the same answer
+        const cr = chunkFrom >= 0 && status === 206 ? streamSource.parseContentRange(proxyRes.headers['content-range']) : null;
+        if (cr && cr.start === chunkFrom && cr.total > cr.end + 1) {
+          out['content-range'] = `bytes ${cr.start}-${cr.total - 1}/${cr.total}`;
+          out['content-length'] = String(cr.total - cr.start);
+          res.writeHead(206, out);
+          pipeChunks(proxyRes, cr.start, cr.total, { client, url: hopUrl, host: hopParsed.host, lookup });
+          return;
+        }
+        res.writeHead(status, out);
         proxyRes.on('error', () => { try { res.destroy(); } catch (e) {} });
         proxyRes.pipe(res);
       });
@@ -3822,7 +3875,7 @@ async function handleEncode(req, res, parsedUrl) {
   }
 }
 
-const { parseForLyrics, pickBest } = require('./lyrics-match');
+const { parseForLyrics, pickBest, syncedFits } = require('./lyrics-match');
 const LRCLIB_UA = 'Uriel (https://github.com/Esperant0s/Uriel)';
 
 function lrclibJson(pathAndQuery) {
@@ -3855,7 +3908,8 @@ async function fetchLyricsDirect(title, artist, duration = 0) {
   const exact = await Promise.all(tries.map(([t, a, d]) => lrclibJson(`/api/get?${q({ track_name: t, artist_name: a, duration: d })}`)));
   let plain = null;
   for (const hit of exact) {
-    if (hit && hit.syncedLyrics) return hit.syncedLyrics;
+    // the lookups without a length can return another cut of the song, whose timing doesn't fit (#33)
+    if (hit && hit.syncedLyrics && syncedFits(hit, dur)) return hit.syncedLyrics;
     if (hit && hit.plainLyrics && !plain) plain = hit.plainLyrics;
   }
   const primary = want.artists.find((a) => !/[,&]/.test(a)) || a0 || '';
