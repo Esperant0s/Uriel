@@ -41,6 +41,7 @@
     "tone": "^15.1.22"
   },
   "productName": "Uriel",
+  "desktopName": "uriel.desktop",
   "homepage": "https://github.com/cloverscripts/riff-muriel",
   "repository": {
     "type": "git",

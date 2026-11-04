@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { pathToFileURL, fileURLToPath } = require('url');
-const { spawn } = require('child_process');
+const { spawn, execFile } = require('child_process');
 const crypto = require('crypto');
 const { LIBRARY_DIR, DATA_DIR, resolveBinary, tutorialDone, markTutorialDone, readStartupConfig, writeStartupConfig } = require('./platform');
 const { getLauncherInfo, installLauncher } = require('./launcher');
@@ -413,6 +413,15 @@ function runGUI() {
         if (!img || img.isEmpty()) img = nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png'));
         try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setIcon(img); } catch (err) {}
         try { if (process.platform === 'darwin' && app.dock) app.dock.setIcon(img); } catch (err) {}
+        // Linux taskbars and docks take the icon from the launcher entry, not the window (linux-icon.js)
+        if (process.platform === 'linux') {
+          try {
+            const custom = typeof src === 'string' && !img.isEmpty() ? img.resize({ width: 512, height: 512, quality: 'best' }).toPNG() : null;
+            if (require('./linux-icon').setLauncherIcon({ png: custom, defaultPng: fs.readFileSync(path.join(__dirname, 'assets', 'icon.png')) })) {
+              execFile('update-desktop-database', [require('./linux-icon').paths().apps], () => {});
+            }
+          } catch (err) {}
+        }
         return !img.isEmpty();
       });
       ipcMain.handle('get-audio-output-info', async () => getSystemAudioOutputInfo());

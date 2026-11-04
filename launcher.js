@@ -3,6 +3,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
+const linuxIcon = require('./linux-icon');
 
 const NAME = 'Uriel';
 const COMMENT = 'Uriel - music player';
@@ -13,11 +14,11 @@ function winShortcutPath() {
 }
 
 function linuxDesktopPath() {
-  return path.join(os.homedir(), '.local', 'share', 'applications', 'muriel.desktop');
+  return linuxIcon.paths().desktop;
 }
 
 function linuxIconPath() {
-  return path.join(os.homedir(), '.local', 'share', 'icons', 'hicolor', '512x512', 'apps', 'muriel.png');
+  return linuxIcon.paths().appIcon;
 }
 
 function getLauncherInfo() {
@@ -27,6 +28,7 @@ function getLauncherInfo() {
   }
   if (process.platform === 'linux') {
     if (!process.env.APPIMAGE) return { platform: 'linux', canInstall: false, installed: false, reason: 'Available when Uriel runs as an AppImage' };
+    try { linuxIcon.adoptOldEntry(os.homedir(), process.env.APPIMAGE); } catch (e) {}
     return { platform: 'linux', canInstall: true, installed: fs.existsSync(linuxDesktopPath()), reason: '' };
   }
   return { platform: process.platform, canInstall: false, installed: false, reason: 'Not supported on this system' };
