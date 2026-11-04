@@ -1,4 +1,4 @@
-## Mural 1.5.3
+## Mural 1.5.4
 
 Mural is the new name of the Esperant0s fork of [Muriel](https://github.com/cloverscripts/riff-muriel) by cloverscripts, itself based on [Riff](https://github.com/rootscripts/riff) by rootscripts (MIT). It is its own app now and installs next to Muriel.
 
@@ -8,6 +8,15 @@ Mural is the new name of the Esperant0s fork of [Muriel](https://github.com/clov
 - **Windows:** installer below, or the portable exe on [windows-latest](https://github.com/Esperant0s/riff-muriel/releases/tag/windows-latest). Windows SmartScreen may warn because the files are unsigned: More info → Run anyway.
 - **macOS:** `.dmg` / `.zip` below, for Apple Silicon and Intel. The app is unsigned: if macOS blocks it, open System Settings → Privacy & Security → Open Anyway.
 - **Linux:** `.AppImage` below (needs FUSE 2: `fuse2` / `libfuse2`)
+
+**New in 1.5.4**
+- **No size limit for your library:** playlists, favorites and history now live in the app's database instead of the browser storage that capped everything at about 5 MB. They move over by themselves the first time you open 1.5.4.
+- **A smooth start:** the opening star stays until Mural has finished loading and runs smoothly, then the app fades in. Start-up itself is also about a second shorter.
+
+**Fixed in 1.5.4**
+- **Your theme from the first moment:** Mural no longer shows its default purple for a second or two before switching to the theme you picked.
+- **Player bar:** the play button and the controls beside it sit in the middle of the bar instead of riding up to its top edge.
+- **Mac and iPhone downloads:** they're built on machines GitHub can actually provide; 1.5.1 to 1.5.3 were missing them at first.
 
 **New in 1.5.3**
 - **Easier to read:** panels start 85% solid instead of see-through, and dialogs, menus and messages are always solid, whatever the opacity setting.
