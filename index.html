@@ -10,6 +10,10 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="no-nav-transition">
+  <!-- first: the open profile's storage, then its theme before anything is drawn (theme-boot.js) -->
+  <script src="library-store.js"></script>
+  <script src="profiles-core.js"></script>
+  <script src="theme-boot.js"></script>
   <div id="splash" aria-hidden="true"><div id="splash-logo"><svg viewBox="140 154 736 726" aria-hidden="true"><path d="M500 160Q543.2 476.8 860 520Q543.2 563.2 500 880Q456.8 563.2 140 520Q456.8 476.8 500 160Z"/><path d="M780 154Q791.5 238.5 876 250Q791.5 261.5 780 346Q768.5 261.5 684 250Q768.5 238.5 780 154Z"/></svg></div></div>
   <div id="fx-root"></div>
 
@@ -3571,8 +3575,6 @@
   </div>
 
   <!-- first, so every script after it sees only the open profile's storage -->
-  <script src="library-store.js"></script>
-  <script src="profiles-core.js"></script>
   <script src="i18n.js"></script>
   <script src="audio-engine.js"></script>
   <script src="m3shapes.js"></script>

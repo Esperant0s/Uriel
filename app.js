@@ -1629,7 +1629,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     updateMeshGradient(mono ? '#9E9E9E' : hexColor, mono ? '#757575' : resolvedAccent2, mode);
     refreshCachedThemeColors();
+    saveThemeBootSoon();
   }
+
+  // what the theme painted, for theme-boot.js to put back on the first frame of the next start (otherwise the
+  // default purple shows until start-up gets this far)
+  let themeBootTimer = null;
+  function saveThemeBoot() {
+    clearTimeout(themeBootTimer);
+    themeBootTimer = null;
+    try {
+      const mesh = {};
+      for (const id of ['bg-mesh-a', 'bg-mesh-b']) { const m = document.getElementById(id); if (m) mesh[id] = m.style.cssText; }
+      localStorage.setItem('muriel_theme_boot', JSON.stringify({
+        root: document.documentElement.style.cssText,
+        body: ['theme-light', 'theme-dark', 'intensity-zero'].filter((c) => document.body.classList.contains(c)),
+        mesh,
+      }));
+    } catch (e) {}
+  }
+  function saveThemeBootSoon() { if (!themeBootTimer) themeBootTimer = setTimeout(saveThemeBoot, 1500); }
+  window.addEventListener('pagehide', saveThemeBoot);
 
   // Auto-theme palettes touch dozens of CSS vars at once; a root view transition
   // crossfades the whole old/new palette instead of snapping.
