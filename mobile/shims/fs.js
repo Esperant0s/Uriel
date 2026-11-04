@@ -11,7 +11,7 @@ let chain = Promise.resolve();
 const persist = (fn) => {
   chain = chain.then(fn).catch((e) => {
     console.warn('[fs] persist failed', e);
-    try { window.dispatchEvent(new CustomEvent('muriel:storage-error', { detail: String((e && e.message) || e) })); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('uriel:storage-error', { detail: String((e && e.message) || e) })); } catch (_) {}
   });
   return chain;
 };

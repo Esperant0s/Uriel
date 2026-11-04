@@ -3,7 +3,7 @@
 // default purple. app.js saves what it painted last (saveThemeBoot); this puts it back before anything is drawn.
 // Runs at the top of <body>, after profiles-core.js, so it reads the open profile's copy.
 (function () {
-  const KEY = 'muriel_theme_boot';
+  const KEY = 'uriel_theme_boot';
   let saved;
   try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { saved = null; }
   if (!saved || typeof saved !== 'object') return;

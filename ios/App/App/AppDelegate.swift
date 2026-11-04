@@ -55,7 +55,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 // Uriel's web view. WebKit has a (private) preference that mutes a page's audio while the page
 // is hidden: playback keeps "running" and shows on the lock screen, but nothing is audible once the
 // app is backgrounded or the phone is locked. Turn it off, if this iOS version has it.
-class MurielBridgeViewController: CAPBridgeViewController {
+class UrielBridgeViewController: CAPBridgeViewController {
     override open func webViewConfiguration(for instanceConfiguration: InstanceConfiguration) -> WKWebViewConfiguration {
         let config = super.webViewConfiguration(for: instanceConfiguration)
         config.allowsInlineMediaPlayback = true
@@ -68,9 +68,9 @@ class MurielBridgeViewController: CAPBridgeViewController {
 
     // plugins that live in the app itself (not in an npm package) are registered by hand
     override open func capacitorDidLoad() {
-        bridge?.registerPluginInstance(MurielLiveActivityPlugin())
-        bridge?.registerPluginInstance(MurielAudioSessionPlugin())
-        bridge?.registerPluginInstance(MuralAppIconPlugin())
+        bridge?.registerPluginInstance(UrielLiveActivityPlugin())
+        bridge?.registerPluginInstance(UrielAudioSessionPlugin())
+        bridge?.registerPluginInstance(UrielAppIconPlugin())
     }
 }
 
@@ -79,10 +79,10 @@ class MurielBridgeViewController: CAPBridgeViewController {
 // again like it does in Spotify (#26). Paused in the background the app is suspended soon after; iOS wakes it
 // for the end of the interruption, and a short background task keeps it awake until the page has asked the
 // song to play again (or a lock screen play has arrived).
-@objc(MurielAudioSessionPlugin)
-public class MurielAudioSessionPlugin: CAPPlugin, CAPBridgedPlugin {
-    public let identifier = "MurielAudioSessionPlugin"
-    public let jsName = "MurielAudioSession"
+@objc(UrielAudioSessionPlugin)
+public class UrielAudioSessionPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "UrielAudioSessionPlugin"
+    public let jsName = "UrielAudioSession"
     public let pluginMethods: [CAPPluginMethod] = []
     private var awake: UIBackgroundTaskIdentifier = .invalid
     private var awakeEnd: DispatchWorkItem?
@@ -108,7 +108,7 @@ public class MurielAudioSessionPlugin: CAPPlugin, CAPBridgedPlugin {
     // once the song plays again iOS keeps the app running by itself; this only bridges the moment until then
     private func stayAwake(seconds: Double) {
         if awake == .invalid {
-            awake = UIApplication.shared.beginBackgroundTask(withName: "MurielInterruptionEnd") { [weak self] in self?.endAwake() }
+            awake = UIApplication.shared.beginBackgroundTask(withName: "UrielInterruptionEnd") { [weak self] in self?.endAwake() }
         }
         awakeEnd?.cancel()
         let work = DispatchWorkItem { [weak self] in self?.endAwake() }
@@ -128,16 +128,16 @@ public class MurielAudioSessionPlugin: CAPPlugin, CAPBridgedPlugin {
 // The home-screen icon (Settings → Theme → App icon, mobile/app-icon.js): the styles are alternate app icons
 // (Assets.xcassets/AppIcon-<name>, made by tools/render-app-icons.js). iOS shows its own short "You have changed
 // the icon" message; apps can't leave that out.
-@objc(MuralAppIconPlugin)
-public class MuralAppIconPlugin: CAPPlugin, CAPBridgedPlugin {
-    public let identifier = "MuralAppIconPlugin"
-    public let jsName = "MuralAppIcon"
+@objc(UrielAppIconPlugin)
+public class UrielAppIconPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "UrielAppIconPlugin"
+    public let jsName = "UrielAppIcon"
     public let pluginMethods: [CAPPluginMethod] = [CAPPluginMethod(name: "set", returnType: CAPPluginReturnPromise)]
     static let icons: Set<String> = ["mural", "default", "editor", "orbit", "vinyl", "cosmos", "aurora", "sunset", "amethyst", "y2k_disc", "cassette", "invincible"]
 
     @objc func set(_ call: CAPPluginCall) {
         let name = call.getString("name") ?? ""
-        let iconName: String? = MuralAppIconPlugin.icons.contains(name) ? "AppIcon-\(name)" : nil
+        let iconName: String? = UrielAppIconPlugin.icons.contains(name) ? "AppIcon-\(name)" : nil
         DispatchQueue.main.async {
             guard UIApplication.shared.supportsAlternateIcons else { call.reject("This iPhone can't change app icons"); return }
             if UIApplication.shared.alternateIconName == iconName { call.resolve(["name": name]); return }

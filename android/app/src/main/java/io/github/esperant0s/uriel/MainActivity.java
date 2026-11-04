@@ -1,4 +1,4 @@
-package io.github.cloverscripts.muriel;
+package io.github.esperant0s.uriel;
 
 import android.os.Bundle;
 

@@ -36,5 +36,5 @@
 
   const api = { positionState, wasPlayingAtInterruption, resumeAfterInterruption, INTERRUPT_GRACE_MS };
   if (typeof module !== 'undefined') module.exports = api;
-  else window.MurielNowPlaying = api;
+  else window.UrielNowPlaying = api;
 })();

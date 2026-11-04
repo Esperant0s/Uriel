@@ -83,62 +83,62 @@ test('exported playlists read back the same, without local addresses or tokens',
   assert.equal(back.description, 'desc');
   assert.deepEqual(back.tracks.map((t) => [t.id, t.title, t.platform]), [[YT, 'Song', 'youtube'], ['local_abc', 'Local', 'local']]);
   assert.equal(B.fileName('a/b:c*?.', 'json'), 'a_b_c_..json');
-  assert.equal(B.fileName('..', 'json'), 'muriel.json');
+  assert.equal(B.fileName('..', 'json'), 'uriel.json');
 });
 
 test('a backup holds the open profile\'s own data and settings, nothing of the device', () => {
   const entries = [
-    ['devsize_playlists', '[]'], ['muriel_theme_mode', 'light'], ['muriel_listens_v1', '{}'],
-    ['muriel_perf_mode', 'true'], ['muriel_audio_analysis_x', '{}'], ['muriel_secret_lastfm', '{"default":{"sk":"x"}}'],
-    ['muriel_sync_group', 'g'], ['muriel_profiles', '[]'], ['muriel_custom_css', 'body{}'], ['muriel_debug_log', '[]'],
+    ['devsize_playlists', '[]'], ['uriel_theme_mode', 'light'], ['uriel_listens_v1', '{}'],
+    ['uriel_perf_mode', 'true'], ['uriel_audio_analysis_x', '{}'], ['uriel_secret_lastfm', '{"default":{"sk":"x"}}'],
+    ['uriel_sync_group', 'g'], ['uriel_profiles', '[]'], ['uriel_custom_css', 'body{}'], ['uriel_debug_log', '[]'],
     ['someplugin_state', '1'],
   ];
   const b = B.makeBackup(entries, { profileName: 'Kid', appVersion: '1.2.9', isDevice: P.isDevice });
-  assert.equal(b.kind, 'muriel-backup');
+  assert.equal(b.kind, 'uriel-backup');
   assert.equal(b.profile.name, 'Kid');
-  assert.deepEqual(Object.keys(b.data).sort(), ['devsize_playlists', 'muriel_listens_v1', 'muriel_theme_mode']);
+  assert.deepEqual(Object.keys(b.data).sort(), ['devsize_playlists', 'uriel_listens_v1', 'uriel_theme_mode']);
 });
 
 test('a restore only writes Uriel keys, checks the playlists through, and keeps the sync link', () => {
-  const backup = { kind: 'muriel-backup', version: 1, profile: { name: 'Me' }, data: {
+  const backup = { kind: 'uriel-backup', version: 1, profile: { name: 'Me' }, data: {
     devsize_playlists: JSON.stringify([{ id: 'pl_a', name: 'A', cover: 'javascript:alert(1)', tracks: [{ id: YT, title: 't', thumbnail: 'javascript:x', url: 'https://www.youtube.com/watch?v=' + YT, nested: { a: 1 }, addedAt: 3 }] }, { id: 'pl_a', name: 'dup id' }, 'junk']),
     devsize_favorites: JSON.stringify([{ id: 'x', title: 'f', platform: 'evilnet' }, 5]),
     devsize_history: 'not json',
-    muriel_theme_mode: 'dark',
-    muriel_volume: 0.5,
-    muriel_sync_group: 'attacker-group',
-    muriel_profile_active: 'x',
-    'muriel_p:abcd:devsize_playlists': '[]',
-    muriel_perf_mode: 'true',
-    muriel_custom_css: 'body{background:url(https://evil/)}',
-    muriel_lastfm_sk: 'leaked',
-    muriel_lastfm_enabled: 'false',
+    uriel_theme_mode: 'dark',
+    uriel_volume: 0.5,
+    uriel_sync_group: 'attacker-group',
+    uriel_profile_active: 'x',
+    'uriel_p:abcd:devsize_playlists': '[]',
+    uriel_perf_mode: 'true',
+    uriel_custom_css: 'body{background:url(https://evil/)}',
+    uriel_lastfm_sk: 'leaked',
+    uriel_lastfm_enabled: 'false',
     evil_key: 'x',
     '__proto__': 'x',
   } };
   const r = B.readBackup(backup, { isDevice: P.isDevice });
-  assert.equal(r.source, 'muriel');
-  assert.deepEqual(Object.keys(r.entries).sort(), ['devsize_favorites', 'devsize_playlists', 'muriel_lastfm_enabled', 'muriel_theme_mode', 'muriel_volume']);
-  assert.equal(r.entries.muriel_volume, '0.5');
+  assert.equal(r.source, 'uriel');
+  assert.deepEqual(Object.keys(r.entries).sort(), ['devsize_favorites', 'devsize_playlists', 'uriel_lastfm_enabled', 'uriel_theme_mode', 'uriel_volume']);
+  assert.equal(r.entries.uriel_volume, '0.5');
   const pls = JSON.parse(r.entries.devsize_playlists);
   assert.equal(pls.length, 2);
   assert.notEqual(pls[0].id, pls[1].id, 'a repeated id gets a new one');
   assert.equal(pls[0].cover, undefined);
   assert.deepEqual(pls[0].tracks[0], { id: YT, title: 't', url: 'https://www.youtube.com/watch?v=' + YT, addedAt: 3 });
   assert.deepEqual(JSON.parse(r.entries.devsize_favorites), [{ id: 'x', title: 'f', platform: 'youtube' }]);
-  assert.ok(r.skipped.includes('devsize_history') && r.skipped.includes('muriel_sync_group') && r.skipped.includes('muriel_custom_css'));
+  assert.ok(r.skipped.includes('devsize_history') && r.skipped.includes('uriel_sync_group') && r.skipped.includes('uriel_custom_css'));
   assert.deepEqual(r.counts, { playlists: 2, favorites: 1, history: 0, keys: 5 });
   // what a restore leaves alone in the profile it replaces
-  assert.equal(B.keepOnRestore('muriel_sync_group', P.isDevice), true);
-  assert.equal(B.keepOnRestore('muriel_custom_css', P.isDevice), true);
-  assert.equal(B.keepOnRestore('muriel_perf_mode', P.isDevice), true);
+  assert.equal(B.keepOnRestore('uriel_sync_group', P.isDevice), true);
+  assert.equal(B.keepOnRestore('uriel_custom_css', P.isDevice), true);
+  assert.equal(B.keepOnRestore('uriel_perf_mode', P.isDevice), true);
   assert.equal(B.keepOnRestore('someplugin_state', P.isDevice), true);
   assert.equal(B.keepOnRestore('devsize_playlists', P.isDevice), false);
   assert.throws(() => B.readBackup({ hello: 1 }), /isn't a Uriel backup/);
   assert.throws(() => B.readBackup(null), /isn't a Uriel backup/);
   const big = 'x'.repeat(B.LIMITS.keyBytes - 10);
-  assert.throws(() => B.readBackup({ kind: 'muriel-backup', data: { muriel_a: big, muriel_b: big, muriel_c: big, muriel_d: big } }), /too big/);
-  assert.ok(B.readBackup({ kind: 'muriel-backup', data: { muriel_a: big + 'x'.repeat(20) } }).skipped.includes('muriel_a'), 'one key over the cap is left out');
+  assert.throws(() => B.readBackup({ kind: 'uriel-backup', data: { uriel_a: big, uriel_b: big, uriel_c: big, uriel_d: big } }), /too big/);
+  assert.ok(B.readBackup({ kind: 'uriel-backup', data: { uriel_a: big + 'x'.repeat(20) } }).skipped.includes('uriel_a'), 'one key over the cap is left out');
 });
 
 // how upstream Riff's main.js writes an account file
@@ -160,15 +160,15 @@ test('Riff account files (.rfacc) open, and their riff_ keys become Uriel\'s', a
   const parsed = await B.parseBackupFile(file);
   const r = B.readBackup(parsed, { isDevice: P.isDevice });
   assert.equal(r.source, 'riff');
-  assert.deepEqual(Object.keys(r.entries).sort(), ['devsize_discord_rpc', 'devsize_playlists', 'muriel_lastfm_enabled', 'muriel_theme_mode']);
+  assert.deepEqual(Object.keys(r.entries).sort(), ['devsize_discord_rpc', 'devsize_playlists', 'uriel_lastfm_enabled', 'uriel_theme_mode']);
   assert.equal(r.counts.playlists, 1);
   // a damaged file says so
   const broken = file.slice();
   broken[broken.length - 1] ^= 1;
   await assert.rejects(B.parseBackupFile(broken), /damaged/);
   await assert.rejects(B.parseBackupFile(new TextEncoder().encode('{nope')), /isn't a Uriel backup/);
-  const own = await B.parseBackupFile(new TextEncoder().encode(JSON.stringify(B.makeBackup([['muriel_theme_mode', 'dark']]))));
-  assert.equal(B.readBackup(own).entries.muriel_theme_mode, 'dark');
+  const own = await B.parseBackupFile(new TextEncoder().encode(JSON.stringify(B.makeBackup([['uriel_theme_mode', 'dark']]))));
+  assert.equal(B.readBackup(own).entries.uriel_theme_mode, 'dark');
 });
 
 test('an .rfacc that inflates into something huge is refused', async () => {

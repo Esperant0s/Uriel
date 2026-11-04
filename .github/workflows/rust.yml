@@ -35,5 +35,5 @@ jobs:
           name: Uriel-RS-windows
           path: |
             rust/target/release/bundle/nsis/*.exe
-            rust/target/release/muriel-rs.exe
+            rust/target/release/uriel-rs.exe
           if-no-files-found: error

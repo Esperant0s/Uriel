@@ -157,5 +157,5 @@
 
   const api = { hash, fingerprint, sha256, stampList, mergeList, stampMap, mergeMap, mergeById, pruneMeta, isGone };
   if (typeof module === 'object' && module.exports) module.exports = api;
-  else root.MurielSyncCore = api;
+  else root.UrielSyncCore = api;
 })(typeof window !== 'undefined' ? window : globalThis);

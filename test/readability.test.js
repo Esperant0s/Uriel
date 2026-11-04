@@ -11,13 +11,13 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 test('Interface opacity starts at 85% when it was never set', () => {
   const app = read('app.js');
   assert.match(app, /const DEFAULT_UI_ALPHA = '85';/);
-  assert.equal(/getItem\('muriel_ui_alpha'\) \|\| '20'/.test(app), false, 'no 20% fallback left');
+  assert.equal(/getItem\('uriel_ui_alpha'\) \|\| '20'/.test(app), false, 'no 20% fallback left');
   assert.match(read('index.html'), /id="slider-ui-alpha"[^>]*value="85"/);
 });
 
 test('dialogs, menus and messages are painted solid', () => {
   const css = read('styles.css');
   const rule = css.slice(css.lastIndexOf(':is(.settings-card, .dialog-card'));
-  for (const cls of ['.settings-card', '.dialog-card', '.modal-card', '.m3-dropdown-menu', '.track-context-menu', '.profile-menu', '.muriel-toast']) assert.ok(rule.split('{')[0].includes(cls), cls);
+  for (const cls of ['.settings-card', '.dialog-card', '.modal-card', '.m3-dropdown-menu', '.track-context-menu', '.profile-menu', '.uriel-toast']) assert.ok(rule.split('{')[0].includes(cls), cls);
   assert.match(rule, /background-color: var\(--md-sys-color-surface-container-high-solid\) !important;/);
 });

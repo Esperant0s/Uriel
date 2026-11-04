@@ -1,4 +1,4 @@
-package io.github.cloverscripts.muriel;
+package io.github.esperant0s.uriel;
 
 import android.Manifest;
 import android.app.Activity;
@@ -60,7 +60,7 @@ import java.util.concurrent.Executors;
  * Android 16+ can also show the song as a "Live Update" (the island): see postIsland.
  */
 @CapacitorPlugin(
-        name = "MurielMedia",
+        name = "UrielMedia",
         // asked for by allowIsland, once when the first song plays (media-controls.js) and from the island row.
         // Android 13+ is meant to show media notifications without it, but many phones hide them too (#25).
         permissions = { @Permission(strings = { Manifest.permission.POST_NOTIFICATIONS }, alias = "notifications") })
@@ -102,8 +102,8 @@ public class MediaControlsPlugin extends Plugin {
     private String artworkUrl = "";
     private Bitmap artwork;
     // the extra buttons beside previous / next (Android 13+: in the quick-settings and lock-screen player)
-    static final String CUSTOM_SHUFFLE = "io.github.cloverscripts.muriel.SHUFFLE";
-    static final String CUSTOM_REPEAT = "io.github.cloverscripts.muriel.REPEAT";
+    static final String CUSTOM_SHUFFLE = "io.github.esperant0s.uriel.SHUFFLE";
+    static final String CUSTOM_REPEAT = "io.github.esperant0s.uriel.REPEAT";
     private boolean shuffle;
     private String repeat = "off"; // "off", "all" (the playlist) or "one" (the song)
     private PowerManager.WakeLock wakeLock;
@@ -424,7 +424,7 @@ public class MediaControlsPlugin extends Plugin {
 
     private Notification buildNotification(Context ctx) {
         NotificationCompat.Builder b = new NotificationCompat.Builder(ctx, CHANNEL)
-                .setSmallIcon(R.drawable.ic_stat_muriel)
+                .setSmallIcon(R.drawable.ic_stat_uriel)
                 .setContentTitle(title)
                 .setContentText(artist)
                 .setLargeIcon(artwork)
@@ -542,7 +542,7 @@ public class MediaControlsPlugin extends Plugin {
 
     private Notification buildIsland(Context ctx, Island s) {
         NotificationCompat.Builder b = new NotificationCompat.Builder(ctx, ISLAND_CHANNEL)
-                .setSmallIcon(R.drawable.ic_stat_muriel)
+                .setSmallIcon(R.drawable.ic_stat_uriel)
                 .setContentTitle(s.title)
                 .setContentText(s.artist)
                 .setLargeIcon(s.art)

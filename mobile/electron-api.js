@@ -69,7 +69,7 @@ module.exports = function electronAPI({ ready, port, fs, fileUrlFor }) {
       await ready;
       // lossless files take a while to copy; say so, or the app looks stuck
       const total = files.reduce((n, f) => n + f.size, 0);
-      if (total > 20e6 && window.MurielCore) window.MurielCore.toast(`Adding ${files.length} song${files.length === 1 ? '' : 's'}…`, 'info');
+      if (total > 20e6 && window.UrielCore) window.UrielCore.toast(`Adding ${files.length} song${files.length === 1 ? '' : 's'}…`, 'info');
       const out = [];
       for (const f of files) {
         const ext = extOf(f.name);
@@ -112,7 +112,7 @@ module.exports = function electronAPI({ ready, port, fs, fileUrlFor }) {
     setDownloadDir: async () => ({ success: false }),
     resetDownloadDir: async () => ({ success: true }),
     restartApp: () => location.reload(),
-    getAppVersion: async () => { const b = window.MURIEL_BUILD || {}; return b.version ? `${b.version}${b.run ? ` (build ${b.run})` : ''}` : '1.1.2'; },
+    getAppVersion: async () => { const b = window.URIEL_BUILD || {}; return b.version ? `${b.version}${b.run ? ` (build ${b.run})` : ''}` : '1.1.2'; },
     getHwAccel: async () => true,
     setHwAccel: noop,
     trimMemory: noop,
@@ -129,7 +129,7 @@ module.exports = function electronAPI({ ready, port, fs, fileUrlFor }) {
     // where "Save to Files" / Drive / Mail take it. In a desktop browser (dev harness) it's a plain download.
     async saveTextFile({ defaultName, content } = {}) {
       if (typeof content !== 'string') return { success: false, error: 'Nothing to save' };
-      const name = String(defaultName || 'muriel.json').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').replace(/^\.+/, '').slice(0, 120) || 'muriel.json';
+      const name = String(defaultName || 'uriel.json').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').replace(/^\.+/, '').slice(0, 120) || 'uriel.json';
       if (!Capacitor.isNativePlatform()) {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(new Blob([content], { type: 'application/json' }));

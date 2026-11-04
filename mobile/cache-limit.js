@@ -6,7 +6,7 @@ const TRACKS = '/data/tracks';
 const KEEP_NEWEST = 4;
 
 function limitBytes() {
-  const mb = parseInt(localStorage.getItem('muriel_cache_limit_mb') || '2048', 10);
+  const mb = parseInt(localStorage.getItem('uriel_cache_limit_mb') || '2048', 10);
   return (Number.isFinite(mb) && mb > 0 ? mb : 2048) * 1024 * 1024;
 }
 
@@ -14,7 +14,7 @@ function limitBytes() {
 // The cache is shared by every profile on the phone, so every profile's History counts.
 function lastPlayedById() {
   const out = new Map();
-  const P = window.MurielProfiles;
+  const P = window.UrielProfiles;
   const histories = P ? P.list().map((p) => P.peek(p.id, 'devsize_history')) : [localStorage.getItem('devsize_history')];
   for (const h of histories) {
     try {
@@ -30,7 +30,7 @@ function lastPlayedById() {
 
 function enforceCacheLimit() {
   // History is still loading from IndexedDB (library-store.js): without it every song looks unplayed
-  const L = window.MurielLibraryStore;
+  const L = window.UrielLibraryStore;
   if (L && L.store && L.store.mode() === 'starting') return;
   const limit = limitBytes();
   const played = lastPlayedById();
@@ -52,7 +52,7 @@ function enforceCacheLimit() {
     if (total <= limit) break;
     try { fs.unlinkSync(f.path); total -= f.size; } catch (e) {}
   }
-  if (window.MurielLog) window.MurielLog.add('info', `cache trimmed to ${Math.round(total / 1048576)} MB`);
+  if (window.UrielLog) window.UrielLog.add('info', `cache trimmed to ${Math.round(total / 1048576)} MB`);
 }
 
 module.exports = { enforceCacheLimit };

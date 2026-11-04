@@ -1,4 +1,4 @@
-package io.github.cloverscripts.muriel;
+package io.github.esperant0s.uriel;
 
 import android.Manifest;
 import android.content.ContentResolver;
@@ -27,7 +27,7 @@ import java.util.concurrent.Executors;
  * Music/Mural. Reading the library needs "Music and audio" (Android 13+) or storage access (older), asked once.
  */
 @CapacitorPlugin(
-        name = "MuralDeviceMusic",
+        name = "UrielDeviceMusic",
         permissions = {
                 @Permission(strings = { Manifest.permission.READ_MEDIA_AUDIO }, alias = "audio"),
                 @Permission(strings = { Manifest.permission.READ_EXTERNAL_STORAGE }, alias = "storage")

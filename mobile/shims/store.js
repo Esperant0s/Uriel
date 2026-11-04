@@ -67,7 +67,7 @@ function saved(vpath, loc) {
 // Android 10 and older only index new files at their next full scan: tell the media index now, so the song shows
 // up in music apps right away (Android 11+ does that by itself; MediaControlsPlugin.java)
 function scan(loc) {
-  const media = Capacitor.Plugins && Capacitor.Plugins.MurielMedia; // registered by media-controls.js
+  const media = Capacitor.Plugins && Capacitor.Plugins.UrielMedia; // registered by media-controls.js
   if (loc.directory !== PUBLIC || !media) return;
   Filesystem.getUri(loc).then(({ uri }) => media.scanFile({ path: uri })).catch(() => {});
 }
@@ -231,7 +231,7 @@ module.exports = {
     const loc = saveTo(vpath);
     if (!Capacitor.isNativePlatform()) {
       // browser harness: downloadFile would hit CORS, so go through the dev proxy
-      const r = await globalThis.__murielFetch(url, { headers });
+      const r = await globalThis.__urielFetch(url, { headers });
       if (!r.ok) throw new Error(`download failed: ${r.status}`);
       const bytes = new Uint8Array(await r.arrayBuffer());
       await Filesystem.writeFile({ ...loc, data: b64FromBytes(bytes), recursive: true });

@@ -1,6 +1,6 @@
 // Shared playlists: the whole playlist travels inside the link (after the #, so it never reaches a server).
 // https://cloverscripts.github.io/riff-muriel/play/#p=<payload>  — opens the web player
-// muriel://playlist?p=<payload>                                   — opens the app
+// uriel://playlist?p=<payload>                                   — opens the app
 // payload, when every song is on YouTube (the usual case): "y" + base64url(name length byte, name, then each
 // video id as its 8 bytes). Titles aren't in the link; fillInfo() looks them up from YouTube. That keeps a
 // 10-song link around 170 characters.
@@ -121,7 +121,7 @@
     return { name: clip(data.n, 100) || 'Shared playlist', tracks };
   }
 
-  // the payload in a pasted link: the web player link or muriel://playlist?p=…
+  // the payload in a pasted link: the web player link or uriel://playlist?p=…
   // (a bare payload isn't taken: "juicewrld" typed into the search bar looked like one)
   function payloadFrom(text) {
     const m = /[#?&]p=([yzj][A-Za-z0-9_-]+)/.exec(String(text || '').trim());
@@ -168,9 +168,9 @@
   }
 
   const webLink = (payload) => `${WEB}#p=${payload}`;
-  const appLink = (payload) => `muriel://playlist?p=${payload}`;
+  const appLink = (payload) => `uriel://playlist?p=${payload}`;
 
   const api = { encode, decode, payloadFrom, fillInfo, tidy, webLink, appLink, packTrack, unpackTrack, WEB };
   if (typeof module === 'object' && module.exports) module.exports = api;
-  else root.MurielShare = api;
+  else root.UrielShare = api;
 })(typeof window !== 'undefined' ? window : globalThis);

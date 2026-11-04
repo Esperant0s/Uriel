@@ -13,11 +13,11 @@
 // No DOM: test/library-store.test.js runs this in Node with a fake database.
 (function (root) {
   const LISTS = ['devsize_playlists', 'devsize_favorites', 'devsize_history'];
-  // every profile's copy too ("muriel_p:<id>:devsize_playlists", profiles-core.js)
-  const isLibraryKey = (k) => LISTS.some((l) => k === l || (k.startsWith('muriel_p:') && k.endsWith(':' + l)));
+  // every profile's copy too ("uriel_p:<id>:devsize_playlists", profiles-core.js)
+  const isLibraryKey = (k) => LISTS.some((l) => k === l || (k.startsWith('uriel_p:') && k.endsWith(':' + l)));
   // set once the lists have moved: from then on a slow IndexedDB is waited for, never skipped (skipping would
   // show empty lists, and the next change would overwrite the real ones)
-  const MOVED = 'muriel_library_idb';
+  const MOVED = 'uriel_library_idb';
   const FIRST_OPEN_MS = 8000;
 
   // base: the real localStorage ({ get, set, remove, keys }); db: { loadAll() -> Map, put(k, v), del(k) }
@@ -134,13 +134,13 @@
 
   // for profiles-core.js: wrap the raw store it built, once
   function attach(base) {
-    if (root.MurielLibraryStore && root.MurielLibraryStore.store) return root.MurielLibraryStore.store;
+    if (root.UrielLibraryStore && root.UrielLibraryStore.store) return root.UrielLibraryStore.store;
     let idb = null;
     try { idb = root.indexedDB || null; } catch (e) {}
     if (!idb) return null;
     const store = createStore(base, idbBackend(idb), { onError: (e, k) => { try { console.warn('library storage', k || '', e); } catch (_) {} } });
-    root.MurielLibraryStore.store = store;
-    root.MurielLibraryStore.ready = store.ready;
+    root.UrielLibraryStore.store = store;
+    root.UrielLibraryStore.ready = store.ready;
     if (root.addEventListener) {
       root.addEventListener('pagehide', () => store.closing(true));
       root.addEventListener('beforeunload', () => store.closing(true));
@@ -151,5 +151,5 @@
 
   const api = { LISTS, MOVED, isLibraryKey, createStore, idbBackend, attach, ready: Promise.resolve('local'), store: null };
   if (typeof module === 'object' && module.exports) module.exports = api;
-  else root.MurielLibraryStore = api;
+  else root.UrielLibraryStore = api;
 })(typeof window !== 'undefined' ? window : globalThis);

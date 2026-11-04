@@ -1,10 +1,10 @@
-"""Makes Muriel's Home-button icons (assets/app-icons/) from Riff's: every Riff logo shape in an icon (the long
-M/C path, also used for its glow, mask and outline) is swapped for Muriel's sparkle (assets/mark.svg), fitted
-into the same box, so the backgrounds and decorations stay and the logo is Muriel's.
-Usage: python3 tools/muriel-app-icons.py <dir with Riff's NN-name.svg files> [out dir]"""
+"""Makes Uriel's Home-button icons (assets/app-icons/) from Riff's: every Riff logo shape in an icon (the long
+M/C path, also used for its glow, mask and outline) is swapped for Uriel's sparkle (assets/mark.svg), fitted
+into the same box, so the backgrounds and decorations stay and the logo is Uriel's.
+Usage: python3 tools/uriel-app-icons.py <dir with Riff's NN-name.svg files> [out dir]"""
 import os, re, sys
 
-# Muriel's mark (assets/mark.svg, 1024 box): the big four-point star and the small one top right
+# Uriel's mark (assets/mark.svg, 1024 box): the big four-point star and the small one top right
 STAR = [((500, 160), [((543.2, 476.8), (860, 520)), ((543.2, 563.2), (500, 880)), ((456.8, 563.2), (140, 520)), ((456.8, 476.8), (500, 160))]),
         ((780, 154), [((791.5, 238.5), (876, 250)), ((791.5, 261.5), (780, 346)), ((768.5, 261.5), (684, 250)), ((768.5, 238.5), (780, 154))])]
 SX0, SY0, SX1, SY1 = 140, 154, 876, 880

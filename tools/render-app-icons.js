@@ -1,7 +1,7 @@
 // Renders the app icon styles (assets/app-icons/*.svg, and assets/icon.svg as "mural") to the PNGs the phones need
 // for switching their home-screen icon (Settings → Theme → App icon). Run with Electron after changing an icon:
 //   npx electron tools/render-app-icons.js
-// Android: res/mipmap-<density>/ic_mural_<name>.png (round and square launchers) and ic_mural_<name>_full.png
+// Android: res/mipmap-<density>/ic_uriel_<name>.png (round and square launchers) and ic_uriel_<name>_full.png
 // (the full layer of an adaptive icon). iOS: Assets.xcassets/AppIcon-<name>.appiconset (one 1024px image).
 // The results are committed, so the builds need nothing extra.
 const { app, BrowserWindow } = require('electron');
@@ -16,7 +16,7 @@ const ADAPTIVE = { mdpi: 108, hdpi: 162, xhdpi: 216, xxhdpi: 324, xxxhdpi: 432 }
 
 // the styles, by the name the app uses for them (app.js HOME_ICONS) -> resource-safe name
 function icons() {
-  const out = [{ id: 'muriel', name: 'mural', file: path.join(ROOT, 'assets', 'icon.svg') }];
+  const out = [{ id: 'uriel', name: 'mural', file: path.join(ROOT, 'assets', 'icon.svg') }];
   for (const f of fs.readdirSync(path.join(ROOT, 'assets', 'app-icons')).filter((f) => f.endsWith('.svg')).sort()) {
     const id = f.replace(/\.svg$/, '');
     out.push({ id, name: id.replace(/^\d+-/, '').replace(/[^a-z0-9]+/g, '_'), file: path.join(ROOT, 'assets', 'app-icons', f) });
@@ -66,15 +66,15 @@ app.whenReady().then(async () => {
     const bg = await edgeColor(win, icon.file);
     for (const [d, px] of Object.entries(LEGACY)) {
       fs.mkdirSync(path.join(RES, `mipmap-${d}`), { recursive: true });
-      fs.writeFileSync(path.join(RES, `mipmap-${d}`, `ic_mural_${icon.name}.png`), await render(win, icon.file, px));
+      fs.writeFileSync(path.join(RES, `mipmap-${d}`, `ic_uriel_${icon.name}.png`), await render(win, icon.file, px));
     }
     // adaptive layer: the icon fills the 72dp of the 108dp layer that every launcher shape shows
     for (const [d, px] of Object.entries(ADAPTIVE)) {
-      fs.writeFileSync(path.join(RES, `mipmap-${d}`, `ic_mural_${icon.name}_full.png`), await render(win, icon.file, px, 72 / 108, bg));
+      fs.writeFileSync(path.join(RES, `mipmap-${d}`, `ic_uriel_${icon.name}_full.png`), await render(win, icon.file, px, 72 / 108, bg));
     }
     fs.mkdirSync(path.join(RES, 'mipmap-anydpi-v26'), { recursive: true });
-    fs.writeFileSync(path.join(RES, 'mipmap-anydpi-v26', `ic_mural_${icon.name}.xml`),
-      `<?xml version="1.0" encoding="utf-8"?>\n<!-- made by tools/render-app-icons.js -->\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@mipmap/ic_mural_${icon.name}_full"/>\n    <foreground android:drawable="@android:color/transparent"/>\n</adaptive-icon>\n`);
+    fs.writeFileSync(path.join(RES, 'mipmap-anydpi-v26', `ic_uriel_${icon.name}.xml`),
+      `<?xml version="1.0" encoding="utf-8"?>\n<!-- made by tools/render-app-icons.js -->\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@mipmap/ic_uriel_${icon.name}_full"/>\n    <foreground android:drawable="@android:color/transparent"/>\n</adaptive-icon>\n`);
     const set = path.join(XCASSETS, `AppIcon-${icon.name}.appiconset`);
     fs.mkdirSync(set, { recursive: true });
     // iOS shows no transparency in app icons: a black corner would show, so the edge colour fills it

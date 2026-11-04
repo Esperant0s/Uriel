@@ -4,10 +4,10 @@
 // each other directly (WebRTC, encrypted) whenever they're open at the same time. A public PeerJS server only
 // introduces them to each other; it never sees the data. Merging (who wins when both changed) is in sync-core.js.
 (() => {
-  const Core = window.MurielSyncCore;
+  const Core = window.UrielSyncCore;
   if (!Core || !window.localStorage) return;
   // UI language (i18n.js); without it everything stays English
-  const I18n = window.MurielI18n || (() => { const f = (s, ...a) => String(s).replace(/\{(\d)\}/g, (_, i) => (a[i] != null ? a[i] : '')); return { T: (s) => s, Tf: f, Tm: f, Th: f, text: (el, s, ...a) => { if (el) el.textContent = f(s, ...a); } }; })();
+  const I18n = window.UrielI18n || (() => { const f = (s, ...a) => String(s).replace(/\{(\d)\}/g, (_, i) => (a[i] != null ? a[i] : '')); return { T: (s) => s, Tf: f, Tm: f, Th: f, text: (el, s, ...a) => { if (el) el.textContent = f(s, ...a); } }; })();
 
   const LINK_PAGE = 'https://cloverscripts.github.io/riff-muriel/link.html';
   const DAY = 864e5;
@@ -16,9 +16,9 @@
   const CONTINUE_WITHIN = 12 * 3600e3;
 
   const K = {
-    device: 'muriel_sync_device', group: 'muriel_sync_group', members: 'muriel_sync_members', meta: 'muriel_sync_meta',
-    listens: 'muriel_sync_listens', np: 'muriel_sync_np', cats: 'muriel_sync_cats', seen: 'muriel_sync_seen',
-    dismissed: 'muriel_sync_np_dismissed', invite: 'muriel_sync_invite',
+    device: 'uriel_sync_device', group: 'uriel_sync_group', members: 'uriel_sync_members', meta: 'uriel_sync_meta',
+    listens: 'uriel_sync_listens', np: 'uriel_sync_np', cats: 'uriel_sync_cats', seen: 'uriel_sync_seen',
+    dismissed: 'uriel_sync_np_dismissed', invite: 'uriel_sync_invite',
   };
 
   // ---------- storage ----------
@@ -68,19 +68,19 @@
   const LISTS = {
     playlists: { key: 'devsize_playlists', cat: 'library', id: (p) => (p && p.id ? String(p.id) : '') },
     favorites: { key: 'devsize_favorites', cat: 'library', id: trackKey },
-    albums: { key: 'muriel_saved_albums', cat: 'library', id: (a) => (a && a.id ? String(a.id) : '') },
-    artists: { key: 'muriel_followed_artists', cat: 'library', id: artistKey },
+    albums: { key: 'uriel_saved_albums', cat: 'library', id: (a) => (a && a.id ? String(a.id) : '') },
+    artists: { key: 'uriel_followed_artists', cat: 'library', id: artistKey },
     history: { key: 'devsize_history', cat: 'history', id: (t) => (trackKey(t) ? `${trackKey(t)}@${t.playedAt || 0}` : ''), sort: (a, b) => (b.playedAt || 0) - (a.playedAt || 0), cap: 100 },
   };
   // the look of the app; sizes, volume, folders and anything else that belongs to one device stay local
-  const SETTINGS = ['muriel_theme_mode', 'muriel_theme_accent', 'muriel_theme_intensity', 'muriel_theme_brightness', 'muriel_palette_style',
-    'muriel_mesh_brightness', 'muriel_mesh_cfg', 'muriel_font', 'muriel_corner_radius', 'muriel_glass_blur', 'muriel_ui_alpha', 'muriel_text_alpha',
-    'muriel_cover_bg_brightness', 'devsize_vfx', 'muriel_lyrics_word_style', 'muriel_lyrics_ease', 'muriel_lyrics_speed',
-    'muriel_lyrics_gradient_tightness', 'muriel_gradient_tight', 'muriel_wavy_progress', 'muriel_progress_knob', 'muriel_progress_bg',
-    'muriel_highlight_buttons', 'muriel_track_art', 'muriel_tr_enabled', 'muriel_tr_lang', 'muriel_tr_auto', 'muriel_crossfade',
-    'muriel_icon_pack', 'muriel_adv_intensity_bg', 'muriel_lyrics_source', 'muriel_word_source', 'muriel_track_trims',
-    'muriel_blocked_artists', 'muriel_blocked_tracks'];
-  const LISTENS_KEY = 'muriel_listens_v1';
+  const SETTINGS = ['uriel_theme_mode', 'uriel_theme_accent', 'uriel_theme_intensity', 'uriel_theme_brightness', 'uriel_palette_style',
+    'uriel_mesh_brightness', 'uriel_mesh_cfg', 'uriel_font', 'uriel_corner_radius', 'uriel_glass_blur', 'uriel_ui_alpha', 'uriel_text_alpha',
+    'uriel_cover_bg_brightness', 'devsize_vfx', 'uriel_lyrics_word_style', 'uriel_lyrics_ease', 'uriel_lyrics_speed',
+    'uriel_lyrics_gradient_tightness', 'uriel_gradient_tight', 'uriel_wavy_progress', 'uriel_progress_knob', 'uriel_progress_bg',
+    'uriel_highlight_buttons', 'uriel_track_art', 'uriel_tr_enabled', 'uriel_tr_lang', 'uriel_tr_auto', 'uriel_crossfade',
+    'uriel_icon_pack', 'uriel_adv_intensity_bg', 'uriel_lyrics_source', 'uriel_word_source', 'uriel_track_trims',
+    'uriel_blocked_artists', 'uriel_blocked_tracks'];
+  const LISTENS_KEY = 'uriel_listens_v1';
   const WATCH = new Map([...Object.entries(LISTS).map(([n, l]) => [l.key, n]), ...SETTINGS.map((k) => [k, 'settings']), [LISTENS_KEY, 'listens']]);
 
   const listItems = (name) => { const v = read(LISTS[name].key, []); return Array.isArray(v) ? v : []; };
@@ -95,7 +95,7 @@
   const saveMeta = () => write(K.meta, meta);
 
   function ownListens() {
-    const E = window.MurielEncore;
+    const E = window.UrielEncore;
     const db = E && E.own ? E.own() : read(LISTENS_KEY);
     return db ? { t: meta.listensT || 1, name: device.name, db } : null;
   }
@@ -147,8 +147,10 @@
       // CSS, a background file path) would otherwise be written into this device's storage as it is
       const theirs = { values: {}, meta: {} };
       for (const k of SETTINGS) {
-        const v = r.settings.values && r.settings.values[k];
-        if (r.settings.meta && r.settings.meta[k] && (v === null || typeof v === 'string')) { theirs.values[k] = v; theirs.meta[k] = r.settings.meta[k]; }
+        // a device still on Muriel or Mural sends the same settings as muriel_x
+        const sent = r.settings.meta && r.settings.meta[k] ? k : k.replace(/^uriel_/, 'muriel_');
+        const v = r.settings.values && r.settings.values[sent];
+        if (r.settings.meta && r.settings.meta[sent] && (v === null || typeof v === 'string')) { theirs.values[k] = v; theirs.meta[k] = r.settings.meta[sent]; }
       }
       const res = Core.mergeMap({ values: settingValues(), meta: meta.settings }, theirs);
       meta.settings = res.meta;
@@ -160,7 +162,7 @@
         listens = res.value;
         write(K.listens, listens);
         any = true;
-        try { window.MurielEncore && window.MurielEncore.refresh && window.MurielEncore.refresh(); } catch (e) {}
+        try { window.UrielEncore && window.UrielEncore.refresh && window.UrielEncore.refresh(); } catch (e) {}
       }
     }
     if (r.np && cats.continue) {
@@ -170,7 +172,7 @@
     saveMeta();
     if (changedKeys.length) {
       any = true;
-      try { window.MurielCore && window.MurielCore.reloadFromStorage(changedKeys); } catch (e) { console.warn('[sync] reload', e); }
+      try { window.UrielCore && window.UrielCore.reloadFromStorage(changedKeys); } catch (e) { console.warn('[sync] reload', e); }
     }
     if (any) render();
     return any || changedKeys.length > 0;
@@ -206,12 +208,12 @@
   // ---------- connections ----------
   // Peer ids on the public PeerJS server. Only the device with the smaller id dials, so two devices never
   // open two connections to each other.
-  const peerId = (id) => `muriel-${id}`;
+  const peerId = (id) => `uriel-${id}`;
   // PeerJS's built-in TURN relays (eu-0 / us-0.turn.peerjs.com) no longer exist: their names don't resolve, and every
   // connection logged a burst of "Failed to resolve address" errors trying them. Google's STUN servers find the
-  // route between two devices; a sync server set in muriel_sync_server (with its own config) still wins.
+  // route between two devices; a sync server set in uriel_sync_server (with its own config) still wins.
   const ICE_SERVERS = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
-  const serverOpts = () => ({ debug: 0, config: { iceServers: ICE_SERVERS }, ...(read('muriel_sync_server') || {}) });
+  const serverOpts = () => ({ debug: 0, config: { iceServers: ICE_SERVERS }, ...(read('uriel_sync_server') || {}) });
   let peer = null, peerRetry = null, dialTimer = null;
   const conns = new Map(); // deviceId -> { conn, ok }
 
@@ -318,7 +320,7 @@
       } else if (msg.t === 'np') {
         if (applyRemote({ np: msg.np })) broadcast({ np }, st.id);
       } else if (msg.t === 'handoff') {
-        const C = window.MurielCore;
+        const C = window.UrielCore;
         if (C && C.state.isPlaying) { C.togglePlay(); if (C.toast) C.toast(I18n.Tm('Now playing on another device'), 'info'); }
       }
     });
@@ -354,7 +356,7 @@
     ensureGroup();
     startPeer();
     const code = newCode();
-    const lp = new window.Peer(`muriel-link-${code.toLowerCase()}`, serverOpts());
+    const lp = new window.Peer(`uriel-link-${code.toLowerCase()}`, serverOpts());
     linking = { code, peer: lp, until: Date.now() + LINK_TTL, timer: setTimeout(stopLinking, LINK_TTL), error: '' };
     lp.on('error', (err) => {
       if (!linking || linking.peer !== lp) return;
@@ -390,12 +392,12 @@
     if (!havePeer(() => joinWithCode(raw))) return;
     joining = { code, busy: true };
     render();
-    const tp = new window.Peer(`muriel-j-${hex(12)}`, serverOpts());
+    const tp = new window.Peer(`uriel-j-${hex(12)}`, serverOpts());
     const done = (error) => { clearTimeout(timer); try { tp.destroy(); } catch (e) {} joining = error ? { code, error } : null; render(); };
     const timer = setTimeout(() => done("No device answered. Check the code, and that Uriel shows it on the other device."), 20000);
     tp.on('error', (err) => done(err && err.type === 'peer-unavailable' ? 'No device is showing that code right now.' : "Couldn't reach the link service. Check your internet connection."));
     tp.on('open', () => {
-      const conn = tp.connect(`muriel-link-${code.toLowerCase()}`, { reliable: true });
+      const conn = tp.connect(`uriel-link-${code.toLowerCase()}`, { reliable: true });
       conn.on('open', () => conn.send({ t: 'join', id: device.id, name: device.name, kind, v: 1 }));
       conn.on('data', (msg) => {
         if (!msg || msg.t !== 'welcome' || !msg.group || !msg.group.secret) return;
@@ -438,7 +440,7 @@
     stopPeer();
     group = null; members = {}; meta = {}; listens = {}; np = {};
     [K.group, K.members, K.meta, K.listens, K.np, K.seen].forEach((k) => { try { rawRemove.call(localStorage, k); } catch (e) {} });
-    try { window.MurielEncore && window.MurielEncore.refresh && window.MurielEncore.refresh(); } catch (e) {}
+    try { window.UrielEncore && window.UrielEncore.refresh && window.UrielEncore.refresh(); } catch (e) {}
     updateContinue();
     if (msg) toast(I18n.Tm(msg));
     render();
@@ -448,7 +450,7 @@
   const trackInfo = (t) => (t ? { id: t.id, title: t.title, artist: t.artist, album: t.album, thumbnail: t.thumbnail, platform: t.platform, url: t.url, duration: t.duration } : null);
   let npTimer = null, lastNpSent = 0;
   function publishNp(force) {
-    const C = window.MurielCore;
+    const C = window.UrielCore;
     if (!group || !catsOn().continue || !C || !C.state.currentTrack) return;
     const now = Date.now();
     if (!force && now - lastNpSent < 15000) return;
@@ -467,7 +469,7 @@
   const isDismissed = (d, e) => !!d && (d === e.t || (typeof d === 'object' && (Date.now() < d.until || d.key === songKey(e.track))));
   function dismiss(id, e) { write(K.dismissed, { ...read(K.dismissed, {}), [id]: { key: songKey(e.track), until: Date.now() + DISMISS_FOR } }); }
   function candidate() {
-    const C = window.MurielCore;
+    const C = window.UrielCore;
     if (!group || !catsOn().continue || !C || C.state.isPlaying) return null;
     const mine = np[device.id];
     const dismissed = read(K.dismissed, {});
@@ -501,7 +503,7 @@
     banner.querySelector('span').textContent = `${e.track.title || I18n.T('Unknown')}${e.track.artist ? ` · ${e.track.artist}` : ''} · ${fmt(e.pos || 0)}`;
     banner.querySelector('.update-banner-later').onclick = () => { dismiss(id, e); updateContinue(); };
     banner.querySelector('.update-banner-go').onclick = () => {
-      const C = window.MurielCore;
+      const C = window.UrielCore;
       const at = (e.pos || 0) + (live ? (Date.now() - e.t) / 1000 : 0);
       dismiss(id, e);
       if (live) sendTo(id, { t: 'handoff' });
@@ -514,7 +516,7 @@
 
   // ---------- Settings → Sync ----------
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const toast = (m) => { try { window.MurielCore && window.MurielCore.toast(m, 'info'); } catch (e) {} };
+  const toast = (m) => { try { window.UrielCore && window.UrielCore.toast(m, 'info'); } catch (e) {} };
   // UI language (i18n.js): data-i18n marks Uriel's own words in the HTML below; names only ever go into {0} slots
   // phones hand outside links to the browser; the desktop app opens https links in the default browser
   const openUrl = (u) => { if (platform === 'ios' || platform === 'android') location.href = u; else window.open(u, '_blank'); };
@@ -584,7 +586,7 @@
     const cats = catsOn();
     const parts = [`<span class="settings-section-title" data-i18n>Sync <span class="sync-badge" data-i18n>New</span></span>`];
     // every profile on this device has its own group (its keys, device id included, are its own: profiles-core.js)
-    const prof = window.MurielProfiles;
+    const prof = window.UrielProfiles;
     const profNote = prof && prof.list().length > 1
       ? `<span>${I18n.Th('This links the profile “{0}”; every profile on this device links its own devices. Open the same profile on the other device before you link.', esc(prof.current().name))}</span>` : '';
     parts.push(`<div class="m3-group"><div class="setting-item"><div class="sync-intro">
@@ -683,16 +685,17 @@
     }
   }
 
-  // ---------- links from the QR code (muriel://link?code=…) ----------
+  // ---------- links from the QR code (uriel://link?code=…) ----------
   function handleLink(url) {
-    const m = /^muriel:\/\/link\/?\?(?:.*&)?code=([0-9A-Za-z-]+)/.exec(String(url || ''));
+    // muriel:// is the same link from before the rename (the Sync page still makes it)
+    const m = /^(?:uriel|muriel):\/\/link\/?\?(?:.*&)?code=([0-9A-Za-z-]+)/i.exec(String(url || ''));
     if (!m) return;
     if (window.showSettingsCategory) { const nav = document.getElementById('nav-settings'); if (nav) nav.click(); window.showSettingsCategory('sync'); }
     joinWithCode(m[1]);
   }
-  window.addEventListener('muriel:deeplink', (e) => handleLink(e.detail));
+  window.addEventListener('uriel:deeplink', (e) => handleLink(e.detail));
   // another language, or its words just came in: the sentences with names in them are built here
-  window.addEventListener('muriel:i18n', () => { if (section || document.getElementById('section-sync-invite')) render(); });
+  window.addEventListener('uriel:i18n', () => { if (section || document.getElementById('section-sync-invite')) render(); });
 
   // ---------- start ----------
   function wake() {
@@ -710,9 +713,9 @@
   }, 1000);
 
   function hook() {
-    const C = window.MurielCore;
+    const C = window.UrielCore;
     if (C && C.audio) {
-      window.addEventListener('muriel:track', () => publishNp(true));
+      window.addEventListener('uriel:track', () => publishNp(true));
       C.audio.addEventListener('playing', () => { publishNp(true); updateContinue(); });
       C.audio.addEventListener('pause', () => publishNp(true));
       C.audio.addEventListener('timeupdate', () => publishNp(false));
@@ -722,9 +725,9 @@
     if (active()) startPeer();
     updateContinue();
   }
-  if (window.MurielCore) hook(); else window.addEventListener('muriel:ready', hook, { once: true });
+  if (window.UrielCore) hook(); else window.addEventListener('uriel:ready', hook, { once: true });
 
-  window.MurielSync = {
+  window.UrielSync = {
     // other devices' Encore data, for encore.js
     listenDbs: () => (catsOn().history ? Object.entries(listens).filter(([id]) => id !== device.id && members[id] && !members[id].del).map(([, e]) => e.db).filter(Boolean) : []),
     status: () => ({ device, group: !!group, members, connected: [...conns].filter(([, s]) => s.ok).map(([id]) => id) }),

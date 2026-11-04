@@ -1,5 +1,5 @@
 {
-  description = "Muriel - a desktop audio player (Electron)";
+  description = "Uriel - a desktop audio player (Electron)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -8,9 +8,9 @@
 
   outputs = { self, nixpkgs, flake-utils, ... }:
     let
-      mkMuriel = pkgs:
+      mkUriel = pkgs:
         pkgs.buildNpmPackage rec {
-          pname = "muriel";
+          pname = "uriel";
           version = "42.0.0";
           src = self;
 
@@ -24,16 +24,16 @@
 
           installPhase =
             let
-              appDir = "$out/share/muriel";
+              appDir = "$out/share/uriel";
               runtimeDeps = pkgs.lib.makeBinPath [ pkgs.yt-dlp pkgs.ffmpeg ];
               desktop = pkgs.makeDesktopItem {
-                name = "Muriel";
-                desktopName = "Muriel";
+                name = "Uriel";
+                desktopName = "Uriel";
                 genericName = "Audio Player";
-                exec = "muriel";
-                icon = "muriel";
+                exec = "uriel";
+                icon = "uriel";
                 categories = [ "AudioVideo" "Audio" "Player" ];
-                startupWMClass = "muriel";
+                startupWMClass = "uriel";
               };
             in
             ''
@@ -43,7 +43,7 @@
               for f in *; do cp -r "$f" ${appDir}/; done
 
               mkdir -p $out/bin
-              makeWrapper ${pkgs.electron}/bin/electron $out/bin/muriel \
+              makeWrapper ${pkgs.electron}/bin/electron $out/bin/uriel \
                 --add-flags ${appDir} \
                 --prefix PATH : ${runtimeDeps}
 
@@ -51,16 +51,16 @@
               cp ${desktop}/share/applications/*.desktop $out/share/applications/
 
               mkdir -p $out/share/icons/hicolor/256x256/apps
-              cp ${appDir}/assets/icon.png $out/share/icons/hicolor/256x256/apps/muriel.png
+              cp ${appDir}/assets/icon.png $out/share/icons/hicolor/256x256/apps/uriel.png
 
               runHook postInstall
             '';
 
           meta = with pkgs.lib; {
-            description = "Muriel - audio player made for humans";
-            homepage = "https://github.com/cloverscripts/riff-muriel";
+            description = "Uriel - audio player made for humans";
+            homepage = "https://github.com/Esperant0s/Uriel";
             license = licenses.mit;
-            mainProgram = "muriel";
+            mainProgram = "uriel";
             platforms = platforms.linux ++ platforms.darwin;
           };
         };
@@ -71,8 +71,8 @@
       in
       {
         packages = {
-          default = mkMuriel pkgs;
-          muriel = mkMuriel pkgs;
+          default = mkUriel pkgs;
+          uriel = mkUriel pkgs;
         };
 
         devShells.default = pkgs.mkShell {
@@ -84,14 +84,14 @@
           ];
 
           shellHook = ''
-            echo "Muriel dev shell. Install deps and run with:"
+            echo "Uriel dev shell. Install deps and run with:"
             echo "  npm install && npm start"
           '';
         };
       })
     // {
       overlays.default = final: prev: {
-        muriel = mkMuriel final;
+        uriel = mkUriel final;
       };
     };
 }

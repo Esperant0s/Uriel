@@ -29,7 +29,7 @@
     return 0;
   }
 
-  const releaseVersion = (rel) => ((rel.body || '').match(/muriel-version: ([0-9][\w.-]*)/) || [])[1] || String(rel.tag_name || '').replace(/^v(?=\d)/, '');
+  const releaseVersion = (rel) => ((rel.body || '').match(/(?:uriel|muriel)-version: ([0-9][\w.-]*)/) || [])[1] || String(rel.tag_name || '').replace(/^v(?=\d)/, '');
 
   // Versioned channels: a higher version. Rolling ones: built from another commit and published after this
   // build was made (so test builds that are newer than the public release don't get told to "update" to an older one).
@@ -80,5 +80,5 @@
 
   const core = { TAGS, VERSIONED, releaseApi, compareVersions, isNewer, installAsset, isGithubUrl, describe };
   if (typeof module !== 'undefined' && module.exports) module.exports = core;
-  else root.MurielUpdateCore = core;
+  else root.UrielUpdateCore = core;
 })(typeof window !== 'undefined' ? window : globalThis);

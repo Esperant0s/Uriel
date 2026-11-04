@@ -63,8 +63,9 @@ jobs:
           gh release delete windows-latest --cleanup-tag --yes 2>/dev/null || true
           # 1.5.x (Mural) builds look for Mural.exe: the same file goes up under that name too, so they update to Uriel
           cp Uriel.exe Mural.exe
+          # 1.5.x builds read the version from muriel-version
           gh release create windows-latest Uriel.exe Mural.exe \
             --prerelease \
             --target "$GITHUB_SHA" \
             --title "Uriel for Windows (latest build)" \
-            --notes "Uriel $ver. Portable build of ${GITHUB_SHA::7} (run ${{ github.run_number }}). No install needed: download Uriel.exe and run it. Windows SmartScreen may warn because the exe is unsigned: More info -> Run anyway.<!-- muriel-downloads-before: $before --><!-- muriel-version: $ver -->"
+            --notes "Uriel $ver. Portable build of ${GITHUB_SHA::7} (run ${{ github.run_number }}). No install needed: download Uriel.exe and run it. Windows SmartScreen may warn because the exe is unsigned: More info -> Run anyway.<!-- uriel-downloads-before: $before --><!-- uriel-version: $ver --><!-- muriel-version: $ver -->"

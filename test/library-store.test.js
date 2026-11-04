@@ -23,14 +23,14 @@ const settle = () => new Promise((r) => setTimeout(r, 5));
 const PL = JSON.stringify([{ id: 'pl_1', name: 'Road trip', tracks: [] }]);
 
 test('first start: the lists move into IndexedDB and leave localStorage; settings stay', async () => {
-  const ls = local({ devsize_playlists: PL, devsize_favorites: '[]', muriel_theme_mode: 'dark' });
+  const ls = local({ devsize_playlists: PL, devsize_favorites: '[]', uriel_theme_mode: 'dark' });
   const db = idb();
   const s = L.createStore(ls, db);
   assert.equal(await s.ready, 'idb');
   await settle();
   assert.equal(db.m.get('devsize_playlists'), PL);
   assert.equal(ls.m.has('devsize_playlists'), false, 'out of localStorage, so it stops counting towards the 5 MB');
-  assert.equal(ls.get('muriel_theme_mode'), 'dark');
+  assert.equal(ls.get('uriel_theme_mode'), 'dark');
   assert.equal(ls.get(L.MOVED), '1');
   assert.equal(s.get('devsize_playlists'), PL);
   assert.ok(s.keys().includes('devsize_playlists'), 'backups and profiles still see the key');
@@ -98,13 +98,13 @@ test("a change saved before the database opened isn't lost", async () => {
 });
 
 test('every profile has its own lists in IndexedDB; the move flag belongs to the device', async () => {
-  const ls = local({ [`${P.PREFIX}abcd1234:devsize_history`]: '[2]', [`${P.PREFIX}abcd1234:muriel_font`]: 'serif' });
+  const ls = local({ [`${P.PREFIX}abcd1234:devsize_history`]: '[2]', [`${P.PREFIX}abcd1234:uriel_font`]: 'serif' });
   const db = idb();
   const s = L.createStore(ls, db);
   await s.ready;
   await settle();
   assert.equal(db.m.get(`${P.PREFIX}abcd1234:devsize_history`), '[2]');
-  assert.equal(ls.get(`${P.PREFIX}abcd1234:muriel_font`), 'serif');
+  assert.equal(ls.get(`${P.PREFIX}abcd1234:uriel_font`), 'serif');
   const v = P.view(s, 'abcd1234');
   assert.equal(v.getItem('devsize_history'), '[2]');
   v.setItem('devsize_playlists', PL);

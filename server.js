@@ -1,3 +1,4 @@
+require('./legacy-env');
 const http = require('http');
 const https = require('https');
 const url = require('url');
@@ -77,9 +78,9 @@ async function fastYouTubeStream(trackUrl, id) {
   }
 }
 
-// MURIEL_DEBUG_YTDLP=1 logs every yt-dlp run with its reason and arguments
-const YTDLP_DEBUG = !!process.env.MURIEL_DEBUG_YTDLP;
-const AUDIO_PROXY_DEBUG = YTDLP_DEBUG || process.env.MURIEL_DEBUG === '1';
+// URIEL_DEBUG_YTDLP=1 logs every yt-dlp run with its reason and arguments
+const YTDLP_DEBUG = !!process.env.URIEL_DEBUG_YTDLP;
+const AUDIO_PROXY_DEBUG = YTDLP_DEBUG || process.env.URIEL_DEBUG === '1';
 
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const SAFE_MEDIA_URL = /^https?:\/\//i;
@@ -1693,7 +1694,7 @@ function executeYtDlp(args, timeoutMs = 25000, opts = {}) {
   return ytdlpQueue.run(() => {
     const startedAt = Date.now();
     const run = runYtDlpNow(args, timeoutMs, opts, priority);
-    // with MURIEL_DEBUG_YTDLP: how long a run waited for its slot and how long it took (#17)
+    // with URIEL_DEBUG_YTDLP: how long a run waited for its slot and how long it took (#17)
     if (YTDLP_DEBUG) run.then(() => 0, () => 1).then((failed) => { try { logger.log('info', `yt-dlp done [${opts.reason || 'unknown'}/${priority}] waited ${startedAt - queuedAt}ms ran ${Date.now() - startedAt}ms${failed ? ' (failed)' : ''}`); } catch (_) {} });
     return run;
   }, { key: opts.key, priority, cacheMs: opts.cacheMs });
@@ -3088,7 +3089,7 @@ async function handleAudioProxy(req, res, targetUrl) {
           fetchHop(next, hops + 1).catch(() => fail(500, 'Proxy failed'));
           return;
         }
-        // what the stream answered, for #17-style reports: refusals always, everything with MURIEL_DEBUG(_YTDLP)
+        // what the stream answered, for #17-style reports: refusals always, everything with URIEL_DEBUG(_YTDLP)
         if (status >= 400 || AUDIO_PROXY_DEBUG) {
           try { logger.log(status >= 400 ? 'warn' : 'info', `audio-proxy ${req.method} ${host}${hops ? ` (+${hops} redirect)` : ''} -> HTTP ${status} ${proxyRes.headers['content-type'] || '-'} len=${proxyRes.headers['content-length'] || '-'} range=${headers.range || '-'} ytHeaders=${ytHeaders ? 'yes' : 'no'}`); } catch (_) {}
         }
@@ -3822,7 +3823,7 @@ async function handleEncode(req, res, parsedUrl) {
 }
 
 const { parseForLyrics, pickBest } = require('./lyrics-match');
-const LRCLIB_UA = 'Uriel (https://github.com/Esperant0s/riff-muriel)';
+const LRCLIB_UA = 'Uriel (https://github.com/Esperant0s/Uriel)';
 
 function lrclibJson(pathAndQuery) {
   return new Promise((resolve) => {
@@ -6051,7 +6052,7 @@ let lastfmStoreError = '';
 const lastfmPending = new Map(); // profileId -> { token, pair, at }: a browser sign-in waiting for approval
 
 function lastfmVault() {
-  if (typeof globalThis.__murielVault === 'function') return globalThis.__murielVault('lastfm');
+  if (typeof globalThis.__urielVault === 'function') return globalThis.__urielVault('lastfm');
   if (!canStoreSpotifyAuth()) return null;
   return {
     read: () => JSON.parse(spotifySafeStorage.decryptString(fs.readFileSync(lastfmAuthPath))),
@@ -6496,7 +6497,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
     if (Array.isArray(value)) parsedUrl.query[key] = value[value.length - 1];
   }
 
-  if ((TOKEN_PROTECTED_ROUTES.has(parsedUrl.pathname) || routeNeedsToken(parsedUrl.pathname)) && !tokenMatches(req.headers['x-muriel-token']) && !tokenMatches(parsedUrl.query.t)) {
+  if ((TOKEN_PROTECTED_ROUTES.has(parsedUrl.pathname) || routeNeedsToken(parsedUrl.pathname)) && !tokenMatches(req.headers['x-uriel-token']) && !tokenMatches(parsedUrl.query.t)) {
     res.writeHead(403, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ success: false, error: 'forbidden' }));
   }

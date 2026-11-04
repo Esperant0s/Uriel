@@ -131,17 +131,17 @@
   }
 
   // a file name from a playlist or profile name
-  const fileName = (name, ext) => `${clip(name, 60).replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').replace(/^\.+/, '') || 'muriel'}.${ext}`;
+  const fileName = (name, ext) => `${clip(name, 60).replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '_').replace(/^\.+/, '') || 'uriel'}.${ext}`;
 
   // ---------- backups ----------
-  const KEY_RE = /^(?:muriel|devsize)_[A-Za-z0-9_.:-]{1,80}$/;
+  const KEY_RE = /^(?:uriel|devsize)_[A-Za-z0-9_.:-]{1,80}$/;
   // never written by a restore, never in a backup: the sync link (and which devices are in it), the profile list,
   // logins, phone logs, and things that only mean something on the device they were made on
   // (a Riff file also carries its Last.fm login in plain text: Uriel keeps logins in the server's vault instead)
-  const NEVER = [/^muriel_sync_/, /^muriel_p:/, /^muriel_secret_/, /^muriel_profiles?(?:_|$)/, /^muriel_debug_log$/,
-    /^muriel_custom_css/, /^muriel_bg_(?:url|vpath)$/, /^muriel_banner_media$/, /^muriel_lastfm_(?!enabled$)/,
+  const NEVER = [/^uriel_sync_/, /^uriel_p:/, /^uriel_secret_/, /^uriel_profiles?(?:_|$)/, /^uriel_debug_log$/,
+    /^uriel_custom_css/, /^uriel_bg_(?:url|vpath)$/, /^uriel_banner_media$/, /^uriel_lastfm_(?!enabled$)/,
     // a copy of what the theme last painted (theme-boot.js), rebuilt from the theme settings, which are backed up
-    /^muriel_theme_boot$/];
+    /^uriel_theme_boot$/];
   const neverKey = (k) => NEVER.some((re) => re.test(k));
   function backupKeyAllowed(key, isDevice) {
     if (typeof key !== 'string' || !KEY_RE.test(key) || neverKey(key)) return false;
@@ -155,7 +155,7 @@
   function makeBackup(entries, { profileName = '', appVersion = '', isDevice } = {}) {
     const data = {};
     for (const [k, v] of entries) if (typeof v === 'string' && backupKeyAllowed(k, isDevice)) data[k] = v;
-    return { app: 'Uriel', kind: 'muriel-backup', version: 1, appVersion: String(appVersion || ''), exportedAt: new Date().toISOString(), profile: { name: clip(profileName, 24) }, data };
+    return { app: 'Uriel', kind: 'uriel-backup', version: 1, appVersion: String(appVersion || ''), exportedAt: new Date().toISOString(), profile: { name: clip(profileName, 24) }, data };
   }
 
   // A stored track, as the app itself saves it. A restore keeps its own fields (text, numbers, true/false; Uriel
@@ -212,22 +212,24 @@
     devsize_history: (v) => cleanTrackList(v, 5000),
   };
 
-  // Upstream Riff's localStorage names: riff_x became muriel_x in Uriel (tools/rename-riff.py)
-  const fromRiff = (k) => (typeof k === 'string' && k.startsWith('riff_') ? `muriel_${k.slice(5)}` : k);
+  // Older names of the same keys: upstream Riff's riff_x (tools/rename-riff.py) and Muriel's and Mural's muriel_x
+  // (and mural_x) are uriel_x now
+  const fromOlder = (k) => (typeof k === 'string' ? k.replace(/^(?:riff|muriel|mural)_/, 'uriel_') : k);
 
   // A backup file's contents (already parsed) -> what a restore writes. Throws an Error with a message for people.
   function readBackup(obj, { isDevice } = {}) {
     if (!isObj(obj)) throw new Error("That file isn't a Uriel backup");
     let source = '';
     let raw = null;
-    if (obj.kind === 'muriel-backup' && isObj(obj.data)) { source = 'muriel'; raw = obj.data; }
+    // backups made before the rename say muriel-backup
+    if ((obj.kind === 'uriel-backup' || obj.kind === 'muriel-backup') && isObj(obj.data)) { source = 'uriel'; raw = obj.data; }
     else if (isObj(obj.localStorage) && ['Riff', 'Muriel', 'Mural', 'Uriel'].includes(obj.app)) { source = 'riff'; raw = obj.localStorage; }
     if (!raw) throw new Error("That file isn't a Uriel backup or a Riff account file");
     const entries = {};
     const skipped = [];
     let total = 0;
     for (const k0 of Object.keys(raw).slice(0, 5000)) {
-      const k = source === 'riff' ? fromRiff(k0) : k0;
+      const k = fromOlder(k0);
       let v = raw[k0];
       if (!backupKeyAllowed(k, isDevice) || v == null) { skipped.push(k); continue; }
       if (typeof v !== 'string') { try { v = JSON.stringify(v); } catch (e) { skipped.push(k); continue; } }
@@ -248,7 +250,7 @@
       source,
       entries,
       skipped,
-      profileName: source === 'muriel' && isObj(obj.profile) ? clip(obj.profile.name, 24) : '',
+      profileName: source === 'uriel' && isObj(obj.profile) ? clip(obj.profile.name, 24) : '',
       counts: { playlists: count('devsize_playlists'), favorites: count('devsize_favorites'), history: count('devsize_history'), keys: Object.keys(entries).length },
     };
   }
@@ -303,5 +305,5 @@
 
   const api = { LIMITS, cleanSharedTrack, parsePlaylistFile, exportTrack, playlistFile, fileName, backupKeyAllowed, keepOnRestore, makeBackup, cleanStoredTrack, cleanStoredPlaylists, readBackup, isRiffAccount, readRiffAccount, parseBackupFile };
   if (typeof module === 'object' && module.exports) module.exports = api;
-  else root.MurielBackup = api;
+  else root.UrielBackup = api;
 })(typeof window !== 'undefined' ? window : globalThis);

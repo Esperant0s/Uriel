@@ -116,7 +116,7 @@ function phone({ platform = 'android', perm = 'granted', answer = 'granted', hol
   };
   const Capacitor = {
     getPlatform: () => platform, isNativePlatform: () => true, convertFileSrc: (u) => `app:${u}`,
-    Plugins: { MurielMedia: { scanFile: async ({ path: p }) => { scans.push(p); } } },
+    Plugins: { UrielMedia: { scanFile: async ({ path: p }) => { scans.push(p); } } },
   };
   const fakes = {
     '@capacitor/filesystem': { Filesystem, Directory: { Data: 'DATA', Documents: 'DOCUMENTS', ExternalStorage: 'EXTERNAL_STORAGE' }, Encoding: { UTF8: 'utf8' } },

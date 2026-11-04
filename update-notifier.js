@@ -5,8 +5,8 @@
 // "Update" downloads it right here with a progress bar and then offers "Restart now"; on iOS, or if that fails,
 // "Download" opens the release in the browser as before.
 (() => {
-  const build = window.MURIEL_BUILD || {};
-  const core = window.MurielUpdateCore;
+  const build = window.URIEL_BUILD || {};
+  const core = window.UrielUpdateCore;
   const CHECK_EVERY = 6 * 3600 * 1000;
   const SNOOZE = 3 * 24 * 3600 * 1000;
   const store = {
@@ -15,11 +15,11 @@
   };
 
   const channel = build.channel || (window.Capacitor && window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : '');
-  const api = core && core.releaseApi(build.repo || 'cloverscripts/riff-muriel', channel);
+  const api = core && core.releaseApi(build.repo || 'Esperant0s/Uriel', channel);
   const enabled = !!(api && build.sha && build.sha !== 'dev');
   const isAndroid = channel === 'android';
   // the in-app installer, when this build has one (null on iOS and in the browser)
-  const installer = (window.electronAPI && window.electronAPI.updates) || window.MurielAppUpdater || null;
+  const installer = (window.electronAPI && window.electronAPI.updates) || window.UrielAppUpdater || null;
   let canInstall = null;
   const installable = async () => {
     if (canInstall === null) canInstall = !!(installer && await installer.supported().catch(() => false));
@@ -91,7 +91,7 @@
   }
   async function showBanner(update) {
     if (banner) return;
-    const snooze = store.get('muriel_update_snooze');
+    const snooze = store.get('uriel_update_snooze');
     if (snooze && snooze.sha === update.sha && snooze.until > Date.now()) return;
     const inApp = await installable();
     if (banner) return;
@@ -141,7 +141,7 @@
     // before downloading: snooze this build. While or after downloading: just hide; a downloaded update still goes
     // in when Uriel quits (the computer) or from Settings > About (Android)
     later.addEventListener('click', () => {
-      if (phase === 'idle') store.set('muriel_update_snooze', { sha: update.sha, until: Date.now() + SNOOZE });
+      if (phase === 'idle') store.set('uriel_update_snooze', { sha: update.sha, until: Date.now() + SNOOZE });
       hideBanner();
     });
     listeners.add(b.render);
@@ -178,18 +178,18 @@
 
   async function check(manual) {
     if (!enabled) { if (manual) setStatus('Update checks run in the official builds'); return; }
-    const last = store.get('muriel_update_last') || 0;
+    const last = store.get('uriel_update_last') || 0;
     if (!manual && Date.now() - last < CHECK_EVERY) {
-      const cached = store.get('muriel_update_found');
+      const cached = store.get('uriel_update_found');
       if (cached && cached.from === build.sha) { current = cached.update; await installable(); setStatus(`${label(current)} is available`); showBanner(current); }
       return;
     }
     if (manual) setStatus('Checking…');
     const rel = await latestRelease();
     if (!rel) { if (manual) setStatus("Couldn't reach GitHub, try again later"); return; }
-    store.set('muriel_update_last', Date.now());
+    store.set('uriel_update_last', Date.now());
     current = core.describe(rel, build, channel);
-    store.set('muriel_update_found', current ? { from: build.sha, update: current } : null);
+    store.set('uriel_update_found', current ? { from: build.sha, update: current } : null);
     await installable();
     if (current) { setStatus(`${label(current)} is available`); showBanner(current); }
     else setStatus(`You're up to date${build.run ? ` (build ${build.run})` : ''}`);
@@ -208,5 +208,5 @@
   // first check a little after start-up, then whenever the app comes back to the foreground
   setTimeout(() => check(false), 8000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) check(false); });
-  window.MurielUpdates = { check: () => check(true) };
+  window.UrielUpdates = { check: () => check(true) };
 })();

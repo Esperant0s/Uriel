@@ -20,23 +20,28 @@
             android:launchMode="singleTask"
             android:exported="true">
 
-            <!-- muriel://link?code=… from the QR code in Settings → Sync (opens the app and links it) -->
+            <!-- uriel://link?code=… from the QR code in Settings → Sync (opens the app and links it) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="uriel" android:host="link" />
+                <!-- uriel://playlist?p=… from a shared playlist link (adds the playlist) -->
+                <data android:scheme="uriel" android:host="playlist" />
+                <!-- the same links from before the rename (and the Sync page's QR codes) -->
                 <data android:scheme="muriel" android:host="link" />
-                <!-- muriel://playlist?p=… from a shared playlist link (adds the playlist) -->
                 <data android:scheme="muriel" android:host="playlist" />
             </intent-filter>
 
         </activity>
 
-        <!-- The home-screen icon (Settings → Theme → App icon, AppIconPlugin): Android can only switch between icons
+        <!-- The launcher entries keep the names they had before the app's code moved to io.github.esperant0s.uriel:
+             phones keep the icon someone picked, and their home-screen shortcut, across the update.
+             The home-screen icon (Settings → Theme → App icon, AppIconPlugin): Android can only switch between icons
              the app ships with, so each style is a launcher entry of its own and one of them is on at a time.
              The PNGs come from tools/render-app-icons.js. -->
         <activity-alias
-            android:name=".LauncherDefault"
+            android:name="io.github.cloverscripts.muriel.LauncherDefault"
             android:targetActivity=".MainActivity"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"
@@ -48,10 +53,10 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIcon_mural"
+            android:name="io.github.cloverscripts.muriel.LauncherIcon_mural"
             android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_mural_mural"
-            android:roundIcon="@mipmap/ic_mural_mural"
+            android:icon="@mipmap/ic_uriel_mural"
+            android:roundIcon="@mipmap/ic_uriel_mural"
             android:exported="true"
             android:enabled="false">
             <intent-filter>
@@ -60,10 +65,10 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIcon_default"
+            android:name="io.github.cloverscripts.muriel.LauncherIcon_default"
             android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_mural_default"
-            android:roundIcon="@mipmap/ic_mural_default"
+            android:icon="@mipmap/ic_uriel_default"
+            android:roundIcon="@mipmap/ic_uriel_default"
             android:exported="true"
             android:enabled="false">
             <intent-filter>
@@ -72,10 +77,10 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIcon_editor"
+            android:name="io.github.cloverscripts.muriel.LauncherIcon_editor"
             android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_mural_editor"
-            android:roundIcon="@mipmap/ic_mural_editor"
+            android:icon="@mipmap/ic_uriel_editor"
+            android:roundIcon="@mipmap/ic_uriel_editor"
             android:exported="true"
             android:enabled="false">
             <intent-filter>
@@ -84,10 +89,10 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIcon_orbit"
+            android:name="io.github.cloverscripts.muriel.LauncherIcon_orbit"
             android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_mural_orbit"
-            android:roundIcon="@mipmap/ic_mural_orbit"
+            android:icon="@mipmap/ic_uriel_orbit"
+            android:roundIcon="@mipmap/ic_uriel_orbit"
             android:exported="true"
             android:enabled="false">
             <intent-filter>
@@ -96,10 +101,10 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIcon_vinyl"
+            android:name="io.github.cloverscripts.muriel.LauncherIcon_vinyl"
             android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_mural_vinyl"
-            android:roundIcon="@mipmap/ic_mural_vinyl"
+            android:icon="@mipmap/ic_uriel_vinyl"
+            android:roundIcon="@mipmap/ic_uriel_vinyl"
             android:exported="true"
             android:enabled="false">
             <intent-filter>
@@ -108,10 +113,10 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIcon_cosmos"
+            android:name="io.github.cloverscripts.muriel.LauncherIcon_cosmos"
             android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_mural_cosmos"
-            android:roundIcon="@mipmap/ic_mural_cosmos"
+            android:icon="@mipmap/ic_uriel_cosmos"
+            android:roundIcon="@mipmap/ic_uriel_cosmos"
             android:exported="true"
             android:enabled="false">
             <intent-filter>
@@ -120,10 +125,10 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIcon_aurora"
+            android:name="io.github.cloverscripts.muriel.LauncherIcon_aurora"
             android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_mural_aurora"
-            android:roundIcon="@mipmap/ic_mural_aurora"
+            android:icon="@mipmap/ic_uriel_aurora"
+            android:roundIcon="@mipmap/ic_uriel_aurora"
             android:exported="true"
             android:enabled="false">
             <intent-filter>
@@ -132,10 +137,10 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIcon_sunset"
+            android:name="io.github.cloverscripts.muriel.LauncherIcon_sunset"
             android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_mural_sunset"
-            android:roundIcon="@mipmap/ic_mural_sunset"
+            android:icon="@mipmap/ic_uriel_sunset"
+            android:roundIcon="@mipmap/ic_uriel_sunset"
             android:exported="true"
             android:enabled="false">
             <intent-filter>
@@ -144,10 +149,10 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIcon_amethyst"
+            android:name="io.github.cloverscripts.muriel.LauncherIcon_amethyst"
             android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_mural_amethyst"
-            android:roundIcon="@mipmap/ic_mural_amethyst"
+            android:icon="@mipmap/ic_uriel_amethyst"
+            android:roundIcon="@mipmap/ic_uriel_amethyst"
             android:exported="true"
             android:enabled="false">
             <intent-filter>
@@ -156,10 +161,10 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIcon_y2k_disc"
+            android:name="io.github.cloverscripts.muriel.LauncherIcon_y2k_disc"
             android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_mural_y2k_disc"
-            android:roundIcon="@mipmap/ic_mural_y2k_disc"
+            android:icon="@mipmap/ic_uriel_y2k_disc"
+            android:roundIcon="@mipmap/ic_uriel_y2k_disc"
             android:exported="true"
             android:enabled="false">
             <intent-filter>
@@ -168,10 +173,10 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIcon_cassette"
+            android:name="io.github.cloverscripts.muriel.LauncherIcon_cassette"
             android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_mural_cassette"
-            android:roundIcon="@mipmap/ic_mural_cassette"
+            android:icon="@mipmap/ic_uriel_cassette"
+            android:roundIcon="@mipmap/ic_uriel_cassette"
             android:exported="true"
             android:enabled="false">
             <intent-filter>
@@ -180,10 +185,10 @@
             </intent-filter>
         </activity-alias>
         <activity-alias
-            android:name=".LauncherIcon_invincible"
+            android:name="io.github.cloverscripts.muriel.LauncherIcon_invincible"
             android:targetActivity=".MainActivity"
-            android:icon="@mipmap/ic_mural_invincible"
-            android:roundIcon="@mipmap/ic_mural_invincible"
+            android:icon="@mipmap/ic_uriel_invincible"
+            android:roundIcon="@mipmap/ic_uriel_invincible"
             android:exported="true"
             android:enabled="false">
             <intent-filter>

@@ -11,7 +11,7 @@ const http = require('node:http');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'uriel-device-'));
 for (const key of ['HOME', 'USERPROFILE', 'XDG_CONFIG_HOME']) process.env[key] = tmp;
-process.env.MURIEL_DATA_DIR = path.join(tmp, 'data');
+process.env.URIEL_DATA_DIR = path.join(tmp, 'data');
 const music = path.join(tmp, 'Music');
 const put = (file, bytes) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, Buffer.alloc(bytes, 1)); };
 put(path.join(music, 'Daft Punk - Get Lucky.mp3'), 4000);
@@ -42,7 +42,7 @@ test.before(async () => { port = await startServer(0); });
 test.after(async () => { await stopServer(); fs.rmSync(tmp, { recursive: true, force: true }); });
 
 const call = (route, body) => new Promise((resolve, reject) => {
-  const req = http.request({ host: '127.0.0.1', port, path: route, method: body ? 'POST' : 'GET', headers: { 'x-muriel-token': getServerToken(), 'Content-Type': 'application/json' } }, (res) => {
+  const req = http.request({ host: '127.0.0.1', port, path: route, method: body ? 'POST' : 'GET', headers: { 'x-uriel-token': getServerToken(), 'Content-Type': 'application/json' } }, (res) => {
     const chunks = [];
     res.on('data', (c) => chunks.push(c));
     res.on('end', () => resolve({ status: res.statusCode, body: Buffer.concat(chunks) }));
@@ -63,7 +63,7 @@ test('songs in the Music folder show up in the library and play from where they 
   assert.equal(file.status, 200);
   assert.equal(file.body.length, 4000);
   assert.ok(fs.existsSync(path.join(music, 'Daft Punk - Get Lucky.mp3')), 'nothing copied or moved');
-  assert.equal(fs.existsSync(path.join(process.env.MURIEL_DATA_DIR, 'library', `${lucky.id}.mp3`)), false);
+  assert.equal(fs.existsSync(path.join(process.env.URIEL_DATA_DIR, 'library', `${lucky.id}.mp3`)), false);
   const status = JSON.parse((await call('/api/device-music')).body);
   assert.equal(status.enabled, true);
   assert.equal(status.count, 2);

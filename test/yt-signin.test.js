@@ -9,7 +9,7 @@ const os = require('node:os');
 const path = require('node:path');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'uriel-ytsignin-'));
-process.env.MURIEL_DATA_DIR = path.join(tmp, 'data');
+process.env.URIEL_DATA_DIR = path.join(tmp, 'data');
 test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
 const { netscapeCookies } = require('../google-library')._test;

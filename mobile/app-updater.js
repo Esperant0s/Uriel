@@ -5,8 +5,8 @@ const { Capacitor, registerPlugin } = require('@capacitor/core');
 
 module.exports = function appUpdater() {
   if (Capacitor.getPlatform() !== 'android') return;
-  const plugin = registerPlugin('MurielUpdater');
-  window.MurielAppUpdater = {
+  const plugin = registerPlugin('UrielUpdater');
+  window.UrielAppUpdater = {
     supported: async () => true,
     async download(update, onProgress) {
       const apk = update && update.apk;

@@ -2,11 +2,11 @@
 // lastfm-core.js decides when (the scrobbling rules); the in-app server (server.js, /api/lastfm/*) talks to Last.fm
 // and keeps the login, so this page never sees the session key. Works the same on phones.
 (function () {
-  const L = window.MurielLastfm;
+  const L = window.UrielLastfm;
   if (!L) return;
-  const ENABLED = 'muriel_lastfm_enabled';
+  const ENABLED = 'uriel_lastfm_enabled';
   const $ = (id) => document.getElementById(id);
-  const profileId = () => (window.MurielProfiles && window.MurielProfiles.id) || 'default';
+  const profileId = () => (window.UrielProfiles && window.UrielProfiles.id) || 'default';
   const isPhone = () => !!(window.electronAPI && window.electronAPI.isMobile);
   let core = null;
   let account = { connected: false, username: '', error: '' };
@@ -40,11 +40,11 @@
   }
 
   // UI language (i18n.js); the Last.fm name is filled in after translating, so it's never sent
-  const I18N = window.MurielI18n;
+  const I18N = window.UrielI18n;
   const T = (s) => (I18N ? I18N.T(s) : s);
   const Tf = (s, ...a) => (I18N ? I18N.Tf(s, ...a) : s.replace(/\{(\d+)\}/g, (m, i) => a[i]));
   // the card's line is drawn before the words of another language arrive: draw it again when they do
-  window.addEventListener('muriel:i18n', () => render());
+  window.addEventListener('uriel:i18n', () => render());
 
   function cardLine(text) {
     const label = $('lastfm-status-label');
@@ -74,7 +74,7 @@
 
   async function refresh() {
     let profiles = [];
-    try { profiles = window.MurielProfiles ? window.MurielProfiles.list().map((p) => p.id) : []; } catch (e) {}
+    try { profiles = window.UrielProfiles ? window.UrielProfiles.list().map((p) => p.id) : []; } catch (e) {}
     const r = await api('status', profiles.length ? { profiles } : {});
     if (r && r.success) account = { connected: !!r.connected, username: String(r.username || ''), error: r.error ? String(r.error) : '' };
     render();
@@ -228,7 +228,7 @@
   }
 
   function hook() {
-    core = window.MurielCore;
+    core = window.UrielCore;
     if (!core || !core.audio) return;
     ['timeupdate', 'play', 'playing', 'pause', 'seeked', 'emptied', 'ended'].forEach((ev) => core.audio.addEventListener(ev, tick));
 
@@ -256,6 +256,6 @@
     refresh();
   }
 
-  if (window.MurielCore) hook();
-  else window.addEventListener('muriel:ready', hook, { once: true });
+  if (window.UrielCore) hook();
+  else window.addEventListener('uriel:ready', hook, { once: true });
 })();

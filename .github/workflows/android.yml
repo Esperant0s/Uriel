@@ -47,15 +47,15 @@ jobs:
 
       - name: Build signed APK
         env:
-          MURIEL_KEYSTORE_B64: ${{ secrets.MURIEL_KEYSTORE_B64 }}
-          MURIEL_KEYSTORE_PASSWORD: ${{ secrets.MURIEL_KEYSTORE_PASSWORD }}
-          MURIEL_KEY_PASSWORD: ${{ secrets.MURIEL_KEYSTORE_PASSWORD }}
-          MURIEL_KEY_ALIAS: muriel
-          MURIEL_VERSION_CODE: ${{ github.run_number }}
+          URIEL_KEYSTORE_B64: ${{ secrets.MURIEL_KEYSTORE_B64 }}
+          URIEL_KEYSTORE_PASSWORD: ${{ secrets.MURIEL_KEYSTORE_PASSWORD }}
+          URIEL_KEY_PASSWORD: ${{ secrets.MURIEL_KEYSTORE_PASSWORD }}
+          URIEL_KEY_ALIAS: muriel
+          URIEL_VERSION_CODE: ${{ github.run_number }}
         run: |
-          echo "$MURIEL_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/muriel-release.p12"
-          export MURIEL_KEYSTORE="$RUNNER_TEMP/muriel-release.p12"
-          export MURIEL_VERSION_NAME="$(node -p "require('./package.json').version")"
+          echo "$URIEL_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/uriel-release.p12"
+          export URIEL_KEYSTORE="$RUNNER_TEMP/uriel-release.p12"
+          export URIEL_VERSION_NAME="$(node -p "require('./package.json').version")"
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
@@ -83,8 +83,9 @@ jobs:
           gh release delete android-latest --cleanup-tag --yes 2>/dev/null || true
           # 1.5.x (Mural) builds look for Mural.apk: the same file goes up under that name too, so they update to Uriel
           cp Uriel.apk Mural.apk
+          # 1.5.x builds read the version from muriel-version
           gh release create android-latest Uriel.apk Mural.apk \
             --prerelease \
             --target "$GITHUB_SHA" \
             --title "Uriel for Android (latest build)" \
-            --notes "Uriel $ver. Build of ${GITHUB_SHA::7} (run ${{ github.run_number }}). Download Uriel.apk on your phone and open it to install. Allow installs from your browser/files app if Android asks.<!-- muriel-downloads-before: $before --><!-- muriel-version: $ver -->"
+            --notes "Uriel $ver. Build of ${GITHUB_SHA::7} (run ${{ github.run_number }}). Download Uriel.apk on your phone and open it to install. Allow installs from your browser/files app if Android asks.<!-- uriel-downloads-before: $before --><!-- uriel-version: $ver --><!-- muriel-version: $ver -->"

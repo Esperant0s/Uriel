@@ -4257,7 +4257,7 @@ body.perf #sleep-timer-status.active::before {
   pointer-events: none;
 }
 
-.muriel-toast {
+.uriel-toast {
   pointer-events: auto;
   min-width: 240px;
   max-width: 480px;
@@ -4275,14 +4275,14 @@ body.perf #sleep-timer-status.active::before {
   user-select: none;
 }
 
-.muriel-toast .toast-icon {
+.uriel-toast .toast-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.muriel-toast .toast-text {
+.uriel-toast .toast-text {
   flex: 1;
   color: var(--md-sys-color-on-surface);
   font-size: 14px;
@@ -4293,34 +4293,34 @@ body.perf #sleep-timer-status.active::before {
   text-overflow: ellipsis;
 }
 
-.muriel-toast.info {
+.uriel-toast.info {
   background: var(--md-sys-color-surface-container-highest);
   color: var(--md-sys-color-on-surface);
 }
-.muriel-toast.info .toast-icon {
+.uriel-toast.info .toast-icon {
   color: var(--md-sys-color-primary);
 }
 
-.muriel-toast.success {
+.uriel-toast.success {
   background: var(--md-sys-color-surface-container-highest);
   color: var(--md-sys-color-on-surface);
 }
-.muriel-toast.success .toast-icon {
+.uriel-toast.success .toast-icon {
   color: #388e3c;
 }
 
-.muriel-toast.warning {
+.uriel-toast.warning {
   background: var(--md-sys-color-surface-container-highest);
   color: var(--md-sys-color-on-surface);
 }
-.muriel-toast.warning .toast-icon {
+.uriel-toast.warning .toast-icon {
   color: #f9a825;
 }
-.muriel-toast.error {
+.uriel-toast.error {
   background: var(--md-sys-color-error-container);
   color: var(--md-sys-color-on-error-container);
 }
-.muriel-toast.error .toast-icon {
+.uriel-toast.error .toast-icon {
   color: var(--md-sys-color-error);
 }
 
@@ -7298,8 +7298,8 @@ body.perf .cpm-service-btn { transition: none !important; transform: none !impor
 
 @keyframes toastIn { from { opacity: 0; transform: translateY(-14px) scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes toastOut { to { opacity: 0; transform: translateY(-10px) scale(.97); } }
-.muriel-toast { animation: toastIn 240ms cubic-bezier(0.2, 0, 0, 1) both; }
-.muriel-toast.leaving { animation: toastOut 180ms cubic-bezier(0.4, 0, 1, 1) forwards; }
+.uriel-toast { animation: toastIn 240ms cubic-bezier(0.2, 0, 0, 1) both; }
+.uriel-toast.leaving { animation: toastOut 180ms cubic-bezier(0.4, 0, 1, 1) forwards; }
 
 .right-panel > .panel-resize-edge { position: absolute; left: -5px; top: 0; bottom: 0; width: 12px; z-index: 60; }
 
@@ -8858,7 +8858,7 @@ html.ui-rtl input::placeholder { direction: rtl; text-align: right; }
 
 /* ---------- Riff 43: player & look ---------- */
 .setting-hint { font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline); line-height: 1.35; font-weight: 400; }
-.muriel-beta-badge { display: inline-flex; align-items: center; justify-content: center; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); line-height: 1.2; }
+.uriel-beta-badge { display: inline-flex; align-items: center; justify-content: center; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); line-height: 1.2; }
 
 /* splash: Uriel's star blooms in and breathes until the app has loaded and runs smoothly, then the app fades in
    (app.js; desktop only, skipped in performance mode). Only transform and opacity move, which the compositor animates
@@ -8916,8 +8916,8 @@ body.bar-viz-behind:not(.mini):not(.perf):not(.bar-wave-off) .playbar-bg-visuali
 body.bar-viz-behind #visualizer-container { display: none !important; }
 
 /* share the song that is playing (as a one-song Uriel link) */
-.muriel-share-action-btn { color: var(--md-sys-color-on-surface-variant); }
-.muriel-share-action-btn:hover { color: var(--md-sys-color-primary); }
+.uriel-share-action-btn { color: var(--md-sys-color-on-surface-variant); }
+.uriel-share-action-btn:hover { color: var(--md-sys-color-primary); }
 body.mini #btn-playbar-share { display: none !important; }
 
 /* lyrics under the mini player (the layout is in the body.mini block) */
@@ -8959,7 +8959,7 @@ html.force-reduced-motion .tvk-liquid-layer { animation-play-state: paused !impo
 .dl-mode-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px; border-radius: 999px; background: var(--md-sys-color-surface-container); margin-bottom: 14px; }
 .dl-mode-tab { height: 36px; border: none; border-radius: 999px; background: transparent; color: var(--md-sys-color-on-surface-variant); font-size: calc(13px * var(--font-scale, 1)); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background-color 160ms ease, color 160ms ease; }
 .dl-mode-tab.active { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); }
-.dl-mode-tab.active .muriel-beta-badge { background: var(--md-sys-color-on-primary); color: var(--md-sys-color-primary); }
+.dl-mode-tab.active .uriel-beta-badge { background: var(--md-sys-color-on-primary); color: var(--md-sys-color-primary); }
 #download-modal.batch-mode .dl-mode-tabs { display: none; }
 /* the dialog card lays its parts out as a column with gaps; the download pane keeps that for its own parts */
 #dl-pane-download:not(.hidden) { display: flex; flex-direction: column; gap: 16px; }
@@ -9068,7 +9068,7 @@ body.hide-titlebar:not(.mini) .update-banner { top: 76px; }
 /* Things you read and choose from sit on a solid surface whatever Interface opacity is set to: at the old default
    (20%) a dialog, menu or message over a bright album cover or wallpaper was 80% see-through and hard to read.
    Phones did this for toasts and menus already (mobile.css). Panels still follow the setting. */
-:is(.settings-card, .dialog-card, .modal-card, .m3-dropdown-menu, .track-context-menu, .profile-menu, .muriel-toast) {
+:is(.settings-card, .dialog-card, .modal-card, .m3-dropdown-menu, .track-context-menu, .profile-menu, .uriel-toast) {
   background-color: var(--md-sys-color-surface-container-high-solid) !important;
 }
 

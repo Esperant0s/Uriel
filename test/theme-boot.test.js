@@ -18,15 +18,15 @@ test('runs at the top of the page, after the profile storage, before anything is
 
 test('app.js saves what the theme painted, after each change and when the page goes', () => {
   const app = read('app.js');
-  assert.match(app, /localStorage\.setItem\('muriel_theme_boot'/);
+  assert.match(app, /localStorage\.setItem\('uriel_theme_boot'/);
   assert.match(app, /saveThemeBootSoon\(\);\n  }/, 'at the end of applyTheme');
   assert.match(app, /addEventListener\('pagehide', saveThemeBoot\)/);
 });
 
 test('the saved copy is not put in backups (the theme settings are)', () => {
   const B = require('../backup-core.js');
-  const backup = B.makeBackup([['muriel_theme_boot', '{}'], ['muriel_theme_accent', '#2E7D32']]);
+  const backup = B.makeBackup([['uriel_theme_boot', '{}'], ['uriel_theme_accent', '#2E7D32']]);
   const data = JSON.stringify(backup);
-  assert.equal(data.includes('muriel_theme_boot'), false);
-  assert.equal(data.includes('muriel_theme_accent'), true);
+  assert.equal(data.includes('uriel_theme_boot'), false);
+  assert.equal(data.includes('uriel_theme_accent'), true);
 });

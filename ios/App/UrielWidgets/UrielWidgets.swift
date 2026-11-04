@@ -7,18 +7,18 @@ import WidgetKit
 // Dynamic Island, where long-pressing opens a small player (buttons need iOS 17).
 // The app keeps it up to date (App/LyricsLiveActivity.swift); this only draws it.
 @main
-struct MurielWidgets: WidgetBundle {
+struct UrielWidgets: WidgetBundle {
     var body: some Widget {
-        MurielLyricsLiveActivity()
+        UrielLyricsLiveActivity()
     }
 }
 
 private let pink = Color(red: 1.0, green: 0.31, blue: 0.64)
 private let violet = Color(red: 0.55, green: 0.36, blue: 0.96)
 
-struct MurielLyricsLiveActivity: Widget {
+struct UrielLyricsLiveActivity: Widget {
     var body: some WidgetConfiguration {
-        ActivityConfiguration(for: MurielLyricsAttributes.self) { context in
+        ActivityConfiguration(for: UrielLyricsAttributes.self) { context in
             LockScreenLyrics(state: context.state)
                 .activityBackgroundTint(Color.black.opacity(0.5))
                 .activitySystemActionForegroundColor(.white)
@@ -77,7 +77,7 @@ struct MurielLyricsLiveActivity: Widget {
 }
 
 struct LockScreenLyrics: View {
-    let state: MurielLyricsAttributes.ContentState
+    let state: UrielLyricsAttributes.ContentState
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -108,7 +108,7 @@ struct LockScreenLyrics: View {
 
 // the line being sung, big, and the one after it, dimmed. Without synced lyrics: the song itself.
 struct LyricLines: View {
-    let state: MurielLyricsAttributes.ContentState
+    let state: UrielLyricsAttributes.ContentState
     let big: CGFloat
     let small: CGFloat
 
@@ -147,7 +147,7 @@ struct LyricLines: View {
 
 // the bar and the times; while playing it moves by itself (no update needed every second)
 struct SongProgress: View {
-    let state: MurielLyricsAttributes.ContentState
+    let state: UrielLyricsAttributes.ContentState
 
     var body: some View {
         if state.duration > 0 {
@@ -184,10 +184,10 @@ struct SongProgress: View {
     }
 }
 
-// shuffle · previous · play/pause · next, run in the app by MurielPlayerIntent
+// shuffle · previous · play/pause · next, run in the app by UrielPlayerIntent
 @available(iOS 17.0, *)
 struct PlayerButtons: View {
-    let state: MurielLyricsAttributes.ContentState
+    let state: UrielLyricsAttributes.ContentState
 
     var body: some View {
         HStack {
@@ -206,7 +206,7 @@ struct PlayerButtons: View {
     }
 
     private func button(_ action: String, _ symbol: String, _ size: CGFloat, on: Bool = true) -> some View {
-        Button(intent: MurielPlayerIntent(action: action)) {
+        Button(intent: UrielPlayerIntent(action: action)) {
             Image(systemName: symbol)
                 .font(.system(size: size, weight: .semibold))
                 .foregroundColor(on ? .white : .white.opacity(0.4))

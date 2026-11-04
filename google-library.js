@@ -18,8 +18,8 @@ const partitionFor = (profile) => (PROFILE_RE.test(String(profile || '')) && pro
 
 function googleSession(profile) {
   const s = session.fromPartition(partitionFor(profile));
-  if (!s.__murielReady) {
-    s.__murielReady = true;
+  if (!s.__urielReady) {
+    s.__urielReady = true;
     try { s.setUserAgent(CHROME_UA); } catch (e) {}
     // the login page needs no camera, microphone, notifications or anything else
     try { s.setPermissionRequestHandler((wc, permission, cb) => cb(false)); } catch (e) {}

@@ -1,4 +1,4 @@
-package io.github.cloverscripts.muriel;
+package io.github.esperant0s.uriel;
 
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -20,15 +20,15 @@ import androidx.core.app.ServiceCompat;
  * older; newer versions call the media session directly. MediaControlsPlugin owns everything else.
  */
 public class PlaybackService extends Service {
-    static final String ACTION_REFRESH = "io.github.cloverscripts.muriel.REFRESH";
-    static final String ACTION_TOGGLE = "io.github.cloverscripts.muriel.TOGGLE";
-    static final String ACTION_NEXT = "io.github.cloverscripts.muriel.NEXT";
-    static final String ACTION_PREV = "io.github.cloverscripts.muriel.PREV";
-    static final String ACTION_DISMISS = "io.github.cloverscripts.muriel.DISMISS";
-    static final String ACTION_SHUFFLE = "io.github.cloverscripts.muriel.SHUFFLE_BUTTON";
-    static final String ACTION_REPEAT = "io.github.cloverscripts.muriel.REPEAT_BUTTON";
+    static final String ACTION_REFRESH = "io.github.esperant0s.uriel.REFRESH";
+    static final String ACTION_TOGGLE = "io.github.esperant0s.uriel.TOGGLE";
+    static final String ACTION_NEXT = "io.github.esperant0s.uriel.NEXT";
+    static final String ACTION_PREV = "io.github.esperant0s.uriel.PREV";
+    static final String ACTION_DISMISS = "io.github.esperant0s.uriel.DISMISS";
+    static final String ACTION_SHUFFLE = "io.github.esperant0s.uriel.SHUFFLE_BUTTON";
+    static final String ACTION_REPEAT = "io.github.esperant0s.uriel.REPEAT_BUTTON";
     // the Live Update (the island, MediaControlsPlugin.postIsland) was swiped away
-    static final String ACTION_ISLAND_DISMISSED = "io.github.cloverscripts.muriel.ISLAND_DISMISSED";
+    static final String ACTION_ISLAND_DISMISSED = "io.github.esperant0s.uriel.ISLAND_DISMISSED";
     // set when started with startForegroundService(): Android then insists on startForeground()
     static final String EXTRA_FOREGROUND = "foreground";
     // Paused, Uriel stays in the foreground this much longer. Android doesn't let an app in the background

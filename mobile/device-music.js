@@ -9,7 +9,7 @@ const { App } = require('@capacitor/app');
 const { Filesystem, Directory } = require('@capacitor/filesystem');
 const lib = require('../device-library');
 
-const ASKED = 'mural_device_music_asked';
+const ASKED = 'uriel_device_music_asked';
 const IOS_SKIP = new Set(['tracks', 'lyrics', 'custom-lyrics', 'thumbnails', 'library', 'logs', 'i18n', 'bin', 'plugins']);
 
 async function androidSongs(plugin, mayAsk) {
@@ -63,7 +63,7 @@ async function iosSongs() {
 module.exports = function deviceMusic(server) {
   const platform = Capacitor.getPlatform();
   if (platform !== 'android' && platform !== 'ios') return;
-  const plugin = platform === 'android' ? registerPlugin('MuralDeviceMusic') : null;
+  const plugin = platform === 'android' ? registerPlugin('UrielDeviceMusic') : null;
   let running = null;
 
   async function scan(mayAsk) {
@@ -84,8 +84,8 @@ module.exports = function deviceMusic(server) {
   // the first start asks (once); Settings asks again when the switch is turned on
   const first = !localStorage.getItem(ASKED);
   try { localStorage.setItem(ASKED, '1'); } catch (e) {}
-  const begin = () => rescan(first).then(() => window.dispatchEvent(new CustomEvent('mural:device-music')));
-  if (window.MurielCore) begin(); else window.addEventListener('muriel:ready', begin, { once: true });
+  const begin = () => rescan(first).then(() => window.dispatchEvent(new CustomEvent('uriel:device-music')));
+  if (window.UrielCore) begin(); else window.addEventListener('uriel:ready', begin, { once: true });
   App.addListener('appStateChange', (s) => { if (s && s.isActive) rescan(false); });
-  window.MuralDeviceMusic = { rescan: (ask) => rescan(!!ask) };
+  window.UrielDeviceMusic = { rescan: (ask) => rescan(!!ask) };
 };

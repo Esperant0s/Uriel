@@ -1,4 +1,4 @@
-package io.github.cloverscripts.muriel;
+package io.github.esperant0s.uriel;
 
 import android.content.Context;
 import android.content.Intent;
@@ -31,7 +31,7 @@ import java.util.concurrent.Executors;
  * SHA-256 for that file, and hands it to Android's installer. Android always asks the person to confirm the
  * install, and the first time also to allow installs from Uriel (install() opens that setting).
  */
-@CapacitorPlugin(name = "MurielUpdater")
+@CapacitorPlugin(name = "UrielUpdater")
 public class AppUpdaterPlugin extends Plugin {
     private static final long PROGRESS_EVERY_MS = 150;
     private final ExecutorService worker = Executors.newSingleThreadExecutor();

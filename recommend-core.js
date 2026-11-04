@@ -2,7 +2,7 @@
 // watch playlist) and Last.fm's similar songs and artists, and keeping blocked and just-played songs out.
 // No network: server.js fetches and uses these in My Wave / the Daily Mixes, test/recommend-core.test.js runs them.
 (function (root) {
-  const lib = typeof module === 'object' && module.exports ? require('./library-pages') : root.MurielLibrary;
+  const lib = typeof module === 'object' && module.exports ? require('./library-pages') : root.UrielLibrary;
   const list = (v) => (Array.isArray(v) ? v : []);
   const VIDEO_ID = /^[\w-]{11}$/;
   const runsText = (r) => list(r && r.runs).map((x) => (x && x.text) || '').join('');
@@ -183,5 +183,5 @@
 
   const api = { parseLength, cleanVideoTitle, parseWatchPlaylist, parseSimilarTracks, parseSimilarArtists, parseTopTracks, dropUnwanted, mixRadio };
   if (typeof module === 'object' && module.exports) module.exports = api;
-  else root.MurielRecommend = api;
+  else root.UrielRecommend = api;
 })(typeof window !== 'undefined' ? window : globalThis);

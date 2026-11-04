@@ -3,16 +3,16 @@ const assert = require('node:assert/strict');
 const core = require('../update-core');
 
 const SHA = 'a'.repeat(64);
-const asset = (name, extra = {}) => ({ name, size: 10, digest: `sha256:${SHA}`, browser_download_url: `https://github.com/cloverscripts/riff-muriel/releases/download/v1.4.0/${name}`, ...extra });
-const versioned = { tag_name: 'v1.4.0', target_commitish: 'b'.repeat(40), html_url: 'https://github.com/cloverscripts/riff-muriel/releases/tag/v1.4.0', assets: [
-  asset('muriel-1.4.0-win-x64.exe'), asset('muriel-1.4.0-linux-x86_64.AppImage'),
+const asset = (name, extra = {}) => ({ name, size: 10, digest: `sha256:${SHA}`, browser_download_url: `https://github.com/Esperant0s/Uriel/releases/download/v1.4.0/${name}`, ...extra });
+const versioned = { tag_name: 'v1.4.0', target_commitish: 'b'.repeat(40), html_url: 'https://github.com/Esperant0s/Uriel/releases/tag/v1.4.0', assets: [
+  asset('uriel-1.4.0-win-x64.exe'), asset('uriel-1.4.0-linux-x86_64.AppImage'),
   asset('Uriel-1.4.0-mac-arm64.zip'), asset('Uriel-1.4.0-mac-x64.zip'), asset('Uriel-1.4.0-mac-x64.dmg'),
 ] };
 
 test('each channel asks its own release', () => {
-  assert.equal(core.releaseApi('cloverscripts/riff-muriel', 'windows'), 'https://api.github.com/repos/cloverscripts/riff-muriel/releases/tags/windows-latest');
-  assert.equal(core.releaseApi('cloverscripts/riff-muriel', 'linux'), 'https://api.github.com/repos/cloverscripts/riff-muriel/releases/latest');
-  assert.equal(core.releaseApi('cloverscripts/riff-muriel', ''), null);
+  assert.equal(core.releaseApi('Esperant0s/Uriel', 'windows'), 'https://api.github.com/repos/Esperant0s/Uriel/releases/tags/windows-latest');
+  assert.equal(core.releaseApi('Esperant0s/Uriel', 'linux'), 'https://api.github.com/repos/Esperant0s/Uriel/releases/latest');
+  assert.equal(core.releaseApi('Esperant0s/Uriel', ''), null);
   assert.equal(core.releaseApi('evil/../x?y', 'linux'), null);
 });
 
@@ -31,7 +31,7 @@ test('versioned builds update to a higher version only', () => {
 });
 
 test('rolling builds update to a later build from another commit', () => {
-  const rel = { target_commitish: 'new', published_at: '2026-11-02T00:00:00Z', body: 'run 90 <!-- muriel-version: 1.3.11 -->', assets: [asset('Uriel.exe')] };
+  const rel = { target_commitish: 'new', published_at: '2026-11-02T00:00:00Z', body: 'run 90 <!-- uriel-version: 1.3.11 -->', assets: [asset('Uriel.exe')] };
   const build = { sha: 'old', builtAt: '2026-11-01T00:00:00Z', version: '1.3.10' };
   assert.equal(core.isNewer(rel, build, 'windows'), true);
   assert.equal(core.isNewer(rel, { ...build, sha: 'new' }, 'windows'), false);

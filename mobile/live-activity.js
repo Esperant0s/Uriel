@@ -1,17 +1,17 @@
-// Lyrics on the iPhone lock screen and in the Dynamic Island (a Live Activity, drawn by the MurielWidgets
+// Lyrics on the iPhone lock screen and in the Dynamic Island (a Live Activity, drawn by the UrielWidgets
 // extension). This sends the song, its synced lyrics and every play/pause/seek to the native side
 // (ios/App/App/LyricsLiveActivity.swift), which times the lines itself while the app is in the background.
 const { Capacitor, registerPlugin } = require('@capacitor/core');
 
-const KEY = 'muriel_live_activity';
+const KEY = 'uriel_live_activity';
 
 module.exports = function liveActivity() {
   if (Capacitor.getPlatform() !== 'ios') return;
-  const plugin = registerPlugin('MurielLiveActivity');
+  const plugin = registerPlugin('UrielLiveActivity');
   const enabled = () => localStorage.getItem(KEY) !== '0';
   const send = (method, data) => { if (enabled()) plugin[method](data).catch(() => {}); };
 
-  const core = () => window.MurielCore;
+  const core = () => window.UrielCore;
   const keyOf = (t) => (t ? `${t.platform || ''}:${t.id || ''}:${t.title || ''}` : '');
   let lastSync = 0;
 
@@ -43,10 +43,10 @@ module.exports = function liveActivity() {
   function hook() {
     const a = core() && core().audio;
     if (!a) return;
-    window.addEventListener('muriel:track', () => sendTrack());
-    window.addEventListener('muriel:lyrics', () => sendLyrics());
+    window.addEventListener('uriel:track', () => sendTrack());
+    window.addEventListener('uriel:lyrics', () => sendLyrics());
     ['playing', 'pause', 'seeked', 'ratechange', 'ended', 'durationchange'].forEach((ev) => a.addEventListener(ev, sendPlayback));
-    window.addEventListener('muriel:modes', sendPlayback);
+    window.addEventListener('uriel:modes', sendPlayback);
     // the buttons in the Dynamic Island (iOS 17+)
     plugin.addListener('action', ({ action } = {}) => {
       const c = core();
@@ -59,10 +59,10 @@ module.exports = function liveActivity() {
     // the native clock drifts a little from the audio over a long song; line it up now and then
     a.addEventListener('timeupdate', () => { if (!a.paused && Date.now() - lastSync > 15000) sendPlayback(); });
   }
-  if (window.MurielCore) hook(); else window.addEventListener('muriel:ready', hook, { once: true });
+  if (window.UrielCore) hook(); else window.addEventListener('uriel:ready', hook, { once: true });
 
   // for the switch in Settings (mobile-ui.js)
-  window.MurielLiveActivity = {
+  window.UrielLiveActivity = {
     enabled,
     available: () => plugin.isAvailable().then((r) => !!(r && r.available)).catch(() => false),
     setEnabled(on) {

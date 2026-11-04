@@ -3,7 +3,7 @@
   "version": "1.5.5",
   "main": "main.js",
   "bin": {
-    "muriel": "./cli.js"
+    "uriel": "./cli.js"
   },
   "scripts": {
     "start": "electron .",
@@ -14,7 +14,7 @@
     "release:major": "npm version major && git push --follow-tags"
   },
   "keywords": [],
-  "author": "cloverscripts",
+  "author": "Esperant0s",
   "license": "MIT",
   "description": "Uriel - a lightweight music player.",
   "devDependencies": {
@@ -42,13 +42,13 @@
   },
   "productName": "Uriel",
   "desktopName": "uriel.desktop",
-  "homepage": "https://github.com/cloverscripts/riff-muriel",
+  "homepage": "https://github.com/Esperant0s/Uriel",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cloverscripts/riff-muriel.git"
+    "url": "git+https://github.com/Esperant0s/Uriel.git"
   },
   "bugs": {
-    "url": "https://github.com/cloverscripts/riff-muriel/issues"
+    "url": "https://github.com/Esperant0s/Uriel/issues"
   },
   "build": {
     "appId": "io.github.esperant0s.mural",
@@ -130,7 +130,7 @@
       {
         "provider": "github",
         "owner": "Esperant0s",
-        "repo": "riff-muriel",
+        "repo": "riff-uriel",
         "releaseType": "release"
       }
     ]

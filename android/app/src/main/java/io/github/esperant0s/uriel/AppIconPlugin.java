@@ -1,4 +1,4 @@
-package io.github.cloverscripts.muriel;
+package io.github.esperant0s.uriel;
 
 import android.content.ComponentName;
 import android.content.pm.PackageManager;
@@ -14,14 +14,18 @@ import com.getcapacitor.annotation.CapacitorPlugin;
  * activity-alias in AndroidManifest.xml; this turns the chosen one on and the others off. Some launchers take a
  * moment to show the new icon, and a few drop the old home-screen shortcut, which Android doesn't let apps avoid.
  */
-@CapacitorPlugin(name = "MuralAppIcon")
+@CapacitorPlugin(name = "UrielAppIcon")
 public class AppIconPlugin extends Plugin {
-    // the styles tools/render-app-icons.js makes, as in AndroidManifest.xml (".LauncherIcon_<name>")
+    // the styles tools/render-app-icons.js makes, as in AndroidManifest.xml ("…LauncherIcon_<name>")
     static final String[] ICONS = { "mural", "default", "editor", "orbit", "vinyl", "cosmos", "aurora", "sunset", "amethyst", "y2k_disc", "cassette", "invincible" };
+
+    // the launcher entries' names from before the code moved package (AndroidManifest.xml): renaming them would
+    // drop people's picked icon and home-screen shortcut on update
+    static final String LAUNCHER_PREFIX = "io.github.cloverscripts" + ".muriel.";
 
     private ComponentName alias(String name) {
         String pkg = getContext().getPackageName();
-        return new ComponentName(pkg, "io.github.cloverscripts.muriel." + (name == null ? "LauncherDefault" : "LauncherIcon_" + name));
+        return new ComponentName(pkg, LAUNCHER_PREFIX + (name == null ? "LauncherDefault" : "LauncherIcon_" + name));
     }
 
     // name: one of ICONS, or "" for the app's own icon

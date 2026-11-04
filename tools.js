@@ -180,9 +180,9 @@ async function installFfmpeg() {
   if (!want) throw new Error(`No checksum published for ${asset.name}`);
   // a private folder (0700) instead of a fixed name in the shared temp dir, which another local user could
   // create or swap before tar reads it; the hash is checked again on what is actually on disk
-  const dlDir = fs.mkdtempSync(path.join(os.tmpdir(), 'muriel-ffmpeg-dl-'));
+  const dlDir = fs.mkdtempSync(path.join(os.tmpdir(), 'uriel-ffmpeg-dl-'));
   const archive = path.join(dlDir, asset.name);
-  const work = fs.mkdtempSync(path.join(os.tmpdir(), 'muriel-ffmpeg-'));
+  const work = fs.mkdtempSync(path.join(os.tmpdir(), 'uriel-ffmpeg-'));
   try {
     const got = await downloadFile(`${base}/${asset.name}`, archive);
     if (got !== want || await sha256OfFile(archive) !== want) throw new Error('ffmpeg checksum mismatch');
@@ -242,7 +242,7 @@ async function ensureTools() {
 
 async function updateYtDlpIfManaged() {
   const bin = resolveBinary('yt-dlp');
-  // only the copies Uriel (or Muriel before it) downloaded: one from a package manager is that manager's to update
+  // only the copies Uriel (or Uriel before it) downloaded: one from a package manager is that manager's to update
   if (!bin || ![BIN_DIR, ...LEGACY_BIN_DIRS].includes(path.dirname(bin))) return false;
   if (hasSlowMacYtDlp()) {
     try {

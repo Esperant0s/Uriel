@@ -1,4 +1,4 @@
-package io.github.cloverscripts.muriel;
+package io.github.esperant0s.uriel;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -27,7 +27,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
  * app. The window now paints the page's background behind the status bar and the navigation's behind the gesture
  * bar, and the bars' icons are dark or light to suit. Where the page draws behind the bars, only the icons matter.
  */
-@CapacitorPlugin(name = "MuralSystemBars")
+@CapacitorPlugin(name = "UrielSystemBars")
 public class SystemBarsPlugin extends Plugin {
     /** top: behind the status bar; bottom: everything else the WebView doesn't cover (the gesture bar) */
     static class BarsBackground extends Drawable {

@@ -8,13 +8,13 @@ const DEFAULT_DATA_DIR = IS_WIN
   ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Uriel')
   : process.platform === 'darwin'
   ? path.join(os.homedir(), 'Library', 'Application Support', 'Uriel')
-  : path.join(os.homedir(), '.cache', 'mural');
+  : path.join(os.homedir(), '.cache', 'uriel');
 
 const CONFIG_DIR = IS_WIN
   ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Uriel')
   : process.platform === 'darwin'
   ? path.join(os.homedir(), 'Library', 'Application Support', 'Uriel')
-  : path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'mural');
+  : path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'uriel');
 const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');
 
 function readConfig() {
@@ -27,7 +27,7 @@ function readConfig() {
 }
 
 function resolveDataDir() {
-  const override = process.env.MURIEL_DATA_DIR;
+  const override = process.env.URIEL_DATA_DIR;
   if (override && override.trim()) {
     try { return path.resolve(override.trim()); } catch (e) {}
   }
@@ -87,8 +87,10 @@ const LEGACY_BIN_DIRS = (IS_WIN
   ? ['Muriel', 'Riff'].map((n) => path.join(os.homedir(), 'Library', 'Application Support', n, 'bin'))
   : ['muriel', 'riff'].map((n) => path.join(os.homedir(), '.cache', n, 'bin'))
 ).filter((d) => d !== BIN_DIR);
-const TUTORIAL_MARKER = IS_WIN ? 'C:\\Mural\\.murieltutorial' : path.join(os.homedir(), '.murieltutorial');
-const TUTORIAL_MARKER_FALLBACK = path.join(DATA_DIR, '.murieltutorial');
+const TUTORIAL_MARKER = IS_WIN ? 'C:\\Uriel\\.urieltutorial' : path.join(os.homedir(), '.urieltutorial');
+const TUTORIAL_MARKER_FALLBACK = path.join(DATA_DIR, '.urieltutorial');
+// where Muriel and Mural marked it (the data folder's copy comes over with migrate-legacy.js)
+const TUTORIAL_MARKERS_BEFORE = [IS_WIN ? 'C:\\Mural\\.murieltutorial' : path.join(os.homedir(), '.murieltutorial'), path.join(DATA_DIR, '.murieltutorial')];
 const STARTUP_PATH = path.join(DATA_DIR, 'startup.json');
 function readStartupConfig() { try { return JSON.parse(fs.readFileSync(STARTUP_PATH, 'utf8')) || {}; } catch (e) { return {}; } }
 function writeStartupConfig(patch) {
@@ -98,7 +100,7 @@ function writeStartupConfig(patch) {
     return true;
   } catch (e) { return false; }
 }
-function tutorialDone() { return fs.existsSync(TUTORIAL_MARKER) || fs.existsSync(TUTORIAL_MARKER_FALLBACK); }
+function tutorialDone() { return [TUTORIAL_MARKER, TUTORIAL_MARKER_FALLBACK, ...TUTORIAL_MARKERS_BEFORE].some((f) => fs.existsSync(f)); }
 function markTutorialDone() {
   for (const file of [TUTORIAL_MARKER, TUTORIAL_MARKER_FALLBACK]) {
     try { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, '1'); return true; } catch (e) {}
@@ -107,7 +109,7 @@ function markTutorialDone() {
 }
 
 // what Uriel itself keeps in its music folder (moving the folder copies and then deletes only these)
-const MURIEL_DATA_ENTRIES = ['tracks', 'custom-lyrics', 'lyrics', 'thumbnails', 'library', 'bin', 'plugins', 'logs', 'metadata.json', 'library.json', 'startup.json', 'spotify-auth.enc', 'lastfm-auth.enc', '.murieltutorial', 'i18n'];
+const URIEL_DATA_ENTRIES = ['tracks', 'custom-lyrics', 'lyrics', 'thumbnails', 'library', 'bin', 'plugins', 'logs', 'metadata.json', 'library.json', 'startup.json', 'spotify-auth.enc', 'lastfm-auth.enc', '.urieltutorial', 'i18n'];
 
 // `only`: names to take at the top level (deeper levels take everything under them)
 async function copyDirContents(fromDir, toDir, skipNames = new Set(['config.json']), only = null) {
@@ -185,14 +187,14 @@ const missedAt = {};
 function resolveBinary(name) {
   if (name in binaryCache && (binaryCache[name] || Date.now() - missedAt[name] < MISS_TTL)) return binaryCache[name];
   const exe = IS_WIN ? `${name}.exe` : name;
-  const envKey = `MURIEL_${name.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
+  const envKey = `URIEL_${name.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
   const candidates = [
     process.env[envKey],
     path.join(BIN_DIR, exe),
     process.resourcesPath && path.join(process.resourcesPath, 'bin', exe),
     path.join(__dirname, 'bin', exe)
   ].filter(Boolean);
-  // then the copies Muriel (or Riff) downloaded before the rename: they were skipped when the Uriel folder
+  // then the copies Uriel (or Riff) downloaded before the rename: they were skipped when the Uriel folder
   // already existed, and the app offered to download ~400 MB it already had
   const found = candidates.find(isExecutableFile) || findInPath(name) || LEGACY_BIN_DIRS.map((d) => path.join(d, exe)).find(isExecutableFile);
   binaryCache[name] = found || null;
@@ -226,5 +228,5 @@ module.exports = {
   findInPath, systemBinDirs, resolveBinary, ytDlpCommand,
   tutorialDone, markTutorialDone,
   readStartupConfig, writeStartupConfig,
-  readConfig, resolveDataDir, setDataDir, resolveDownloadDir, setDownloadDir, copyDirContents, removeDirContents, MURIEL_DATA_ENTRIES
+  readConfig, resolveDataDir, setDataDir, resolveDownloadDir, setDownloadDir, copyDirContents, removeDirContents, URIEL_DATA_ENTRIES
 };

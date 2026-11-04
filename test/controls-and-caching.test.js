@@ -26,8 +26,8 @@ test('playlists say how many of their songs are downloaded, and the dialog what 
 });
 
 test('My Wave and For you show what they had last time while new picks load', () => {
-  assert.match(app, /safeJson\('muriel_home_wave_cache', null\)/);
-  assert.match(app, /safeJson\('muriel_home_foryou_cache', null\)/);
+  assert.match(app, /safeJson\('uriel_home_wave_cache', null\)/);
+  assert.match(app, /safeJson\('uriel_home_foryou_cache', null\)/);
   assert.match(app, /fetchWaveTracks\(\{ \.\.\.vibePayload, refresh: true \}\)\.then\(saveWaveCache/, 'the cached wave is replaced for next time');
 });
 

@@ -26,8 +26,8 @@ test('the four artwork shapes are ready as soon as m3shapes.js runs, without tou
 
 test('the splash waits for the app and for smooth frames, with a cap; it only animates transform and opacity', () => {
   const app = read('app.js');
-  const splash = app.slice(app.indexOf('(function murielSplash()'), app.indexOf("document.addEventListener('DOMContentLoaded'"));
-  assert.match(splash, /addEventListener\('muriel:ready'/);
+  const splash = app.slice(app.indexOf('(function urielSplash()'), app.indexOf("document.addEventListener('DOMContentLoaded'"));
+  assert.match(splash, /addEventListener\('uriel:ready'/);
   assert.match(splash, /MAX_MS/);
   assert.match(splash, /smooth >= SMOOTH_MS/);
   const css = read('styles.css');

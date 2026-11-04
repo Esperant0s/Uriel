@@ -14,7 +14,7 @@ mkdirSync(out, { recursive: true });
 
 // server.js requires './platform', './tools', './logger' and './audio-output'; on phones those resolve to the shims.
 const swapLocal = {
-  name: 'muriel-ios-swaps',
+  name: 'uriel-ios-swaps',
   setup(b) {
     b.onResolve({ filter: /^\.\/(platform|tools|logger|audio-output)$/ }, (a) => (a.importer.endsWith('server.js') ? { path: shim(a.path.slice(2)) } : undefined));
   },
@@ -41,7 +41,7 @@ await build({
   logLevel: 'warning',
 });
 
-for (const f of ['app.js', 'styles.css', 'audio-engine.js', 'm3shapes.js', 'lyrics-rtl.js', 'track-sort.js', 'search-text.js', 'track-match.js', 'library-tools.js', 'library-pages.js', 'update-core.js', 'update-notifier.js', 'lyrics-match.js', 'encore.js', 'sync-core.js', 'sync.js', 'share-link.js', 'library-store.js', 'profiles-core.js', 'theme-boot.js', 'profiles.js', 'lastfm-core.js', 'lastfm.js', 'backup-core.js', 'backup.js', 'i18n.js', 'lyrics-sources.js', 'track-trim.js', 'download-batch.js', 'track-audio.js', 'now-playing.js']) cpSync(join(root, f), join(out, f));
+for (const f of ['storage-migrate.js', 'app.js', 'styles.css', 'audio-engine.js', 'm3shapes.js', 'lyrics-rtl.js', 'track-sort.js', 'search-text.js', 'track-match.js', 'library-tools.js', 'library-pages.js', 'update-core.js', 'update-notifier.js', 'lyrics-match.js', 'encore.js', 'sync-core.js', 'sync.js', 'share-link.js', 'library-store.js', 'profiles-core.js', 'theme-boot.js', 'profiles.js', 'lastfm-core.js', 'lastfm.js', 'backup-core.js', 'backup.js', 'i18n.js', 'lyrics-sources.js', 'track-trim.js', 'download-batch.js', 'track-audio.js', 'now-playing.js']) cpSync(join(root, f), join(out, f));
 // iOS or Android is read at runtime; CI fills in the commit and run number
 writeFileSync(join(out, 'build-info.js'), buildInfoScript(''));
 cpSync(join(root, 'assets'), join(out, 'assets'), { recursive: true });

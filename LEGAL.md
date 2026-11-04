@@ -28,7 +28,7 @@ Uriel works with.
 
 **For rights holders**
 If you believe Uriel infringes your rights, please contact us first and we will look at it promptly:
-open a [rights holder request](https://github.com/cloverscripts/riff-muriel/issues/new?template=rights-holder-request.yml)
+open a [rights holder request](https://github.com/Esperant0s/Uriel/issues/new?template=rights-holder-request.yml)
 on GitHub. Tell us which content or feature is concerned and how to reach you; personal details don't need
 to be posted publicly, ask for a private channel instead. You can also use
 [GitHub's DMCA process](https://docs.github.com/en/site-policy/content-removal-policies/dmca-takedown-policy).
@@ -61,7 +61,7 @@ nur genannt, um zu beschreiben, womit Uriel funktioniert.
 **Für Rechteinhaber**
 Wenn du der Meinung bist, dass Uriel deine Rechte verletzt, melde dich bitte zuerst bei uns, wir kümmern uns
 umgehend darum: Eröffne auf GitHub eine
-[Anfrage für Rechteinhaber](https://github.com/cloverscripts/riff-muriel/issues/new?template=rights-holder-request.yml).
+[Anfrage für Rechteinhaber](https://github.com/Esperant0s/Uriel/issues/new?template=rights-holder-request.yml).
 Nenne die betroffenen Inhalte oder Funktionen und wie wir dich erreichen; persönliche Daten müssen nicht
 öffentlich gepostet werden, frag stattdessen nach einem privaten Kontakt. Alternativ steht das
 [DMCA-Verfahren von GitHub](https://docs.github.com/en/site-policy/content-removal-policies/dmca-takedown-policy)

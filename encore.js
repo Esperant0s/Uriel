@@ -3,7 +3,7 @@
 // Everything stays on the device (localStorage). Listening older than ~13 months is folded into one
 // all-time total per song (compact below), so the data stays small however long Uriel is used.
 (() => {
-  const KEY = 'muriel_listens_v1';
+  const KEY = 'uriel_listens_v1';
   const COUNT_AFTER = 30;
   const PERIODS = { week: 'This week', month: 'This month', year: 'This year', all: 'All time' };
 
@@ -78,7 +78,7 @@
   // first run: what's already in History counts as one play each, so the home card isn't empty
   function importHistory() {
     if (db.imported) return;
-    const C = window.MurielCore;
+    const C = window.UrielCore;
     const hist = (C && C.state && C.state.history) || [];
     hist.forEach((t) => { if (t && t.playedAt) add(remember(t), 1, 0, new Date(t.playedAt)); });
     db.imported = true;
@@ -92,7 +92,7 @@
   }
   function start(track) {
     commit();
-    const audio = window.MurielCore && window.MurielCore.audio;
+    const audio = window.UrielCore && window.UrielCore.audio;
     cur = track ? { key: remember(track), track, secs: 0, pending: 0, counted: false, last: audio ? audio.currentTime || 0 : 0, ended: false } : null;
   }
   function needed() {
@@ -100,12 +100,12 @@
     return d > 0 ? Math.min(COUNT_AFTER, d * 0.5) : COUNT_AFTER;
   }
   function hook() {
-    const C = window.MurielCore;
+    const C = window.UrielCore;
     const audio = C && C.audio;
     if (!audio) return;
     importHistory();
     if (C.state.currentTrack) start(C.state.currentTrack);
-    window.addEventListener('muriel:track', (e) => { if (!cur || cur.ended || keyOf(e.detail) !== cur.key) start(e.detail); });
+    window.addEventListener('uriel:track', (e) => { if (!cur || cur.ended || keyOf(e.detail) !== cur.key) start(e.detail); });
     audio.addEventListener('timeupdate', () => {
       if (!cur) return;
       const t = audio.currentTime || 0, d = t - cur.last;
@@ -126,7 +126,7 @@
 
   // ---------- stats ----------
   const cleanTitle = (t, a) => {
-    const M = window.MurielLyricsMatch;
+    const M = window.UrielLyricsMatch;
     if (!M) return { title: t, artist: a };
     const p = M.parseForLyrics(t, a);
     return { title: p.titles[0] || t, artist: p.artists[0] || a };
@@ -139,7 +139,7 @@
     return new Date(0);
   }
   // this device's listening plus what linked devices sent (sync.js); each device only ever counts its own plays
-  const sources = () => [db, ...((window.MurielSync && window.MurielSync.listenDbs && window.MurielSync.listenDbs()) || [])];
+  const sources = () => [db, ...((window.UrielSync && window.UrielSync.listenDbs && window.UrielSync.listenDbs()) || [])];
   function stats(period) {
     commit();
     const from = dayKey(rangeStart(period));
@@ -188,14 +188,14 @@
   const toTrack = (s) => ({ id: s.raw.id, title: s.raw.t, artist: s.raw.a, thumbnail: s.raw.th, platform: s.raw.p, url: s.raw.u, duration: s.raw.d });
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   // UI language (i18n.js): Th() gives escaped HTML with the {n} slots filled; titles and names only go into slots
-  const I18n = window.MurielI18n || (() => { const f = (s, ...a) => String(s).replace(/\{(\d)\}/g, (_, i) => (a[i] != null ? a[i] : '')); return { T: (s) => s, Tf: f, Tm: f, Th: (s, ...a) => f(esc(s), ...a) }; })();
+  const I18n = window.UrielI18n || (() => { const f = (s, ...a) => String(s).replace(/\{(\d)\}/g, (_, i) => (a[i] != null ? a[i] : '')); return { T: (s) => s, Tf: f, Tm: f, Th: (s, ...a) => f(esc(s), ...a) }; })();
   const Th = (s, ...a) => I18n.Th(s, ...a);
   // the word that goes with a number ('plays', 'days'), translated together with the number so it reads as a count
   const unit = (n, one, many) => esc(I18n.Tf(n === 1 ? `{0} ${one}` : `{0} ${many}`, '\u2063').replace('\u2063', '').trim());
-  const thumb = (s) => esc((window.MurielCore && window.MurielCore.thumb ? window.MurielCore.thumb(toTrack(s)) : '') || s.raw.th || '');
+  const thumb = (s) => esc((window.UrielCore && window.UrielCore.thumb ? window.UrielCore.thumb(toTrack(s)) : '') || s.raw.th || '');
 
   // ---------- home: "On repeat" ----------
-  let homePeriod = (() => { try { return localStorage.getItem('muriel_onrepeat_period') || 'month'; } catch (e) { return 'month'; } })();
+  let homePeriod = (() => { try { return localStorage.getItem('uriel_onrepeat_period') || 'month'; } catch (e) { return 'month'; } })();
   let renderTimer = null;
   function renderHome() {
     clearTimeout(renderTimer);
@@ -220,13 +220,13 @@
           </button>`).join('')}</div>` : `<div class="onrepeat-empty">${Th("Your most played songs show up here once you've listened for a bit.")}</div>`}`;
       box.querySelectorAll('.onrepeat-chip').forEach((b) => b.addEventListener('click', () => {
         homePeriod = b.dataset.p;
-        try { localStorage.setItem('muriel_onrepeat_period', homePeriod); } catch (e) {}
+        try { localStorage.setItem('uriel_onrepeat_period', homePeriod); } catch (e) {}
         renderHome();
       }));
       box.querySelector('.onrepeat-encore').addEventListener('click', () => open(homePeriod === 'all' ? 'all' : homePeriod));
       box.querySelectorAll('.onrepeat-row').forEach((r) => r.addEventListener('click', () => {
         const list = top.map(toTrack);
-        window.MurielCore.playTrack(list[+r.dataset.i], list, +r.dataset.i);
+        window.UrielCore.playTrack(list[+r.dataset.i], list, +r.dataset.i);
       }));
     }, 60);
   }
@@ -307,7 +307,7 @@
   function shareText(st) {
     const lines = [I18n.Tf('My Uriel Encore ({0})', I18n.T(PERIODS[st.period])), I18n.Tf('{0} minutes of music', st.minutes.toLocaleString())];
     st.songs.slice(0, 5).forEach((s, i) => lines.push(`${i + 1}. ${s.title} - ${s.artist}`));
-    lines.push('', `${I18n.T('Uriel: free music app, no ads, no login.')} github.com/Esperant0s/riff-muriel`);
+    lines.push('', `${I18n.T('Uriel: free music app, no ads, no login.')} github.com/Esperant0s/Uriel`);
     return lines.join('\n');
   }
   async function share(st) {
@@ -315,7 +315,7 @@
     const api = window.electronAPI;
     if (api && api.shareText) { await api.shareText(I18n.T('My Uriel Encore'), text); return; }
     if (navigator.share) { try { await navigator.share({ title: I18n.T('My Uriel Encore'), text }); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
-    try { await navigator.clipboard.writeText(text); if (window.MurielCore) window.MurielCore.toast(I18n.Tm('Copied your Encore')); } catch (e) {}
+    try { await navigator.clipboard.writeText(text); if (window.UrielCore) window.UrielCore.toast(I18n.Tm('Copied your Encore')); } catch (e) {}
   }
 
   function render(period) {
@@ -349,7 +349,7 @@
       const p = t.closest('[data-period]');
       if (p) return render(p.dataset.period);
       if (t.closest('[data-next]')) return show(1);
-      if (t.closest('[data-play]')) { const list = current.songs.slice(0, 25).map(toTrack); if (list.length) window.MurielCore.playTrack(list[0], list, 0); return close(); }
+      if (t.closest('[data-play]')) { const list = current.songs.slice(0, 25).map(toTrack); if (list.length) window.UrielCore.playTrack(list[0], list, 0); return close(); }
       if (t.closest('[data-share]')) return share(current);
       if (t.closest('button, a')) return;
       if (slide === 0) return; // the intro waits for "Start"
@@ -377,14 +377,14 @@
 
   // sync.js: this device's own listening (sent to linked devices), and a redraw when theirs arrives
   const own = () => { commit(); return db; };
-  window.MurielEncore = { open, stats, close, compact, own, refresh: () => renderHome() };
+  window.UrielEncore = { open, stats, close, compact, own, refresh: () => renderHome() };
   // another language, or its words just came in: the story too, on the slide it is on
-  window.addEventListener('muriel:i18n', () => {
+  window.addEventListener('uriel:i18n', () => {
     renderHome();
     if (overlay && current) { const at = slide; render(current.period); show(at); }
   });
   try { compact(); } catch (e) {}
   const histBtn = document.getElementById('btn-open-encore');
   if (histBtn) histBtn.addEventListener('click', () => open('month'));
-  if (window.MurielCore) hook(); else window.addEventListener('muriel:ready', hook, { once: true });
+  if (window.UrielCore) hook(); else window.addEventListener('uriel:ready', hook, { once: true });
 })();

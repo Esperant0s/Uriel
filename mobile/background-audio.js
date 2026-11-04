@@ -22,7 +22,7 @@ function silentWav(rate = 8000) {
 
 module.exports = function backgroundAudio() {
   if (Capacitor.getPlatform() !== 'ios') return;
-  const core = () => window.MurielCore;
+  const core = () => window.UrielCore;
   let silence = null;
   let capTimer = null;
 
@@ -53,8 +53,8 @@ module.exports = function backgroundAudio() {
   function hook() {
     const c = core();
     if (!c || !c.audio) return;
-    window.addEventListener('muriel:loading', sync);
+    window.addEventListener('uriel:loading', sync);
     ['play', 'playing', 'pause'].forEach((ev) => c.audio.addEventListener(ev, sync));
   }
-  if (window.MurielCore) hook(); else window.addEventListener('muriel:ready', hook, { once: true });
+  if (window.UrielCore) hook(); else window.addEventListener('uriel:ready', hook, { once: true });
 };

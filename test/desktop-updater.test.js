@@ -7,11 +7,11 @@ const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const updater = require('../desktop-updater');
 
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'muriel-updater-'));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'uriel-updater-'));
 test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-const URL_OK = 'https://github.com/cloverscripts/riff-muriel/releases/download/v1.4.0/file';
-const body = Buffer.from('new muriel build '.repeat(5000));
+const URL_OK = 'https://github.com/Esperant0s/Uriel/releases/download/v1.4.0/file';
+const body = Buffer.from('new uriel build '.repeat(5000));
 const sha = crypto.createHash('sha256').update(body).digest('hex');
 // a fetch that answers in a few chunks, like a real download, after a redirect to GitHub's download servers
 const fakeFetch = (bytes, finalUrl = 'https://release-assets.githubusercontent.com/x') => async () => ({
@@ -62,7 +62,7 @@ test('only stamped, packaged builds that can replace themselves update in the ap
 });
 
 test('the new AppImage starts without the old one\'s mount in its environment', () => {
-  const mount = '/tmp/.mount_MurielAbc';
+  const mount = '/tmp/.mount_UrielAbc';
   const env = updater.appImageEnv({
     APPDIR: mount, APPIMAGE: '/apps/Uriel.AppImage', ARGV0: './Uriel.AppImage', OWD: '/apps', HOME: '/home/me',
     PATH: `${mount}:${mount}/usr/sbin:/usr/bin`, LD_LIBRARY_PATH: `${mount}/usr/lib`,
@@ -74,7 +74,7 @@ test('the new AppImage starts without the old one\'s mount in its environment', 
 test('the build stamp is read from build-info.js', () => {
   const dir = path.join(tmp, 'stamp');
   fs.mkdirSync(dir);
-  fs.writeFileSync(path.join(dir, 'build-info.js'), 'window.MURIEL_BUILD = {"sha":"abc","channel":"linux","version":"1.4.0"};\n');
+  fs.writeFileSync(path.join(dir, 'build-info.js'), 'window.URIEL_BUILD = {"sha":"abc","channel":"linux","version":"1.4.0"};\n');
   assert.deepEqual(updater.readBuildInfo(dir), { sha: 'abc', channel: 'linux', version: '1.4.0' });
   assert.deepEqual(updater.readBuildInfo(path.join(tmp, 'missing')), { sha: 'dev' });
 });
@@ -102,7 +102,7 @@ test('the Mac swap script puts the new app in place and keeps the old one if tha
 
 test('the update banner offers the in-app update before the browser one', () => {
   const notifier = fs.readFileSync(path.join(__dirname, '..', 'update-notifier.js'), 'utf8');
-  assert.match(notifier, /window\.electronAPI && window\.electronAPI\.updates\) \|\| window\.MurielAppUpdater/);
+  assert.match(notifier, /window\.electronAPI && window\.electronAPI\.updates\) \|\| window\.UrielAppUpdater/);
   const preload = fs.readFileSync(path.join(__dirname, '..', 'preload.js'), 'utf8');
   assert.match(preload, /invoke\('updater-download'\)/);
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');

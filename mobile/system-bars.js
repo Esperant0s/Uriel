@@ -26,7 +26,7 @@ function colors() {
 
 module.exports = function systemBars() {
   if (Capacitor.getPlatform() !== 'android') return;
-  const plugin = registerPlugin('MuralSystemBars');
+  const plugin = registerPlugin('UrielSystemBars');
   let last = '';
   let timer = null;
   const sync = (force) => {
@@ -50,5 +50,5 @@ module.exports = function systemBars() {
     try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => sync(true)); } catch (e) {}
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true }); else start();
-  window.addEventListener('muriel:ready', () => sync(true), { once: true });
+  window.addEventListener('uriel:ready', () => sync(true), { once: true });
 };

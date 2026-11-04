@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for reaching out first. Uriel doesn't host any music; it plays publicly available sources on the
-        listener's device (see [LEGAL.md](https://github.com/cloverscripts/riff-muriel/blob/main/LEGAL.md)).
+        listener's device (see [LEGAL.md](https://github.com/Esperant0s/Uriel/blob/main/LEGAL.md)).
         This issue is **public**: don't post personal details or confidential information here. Tick the box
         below and we'll contact you privately instead.
   - type: textarea

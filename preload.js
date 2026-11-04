@@ -5,8 +5,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // only Uriel's own pages get the token (main.js also stops the window from navigating anywhere else)
   serverToken: (() => {
     if (location.protocol !== 'file:') return '';
-    const arg = process.argv.find((a) => a.startsWith('--muriel-token='));
-    return arg ? arg.slice('--muriel-token='.length) : '';
+    const arg = process.argv.find((a) => a.startsWith('--uriel-token='));
+    return arg ? arg.slice('--uriel-token='.length) : '';
   })(),
   minimizeWindow: () => ipcRenderer.send('window-minimize'),
   maximizeWindow: () => ipcRenderer.send('window-maximize'),

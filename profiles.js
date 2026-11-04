@@ -2,14 +2,14 @@
 // delete). Which keys belong to a profile and how localStorage keeps them apart is in profiles-core.js. Switching
 // stops the music and reloads the app, so everything in memory starts fresh with the other profile's things.
 (() => {
-  const P = window.MurielProfiles;
+  const P = window.UrielProfiles;
   if (!P) return;
 
   const EMOJI = ['', '🎧', '🎸', '🎹', '🎤', '🥁', '🦊', '🐱', '🐼', '🌙', '⭐', '🔥', '🌈', '🍀'];
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const toast = (m, kind) => { try { window.MurielCore && window.MurielCore.toast(m, kind || 'info'); } catch (e) {} };
+  const toast = (m, kind) => { try { window.UrielCore && window.UrielCore.toast(m, kind || 'info'); } catch (e) {} };
   // UI language (i18n.js): data-i18n marks Uriel's own words in the HTML below; profile names only go into {0} slots
-  const I18n = window.MurielI18n || (() => { const f = (s, ...a) => String(s).replace(/\{(\d)\}/g, (_, i) => (a[i] != null ? a[i] : '')); return { T: (s) => s, Tf: f, Tm: f, Th: f, text: (el, s, ...a) => { if (el) el.textContent = f(s, ...a); } }; })();
+  const I18n = window.UrielI18n || (() => { const f = (s, ...a) => String(s).replace(/\{(\d)\}/g, (_, i) => (a[i] != null ? a[i] : '')); return { T: (s) => s, Tf: f, Tm: f, Th: f, text: (el, s, ...a) => { if (el) el.textContent = f(s, ...a); } }; })();
   const initial = (name) => (Array.from(String(name || '').trim())[0] || '?').toUpperCase();
   // dark letters on light colors, white on dark ones
   const inkOn = (hex) => {
@@ -33,10 +33,10 @@
     let ok = false;
     try { ok = P.open(id); } catch (e) {}
     if (!ok) { toast(I18n.Tm('Could not switch: the storage is full'), 'error'); return; }
-    const C = window.MurielCore;
+    const C = window.UrielCore;
     try { if (C && C.state && C.state.isPlaying) C.togglePlay(); if (C && C.audio) C.audio.pause(); } catch (e) {}
     // frees this profile's id on the link service right away, so switching back connects without waiting
-    try { if (window.MurielSync && window.MurielSync.stop) window.MurielSync.stop(); } catch (e) {}
+    try { if (window.UrielSync && window.UrielSync.stop) window.UrielSync.stop(); } catch (e) {}
     closeMenu();
     const curtain = document.createElement('div');
     curtain.className = 'profile-curtain';
@@ -129,7 +129,7 @@
     if (pl) parts.push(plural(pl, 'playlist', 'playlists'));
     if (fav) parts.push(plural(fav, 'favorite', 'favorites'));
     let linked = 0;
-    try { const m = JSON.parse(P.peek(p.id, 'muriel_sync_members') || '{}'); linked = Math.max(0, Object.values(m).filter((x) => x && !x.del).length - 1); } catch (e) {}
+    try { const m = JSON.parse(P.peek(p.id, 'uriel_sync_members') || '{}'); linked = Math.max(0, Object.values(m).filter((x) => x && !x.del).length - 1); } catch (e) {}
     if (linked) parts.push(linked === 1 ? I18n.T('syncs with 1 device') : I18n.Tf('syncs with {0} devices', linked));
     return parts.length ? parts.join(' · ') : I18n.T('Nothing saved yet');
   }
@@ -259,7 +259,7 @@
   mountSwitcher();
   mount();
   // the song counts come from IndexedDB, which is still loading when this first draws (library-store.js)
-  if (window.MurielLibraryStore) window.MurielLibraryStore.ready.then(() => { if (!editing && !adding) render(); }, () => {});
+  if (window.UrielLibraryStore) window.UrielLibraryStore.ready.then(() => { if (!editing && !adding) render(); }, () => {});
   // another language, or its words just came in: names and counts are put together here
-  window.addEventListener('muriel:i18n', () => { if (!editing && !adding) render(); });
+  window.addEventListener('uriel:i18n', () => { if (!editing && !adding) render(); });
 })();

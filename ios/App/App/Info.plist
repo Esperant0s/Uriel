@@ -22,14 +22,16 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<!-- muriel://link?code=… from the QR code in Settings → Sync (opens the app and links it) -->
+	<!-- uriel://link?code=… from the QR code in Settings → Sync (opens the app and links it) -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>io.github.cloverscripts.muriel</string>
+			<string>io.github.esperant0s.uriel</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
+				<string>uriel</string>
+				<!-- links from before the rename, and the Sync page's QR codes -->
 				<string>muriel</string>
 			</array>
 		</dict>

@@ -224,5 +224,5 @@
     isArtistBlocked, isSongBlocked, isTrackBlocked, toggleBlockedArtist, toggleBlockedSong,
   };
   if (typeof module === 'object' && module.exports) module.exports = api;
-  else root.MurielLibrary = api;
+  else root.UrielLibrary = api;
 })(typeof window !== 'undefined' ? window : globalThis);

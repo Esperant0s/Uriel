@@ -136,7 +136,7 @@ function register() {
   const { app, ipcMain, net } = require('electron');
   const build = readBuildInfo();
   const kind = installKind({ build, exePath: app.getPath('exe'), packaged: app.isPackaged });
-  const workDir = path.join(os.tmpdir(), 'muriel-update');
+  const workDir = path.join(os.tmpdir(), 'uriel-update');
   let downloading = null;
   let staged = null; // { kind, file, version } once a verified update is ready to go in
   let applied = false;
@@ -219,7 +219,7 @@ function register() {
       // not app.relaunch(): its helper is this build's binary, inside the AppImage's mount that goes away as Uriel
       // quits, and the new AppImage then can't mount ("Cannot mount AppImage, please check your FUSE setup")
       if (relaunch) {
-        runDetached('/bin/sh', ['-c', APPIMAGE_RELAUNCH, 'muriel-update', String(process.pid), process.env.APPIMAGE],
+        runDetached('/bin/sh', ['-c', APPIMAGE_RELAUNCH, 'uriel-update', String(process.pid), process.env.APPIMAGE],
           { cwd: path.dirname(process.env.APPIMAGE), env: appImageEnv(process.env) });
         app.exit(0);
       }

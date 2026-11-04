@@ -8,8 +8,8 @@
 // DOMContentLoaded, which hasn't fired yet when this script runs.
 (() => {
   // desktop's default text scale (1.25x) is sized for a monitor; phones start at 1.0x unless the user picked one
-  if (!localStorage.getItem('muriel_font_scale')) localStorage.setItem('muriel_font_scale', '80');
-  const Engine = window.MurielAudioEngine;
+  if (!localStorage.getItem('uriel_font_scale')) localStorage.setItem('uriel_font_scale', '80');
+  const Engine = window.UrielAudioEngine;
   if (!Engine) return;
   Engine.prototype.init = function (audioElement) { this.__element = audioElement || this.__element; };
   // iOS ignores element.volume (hardware buttons own it); mute still works
@@ -84,15 +84,15 @@
       return url || u;
     };
     let bgChanged = false;
-    for (const key of ['muriel_bg_url', 'muriel_banner_media', 'muriel_app_icon']) {
+    for (const key of ['uriel_bg_url', 'uriel_banner_media', 'uriel_app_icon']) {
       const cur = localStorage.getItem(key);
       if (!cur) continue;
       const next = await fresh(cur);
-      if (next !== cur) { localStorage.setItem(key, next); if (key === 'muriel_bg_url') bgChanged = true; }
+      if (next !== cur) { localStorage.setItem(key, next); if (key === 'uriel_bg_url') bgChanged = true; }
     }
     let artOk = true;
     try {
-      const art = JSON.parse(localStorage.getItem('muriel_track_art') || '{}');
+      const art = JSON.parse(localStorage.getItem('uriel_track_art') || '{}');
       let dirty = false;
       for (const v of Object.values(art)) {
         for (const f of ['cover', 'banner']) {
@@ -101,22 +101,22 @@
           if (next !== v[f]) { v[f] = next; dirty = true; }
         }
       }
-      if (dirty) localStorage.setItem('muriel_track_art', JSON.stringify(art));
+      if (dirty) localStorage.setItem('uriel_track_art', JSON.stringify(art));
     } catch (e) { artOk = false; }
-    localStorage.removeItem('muriel_bg_vpath');
-    if (bgChanged) window.MurielCore.refreshBackground();
+    localStorage.removeItem('uriel_bg_vpath');
+    if (bgChanged) window.UrielCore.refreshBackground();
     // these settings are per profile but the files are shared: keep every profile's picks, not only this one's
     // (switching to a profile without a background used to delete the other profile's)
     let othersOk = true;
-    const P = window.MurielProfiles;
+    const P = window.UrielProfiles;
     if (P) {
       for (const p of P.list()) {
-        for (const key of ['muriel_bg_url', 'muriel_banner_media', 'muriel_app_icon']) {
+        for (const key of ['uriel_bg_url', 'uriel_banner_media', 'uriel_app_icon']) {
           const name = nameOf(P.peek(p.id, key));
           if (name) keep.add(name);
         }
         try {
-          for (const v of Object.values(JSON.parse(P.peek(p.id, 'muriel_track_art') || '{}'))) {
+          for (const v of Object.values(JSON.parse(P.peek(p.id, 'uriel_track_art') || '{}'))) {
             for (const f of ['cover', 'banner']) { const name = v && nameOf(v[f]); if (name) keep.add(name); }
           }
         } catch (e) { othersOk = false; }
@@ -124,15 +124,15 @@
     }
     if (artOk && othersOk && api.pruneMedia) api.pruneMedia(keep);
   };
-  if (window.MurielCore) fixPickedMedia(); else window.addEventListener('muriel:ready', fixPickedMedia, { once: true });
+  if (window.UrielCore) fixPickedMedia(); else window.addEventListener('uriel:ready', fixPickedMedia, { once: true });
 
   // phones default to word-by-word karaoke (the Line/Word button still switches)
   const preferWordLyrics = () => {
-    const st = window.MurielCore && window.MurielCore.state;
+    const st = window.UrielCore && window.UrielCore.state;
     const btn = document.getElementById('btn-lyrics-mode');
-    if (st && btn && st.lyricsMode === 'line' && localStorage.getItem('muriel_adv_karaoke_words') !== 'false') btn.click();
+    if (st && btn && st.lyricsMode === 'line' && localStorage.getItem('uriel_adv_karaoke_words') !== 'false') btn.click();
   };
-  if (window.MurielCore) preferWordLyrics(); else window.addEventListener('muriel:ready', preferWordLyrics, { once: true });
+  if (window.UrielCore) preferWordLyrics(); else window.addEventListener('uriel:ready', preferWordLyrics, { once: true });
 
   // lyrics tools (edit / sync / translate / fullscreen) move up next to the Line/Word button,
   // so the lyrics get that row back; same buttons, so their handlers keep working
@@ -219,7 +219,7 @@
   const aboutGroup = document.querySelector('.settings-section[data-cat="about"] .m3-group');
   if (storageGroup) {
     const limits = [['1024', '1 GB'], ['2048', '2 GB'], ['5120', '5 GB'], ['10240', '10 GB']];
-    const current = localStorage.getItem('muriel_cache_limit_mb') || '2048';
+    const current = localStorage.getItem('uriel_cache_limit_mb') || '2048';
     const limitRow = document.createElement('div');
     limitRow.className = 'setting-item';
     limitRow.innerHTML = `
@@ -233,10 +233,10 @@
         ${limits.map(([v, l]) => `<button class="fps-cap-btn${v === current ? ' active' : ''}" data-limit="${v}">${l}</button>`).join('')}
       </div>`;
     limitRow.querySelectorAll('[data-limit]').forEach((b) => b.addEventListener('click', () => {
-      localStorage.setItem('muriel_cache_limit_mb', b.dataset.limit);
+      localStorage.setItem('uriel_cache_limit_mb', b.dataset.limit);
       limitRow.querySelectorAll('[data-limit]').forEach((x) => x.classList.toggle('active', x === b));
       // a lower limit applies now, not only after the next download
-      if (window.MurielCache) window.MurielCache.enforceLimit();
+      if (window.UrielCache) window.UrielCache.enforceLimit();
     }));
     const logRow = document.createElement('div');
     logRow.className = 'setting-item';
@@ -249,8 +249,8 @@
         <button class="btn-pill-primary" type="button" data-i18n>Share</button>
       </div>`;
     logRow.querySelector('button').addEventListener('click', async () => {
-      const res = await window.electronAPI.shareText('Uriel error log', window.MurielLog ? window.MurielLog.text() : 'no log');
-      if (res === 'copied' && window.MurielCore) window.MurielCore.toast((window.MurielI18n || { T: (x) => x, Tm: (x) => x }).Tm('Log copied to clipboard'), 'info');
+      const res = await window.electronAPI.shareText('Uriel error log', window.UrielLog ? window.UrielLog.text() : 'no log');
+      if (res === 'copied' && window.UrielCore) window.UrielCore.toast((window.UrielI18n || { T: (x) => x, Tm: (x) => x }).Tm('Log copied to clipboard'), 'info');
     });
     storageGroup.append(limitRow);
     if (aboutGroup) aboutGroup.insertBefore(logRow, aboutGroup.lastElementChild); else storageGroup.append(logRow);
@@ -265,8 +265,8 @@
   // the phone's own playback rows go to Tracks → Playback
   const playbackGroup = document.querySelector('.m3-group[data-group="playback"]');
   const addPlaybackRow = (row) => { if (playbackGroup) playbackGroup.append(row); else trRow.parentElement.insertBefore(row, trRow); };
-  if (window.MurielLiveActivity && trRow) {
-    const la = window.MurielLiveActivity;
+  if (window.UrielLiveActivity && trRow) {
+    const la = window.UrielLiveActivity;
     const row = document.createElement('div');
     row.className = 'setting-item';
     row.innerHTML = `
@@ -290,8 +290,8 @@
   }
 
   // Android: let Uriel off battery optimization so the phone doesn't stop it in the background (media-controls.js)
-  if (window.MurielBackground && trRow) {
-    const bg = window.MurielBackground;
+  if (window.UrielBackground && trRow) {
+    const bg = window.UrielBackground;
     const row = document.createElement('div');
     row.className = 'setting-item';
     row.innerHTML = `
@@ -314,8 +314,8 @@
   // Android: the song in the island at the top of the screen, as an Android 16 live update (media-controls.js).
   // vivo's Origin Island and OPPO's Fluid Cloud only take music apps on their maker's list; a live update they take
   // from any app. Xiaomi's Super Island and Samsung's Now Bar show the playback notification already: no row there.
-  if (window.MurielIsland && trRow) {
-    const isl = window.MurielIsland;
+  if (window.UrielIsland && trRow) {
+    const isl = window.UrielIsland;
     isl.status().then((s) => {
       if (!s.vendor || s.vendor === 'xiaomi' || s.vendor === 'samsung' || (!s.supported && s.vendor !== 'vivo')) return;
       const name = { vivo: 'Origin Island', oplus: 'Fluid Cloud' }[s.vendor] || 'Song in the status bar';
@@ -375,9 +375,9 @@
 // a write to the phone's storage failed (usually: storage full); say so instead of losing it silently
 (() => {
   let last = 0;
-  window.addEventListener('muriel:storage-error', () => {
-    if (Date.now() - last < 30000 || !window.MurielCore || !window.MurielCore.toast) return;
+  window.addEventListener('uriel:storage-error', () => {
+    if (Date.now() - last < 30000 || !window.UrielCore || !window.UrielCore.toast) return;
     last = Date.now();
-    window.MurielCore.toast((window.MurielI18n || { T: (x) => x, Tm: (x) => x }).Tm('Could not save to storage. Is your phone full?'), 'error');
+    window.UrielCore.toast((window.UrielI18n || { T: (x) => x, Tm: (x) => x }).Tm('Could not save to storage. Is your phone full?'), 'error');
   });
 })();

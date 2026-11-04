@@ -31,9 +31,9 @@ test('phones show page titles and an evenly spaced bottom bar', () => {
 });
 
 test('Android colours its system bars from the theme', () => {
-  assert.match(read('android/app/src/main/java/io/github/cloverscripts/muriel/MainActivity.java'), /registerPlugin\(SystemBarsPlugin\.class\)/);
+  assert.match(read('android/app/src/main/java/io/github/esperant0s/uriel/MainActivity.java'), /registerPlugin\(SystemBarsPlugin\.class\)/);
   assert.match(read('mobile/bridge.js'), /require\('\.\/system-bars'\)\(\)/);
   const js = read('mobile/system-bars.js');
-  assert.match(js, /registerPlugin\('MuralSystemBars'\)/);
-  assert.match(read('android/app/src/main/java/io/github/cloverscripts/muriel/SystemBarsPlugin.java'), /@CapacitorPlugin\(name = "MuralSystemBars"\)/);
+  assert.match(js, /registerPlugin\('UrielSystemBars'\)/);
+  assert.match(read('android/app/src/main/java/io/github/esperant0s/uriel/SystemBarsPlugin.java'), /@CapacitorPlugin\(name = "UrielSystemBars"\)/);
 });
