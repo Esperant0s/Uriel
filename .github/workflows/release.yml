@@ -67,4 +67,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          # electron-builder quietly skips uploading to a release published over 2 hours ago, which made
+          # re-running a release (to add a build that failed) do nothing
+          EP_GH_IGNORE_TIME: "true"
         run: npx electron-builder ${{ matrix.flag }} --publish always
