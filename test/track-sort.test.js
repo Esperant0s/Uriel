@@ -131,3 +131,23 @@ test('by album: albums A to Z, track order inside, songs without an album last i
 test('every listed sort mode is handled', () => {
   for (const mode of TRACK_SORT_MODES) assert.strictEqual(sortTracks([{ id: 'a' }, { id: 'b' }], mode).length, 2);
 });
+
+test('favoriteIndex gives the same answers as comparing with every favourite', () => {
+  const { favoriteIndex, isSameSong } = require('../track-sort.js');
+  const favs = [
+    { id: 'dQw4w9WgXcQ', platform: 'youtube', title: 'Never Gonna Give You Up', artist: 'Rick Astley', duration: 213 },
+    { id: 'sc123', platform: 'soundcloud', title: 'Lofi Beat (Official Audio)', artist: 'Some Producer', duration: 120 },
+    { id: 'L1', platform: 'local', title: 'Home Recording', artist: 'Me', duration: 60 },
+  ];
+  const probes = [
+    { id: 'ytm:dQw4w9WgXcQ', platform: 'ytmusic', title: 'x', artist: 'y' }, // same video, another prefix
+    { id: 'other1', platform: 'youtube', title: 'never gonna give you up', artist: 'Rick Astley - Topic', duration: 215 }, // same song, close length
+    { id: 'other2', platform: 'youtube', title: 'Never Gonna Give You Up', artist: 'Rick Astley', duration: 400 }, // a long version
+    { id: 'other3', platform: 'youtube', title: 'Lofi Beat', artist: 'Some Producer', duration: 121 },
+    { id: 'L2', platform: 'local', title: 'Home Recording', artist: 'Me', duration: 60 }, // local songs match by id only
+    { id: 'L1', platform: 'local', title: 'renamed', artist: 'Me' },
+    null,
+  ];
+  const idx = favoriteIndex(favs);
+  for (const p of probes) assert.equal(idx.has(p), favs.some((f) => isSameSong(f, p)), JSON.stringify(p));
+});

@@ -168,4 +168,28 @@ function dedupeFavoriteTracks(tracks) {
   return out.length === tracks.length ? tracks : out;
 }
 
-if (typeof module !== 'undefined') module.exports = { TRACK_SORT_MODES, LIBRARY_SORT_MODES, librarySortMode, sortLibrary, sortTracks, backfillAddedAt, favoriteTrackKey, isSameSong, dedupeFavoriteTracks };
+// "Is this a favourite?" for every row drawn: comparing each row with every favourite (normalising both titles each
+// time) cost ~a second for a long Favourites list. Built once per list: same answers as list.some(isSameSong).
+function favoriteIndex(list) {
+  const keys = new Set();
+  const bySong = new Map();
+  for (const f of list || []) {
+    if (!f) continue;
+    keys.add(favoriteTrackKey(f));
+    if (String(f.platform || '').toLowerCase() === 'local' || !tsNormTitle(f.title) || !tsNormArtist(f.artist)) continue;
+    const k = tsSongKey(f);
+    const same = bySong.get(k);
+    if (same) same.push(f); else bySong.set(k, [f]);
+  }
+  return {
+    has(t) {
+      if (!t) return false;
+      if (keys.has(favoriteTrackKey(t))) return true;
+      if (String(t.platform || '').toLowerCase() === 'local') return false;
+      const same = bySong.get(tsSongKey(t));
+      return !!same && same.some((f) => isSameSong(f, t));
+    },
+  };
+}
+
+if (typeof module !== 'undefined') module.exports = { TRACK_SORT_MODES, LIBRARY_SORT_MODES, librarySortMode, sortLibrary, sortTracks, backfillAddedAt, favoriteTrackKey, isSameSong, dedupeFavoriteTracks, favoriteIndex };

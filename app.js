@@ -7938,7 +7938,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       }
 
-      const isFav = state.favorites.some(f => isSameSong(f, track));
+      const isFav = isFavoriteSong(track);
       const rowThumb = getTrackThumbUrl(track);
       const isAlbum = context === 'album';
       const albumArtist = (track.albumArtist || '').trim().toLowerCase();
@@ -8043,7 +8043,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           btnFav.addEventListener('click', (e) => {
             e.stopPropagation();
             toggleFavoriteTrack(track);
-            const isFavNow = state.favorites.some(f => isSameSong(f, track));
+            const isFavNow = isFavoriteSong(track);
             const svg = btnFav.querySelector('svg');
             if (svg) svg.setAttribute('fill', isFavNow ? 'currentColor' : 'none');
           });
@@ -8207,9 +8207,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   renderBlockedSettings();
 
+  // one index of the favourites, rebuilt when the list changes (track-sort.js favoriteIndex)
+  var favIndexCache = null;
+  // an edit in the middle of the list (a renamed song, Sync) keeps its length and ends: start over on any library change
+  window.addEventListener('muriel:library', () => { favIndexCache = null; });
+  function isFavoriteSong(track) {
+    const list = state.favorites || [];
+    const c = favIndexCache;
+    if (!c || c.list !== list || c.length !== list.length || c.first !== list[0] || c.last !== list[list.length - 1]) {
+      favIndexCache = { list, length: list.length, first: list[0], last: list[list.length - 1], index: favoriteIndex(list) };
+    }
+    return favIndexCache.index.has(track);
+  }
+
   function openTrackContextMenu(x, y, track, context, row) {
     closeTrackContextMenu();
-    const isFav = state.favorites.some(f => isSameSong(f, track));
+    const isFav = isFavoriteSong(track);
     const items = [
       { label: 'Play', run: () => row.click() },
       { label: 'Play next', run: () => {
@@ -8239,7 +8252,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       { label: 'Add to playlist…', run: () => openAddToPlaylistModal(track) },
       { label: isFav ? 'Remove from favorites' : 'Add to favorites', run: () => {
         toggleFavoriteTrack(track);
-        const on = state.favorites.some(f => isSameSong(f, track));
+        const on = isFavoriteSong(track);
         const svg = row.querySelector('.btn-row-fav svg');
         if (svg) svg.setAttribute('fill', on ? 'currentColor' : 'none');
       } }
@@ -8249,6 +8262,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (track.platform !== 'local') {
       items.push({ label: 'Download…', run: () => openDownloadModal(track) });
+    }
+    if (track.platform !== 'local') {
+      items.push({ label: 'Share…', run: () => sharePlaylist({ name: [track.title, track.artist].filter(Boolean).join(' · ') || 'A song', tracks: [track] }) });
+      if (track.url) items.push({ label: 'Copy song link', run: async () => { const ok = await copyText(track.url); showToast(ok ? Tm('Link copied') : Tm("Couldn't copy the link"), ok ? 'success' : 'error'); } });
     }
     if (context === 'playlist') {
       items.push({ label: 'Remove from playlist', danger: true, run: () => removeTrackFromCurrentPlaylist(track) });
@@ -8261,6 +8278,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (artistName) items.push({ label: Lib.isArtistBlocked(getBlocks().artists, artistName) ? 'Unblock artist' : 'Block artist', run: () => toggleBlockArtist(artistName) });
     }
 
+    showActionMenu(x, y, items);
+  }
+
+  // a menu of { label, run, danger } at x, y (a song's, a playlist's); the same look and closing rules for all
+  function showActionMenu(x, y, items) {
+    closeTrackContextMenu();
     const menu = document.createElement('div');
     menu.className = 'track-context-menu';
     menu.setAttribute('role', 'menu');
@@ -8810,7 +8833,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function toggleFavoriteTrack(track) {
     if (!track) return;
-    const exists = state.favorites.some(f => isSameSong(f, track));
+    const exists = isFavoriteSong(track);
     
     if (exists) {
       state.favorites = state.favorites.filter(f => !isSameSong(f, track));
@@ -8825,7 +8848,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function updateFavoriteIcon() {
-    const isFav = !!(state.currentTrack && state.favorites.some(f => isSameSong(f, state.currentTrack)));
+    const isFav = !!(state.currentTrack && isFavoriteSong(state.currentTrack));
     if (el.favIcon) el.favIcon.setAttribute('fill', isFav ? 'currentColor' : 'none');
     if (el.tvkFavIcon) el.tvkFavIcon.setAttribute('fill', isFav ? 'currentColor' : 'none');
     if (el.btnTvkFav) {
@@ -9784,6 +9807,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (el.playlistTracksList) renderTracks(el.playlistTracksList, filtered, 'playlist');
     switchView('playlist-detail');
     renderPlaylistsList();
+    refreshPlaylistDownloads(pl);
   }
 
   if (el.playlistSort) {
@@ -9858,6 +9882,76 @@ document.addEventListener('DOMContentLoaded', async () => {
       showToast(Tm('Link copied. Anyone can open it in the browser or in Mural{0}', note), 'success');
     } catch (e) { window.prompt(T('Copy this link'), link); }
   }
+  // ---- the playlist's "More" menu: the things Spotify keeps behind its ⋯ ----
+  function queuePlaylist(pl, next) {
+    const tracks = (pl.tracks || []).filter((t) => !isBlocked(t));
+    if (!tracks.length) { showToast(Tm('This playlist is empty'), 'info'); return; }
+    // nothing playing yet: the playlist simply starts
+    if (!state.queue.length || state.queueIndex < 0) { playTrack(tracks[0], tracks.slice(), 0, 'playlist'); return; }
+    if (next) {
+      state.queue.splice(state.queueIndex + 1, 0, ...tracks);
+      shuffleBag.next.push(...tracks);
+    } else state.queue.push(...tracks);
+    updateQueueBadge();
+    window.dispatchEvent(new Event('muriel:queue'));
+    showToast(next ? Tm('{0} songs play next', tracks.length) : Tm('{0} songs added to the queue', tracks.length), 'success');
+  }
+  function duplicatePlaylist(pl) {
+    const taken = new Set(state.playlists.map((p) => p.name));
+    let name = Tf('{0} (copy)', pl.name);
+    for (let n = 2; taken.has(name); n++) name = Tf('{0} (copy {1})', pl.name, n);
+    const copy = { ...pl, id: 'pl_' + Date.now(), name, tracks: (pl.tracks || []).map((t) => ({ ...t })) };
+    state.playlists.push(copy);
+    localStorage.setItem('devsize_playlists', JSON.stringify(state.playlists));
+    window.dispatchEvent(new Event('muriel:library'));
+    renderPlaylistsList();
+    openPlaylistDetail(copy.id);
+    showToast(Tm('Made "{0}"', name), 'success');
+  }
+  const btnPlaylistMore = document.getElementById('btn-playlist-more');
+  if (btnPlaylistMore) btnPlaylistMore.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const pl = state.playlists.find((p) => p.id === state.currentPlaylistId);
+    if (!pl) return;
+    const click = (id) => () => { const b = document.getElementById(id); if (b) b.click(); };
+    const r = btnPlaylistMore.getBoundingClientRect();
+    showActionMenu(r.left, r.bottom + 6, [
+      { label: 'Play next', run: () => queuePlaylist(pl, true) },
+      { label: 'Add to queue', run: () => queuePlaylist(pl, false) },
+      ...(songRadioEnabled() && (pl.tracks || []).length ? [{ label: 'Start radio', run: () => startSongRadio((pl.tracks || []).slice(0, 5)) }] : []),
+      { label: 'Edit details', run: click('btn-rename-playlist') },
+      { label: 'Duplicate', run: () => duplicatePlaylist(pl) },
+      { label: 'Share…', run: () => sharePlaylist(pl) },
+      { label: 'Export as file', run: click('btn-export-playlist') },
+      { label: 'Delete playlist', danger: true, run: click('btn-delete-playlist') },
+    ]);
+  });
+
+  // ---- which of a playlist's songs are already on this device ----
+  // Songs from your own files always are; the others count when they're in the Downloads folder (what "Download
+  // all" skips). Shown under the title ("12 of 40 downloaded") and on the Download button ("Download 28 more").
+  let playlistDownloadsFor = '';
+  async function refreshPlaylistDownloads(pl) {
+    const stateEl = document.getElementById('playlist-download-state');
+    const label = document.getElementById('btn-download-playlist-label');
+    if (!pl || !stateEl) return;
+    const id = pl.id;
+    playlistDownloadsFor = id;
+    const all = pl.tracks || [];
+    const online = all.filter((t) => t.platform !== 'local');
+    let present;
+    try { present = online.length ? await downloadedInFolder(online) : []; } catch (e) { present = null; }
+    if (playlistDownloadsFor !== id || state.currentPlaylistId !== id) return;
+    if (!present) { stateEl.hidden = true; if (label) label.textContent = T('Download all'); return; }
+    const have = present.filter(Boolean).length + (all.length - online.length);
+    // the arrows on the rows agree with the count
+    online.forEach((t, i) => { if (present[i]) offlineChanged(t, true); });
+    stateEl.hidden = !all.length || !have;
+    stateEl.textContent = have >= all.length ? T('All downloaded') : Tf('{0} of {1} downloaded', have, all.length);
+    stateEl.classList.toggle('complete', have >= all.length);
+    if (label) label.textContent = have >= all.length && all.length ? T('Downloaded') : (have ? Tf('Download {0} more', all.length - have) : T('Download all'));
+  }
+
   const btnSharePlaylist = document.getElementById('btn-share-playlist');
   if (btnSharePlaylist) btnSharePlaylist.addEventListener('click', () => sharePlaylist(state.playlists.find(p => p.id === state.currentPlaylistId)));
 
@@ -9904,7 +9998,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       let added = 0;
       for (let i = pl.tracks.length - 1; i >= 0; i--) {
         const track = pl.tracks[i];
-        if (!state.favorites.some(f => isSameSong(f, track))) {
+        if (!isFavoriteSong(track)) {
           state.favorites.unshift(stampAddedAt(track));
           added++;
         }
@@ -9971,7 +10065,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     on('multi-select-fav', () => {
       let added = 0;
       multiSel.tracks.forEach(t => {
-        if (!state.favorites.some(f => isSameSong(f, t))) { state.favorites.unshift(stampAddedAt(t)); added++; }
+        if (!isFavoriteSong(t)) { state.favorites.unshift(stampAddedAt(t)); added++; }
       });
       localStorage.setItem('devsize_favorites', JSON.stringify(state.favorites));
       updateFavoritesBadge();
@@ -16024,7 +16118,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // liked songs become favorites of the open profile
       let newFavorites = 0;
       for (const t of likes) {
-        if (!state.favorites.some((f) => isSameSong(f, t))) { state.favorites.push(stampAddedAt(t)); newFavorites++; }
+        if (!isFavoriteSong(t)) { state.favorites.push(stampAddedAt(t)); newFavorites++; }
         progress(++done, total);
       }
       if (newFavorites) {
@@ -16242,6 +16336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     trackToDownload = null;
     downloadBatch = { name: playlist.name || 'Playlist', tracks, resolve: playlist.resolve, onProgress: playlist.onProgress, onDone: playlist.onDone };
+    const batchShown = downloadBatch;
     el.downloadModal.classList.add('batch-mode');
     showDownloadPane('download');
     const modalTitle = document.getElementById('download-modal-title');
@@ -16254,6 +16349,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateLosslessQualityState();
     updateDownloadCaptionPath();
     openModal(el.downloadModal);
+    // say up front how many are already in the Downloads folder (they're skipped)
+    downloadedInFolder(tracks).then((present) => {
+      if (downloadBatch !== batchShown || !el.downloadPreviewArtist) return;
+      const have = present.filter(Boolean).length;
+      if (!have) return;
+      if (have >= tracks.length) I18N.text(el.downloadPreviewArtist, 'All {0} songs are already downloaded', tracks.length);
+      else I18N.text(el.downloadPreviewArtist, '{0} of {1} already downloaded · {2} to go', have, tracks.length, tracks.length - have);
+    }, () => {});
   }
 
   function setDownloadFormat(fmt) {
@@ -16485,6 +16588,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (shown()) el.btnConfirmDownload.disabled = false;
         if (downloadAbort === batchAbort) downloadAbort = null;
         if (typeof batch.onDone === 'function') batch.onDone(done + skipped, total);
+        // the playlist page's "12 of 40 downloaded" and its Download button follow
+        if (state.currentView === 'playlist-detail') refreshPlaylistDownloads(state.playlists.find((p) => p.id === state.currentPlaylistId));
         // on phones the server answers with the app's internal path (/data/Downloads); name the real folder
         if (isPhoneApp && lastDir) {
           try { lastDir = (await window.electronAPI.getDownloadDir()).dir || lastDir; } catch (e) {}
@@ -17701,6 +17806,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const sig = `${state.history.length}:${state.favorites.length}:${state.history[0] ? state.history[0].id : ''}`;
     if (!force && sig === forYouSig) return;
     forYouSig = sig;
+    const isEmpty = (d) => !d || !d.success || (!(d.genres || []).length && !(d.sections || []).some((x) => (x.items || x.tracks || []).length));
+    // what For you showed last time, drawn at once while the new one loads
+    const cached = safeJson('muriel_home_foryou_cache', null);
+    if (!box.children.length && cached && !isEmpty(cached.data)) renderForYou(box, cached.data);
     let data = null;
     try {
       const res = await fetch(`http://127.0.0.1:${state.serverPort}/api/discover`, {
@@ -17710,8 +17819,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       data = await res.json();
     } catch (e) {}
     // forget the signature on a failed (or offline, empty) load, or "For you" stayed empty until the history changed
-    const empty = !data || !data.success || (!(data.genres || []).length && !(data.sections || []).some((x) => (x.items || x.tracks || []).length));
-    if (empty) { if (forYouSig === sig) forYouSig = ''; return; }
+    if (isEmpty(data)) { if (forYouSig === sig) forYouSig = ''; return; }
+    try { localStorage.setItem('muriel_home_foryou_cache', JSON.stringify({ at: Date.now(), data })); } catch (e) {}
+    renderForYou(box, data);
+  }
+  function renderForYou(box, data) {
     box.innerHTML = '';
     const section = (title) => {
       const block = document.createElement('div');
@@ -17761,6 +17873,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       section(sec.title).appendChild(row);
     }
+    const firstSongs = (data.sections || []).find((x) => x.type !== 'artists' && (x.tracks || []).length);
+    if (firstSongs) warmHomeSongs(firstSongs.tracks, 1);
   }
 
   // ---- Home layout: Mural (the carousel; the default) or Spotify-style rows (Settings > Advanced > Home layout) ----
@@ -18006,6 +18120,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       onClick: () => { state.myWaveActive = false; playTrack(t, [...tracks], i); }
     })));
     finishRow(row);
+    warmHomeSongs(tracks, 2);
   }
   async function renderTrending() {
     const sec = document.getElementById('sp-trend-sec');
@@ -18202,6 +18317,55 @@ document.addEventListener('DOMContentLoaded', async () => {
   spHomeReady = true;
   applyHomeLayout();
 
+  // My Wave's picks from /api/vibe, one of each song
+  // The first few recommended songs, looked up ahead so tapping one starts at once: computers find the stream,
+  // phones fetch the song into the offline cache (so only on Wi-Fi, and never with Data Saver). A few per feed,
+  // a few seconds apart, never while a song you picked is loading, at most 8 per session.
+  var homeWarmed = null;
+  function warmHomeSongs(tracks, n) {
+    if (!state.serverPort || !Array.isArray(tracks)) return;
+    const conn = navigator.connection;
+    if (conn && conn.saveData) return;
+    if (isPhoneApp && conn && conn.type && conn.type !== 'wifi' && conn.type !== 'ethernet') return;
+    homeWarmed = homeWarmed || new Set();
+    const picks = tracks.filter((t) => t && t.platform !== 'local' && (t.url || t.id) && !isBlocked(t) && !homeWarmed.has(getTrackCanonicalId(t))).slice(0, n || 2);
+    picks.forEach((t, k) => {
+      if (homeWarmed.size >= 8) return;
+      homeWarmed.add(getTrackCanonicalId(t));
+      setTimeout(() => {
+        if (state.trackLoading || offlineState(t)) return;
+        fetch(`http://127.0.0.1:${state.serverPort}/api/prefetch?url=${encodeURIComponent(t.url || '')}&id=${encodeURIComponent(t.id || '')}&platform=${t.platform || 'youtube'}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&duration=${encodeURIComponent(t.duration || 0)}&thumbnail=${encodeURIComponent(t.thumbnail || '')}`).catch(() => {});
+      }, 5000 + homeWarmed.size * 4000);
+    });
+  }
+  async function fetchWaveTracks(payload) {
+    const res = await fetch(`http://127.0.0.1:${state.serverPort}/api/vibe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    const out = [];
+    if (data && data.success && Array.isArray(data.tracks)) {
+      const seenIds = new Set();
+      const seenKeys = new Set();
+      for (const t of data.tracks) {
+        const cid = getTrackCanonicalId(t);
+        const nkey = getTrackNormalizedKey(t.artist, t.title);
+        if (!seenIds.has(cid) && !seenKeys.has(nkey)) {
+          seenIds.add(cid);
+          seenKeys.add(nkey);
+          out.push(t);
+        }
+      }
+    }
+    return out;
+  }
+  function saveWaveCache(tracks) {
+    if (!Array.isArray(tracks) || tracks.length < 5) return;
+    try { localStorage.setItem('muriel_home_wave_cache', JSON.stringify({ at: Date.now(), tracks: tracks.slice(0, 30) })); } catch (e) {}
+  }
+
   async function loadHomePage(isRefresh = false) {
     loadForYou();
     const jumpSection = document.getElementById('section-jump-back');
@@ -18256,29 +18420,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (isRefresh) {
         vibePayload.refresh = true;
       }
+      // the last My Wave shows at once (no waiting for the network on every start) and a new one is fetched
+      // quietly for next time; Refresh always asks for new picks
       let uniqueTracks = [];
-      try {
-        const res = await fetch(`http://127.0.0.1:${state.serverPort}/api/vibe`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(vibePayload)
-        });
-
-        const data = await res.json();
-        if (data && data.success && Array.isArray(data.tracks)) {
-          const seenIds = new Set();
-          const seenKeys = new Set();
-          for (const t of data.tracks) {
-            const cid = getTrackCanonicalId(t);
-            const nkey = getTrackNormalizedKey(t.artist, t.title);
-            if (!seenIds.has(cid) && !seenKeys.has(nkey)) {
-              seenIds.add(cid);
-              seenKeys.add(nkey);
-              uniqueTracks.push(t);
-            }
-          }
-        }
-      } catch (_) {}
+      const cachedWave = isRefresh ? null : safeJson('muriel_home_wave_cache', null);
+      const waveFresh = !!(cachedWave && Array.isArray(cachedWave.tracks) && cachedWave.tracks.length >= 5 && Date.now() - (cachedWave.at || 0) < 6 * 3600e3);
+      if (waveFresh) {
+        uniqueTracks = cachedWave.tracks.filter((t) => t && !isBlocked(t));
+        setTimeout(() => { fetchWaveTracks({ ...vibePayload, refresh: true }).then(saveWaveCache, () => {}); }, 15000);
+      } else {
+        uniqueTracks = await fetchWaveTracks(vibePayload).catch(() => []);
+        saveWaveCache(uniqueTracks);
+      }
+      warmHomeSongs(uniqueTracks, 2);
 
       state.isHotPicks = false;
       state.hotPicksTitle = '';
@@ -19676,9 +19830,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!state._queueRestored) return;
     try {
       const position = el.nativeAudio && Number.isFinite(el.nativeAudio.currentTime) ? el.nativeAudio.currentTime : 0;
+      // up to 1000 songs around the current one: a queue made from a long Liked Songs list was megabytes, filled
+      // the browser storage and made every save fail and retry (seconds, on each pause and on closing)
+      const all = Array.isArray(state.queue) ? state.queue : [];
+      const idx = Math.max(0, state.queueIndex);
+      const from = all.length > 1000 ? Math.max(0, Math.min(idx - 100, all.length - 1000)) : 0;
       localStorage.setItem('muriel_queue_state', JSON.stringify({
-        queue: state.queue,
-        queueIndex: state.queueIndex,
+        queue: from || all.length > 1000 ? all.slice(from, from + 1000) : all,
+        queueIndex: state.queueIndex - from,
         currentTrack: state.currentTrack,
         position
       }));
@@ -21043,8 +21202,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     seek: (sec) => { if (isFinite(sec)) el.nativeAudio.currentTime = Math.max(0, sec); },
     toggleShuffle: () => { if (el.btnShuffle) el.btnShuffle.click(); return state.isShuffle; },
     toggleRepeat: () => { if (el.btnRepeat) el.btnRepeat.click(); return state.repeatMode; },
-    isFavorite: (t) => state.favorites.some((f) => isSameSong(f, t)),
-    toggleFavorite: (t) => { toggleFavoriteTrack(t); window.dispatchEvent(new Event('muriel:library')); return state.favorites.some((f) => isSameSong(f, t)); },
+    isFavorite: (t) => isFavoriteSong(t),
+    toggleFavorite: (t) => { toggleFavoriteTrack(t); window.dispatchEvent(new Event('muriel:library')); return isFavoriteSong(t); },
     createPlaylist(name, tracks = []) {
       if (!name || !name.trim()) return null;
       const pl = { id: 'pl_' + Date.now(), name: name.trim(), tracks: tracks.slice() };

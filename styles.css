@@ -9082,3 +9082,9 @@ body.hide-titlebar:not(.mini) .update-banner { top: 76px; }
   /* the buttons' larger tap area reached down onto the seek line: a click on the line beside them toggled shuffle */
   html:not(.is-mobile) body:not(.mini) .playbar-center .control-btn::after { top: 0; bottom: 0; }
 }
+
+/* a playlist's "12 of 40 downloaded" (refreshPlaylistDownloads in app.js), after its song count */
+.playlist-download-state { display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; }
+.playlist-download-state[hidden] { display: none; }
+.playlist-download-state::before { content: ''; width: 12px; height: 12px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1 5h2v6.6l2.3-2.3 1.4 1.4L12 17.4l-4.7-4.7 1.4-1.4 2.3 2.3z'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1 5h2v6.6l2.3-2.3 1.4 1.4L12 17.4l-4.7-4.7 1.4-1.4 2.3 2.3z'/%3E%3C/svg%3E") center / contain no-repeat; }
+.playlist-download-state.complete { color: var(--md-sys-color-primary); }

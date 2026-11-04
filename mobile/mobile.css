@@ -631,3 +631,16 @@ html.is-mobile #sidebar .sidebar-nav { flex: 1 1 auto; display: flex; }
 html.is-mobile #sidebar .sidebar-nav > .nav-item { flex: 1 1 0; min-width: 0; }
 html.is-mobile #sidebar .rail-action-group { flex: 0 0 calc((100% - 8px) / 6); justify-content: center; }
 html.is-mobile #sidebar .rail-action-group .rail-icon-btn { width: 100% !important; background: transparent !important; }
+
+/* now playing: the main controls and the row under them on one five-column grid, so the play button, the queue button
+   under it and the middle of the screen line up. The lower row was spread "space-around" with desktop padding on its
+   right, which put the queue button 12px left of centre and its badge against the play button. */
+html.is-mobile body.np-open .playback-controls { display: grid !important; grid-template-columns: repeat(5, 1fr); justify-items: center; }
+html.is-mobile body.np-open .playbar-right { display: grid !important; grid-template-columns: repeat(5, 1fr); justify-items: center; padding: 0 !important; gap: 0 !important; margin-top: 14px; }
+html.is-mobile body.np-open #btn-playbar-radio { grid-column: 2; }
+html.is-mobile body.np-open #btn-toggle-queue { grid-column: 3; }
+html.is-mobile body.np-open #btn-open-settings { grid-column: 4; }
+
+/* playlist page: Share, Edit details, Export and Delete are in its ⋯ menu too, so a phone shows them only there and
+   the buttons fit on two rows instead of four */
+html.is-mobile #btn-share-playlist, html.is-mobile #btn-rename-playlist, html.is-mobile #btn-export-playlist, html.is-mobile #btn-delete-playlist { display: none !important; }
