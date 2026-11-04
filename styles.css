@@ -9107,3 +9107,41 @@ body.hide-titlebar:not(.mini) .update-banner { top: 76px; }
 @container playbar-left (max-width: 330px) {
   #btn-playbar-more { display: none !important; }
 }
+
+/* Playlist page: Share, Edit details, Export and Delete live in the ⋯ menu (like Spotify's), and the buttons wrap
+   onto a second row instead of running off the right edge (below ~1580px they were cut off) */
+.playlist-actions { flex-wrap: wrap !important; row-gap: 10px !important; max-width: 100%; }
+.playlist-meta { min-width: 0; }
+#btn-share-playlist, #btn-rename-playlist, #btn-export-playlist, #btn-delete-playlist { display: none !important; }
+.playlist-actions #btn-playlist-more { width: 44px !important; height: 44px !important; }
+
+/* Player controls in Spotify's manner (computers): a round play button in the text colour, plain buttons around it
+   that light up in the accent when on (shuffle and repeat with a dot under them), and the buttons and the seek bar
+   as one block centred in the bar (buttons 18px from the top, the seek line 20px from the bottom). */
+@media (min-width: 601px) {
+  html:not(.is-mobile) body:not(.mini) .playbar-center { padding-top: 18px; }
+  html:not(.is-mobile) body:not(.mini) .playbar-center .scrubber-bar-wrapper { bottom: 0; }
+  html:not(.is-mobile) body:not(.mini) .playbar-center .playback-controls { gap: 16px; height: 40px; }
+  html:not(.is-mobile) body:not(.mini) .playback-controls :is(#btn-shuffle, #btn-repeat, #btn-prev, #btn-next) {
+    width: 32px !important; height: 32px !important; margin: 0 !important; padding: 0 !important;
+    background: transparent !important; opacity: 1 !important; border-radius: 50% !important;
+    color: var(--md-sys-color-on-surface-variant) !important;
+    transition: color .15s ease, transform .12s ease;
+  }
+  html:not(.is-mobile) body:not(.mini) .playback-controls :is(#btn-shuffle, #btn-repeat, #btn-prev, #btn-next):hover { color: var(--md-sys-color-on-surface) !important; transform: scale(1.06); }
+  html:not(.is-mobile) body:not(.mini) .playback-controls :is(#btn-shuffle, #btn-repeat).active {
+    color: var(--md-sys-color-primary) !important;
+    background: radial-gradient(circle at 50% calc(100% - 1px), currentColor 1.6px, transparent 2.2px) !important;
+  }
+  html:not(.is-mobile) body:not(.mini) .playback-controls :is(#btn-shuffle, #btn-repeat) svg { width: 18px; height: 18px; }
+  html:not(.is-mobile) body:not(.mini) .playback-controls :is(#btn-prev, #btn-next) svg { width: 20px; height: 20px; }
+  html:not(.is-mobile) body:not(.mini) .playback-controls .play-pause-wrapper { width: 40px; height: 40px; min-height: 40px; max-height: 40px; }
+  html:not(.is-mobile) body:not(.mini) .playback-controls :is(.btn-play-pause, .btn-play-pause.playing) {
+    width: 40px !important; height: 40px !important; min-height: 40px !important; max-height: 40px !important;
+    border-radius: 50% !important;
+    background: var(--md-sys-color-on-surface) !important; color: var(--md-sys-color-surface) !important;
+  }
+  html:not(.is-mobile) body:not(.mini) .playback-controls .btn-play-pause:hover { transform: scale(1.06); }
+  html:not(.is-mobile) body:not(.mini) .playback-controls .btn-play-pause:active { transform: scale(0.96); }
+  html:not(.is-mobile) body:not(.mini) .playback-controls .btn-play-pause svg { width: 20px; height: 20px; }
+}

@@ -50,3 +50,15 @@ test('phones: the now-playing controls and the row under them share one five-col
   assert.match(css, /body\.np-open \.playbar-right \{ display: grid !important; grid-template-columns: repeat\(5, 1fr\);/);
   assert.match(css, /body\.np-open #btn-toggle-queue \{ grid-column: 3; \}/);
 });
+
+test('the playlist buttons wrap instead of running off the page; the edit buttons live in ⋯', () => {
+  const css = read('styles.css');
+  assert.match(css, /\.playlist-actions \{ flex-wrap: wrap !important;/);
+  assert.match(css, /#btn-share-playlist, #btn-rename-playlist, #btn-export-playlist, #btn-delete-playlist \{ display: none !important; \}/);
+});
+
+test('computers: a round play button and plain controls, centred with the seek bar as one block', () => {
+  const css = read('styles.css');
+  assert.match(css, /:is\(\.btn-play-pause, \.btn-play-pause\.playing\) \{\s*width: 40px !important; height: 40px !important;[^}]*border-radius: 50% !important;/);
+  assert.match(css, /\.playbar-center \{ padding-top: 18px; \}/);
+});

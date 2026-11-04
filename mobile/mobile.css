@@ -641,6 +641,3 @@ html.is-mobile body.np-open #btn-playbar-radio { grid-column: 2; }
 html.is-mobile body.np-open #btn-toggle-queue { grid-column: 3; }
 html.is-mobile body.np-open #btn-open-settings { grid-column: 4; }
 
-/* playlist page: Share, Edit details, Export and Delete are in its ⋯ menu too, so a phone shows them only there and
-   the buttons fit on two rows instead of four */
-html.is-mobile #btn-share-playlist, html.is-mobile #btn-rename-playlist, html.is-mobile #btn-export-playlist, html.is-mobile #btn-delete-playlist { display: none !important; }
