@@ -9076,9 +9076,20 @@ body.hide-titlebar:not(.mini) .update-banner { top: 76px; }
    in the space below. The column (controls 48px + seek bar 40px) was taller than the 88px bar, so it rode up to the
    bar's top edge. Phones, narrow windows and the mini player lay the bar out their own way. */
 @media (min-width: 601px) {
-  html:not(.is-mobile) body:not(.mini) .playbar-center { position: relative; align-self: stretch; justify-content: center; }
+  /* the buttons and the seek bar centred as one group (buttons 9px from the top, the seek line ~17px from the
+     bottom): with the buttons on the middle line the seek bar sat squeezed against the bar's bottom edge */
+  html:not(.is-mobile) body:not(.mini) .playbar-center { position: relative; align-self: stretch; justify-content: flex-start; padding-top: 9px; box-sizing: border-box; }
   html:not(.is-mobile) body:not(.mini) .playbar-center .playback-controls { position: relative; z-index: 2; }
-  html:not(.is-mobile) body:not(.mini) .playbar-center .scrubber-bar-wrapper { position: absolute; left: 0; right: 0; bottom: -9px; }
+  html:not(.is-mobile) body:not(.mini) .playbar-center .scrubber-bar-wrapper { position: absolute; left: 0; right: 0; bottom: -3px; }
+  /* the cover on the bar's middle line, inside it: it was lifted 12px (margin-top: -12px) and 72px tall, so it and
+     its shape's ring touched the bar's top edge */
+  html:not(.is-mobile) body:not(.mini) .playbar-left .artwork-wrapper,
+  html:not(.is-mobile) body:not(.mini) .playbar-left .m3c-wrap { width: 64px; height: 64px; margin-top: 0; align-self: center; }
+  html:not(.is-mobile) body:not(.mini) .playbar-left .m3c-canvas { width: 107px; height: 107px; }
+  /* the song's title keeps room: in a window ~1240px wide the cover and four buttons took the whole left side and
+     the title shrank to nothing. Edit and Share give way first, then Download. */
+  html:not(.is-mobile) body:not(.mini) .playbar-left { container-type: inline-size; container-name: playbar-left; }
+  html:not(.is-mobile) body:not(.mini) .playbar-left .track-meta { min-width: 96px; flex: 1 1 auto !important; }
   /* the buttons' larger tap area reached down onto the seek line: a click on the line beside them toggled shuffle */
   html:not(.is-mobile) body:not(.mini) .playbar-center .control-btn::after { top: 0; bottom: 0; }
 }
@@ -9088,3 +9099,11 @@ body.hide-titlebar:not(.mini) .update-banner { top: 76px; }
 .playlist-download-state[hidden] { display: none; }
 .playlist-download-state::before { content: ''; width: 12px; height: 12px; background: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1 5h2v6.6l2.3-2.3 1.4 1.4L12 17.4l-4.7-4.7 1.4-1.4 2.3 2.3z'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1 5h2v6.6l2.3-2.3 1.4 1.4L12 17.4l-4.7-4.7 1.4-1.4 2.3 2.3z'/%3E%3C/svg%3E") center / contain no-repeat; }
 .playlist-download-state.complete { color: var(--md-sys-color-primary); }
+
+/* see "the song's title keeps room" above */
+@container playbar-left (max-width: 420px) {
+  #btn-edit-current-track, #btn-playbar-share { display: none !important; }
+}
+@container playbar-left (max-width: 330px) {
+  #btn-playbar-more { display: none !important; }
+}
