@@ -137,7 +137,10 @@ test('downloaded-status says which songs of a list already have a downloaded fil
     body: JSON.stringify({ tracks: [{ title: 'Space Song', artist: 'Beach House', id: 'a_1_1' }, { title: 'Myth', artist: 'Beach House' }, null] }),
   });
   assert.equal(r.status, 200);
-  assert.deepEqual(JSON.parse(r.body), { success: true, downloaded: [true, false, false] });
+  const answer = JSON.parse(r.body);
+  assert.equal(answer.success, true);
+  assert.deepEqual(answer.downloaded, [true, false, false]);
+  assert.equal(typeof answer.localVersion, 'number', 'tells the page when the songs on the device changed');
   const anon = await call('POST', '/api/downloaded-status', { body: '{}', token: false });
   assert.notEqual(anon.status, 200);
 });

@@ -1146,6 +1146,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // "Available offline" marks (checkOffline, further down): kept up here, playTrack can run before that part
   const OFFLINE_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8"/><path d="M8 3.6v6.2M5.2 7.4 8 10.2l2.8-2.8M5 12h6" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const offlineKnown = new Map(); // offlineKey -> true / false
+  const offlineSeen = new Map(); // offlineKey -> the track, to ask again when the device's songs change
+  let offlineLocalVersion = null;
   let offlinePending = new Map();
   let offlineTimer = 0;
 
@@ -4021,6 +4023,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const data = await res.json();
 
     if (currentToken !== state.loadToken) return false;
+
+    // a downloaded, cached or device copy plays: the song is available offline
+    if (data && data.success && data.isLocal) { try { offlineChanged(track, true); } catch (e) {} }
 
     if (!data || !data.success || !data.streamUrl) {
       if (!navigator.onLine) {
@@ -7406,7 +7411,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const res = await fetch(`http://127.0.0.1:${state.serverPort}/api/downloaded-status`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tracks: d.items.map((t) => ({ title: t.title || '', artist: t.artist || '', id: String(t.id || '') })) }),
+        body: JSON.stringify({ tracks: d.items.map((t) => ({ title: t.title || '', artist: t.artist || '', id: String(t.id || ''), duration: Number(t.duration) || 0 })) }),
       });
       const data = await res.json();
       if (albumDownload !== d || !data || !data.success || !Array.isArray(data.downloaded)) return;
@@ -7902,17 +7907,44 @@ document.addEventListener('DOMContentLoaded', async () => {
       try {
         const res = await fetch(`http://127.0.0.1:${state.serverPort}/api/downloaded-status`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tracks: batch.map(([, t]) => ({ id: t.id || '', title: t.title || '', artist: t.artist || '' })) }),
+          body: JSON.stringify({ tracks: batch.map(([, t]) => ({ id: t.id || '', title: t.title || '', artist: t.artist || '', duration: Number(t.duration) || 0 })) }),
         });
         const data = await res.json();
         if (data && data.success && Array.isArray(data.downloaded)) {
-          batch.forEach(([k], i) => { offlineKnown.set(k, !!data.downloaded[i]); if (data.downloaded[i]) showOfflineBadges(k, true); });
+          batch.forEach(([k, t], i) => { offlineKnown.set(k, !!data.downloaded[i]); offlineSeen.set(k, t); if (data.downloaded[i]) showOfflineBadges(k, true); });
           capMap(offlineKnown, 5000);
+          capMap(offlineSeen, 5000);
+          // the songs on the device changed since earlier answers (a scan finished, a song was imported)
+          if (data.localVersion !== undefined) {
+            if (offlineLocalVersion !== null && data.localVersion !== offlineLocalVersion) recheckOffline();
+            offlineLocalVersion = data.localVersion;
+          }
         }
       } catch (e) {}
       if (offlinePending.size) checkOffline([]);
     }, 60);
   }
+  // songs found on the device (local-match.js on the server) count as offline: when that list changes, the
+  // songs answered "not offline" are asked about again
+  function recheckOffline() {
+    const again = [];
+    for (const [k, on] of offlineKnown) if (on === false) { offlineKnown.delete(k); if (offlineSeen.has(k)) again.push(offlineSeen.get(k)); }
+    if (again.length) checkOffline(again);
+  }
+  window.addEventListener('mural:device-music', recheckOffline);
+  // computers scan the Music folder after start-up and on every change in it: look again when the app gets focus
+  async function checkLocalVersion() {
+    if (!state.serverPort || offlineLocalVersion === null) return;
+    try {
+      const data = await (await fetch(`http://127.0.0.1:${state.serverPort}/api/device-music`)).json();
+      if (data && data.localVersion !== undefined && data.localVersion !== offlineLocalVersion) {
+        offlineLocalVersion = data.localVersion;
+        recheckOffline();
+      }
+    } catch (e) {}
+  }
+  window.addEventListener('focus', checkLocalVersion);
+  setTimeout(checkLocalVersion, 15000);
   function showOfflineBadges(key, on) {
     document.querySelectorAll('.offline-badge[data-offline-key]').forEach((b) => { if (b.dataset.offlineKey === key) b.hidden = !on; });
   }
@@ -16551,7 +16583,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     for (let i = 0; i < tracks.length; i += 500) {
       const res = await fetch(`http://127.0.0.1:${state.serverPort}/api/downloaded-status`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filesOnly: true, tracks: tracks.slice(i, i + 500).map((t) => ({ title: t.title || '', artist: t.artist || '', id: String(t.id || '') })) }),
+        body: JSON.stringify({ filesOnly: true, tracks: tracks.slice(i, i + 500).map((t) => ({ title: t.title || '', artist: t.artist || '', id: String(t.id || ''), duration: Number(t.duration) || 0 })) }),
       });
       const data = await res.json();
       if (!data || !data.success || !Array.isArray(data.downloaded)) throw new Error('downloaded-status failed');

@@ -344,8 +344,13 @@ function saveTrackMetadata(cleanId, meta) {
 }
 
 let libraryIndex = readJsonFile(LIBRARY_PATH);
+// local-match.js over the imported and found songs (findLocalSong), built again after a change
+let localMatchIndex = null;
+let localSongsVersion = 0;
 
 function saveLibraryIndex() {
+  localMatchIndex = null;
+  localSongsVersion++;
   try {
     writeJsonFile(LIBRARY_PATH, libraryIndex);
   } catch (e) {}
@@ -373,12 +378,27 @@ function setDeviceSongs(list) {
     next[song.id] = { ...song, duration: Number(song.duration) || Number(deviceMusic.durations[song.id]) || 0, addedAt: Number(song.addedAt) || 0 };
   }
   deviceIndex = next;
+  localMatchIndex = null;
+  localSongsVersion++;
 }
 // an imported song, or a found one that is still in the library
 function libraryItem(id) {
   if (typeof id !== 'string') return null;
   if (hasOwn(libraryIndex, id)) return libraryIndex[id];
   return deviceMusic.enabled && hasOwn(deviceIndex, id) ? deviceIndex[id] : null;
+}
+// A playlist song that is already on the device plays from that file and counts as offline (local-match.js).
+// The index is built again after a scan or a library change; the version tells the page its answers changed.
+const { createLocalIndex } = require('./local-match');
+function findLocalSong(title, artist, duration) {
+  if (!title) return null;
+  if (!localMatchIndex) {
+    const songs = Object.values(libraryIndex);
+    if (deviceMusic.enabled) for (const d of Object.values(deviceIndex)) if (!hasOwn(libraryIndex, d.id)) songs.push(d);
+    localMatchIndex = createLocalIndex(songs);
+  }
+  const song = localMatchIndex.find({ title, artist, duration: Number(duration) || 0 });
+  return song && libraryItem(song.id) ? song : null;
 }
 const libraryFilePath = (item) => item.path || path.join(LIBRARY_DIR, item.file);
 function deviceFolders() {
@@ -396,7 +416,7 @@ async function rescanDeviceMusic() {
   if (STREAM_VIA_CACHE) return;
   const gen = ++deviceScanGen;
   if (deviceStopWatching) { deviceStopWatching(); deviceStopWatching = null; }
-  if (!deviceMusic.enabled) { deviceIndex = {}; return; }
+  if (!deviceMusic.enabled) { setDeviceSongs([]); return; }
   const folders = deviceFolders();
   const songs = await deviceLibrary.scanFolders(folders);
   if (gen !== deviceScanGen) return;
@@ -1880,6 +1900,8 @@ async function prefetchTrack(trackUrl, trackId, platform, meta = null, priority 
   }
   const cacheKey = (cleanId || trackUrl || '').toLowerCase();
   if (!cacheKey || prefetchingSet.size > 2) return;
+  // on the device already: nothing to fetch
+  if (meta && findLocalSong(meta.title, meta.artist, meta.duration)) return;
   const isCached = (cleanId && await findCachedFile(cleanId)) || streamUrlCache.has(cacheKey) || (cleanId && streamUrlCache.has(cleanId));
   if (isCached || prefetchingSet.has(cacheKey)) return;
   if (STREAM_VIA_CACHE) {
@@ -2600,6 +2622,19 @@ async function handleStreamInfo(req, res, trackUrl, trackId, platform = 'youtube
       isLocal: true,
       isDownload: true,
       streamUrl: withToken(`${serverOrigin()}/api/downloaded-track?name=${encodeURIComponent(downloadedName)}`)
+    };
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify(data));
+  }
+
+  // the same song is on the device already (Music folder, phone library, imported): play that file
+  const localSong = findLocalSong(title, artist, duration);
+  if (localSong) {
+    const data = {
+      success: true,
+      isLocal: true,
+      localId: localSong.id,
+      streamUrl: withToken(`${serverOrigin()}/api/library-file?id=${encodeURIComponent(localSong.id)}`)
     };
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify(data));
@@ -6782,13 +6817,15 @@ const server = http.createServer(guardHandler(async (req, res) => {
           const title = typeof t.title === 'string' ? t.title : '';
           const artist = typeof t.artist === 'string' ? t.artist : '';
           if ((title || artist) && await findDownloadedFile(title, artist)) return true;
+          // the same song already on the device (Music folder, phone library) is not downloaded again either
+          if (findLocalSong(title, artist, t.duration)) return true;
           // "Download all" (#29) only skips songs that are in the Downloads folder, not ones merely cached
           if (payload.filesOnly) return false;
           const id = cleanTrackId(typeof t.id === 'string' ? t.id : '');
           return !!(id && await findCachedFile(id));
         }));
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, downloaded }));
+        res.end(JSON.stringify({ success: true, downloaded, localVersion: localSongsVersion }));
       } catch (e) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: e.message }));
@@ -6924,6 +6961,8 @@ const server = http.createServer(guardHandler(async (req, res) => {
         enabled: deviceMusic.enabled,
         count: deviceMusic.enabled ? Object.keys(deviceIndex).filter((id) => !hasOwn(libraryIndex, id)).length : 0,
         hidden: deviceMusic.hidden.length,
+        // changes when the songs on the device do (local-match.js): the page asks about "offline" again
+        localVersion: localSongsVersion,
         folders: STREAM_VIA_CACHE ? [] : deviceFolders().map((f) => f.dir),
       }));
     };
@@ -6992,6 +7031,8 @@ const server = http.createServer(guardHandler(async (req, res) => {
           // a song found on the device: never deleted, only left out of the library from now on
           if (!deviceMusic.hidden.includes(id)) deviceMusic.hidden.push(id);
           delete deviceIndex[id];
+          localMatchIndex = null;
+          localSongsVersion++;
           saveDeviceMusic();
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
