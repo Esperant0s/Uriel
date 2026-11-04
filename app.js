@@ -3825,6 +3825,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   let navigatingBack = false;
 
   const shuffleBag = { queue: null, played: new Set(), next: [] }; // see pickShuffleIndex
+  // every song that has played since Mural opened (any queue, shuffle or not), by id and by artist + title, so the
+  // same song from another list or source counts too: shuffle leaves them for last
+  const sessionPlayed = new Set();
+  const playedThisSession = (t) => !!t && (sessionPlayed.has(getTrackCanonicalId(t)) || sessionPlayed.has(getTrackNormalizedKey(t.artist, t.title)));
+  function notePlayedThisSession(t) {
+    if (!t) return;
+    const id = getTrackCanonicalId(t);
+    if (id) sessionPlayed.add(id);
+    if (t.title) sessionPlayed.add(getTrackNormalizedKey(t.artist, t.title));
+  }
 
   // A song that can't be played used to stop a whole playlist. When playing through a list (or after Next)
   // it is skipped instead; several failures in a row (offline, say) still stop.
@@ -6378,7 +6388,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Shuffle used to roll any index, the current song included (a third of Nexts in a 3-song queue replayed
   // it), and never looked at "Play next". Now it plays the Play-next songs first, then songs not heard yet
-  // in this queue, and starts a new round once everything has played.
+  // this session, then songs not heard yet in this queue, and starts a new round once everything has played.
+  // The songs it may pick next, best first: not played this session, then not played in this round of the queue
+  function shufflePool(q, played) {
+    const fresh = (t, i) => i !== state.queueIndex && !played.has(t) && !isBlocked(t);
+    const pool = [];
+    q.forEach((t, i) => { if (fresh(t, i) && !playedThisSession(t)) pool.push(i); });
+    if (!pool.length) q.forEach((t, i) => { if (fresh(t, i)) pool.push(i); });
+    return pool;
+  }
   function pickShuffleIndex() {
     const q = state.queue;
     if (shuffleBag.queue !== q) { shuffleBag.queue = q; shuffleBag.played = new Set(); }
@@ -6391,10 +6409,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const planned = shuffleBag.planned;
     shuffleBag.planned = null;
     const pi = planned ? q.indexOf(planned) : -1;
-    if (pi >= 0 && pi !== state.queueIndex && !shuffleBag.played.has(planned)) return pi;
+    if (pi >= 0 && pi !== state.queueIndex && !shuffleBag.played.has(planned) && !isBlocked(planned)
+      && (!playedThisSession(planned) || !q.some((t, i) => i !== state.queueIndex && !shuffleBag.played.has(t) && !isBlocked(t) && !playedThisSession(t)))) return pi;
     if (q.length < 2) return 0;
-    let pool = [];
-    q.forEach((t, i) => { if (i !== state.queueIndex && !shuffleBag.played.has(t) && !isBlocked(t)) pool.push(i); });
+    let pool = shufflePool(q, shuffleBag.played);
     if (!pool.length) {
       shuffleBag.played = new Set([q[state.queueIndex]]);
       q.forEach((t, i) => { if (i !== state.queueIndex && !isBlocked(t)) pool.push(i); });
@@ -6413,7 +6431,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (pending) return pending;
     if (shuffleBag.planned && q.indexOf(shuffleBag.planned) >= 0 && shuffleBag.planned !== q[state.queueIndex]) return shuffleBag.planned;
     const played = shuffleBag.queue === q ? shuffleBag.played : new Set();
-    let pool = q.filter((t, i) => i !== state.queueIndex && !played.has(t) && !isBlocked(t));
+    let pool = shufflePool(q, played).map((i) => q[i]);
     if (!pool.length) pool = q.filter((t, i) => i !== state.queueIndex && !isBlocked(t));
     if (!pool.length) pool = q.filter((t, i) => i !== state.queueIndex);
     shuffleBag.planned = pool[Math.floor(Math.random() * pool.length)] || null;
@@ -6588,6 +6606,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     el.nativeAudio.addEventListener('playing', () => {
+      notePlayedThisSession(state.currentTrack);
       failStreak = 0;
       state.isPlaying = true;
       setTrackLoading(false);
