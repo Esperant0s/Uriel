@@ -602,3 +602,32 @@ html.is-mobile .app-icon-picker-grid { grid-template-columns: repeat(auto-fill, 
 
 /* song radio (#28): the queue's "Radio · song" label a little roomier for a finger */
 html.is-mobile .queue-radio-label { margin: 2px 0 10px; padding: 6px 12px 6px 10px; }
+
+/* page titles: the shared styles hide them (the desktop rail names the page), which left a phone's Favorites, My files
+   and History with no title and their buttons floating at the right, wrapping onto two lines. Title first, then the
+   page's buttons in one row under it, from the left. */
+html.is-mobile :is(#view-favorites, #view-local, #view-history) .view-header {
+  justify-content: flex-start !important;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 10px;
+  margin-bottom: 14px;
+}
+html.is-mobile :is(#view-favorites, #view-local) .view-header > div:first-child,
+html.is-mobile :is(#view-favorites, #view-local, #view-history) .view-header h2 {
+  display: block !important;
+  flex: 1 0 100%;
+}
+html.is-mobile :is(#view-favorites, #view-local) .view-header > div:first-child h2 { display: block !important; }
+html.is-mobile :is(#view-favorites, #view-local, #view-history) .view-header h2 { font-size: 1.6rem; font-weight: 500; line-height: 1.2; }
+html.is-mobile :is(#view-favorites, #view-local) .view-header .view-subtitle { display: block !important; margin-top: 2px; }
+/* the sort menu goes to the end of the button row */
+html.is-mobile #view-favorites .view-header > .sort-dropdown { margin-left: auto; }
+
+/* bottom navigation: the playlists-drawer button was narrower than the page buttons and had its own filled pill, which
+   sat against the screen edge and spaced the icons unevenly. Every button gets an equal share and the same look. */
+html.is-mobile #sidebar .sidebar-nav { flex: 1 1 auto; display: flex; }
+html.is-mobile #sidebar .sidebar-nav > .nav-item { flex: 1 1 0; min-width: 0; }
+html.is-mobile #sidebar .rail-action-group { flex: 0 0 calc((100% - 8px) / 6); justify-content: center; }
+html.is-mobile #sidebar .rail-action-group .rail-icon-btn { width: 100% !important; background: transparent !important; }

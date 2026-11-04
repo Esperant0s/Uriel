@@ -1931,9 +1931,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                           btnCancelAddPlaylist: document.getElementById('btn-cancel-add-playlist'),
 
                           nativeAudio: document.getElementById('native-audio'),
-                          trackLoadingOverlay: document.getElementById('track-loading-overlay'),
-                          trackLoadingTitle: document.getElementById('track-loading-title'),
-                          trackLoadingSub: document.getElementById('track-loading-sub'),
 
                           btnAddCustomLyrics: document.getElementById('btn-add-custom-lyrics'),
                           btnSyncLyrics: document.getElementById('btn-sync-lyrics'),
@@ -3909,12 +3906,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     scrubPrevKnobX = null;
     scrubProgress = 0;
 
-    if (el.trackLoadingOverlay) {
-      if (el.trackLoadingTitle) el.trackLoadingTitle.textContent = track.title || T('loading track...');
-      if (el.trackLoadingSub) I18N.text(el.trackLoadingSub, track.artist ? '{0} • buffering stream' : 'buffering audio stream', track.artist);
-      el.trackLoadingOverlay.classList.remove('hidden');
-    }
-
     state.loadToken++;
     const currentToken = state.loadToken;
     if (advancing || SKIP_CONTEXTS.has(context)) skipOnFailToken = currentToken;
@@ -4007,7 +3998,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         logPlaybackIssue('Track playback notice', err);
         if (retryFresh(currentToken, track)) return;
         updatePlayPauseButton(false, false);
-        if (el.trackLoadingOverlay) el.trackLoadingOverlay.classList.add('hidden');
         if (!skipUnplayable(currentToken, track)) showToast(err.message || Tm('Could not load audio stream'), 'error');
       }
     }
@@ -4064,7 +4054,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         state.isPlaying = false;
         document.body.classList.remove('is-playing');
         updatePlayPauseButton(false, false);
-        if (el.trackLoadingOverlay) el.trackLoadingOverlay.classList.add('hidden');
         if (retryFresh(currentToken, track)) return;
         if (!skipUnplayable(currentToken, track)) showToast(Tm('Could not play this song. Try again or skip.'), 'error');
       });
@@ -4133,14 +4122,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (hlsInstance) { try { hlsInstance.destroy(); } catch (e) {} hlsInstance = null; }
     try { el.nativeAudio.pause(); el.nativeAudio.removeAttribute('src'); el.nativeAudio.load(); } catch (e) {}
     setTrackLoading(true);
-    if (el.trackLoadingOverlay) el.trackLoadingOverlay.classList.remove('hidden');
     const signal = state.currentAbortController ? state.currentAbortController.signal : undefined;
     attachStream(track, track.url, track.id, token, signal, true).then((ok) => { if (ok) applyAudioSettings(); }, (err) => {
       if (err && err.name === 'AbortError') return;
       if (token !== state.loadToken) return;
       logPlaybackIssue('Track playback notice (fresh retry)', err);
       updatePlayPauseButton(false, false);
-      if (el.trackLoadingOverlay) el.trackLoadingOverlay.classList.add('hidden');
       if (!skipUnplayable(token, track)) showToast((err && err.message) || Tm('Could not load audio stream'), 'error');
     });
     return true;
@@ -6541,7 +6528,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (el.nativeAudio) {
     el.nativeAudio.addEventListener('error', () => {
-      if (el.trackLoadingOverlay) el.trackLoadingOverlay.classList.add('hidden');
       // only an error on the song that is actually loaded counts (unloading one between songs is not a failure)
       if (!state.currentTrack || (!el.nativeAudio.src && !hlsInstance)) return;
       logPlaybackIssue('Audio element error', null);
@@ -6644,7 +6630,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateMediaSession();
       }
       updateMediaPositionState();
-      if (el.trackLoadingOverlay) el.trackLoadingOverlay.classList.add('hidden');
       hasDrawnPausedFrame = false;
       if (!animationFrameId) startVisualizers();
       if (audioEngine) {
@@ -9257,6 +9242,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     return true;
   }
   window.murielArtNext = nextTrackArt;
+  // Pictures with no onerror of their own (artist photos, album and playlist covers, search results, home cards)
+  // showed the browser's broken-image icon when their host failed: try the picture's other sizes, then hide it
+  // so the cover's placeholder shows instead
+  document.addEventListener('error', (e) => {
+    const img = e.target;
+    if (!img || img.tagName !== 'IMG' || img.onerror || img.hasAttribute('onerror')) return;
+    if (!nextTrackArt(img)) img.classList.add('img-failed');
+  }, true);
 
   // Old saves: give YouTube songs without a cover the one derived from their id (no network), once, when idle.
   function backfillTrackArt() {
@@ -20714,7 +20707,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.body.classList.remove('is-playing');
       if (retryFresh(token, state.currentTrack)) return;
       updatePlayPauseButton(false, false);
-      if (el.trackLoadingOverlay) el.trackLoadingOverlay.classList.add('hidden');
       if (!skipUnplayable(token, state.currentTrack)) showToast('This song took too long to load. Try again or skip.', 'error');
     };
     const arm = () => {

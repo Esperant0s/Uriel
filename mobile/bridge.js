@@ -237,6 +237,7 @@ require('./live-activity')();
 require('./media-controls')();
 require('./device-music')(() => server);
 require('./app-icon')();
+require('./system-bars')();
 require('./app-updater')();
 require('./background-audio')();
 require('./audio-interruption')();
