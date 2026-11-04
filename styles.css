@@ -8871,10 +8871,15 @@ html.ui-rtl input::placeholder { direction: rtl; text-align: right; }
 .setting-hint { font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline); line-height: 1.35; font-weight: 400; }
 .muriel-beta-badge { display: inline-flex; align-items: center; justify-content: center; padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); line-height: 1.2; }
 
-/* splash: Mural's star draws itself, then the app fades in (app.js; desktop only, skipped in performance mode) */
-#splash { position: fixed; inset: 0; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; z-index: 999999; transition: opacity .45s cubic-bezier(0.2, 0, 0, 1); animation: splashGiveUp .45s 2.6s forwards; }
+/* splash: Mural's star blooms in and breathes until the app has loaded and runs smoothly, then the app fades in
+   (app.js; desktop only, skipped in performance mode). Only transform and opacity move, which the compositor animates
+   on its own: the star stays smooth while start-up keeps the main thread busy (a drawn stroke froze for ~1 s). */
+#splash { position: fixed; inset: 0; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; z-index: 999999; transition: opacity .45s cubic-bezier(0.2, 0, 0, 1); animation: splashGiveUp .45s 8s forwards; }
 #splash.hide { opacity: 0; pointer-events: none; }
-#splash-logo { width: 22vmin; height: 22vmin; will-change: transform; }
+#splash-logo { width: 22vmin; height: 22vmin; will-change: transform, opacity; animation: splashBloom .9s cubic-bezier(0.2, 0, 0, 1) both, splashBreathe 1.8s ease-in-out .9s infinite; }
+@keyframes splashBloom { from { transform: scale(.55) rotate(-30deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes splashBreathe { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.07); opacity: .82; } }
+@media (prefers-reduced-motion: reduce) { #splash-logo { animation: none; } }
 #splash-logo svg { width: 100%; height: 100%; overflow: visible; display: block; fill: var(--md-sys-color-primary, #D0BCFF); }
 @keyframes splashGiveUp { to { opacity: 0; visibility: hidden; pointer-events: none; } }
 body.perf #splash, html.is-mobile #splash { display: none !important; }

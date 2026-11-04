@@ -72,48 +72,35 @@
   });
 })();
 
-// Riff 43 splash: Mural's star draws itself while the app starts (computers only; phones show their own launch
-// screen). styles.css also fades it out on its own after a few seconds, so a startup error can't leave it up.
+// Riff 43 splash: Mural's star (styles.css animates it) stays up until start-up is done and the page runs smoothly,
+// so the app appears ready instead of stuttering through its first second (computers only; phones show their own
+// launch screen). styles.css also fades it out on its own after 8 s, so a startup error can't leave it up.
 (function murielSplash() {
   const splash = document.getElementById('splash');
-  const host = document.getElementById('splash-logo');
-  if (!splash || !host) return;
+  if (!splash) return;
   const perf = /^(1|true)$/.test(localStorage.getItem('muriel_perf_mode') || '');
-  const reduced = localStorage.getItem('muriel_adv_reduce_motion') === 'true' || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  if (document.documentElement.classList.contains('is-mobile') || perf || reduced) { splash.remove(); return; }
+  if (document.documentElement.classList.contains('is-mobile') || perf) { splash.remove(); return; }
+  const MIN_MS = 1100; // the bloom (styles.css) and a moment of the star at rest
+  const MAX_MS = 7000;
+  const SMOOTH_MS = 450; // this long without a frame over 50 ms after start-up
+  let ready = false;
   const finish = () => {
     if (!splash.isConnected || splash.classList.contains('hide')) return;
     splash.classList.add('hide');
     setTimeout(() => splash.remove(), 480);
   };
-  const safety = setTimeout(finish, 1850);
-  try {
-    const paths = Array.from(host.querySelectorAll('path'));
-    const lengths = paths.map((p) => {
-      const len = typeof p.getTotalLength === 'function' ? p.getTotalLength() : 2000;
-      Object.assign(p.style, { fillOpacity: '0', stroke: 'var(--md-sys-color-primary, #D0BCFF)', strokeWidth: '14px', strokeLinejoin: 'round', strokeDasharray: String(len), strokeDashoffset: String(len) });
-      return len;
-    });
-    const t0 = performance.now();
-    const ease = (t) => 1 - Math.pow(1 - t, 3);
-    const tick = (now) => {
-      const p = Math.min(1, (now - t0) / 1150);
-      const draw = ease(Math.min(1, p / 0.72));
-      const fill = p < 0.5 ? 0 : ease((p - 0.5) / 0.5);
-      host.style.transform = `scale(${(1.28 - 0.28 * ease(p)).toFixed(3)})`;
-      paths.forEach((el, i) => {
-        el.style.strokeDashoffset = (lengths[i] * (1 - draw)).toFixed(1);
-        el.style.fillOpacity = fill.toFixed(3);
-        el.style.strokeOpacity = (1 - fill * 0.65).toFixed(3);
-      });
-      if (p < 1) requestAnimationFrame(tick);
-      else { clearTimeout(safety); finish(); }
-    };
+  window.addEventListener('muriel:ready', () => { ready = true; }, { once: true });
+  // a hidden window gets no frames: give up on time instead
+  setTimeout(finish, Math.max(0, MAX_MS - performance.now()));
+  let last = 0, smooth = 0;
+  const tick = (now) => {
+    if (!splash.isConnected) return;
+    if (last) smooth = now - last > 50 ? 0 : smooth + (now - last);
+    last = now;
+    if ((ready && smooth >= SMOOTH_MS && now >= MIN_MS) || now >= MAX_MS) return finish();
     requestAnimationFrame(tick);
-  } catch (e) {
-    clearTimeout(safety);
-    finish();
-  }
+  };
+  requestAnimationFrame(tick);
 })();
 
 document.addEventListener('DOMContentLoaded', async () => {
