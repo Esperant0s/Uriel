@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   ipa:
-    runs-on: macos-15
+    runs-on: macos-15-intel # the Apple Silicon Macs are often too busy to take the job
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1' # desktop-only dev dependency, not needed here
     steps:
