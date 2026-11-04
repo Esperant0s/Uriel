@@ -117,6 +117,8 @@
 })();
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // playlists, favorites and history are read from IndexedDB before anything uses them (library-store.js)
+  try { if (window.MurielLibraryStore) await window.MurielLibraryStore.ready; } catch (e) {}
   try { localStorage.removeItem('muriel_stats'); } catch (e) {}
 
   const THUMB_FALLBACK = "if(window.murielArtNext){window.murielArtNext(this)}else if(this.dataset.full&&this.src!==this.dataset.full){this.src=this.dataset.full}else{this.style.visibility='hidden'}";

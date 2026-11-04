@@ -258,6 +258,8 @@
 
   mountSwitcher();
   mount();
+  // the song counts come from IndexedDB, which is still loading when this first draws (library-store.js)
+  if (window.MurielLibraryStore) window.MurielLibraryStore.ready.then(() => { if (!editing && !adding) render(); }, () => {});
   // another language, or its words just came in: names and counts are put together here
   window.addEventListener('muriel:i18n', () => { if (!editing && !adding) render(); });
 })();

@@ -22,6 +22,8 @@
     // asked, shown or done once per device
     'muriel_update_found', 'muriel_update_last', 'muriel_update_snooze', 'muriel_welcome_done', 'muriel_bg_asked',
     'muriel_scale_rebased_v2', 'muriel_debug_log',
+    // the library has moved to IndexedDB on this device (library-store.js)
+    'muriel_library_idb',
     // a copy of the open language's translations for a quick start (i18n.js); which language is per profile
     'muriel_i18n_snap',
   ]);
@@ -165,12 +167,15 @@
     const lengthOf = P && Object.getOwnPropertyDescriptor(P, 'length');
     if (!ls || !P || !lengthOf || !lengthOf.get) return null;
     const native = { getItem: P.getItem, setItem: P.setItem, removeItem: P.removeItem, key: P.key, clear: P.clear, length: lengthOf.get };
-    const store = {
+    const raw = {
       get: (k) => native.getItem.call(ls, k),
       set: (k, v) => native.setItem.call(ls, k, v),
       remove: (k) => native.removeItem.call(ls, k),
       keys: () => { const out = []; for (let i = 0, n = native.length.call(ls); i < n; i++) out.push(native.key.call(ls, i)); return out; },
     };
+    // playlists, favorites and history live in IndexedDB (library-store.js, loaded just before this file)
+    const lib = win.MurielLibraryStore;
+    const store = (lib && lib.attach && lib.attach(raw)) || raw;
     // fixed for the life of the page: what is saved on the way out (the queue, Encore) still lands in this profile
     const id = activeId(store);
     const v = view(store, id);

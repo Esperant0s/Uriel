@@ -98,10 +98,13 @@ tests in the repo). C would fix the same things at many times the cost and risk.
 
 ## Action Items
 
-1. [ ] **Storage layer** (`library-store.js`): playlists, favorites, history and queue in IndexedDB on every
-   platform behind one async API, migrated from `localStorage` on first start; small settings stay in
-   `localStorage`. Removes the 5 MB cap and the full-rewrite-per-edit.
-2. [ ] **One stream resolver** (`stream-resolver.js`): an ordered list of strategies (cache, fast lookup,
+1. [x] **Storage layer** (`library-store.js`): playlists, favorites and history in IndexedDB on every
+   platform, moved from `localStorage` on first start; small settings stay in `localStorage`. Done under the raw
+   store profiles-core.js already routes every key through, so the rest of the app still calls `localStorage`
+   (read into memory at start-up, written back in the background). Removes the 5 MB cap. Still to do: the queue
+   and Encore (read before start-up waits, and saved as the page closes), and one record per playlist instead
+   of rewriting the whole list on every edit.
+2. [x] **One stream resolver** (`stream-resolver.js`): an ordered list of strategies (cache, fast lookup,
    yt-dlp, other uploads, SoundCloud) with one health rule ("YouTube is blocking: skip its strategies for N
    minutes") shared by desktop and phones. See the system design in `docs/design/playback-resolution.md`.
 3. [ ] **Route table for `server.js`**: `routes/stream.js`, `routes/library.js`, `routes/downloads.js`,
