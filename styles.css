@@ -9077,3 +9077,14 @@ body.hide-titlebar:not(.mini) .update-banner { top: 76px; }
 :is(.settings-card, .dialog-card, .modal-card, .m3-dropdown-menu, .track-context-menu, .profile-menu, .muriel-toast) {
   background-color: var(--md-sys-color-surface-container-high-solid) !important;
 }
+
+/* The play button on the bar's middle line, like the song and the buttons either side of it; the seek bar sits
+   in the space below. The column (controls 48px + seek bar 40px) was taller than the 88px bar, so it rode up to the
+   bar's top edge. Phones, narrow windows and the mini player lay the bar out their own way. */
+@media (min-width: 601px) {
+  html:not(.is-mobile) body:not(.mini) .playbar-center { position: relative; align-self: stretch; justify-content: center; }
+  html:not(.is-mobile) body:not(.mini) .playbar-center .playback-controls { position: relative; z-index: 2; }
+  html:not(.is-mobile) body:not(.mini) .playbar-center .scrubber-bar-wrapper { position: absolute; left: 0; right: 0; bottom: -9px; }
+  /* the buttons' larger tap area reached down onto the seek line: a click on the line beside them toggled shuffle */
+  html:not(.is-mobile) body:not(.mini) .playbar-center .control-btn::after { top: 0; bottom: 0; }
+}
