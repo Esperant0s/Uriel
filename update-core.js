@@ -10,7 +10,7 @@
   const TAGS = { ios: 'ios-latest', android: 'android-latest', windows: 'windows-latest', 'windows-setup': 'latest', linux: 'latest', mac: 'latest' };
   const VERSIONED = new Set(['windows-setup', 'linux', 'mac']);
   // the file the browser fallback opens; iOS (sideloaded) and the Mac go to the release page
-  const BROWSER_ASSET = { android: /^Mural\.apk$/, windows: /^Mural\.exe$/, 'windows-setup': /-win-x64\.exe$/, linux: /-linux-x86_64\.AppImage$/ };
+  const BROWSER_ASSET = { android: /^(Uriel|Mural)\.apk$/, windows: /^(Uriel|Mural)\.exe$/, 'windows-setup': /-win-x64\.exe$/, linux: /-linux-x86_64\.AppImage$/ };
 
   const releaseApi = (repo, channel) => {
     const tag = TAGS[channel];
@@ -44,11 +44,11 @@
 
   // the file an in-app update downloads: kind is desktop-updater.js's (portable, nsis, appimage, mac) or "android"
   const INSTALL_ASSET = {
-    portable: () => /^Mural\.exe$/,
+    portable: () => /^(Uriel|Mural)\.exe$/,
     nsis: () => /-win-x64\.exe$/,
     appimage: () => /-linux-x86_64\.AppImage$/,
     mac: (arch) => new RegExp(`-mac-${arch === 'arm64' ? 'arm64' : 'x64'}\\.zip$`),
-    android: () => /^Mural\.apk$/,
+    android: () => /^(Uriel|Mural)\.apk$/,
   };
   function installAsset(rel, kind, arch) {
     const pattern = INSTALL_ASSET[kind] && INSTALL_ASSET[kind](arch);

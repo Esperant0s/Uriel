@@ -1,4 +1,4 @@
-// Writes sidestore.json (AltStore/SideStore source format) next to Mural.ipa in CI.
+// Writes sidestore.json (AltStore/SideStore source format) next to Uriel.ipa in CI.
 // The version must match the built app (MARKETING_VERSION = <major>.<minor>.<run number>) so
 // SideStore can tell when an update is available.
 const fs = require('fs');
@@ -6,13 +6,13 @@ const fs = require('fs');
 const { RUN, REPO, SHA } = process.env;
 const base = require('../package.json').version.split('.').slice(0, 2).join('.');
 const version = `${base}.${RUN}`;
-const ipa = `https://github.com/${REPO}/releases/download/ios-latest/Mural.ipa`;
+const ipa = `https://github.com/${REPO}/releases/download/ios-latest/Uriel.ipa`;
 const icon = `https://raw.githubusercontent.com/${REPO}/${SHA}/assets/icon-ios.png`;
 const now = new Date().toISOString();
-const size = fs.statSync('Mural.ipa').size;
+const size = fs.statSync('Uriel.ipa').size;
 
 const app = {
-  name: 'Mural',
+  name: 'Uriel',
   bundleIdentifier: 'io.github.esperant0s.mural',
   developerName: 'Esperant0s',
   subtitle: 'Free music player',
@@ -26,7 +26,7 @@ const app = {
 };
 
 fs.writeFileSync('sidestore.json', JSON.stringify({
-  name: 'Mural',
+  name: 'Uriel',
   identifier: 'io.github.esperant0s.mural.source',
   iconURL: icon,
   website: `https://${REPO.split('/')[0]}.github.io/${REPO.split('/')[1]}/`,
@@ -34,4 +34,4 @@ fs.writeFileSync('sidestore.json', JSON.stringify({
   apps: [app],
   news: [],
 }, null, 2));
-console.log(`sidestore.json: Mural ${version}, ${size} bytes`);
+console.log(`sidestore.json: Uriel ${version}, ${size} bytes`);

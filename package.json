@@ -1,5 +1,5 @@
 {
-  "name": "mural",
+  "name": "uriel",
   "version": "1.5.5",
   "main": "main.js",
   "bin": {
@@ -16,7 +16,7 @@
   "keywords": [],
   "author": "cloverscripts",
   "license": "MIT",
-  "description": "Mural - a lightweight music player.",
+  "description": "Uriel - a lightweight music player.",
   "devDependencies": {
     "@capacitor/android": "^8.5.3",
     "@capacitor/app": "^8.1.2",
@@ -40,7 +40,7 @@
     "hls.js": "^1.7.1",
     "tone": "^15.1.22"
   },
-  "productName": "Mural",
+  "productName": "Uriel",
   "homepage": "https://github.com/cloverscripts/riff-muriel",
   "repository": {
     "type": "git",
@@ -51,7 +51,7 @@
   },
   "build": {
     "appId": "io.github.esperant0s.mural",
-    "productName": "Mural",
+    "productName": "Uriel",
     "artifactName": "${name}-${version}-${os}-${arch}.${ext}",
     "directories": {
       "output": "dist"

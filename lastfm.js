@@ -16,7 +16,7 @@
   let pollUntil = 0;
 
   async function api(route, body = {}) {
-    if (!core) return { success: false, error: 'Mural is still starting' };
+    if (!core) return { success: false, error: 'Uriel is still starting' };
     try {
       const r = await fetch(`${core.base()}/api/lastfm/${route}`, {
         method: 'POST',
@@ -124,7 +124,7 @@
     announceCurrent();
   }
 
-  // the person approves Mural on last.fm in the browser; this keeps asking the server until they have
+  // the person approves Uriel on last.fm in the browser; this keeps asking the server until they have
   async function webAuth() {
     setStatus('Opening Last.fm…');
     const r = await api('token', keyPair());
@@ -132,7 +132,7 @@
     if (window.electronAPI && typeof window.electronAPI.openExternal === 'function') window.electronAPI.openExternal(r.authUrl);
     else if (isPhone()) location.href = r.authUrl; // phones hand outside links to the browser
     else window.open(r.authUrl, '_blank', 'noopener');
-    setStatus('Allow Mural on the Last.fm page, then come back here');
+    setStatus('Allow Uriel on the Last.fm page, then come back here');
     stopPolling();
     pollUntil = Date.now() + 10 * 60 * 1000;
     let busy = false;
@@ -198,7 +198,7 @@
   async function scrobble(meta, timestamp) {
     const r = await api('scrobble', { ...meta, timestamp });
     if (r.success && r.accepted) cardLine(`Scrobbled: ${meta.artist} — ${meta.track}`);
-    else if (r.code === 'reauth') { account = { connected: false, username: '', error: r.error || '' }; render(); core.toast('Last.fm signed Mural out. Connect again in Settings.', 'info'); }
+    else if (r.code === 'reauth') { account = { connected: false, username: '', error: r.error || '' }; render(); core.toast('Last.fm signed Uriel out. Connect again in Settings.', 'info'); }
   }
 
   function announceCurrent() {

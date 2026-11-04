@@ -5,15 +5,15 @@ const path = require('path');
 const IS_WIN = process.platform === 'win32';
 
 const DEFAULT_DATA_DIR = IS_WIN
-  ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Mural')
+  ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Uriel')
   : process.platform === 'darwin'
-  ? path.join(os.homedir(), 'Library', 'Application Support', 'Mural')
+  ? path.join(os.homedir(), 'Library', 'Application Support', 'Uriel')
   : path.join(os.homedir(), '.cache', 'mural');
 
 const CONFIG_DIR = IS_WIN
-  ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Mural')
+  ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'Uriel')
   : process.platform === 'darwin'
-  ? path.join(os.homedir(), 'Library', 'Application Support', 'Mural')
+  ? path.join(os.homedir(), 'Library', 'Application Support', 'Uriel')
   : path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), 'mural');
 const CONFIG_PATH = path.join(CONFIG_DIR, 'config.json');
 
@@ -106,7 +106,7 @@ function markTutorialDone() {
   return false;
 }
 
-// what Mural itself keeps in its music folder (moving the folder copies and then deletes only these)
+// what Uriel itself keeps in its music folder (moving the folder copies and then deletes only these)
 const MURIEL_DATA_ENTRIES = ['tracks', 'custom-lyrics', 'lyrics', 'thumbnails', 'library', 'bin', 'plugins', 'logs', 'metadata.json', 'library.json', 'startup.json', 'spotify-auth.enc', 'lastfm-auth.enc', '.murieltutorial', 'i18n'];
 
 // `only`: names to take at the top level (deeper levels take everything under them)
@@ -178,7 +178,7 @@ function findInPath(name, env = process.env, platform = process.platform) {
 
 const binaryCache = {};
 
-// a miss is looked up again after a while, so a tool installed with a package manager while Mural is open counts
+// a miss is looked up again after a while, so a tool installed with a package manager while Uriel is open counts
 const MISS_TTL = 30000;
 const missedAt = {};
 
@@ -192,7 +192,7 @@ function resolveBinary(name) {
     process.resourcesPath && path.join(process.resourcesPath, 'bin', exe),
     path.join(__dirname, 'bin', exe)
   ].filter(Boolean);
-  // then the copies Muriel (or Riff) downloaded before the rename: they were skipped when the Mural folder
+  // then the copies Muriel (or Riff) downloaded before the rename: they were skipped when the Uriel folder
   // already existed, and the app offered to download ~400 MB it already had
   const found = candidates.find(isExecutableFile) || findInPath(name) || LEGACY_BIN_DIRS.map((d) => path.join(d, exe)).find(isExecutableFile);
   binaryCache[name] = found || null;

@@ -1,6 +1,6 @@
 'use strict';
 
-// backup-core.js: playlist files (shared, so trusted for nothing) and profile backups (only Mural's own data and
+// backup-core.js: playlist files (shared, so trusted for nothing) and profile backups (only Uriel's own data and
 // settings keys get restored), plus upstream Riff's .rfacc account files.
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -11,7 +11,7 @@ const P = require('../profiles-core.js');
 
 const YT = 'dQw4w9WgXcQ';
 
-test('playlist files from Riff, from Mural and bare song lists are read', () => {
+test('playlist files from Riff, from Uriel and bare song lists are read', () => {
   const riff = JSON.stringify({ app: 'Riff', appVersion: '43.0.0', playlists: [{ name: 'Mix', description: 'd', tracks: [
     { title: 'Song', artist: 'A', album: 'Al', duration: 212, source: 'youtube', id: YT, url: `https://www.youtube.com/watch?v=${YT}`, cover: 'https://i.ytimg.com/vi/x/hq.jpg' },
     { title: 'SC', artist: 'B', source: 'soundcloud', id: '123', url: 'https://soundcloud.com/b/sc' },
@@ -76,7 +76,7 @@ test('exported playlists read back the same, without local addresses or tokens',
   ] }];
   const file = B.playlistFile(pls, { appVersion: '1.2.9' });
   const text = JSON.stringify(file);
-  assert.equal(file.app, 'Mural');
+  assert.equal(file.app, 'Uriel');
   assert.ok(!text.includes('SECRETTOKEN') && !text.includes('127.0.0.1') && !text.includes('file:'));
   const [back] = B.parsePlaylistFile(text);
   assert.equal(back.name, 'Mine');
@@ -99,7 +99,7 @@ test('a backup holds the open profile\'s own data and settings, nothing of the d
   assert.deepEqual(Object.keys(b.data).sort(), ['devsize_playlists', 'muriel_listens_v1', 'muriel_theme_mode']);
 });
 
-test('a restore only writes Mural keys, checks the playlists through, and keeps the sync link', () => {
+test('a restore only writes Uriel keys, checks the playlists through, and keeps the sync link', () => {
   const backup = { kind: 'muriel-backup', version: 1, profile: { name: 'Me' }, data: {
     devsize_playlists: JSON.stringify([{ id: 'pl_a', name: 'A', cover: 'javascript:alert(1)', tracks: [{ id: YT, title: 't', thumbnail: 'javascript:x', url: 'https://www.youtube.com/watch?v=' + YT, nested: { a: 1 }, addedAt: 3 }] }, { id: 'pl_a', name: 'dup id' }, 'junk']),
     devsize_favorites: JSON.stringify([{ id: 'x', title: 'f', platform: 'evilnet' }, 5]),
@@ -134,8 +134,8 @@ test('a restore only writes Mural keys, checks the playlists through, and keeps 
   assert.equal(B.keepOnRestore('muriel_perf_mode', P.isDevice), true);
   assert.equal(B.keepOnRestore('someplugin_state', P.isDevice), true);
   assert.equal(B.keepOnRestore('devsize_playlists', P.isDevice), false);
-  assert.throws(() => B.readBackup({ hello: 1 }), /isn't a Mural backup/);
-  assert.throws(() => B.readBackup(null), /isn't a Mural backup/);
+  assert.throws(() => B.readBackup({ hello: 1 }), /isn't a Uriel backup/);
+  assert.throws(() => B.readBackup(null), /isn't a Uriel backup/);
   const big = 'x'.repeat(B.LIMITS.keyBytes - 10);
   assert.throws(() => B.readBackup({ kind: 'muriel-backup', data: { muriel_a: big, muriel_b: big, muriel_c: big, muriel_d: big } }), /too big/);
   assert.ok(B.readBackup({ kind: 'muriel-backup', data: { muriel_a: big + 'x'.repeat(20) } }).skipped.includes('muriel_a'), 'one key over the cap is left out');
@@ -150,7 +150,7 @@ function rfacc(obj) {
   return new Uint8Array(Buffer.concat([Buffer.from('RFAC'), iv, c.getAuthTag(), enc]));
 }
 
-test('Riff account files (.rfacc) open, and their riff_ keys become Mural\'s', async () => {
+test('Riff account files (.rfacc) open, and their riff_ keys become Uriel\'s', async () => {
   const file = rfacc({ app: 'Riff', version: '1.0', exportedAt: 1, localStorage: {
     devsize_playlists: JSON.stringify([{ id: 'pl_r', name: 'From Riff', tracks: [{ id: YT, title: 'x' }] }]),
     riff_theme_mode: 'light', riff_perf_mode: 'true', riff_lastfm_sk: 'secret', riff_lastfm_apisecret: 's', riff_lastfm_enabled: 'true',
@@ -166,7 +166,7 @@ test('Riff account files (.rfacc) open, and their riff_ keys become Mural\'s', a
   const broken = file.slice();
   broken[broken.length - 1] ^= 1;
   await assert.rejects(B.parseBackupFile(broken), /damaged/);
-  await assert.rejects(B.parseBackupFile(new TextEncoder().encode('{nope')), /isn't a Mural backup/);
+  await assert.rejects(B.parseBackupFile(new TextEncoder().encode('{nope')), /isn't a Uriel backup/);
   const own = await B.parseBackupFile(new TextEncoder().encode(JSON.stringify(B.makeBackup([['muriel_theme_mode', 'dark']]))));
   assert.equal(B.readBackup(own).entries.muriel_theme_mode, 'dark');
 });

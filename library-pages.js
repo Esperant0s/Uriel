@@ -1,4 +1,4 @@
-// Mural's library pages, the parts that are plain data: saved albums, followed artists, the Daily Mixes of the
+// Uriel's library pages, the parts that are plain data: saved albums, followed artists, the Daily Mixes of the
 // Spotify-style home and the thumbs up / down they get, and the explicit [E] badge. No DOM, no network: app.js
 // draws them, server.js marks explicit songs with the same check, test/library-pages.test.js runs this in Node.
 (function (root) {

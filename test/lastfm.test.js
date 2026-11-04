@@ -259,7 +259,7 @@ test('server: Last.fm logins are per profile, kept encrypted, and never handed t
   }
 });
 
-test('server: without a keychain the login lasts until Mural closes, and says so', async () => {
+test('server: without a keychain the login lasts until Uriel closes, and says so', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'muriel-lastfm-'));
   const oldDataDir = process.env.MURIEL_DATA_DIR;
   const oldRequest = https.request;
@@ -280,7 +280,7 @@ test('server: without a keychain the login lasts until Mural closes, and says so
     const r = await post(port, '/api/lastfm/mobile-session', { profile: 'default', username: 'u', password: 'p' }, token);
     assert.equal(r.data.success, true);
     assert.equal(r.data.saved, false);
-    assert.match(r.data.error, /until Mural closes|saved securely/);
+    assert.match(r.data.error, /until Uriel closes|saved securely/);
     assert.ok(!fs.existsSync(path.join(dir, 'lastfm-auth.enc')));
   } finally {
     if (server) await server.stopServer();

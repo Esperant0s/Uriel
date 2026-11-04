@@ -1,7 +1,8 @@
-// Mural used to be Muriel. On the first start of Mural on a computer, everything Muriel kept is brought over:
-// the page's storage (playlists, favorites, history, settings: Electron's userData folder), the music data folder
-// (library, offline songs, lyrics, covers, yt-dlp and ffmpeg) and config.json. Muriel's own folders are left as
-// they are, so Muriel keeps working next to Mural.
+// Uriel used to be Mural, and Mural used to be Muriel. On the first start of Uriel on a computer, everything the
+// older app kept is brought over (Mural's folders if there are any, else Muriel's): the page's storage (playlists,
+// favorites, history, settings: Electron's userData folder), the music data folder (library, offline songs,
+// lyrics, covers, yt-dlp and ffmpeg) and config.json. The old folders are left as they are, so Muriel keeps
+// working next to Uriel.
 //
 // Song files never change once written, so they are hard-linked where the disk allows it (no second copy taking
 // up space); everything else is copied, because both apps rewrite those files. Runs before anything opens them.
@@ -30,19 +31,20 @@ function copyTree(from, to, link = false) {
   }
 }
 
-// [old, new] folder pairs for this computer
+// [old, new] folder pairs for this computer: the old one is Mural's where it exists, else Muriel's
 function folderPairs(appDataDir, platform = process.platform, env = process.env, home = os.homedir()) {
-  const pairs = [[path.join(appDataDir, 'Muriel'), path.join(appDataDir, 'Mural')]];
-  if (platform === 'win32') {
-    const local = env.LOCALAPPDATA || path.join(home, 'AppData', 'Local');
-    pairs.push([path.join(local, 'Muriel'), path.join(local, 'Mural')]);
-  } else if (platform !== 'darwin') {
-    pairs.push([path.join(home, '.cache', 'muriel'), path.join(home, '.cache', 'mural')]);
-    const config = env.XDG_CONFIG_HOME || path.join(home, '.config');
-    pairs.push([path.join(config, 'muriel'), path.join(config, 'mural')]);
+  const dirs = [appDataDir];
+  if (platform === 'win32') dirs.push(env.LOCALAPPDATA || path.join(home, 'AppData', 'Local'));
+  const pairs = dirs.map((d) => [d, ['Muriel', 'Mural', 'Uriel']]);
+  if (platform !== 'win32' && platform !== 'darwin') {
+    pairs.push([path.join(home, '.cache'), ['muriel', 'mural', 'uriel']]);
+    pairs.push([env.XDG_CONFIG_HOME || path.join(home, '.config'), ['muriel', 'mural', 'uriel']]);
   }
   // macOS keeps data, config and userData in the one Application Support folder (the first pair)
-  return pairs;
+  return pairs.map(([dir, [muriel, mural, uriel]]) => {
+    const from = fs.existsSync(path.join(dir, mural)) ? mural : muriel;
+    return [path.join(dir, from), path.join(dir, uriel)];
+  });
 }
 
 // Copies each old folder to its new place, once: a new folder that already exists is never touched.

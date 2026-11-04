@@ -35,7 +35,7 @@ import AppIntents
 /// (LyricsLiveActivity.swift → mobile/live-activity.js).
 @available(iOS 17.0, *)
 struct MurielPlayerIntent: LiveActivityIntent {
-    static let title: LocalizedStringResource = "Control Mural"
+    static let title: LocalizedStringResource = "Control Uriel"
     static var isDiscoverable: Bool { false }
 
     @Parameter(title: "Action") var action: String

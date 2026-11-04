@@ -11,7 +11,7 @@ module.exports = function mediaControls() {
   let pending = 0;
   // The song in the island at the top of the screen (Android 16+, a "Live Update" beside the playback notification;
   // see MediaControlsPlugin). 'on' / 'off' once picked in Settings; until then the phone's default: on for vivo,
-  // whose Origin Island won't take Mural's playback notification itself.
+  // whose Origin Island won't take Uriel's playback notification itself.
   const ISLAND = 'muriel_android_island';
   const islandMode = () => { const v = localStorage.getItem(ISLAND); return v === 'on' || v === 'off' ? v : 'auto'; };
 
@@ -32,7 +32,7 @@ module.exports = function mediaControls() {
       duration,
       position: Math.min(a.currentTime || 0, duration || Infinity),
       playing: !!c.state.isPlaying,
-      // between two songs nothing plays, but Mural still has to stay in the foreground (see MediaControlsPlugin)
+      // between two songs nothing plays, but Uriel still has to stay in the foreground (see MediaControlsPlugin)
       loading: !c.state.isPlaying && !!c.state.trackLoading,
       rate: a.playbackRate || 1,
       shuffle: !!c.state.isShuffle,

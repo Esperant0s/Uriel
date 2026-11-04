@@ -13,10 +13,10 @@ const https = require('node:https');
 
 const I18n = require('../i18n');
 
-test('only Mural\'s own words are worth translating', () => {
+test('only Uriel\'s own words are worth translating', () => {
   for (const s of ['Play next', 'Add to queue', 'No playlists yet. Create one first.', '{0} songs']) assert.equal(I18n.translatable(s), true, s);
   for (const s of ['', ' ', 'x', '100%', '0:00', '1.25x', '-6 dB', '44.1 kHz', 'FLAC', 'HQ', 'v1.2.9', 'https://example.com/a', 'Ctrl+K',
-    'Mural', 'YouTube Music', 'SoundCloud', 'me@example.com', 'a'.repeat(501)]) assert.equal(I18n.translatable(s), false, s);
+    'Uriel', 'YouTube Music', 'SoundCloud', 'me@example.com', 'a'.repeat(501)]) assert.equal(I18n.translatable(s), false, s);
 });
 
 test('a translation must keep every placeholder', () => {

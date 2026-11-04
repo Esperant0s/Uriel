@@ -27,9 +27,9 @@ import java.util.concurrent.Executors;
 
 /**
  * In-app updates for Android: "Update" in the update banner (update-notifier.js, through mobile/app-updater.js)
- * downloads the new Mural.apk from the android-latest release into the app's cache, checks it against GitHub's
+ * downloads the new Uriel.apk from the android-latest release into the app's cache, checks it against GitHub's
  * SHA-256 for that file, and hands it to Android's installer. Android always asks the person to confirm the
- * install, and the first time also to allow installs from Mural (install() opens that setting).
+ * install, and the first time also to allow installs from Uriel (install() opens that setting).
  */
 @CapacitorPlugin(name = "MurielUpdater")
 public class AppUpdaterPlugin extends Plugin {
@@ -37,7 +37,7 @@ public class AppUpdaterPlugin extends Plugin {
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
 
     private File apk() {
-        return new File(new File(getContext().getCacheDir(), "updates"), "Mural.apk");
+        return new File(new File(getContext().getCacheDir(), "updates"), "Uriel.apk");
     }
 
     // release downloads only: github.com links redirect to GitHub's download servers, over https all the way
@@ -123,7 +123,7 @@ public class AppUpdaterPlugin extends Plugin {
             call.reject("nothing downloaded");
             return;
         }
-        // Android 8+: installing needs the person's OK for Mural once ("Install unknown apps")
+        // Android 8+: installing needs the person's OK for Uriel once ("Install unknown apps")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !ctx.getPackageManager().canRequestPackageInstalls()) {
             Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + ctx.getPackageName()));
             settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

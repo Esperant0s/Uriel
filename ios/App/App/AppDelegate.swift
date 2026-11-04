@@ -11,7 +11,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Music app: keep playing with the screen locked or the app in the background,
         // and ignore the silent switch. The session is not activated here: that would stop other
-        // apps' audio the moment Mural opens; WebKit activates it when a song starts.
+        // apps' audio the moment Uriel opens; WebKit activates it when a song starts.
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
         return true
     }
@@ -52,7 +52,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 }
 
 
-// Mural's web view. WebKit has a (private) preference that mutes a page's audio while the page
+// Uriel's web view. WebKit has a (private) preference that mutes a page's audio while the page
 // is hidden: playback keeps "running" and shows on the lock screen, but nothing is audible once the
 // app is backgrounded or the phone is locked. Turn it off, if this iOS version has it.
 class MurielBridgeViewController: CAPBridgeViewController {
@@ -74,7 +74,7 @@ class MurielBridgeViewController: CAPBridgeViewController {
     }
 }
 
-// Another app's sound (a call, Siri, a video) interrupting Mural: the page (mobile/audio-interruption.js) is
+// Another app's sound (a call, Siri, a video) interrupting Uriel: the page (mobile/audio-interruption.js) is
 // told when it starts and when it ends, and whether iOS says to play again, so a song that was playing starts
 // again like it does in Spotify (#26). Paused in the background the app is suspended soon after; iOS wakes it
 // for the end of the interruption, and a short background task keeps it awake until the page has asked the

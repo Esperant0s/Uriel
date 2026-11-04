@@ -90,7 +90,7 @@ function renderWord(rawWord) {
 function startStream() {
   process.stdout.write('\x1b[?25l');
   process.stdout.write('\x1b[2J\x1b[H');
-  console.log('\x1b[90m[Mural CLI] Awaiting real-time lyrics stream...\x1b[0m');
+  console.log('\x1b[90m[Uriel CLI] Awaiting real-time lyrics stream...\x1b[0m');
 
   const req = http.get(URL, (res) => {
     let buffer = '';

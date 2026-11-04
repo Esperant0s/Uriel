@@ -1,4 +1,4 @@
-// Runs Mural's own server.js inside the iOS app and makes app.js think it is talking to the
+// Runs Uriel's own server.js inside the iOS app and makes app.js think it is talking to the
 // desktop backend on 127.0.0.1. Loaded before app.js.
 const { Capacitor } = require('@capacitor/core');
 const store = require('./shims/store');
@@ -29,7 +29,7 @@ window.addEventListener('unhandledrejection', (e) => murielLog('error', `unhandl
 window.MurielCache = { enforceLimit: () => enforceCacheLimit() };
 window.MurielLog = {
   add: murielLog,
-  text: () => [`Mural ${navigator.userAgent}`, `platform: ${Capacitor.getPlatform()}`, ...logLines].join('\n'),
+  text: () => [`Uriel ${navigator.userAgent}`, `platform: ${Capacitor.getPlatform()}`, ...logLines].join('\n'),
   clear: () => { logLines.length = 0; try { localStorage.removeItem(LOG_KEY); } catch (e) {} },
 };
 
@@ -72,7 +72,7 @@ globalThis.__murielFetch = async (input, init) => {
 };
 
 // ---- secrets server.js keeps (the Last.fm logins) ----
-// In the WebView's own storage, which only Mural can read; not under /data, which on iPhone is the Mural folder
+// In the WebView's own storage, which only Uriel can read; not under /data, which on iPhone is the Uriel folder
 // the Files app shows (and backs up). One entry per device (profiles-core.js lists muriel_secret_ as a device key)
 // holding each profile's login, like lastfm-auth.enc on desktop. Never synced, never in an account export.
 globalThis.__murielVault = (name) => {

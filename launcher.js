@@ -4,8 +4,8 @@ const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
 
-const NAME = 'Mural';
-const COMMENT = 'Mural - music player';
+const NAME = 'Uriel';
+const COMMENT = 'Uriel - music player';
 const APP_ID = '';
 
 function winShortcutPath() {
@@ -26,7 +26,7 @@ function getLauncherInfo() {
     return { platform: 'win32', canInstall: true, installed: fs.existsSync(winShortcutPath()), reason: '' };
   }
   if (process.platform === 'linux') {
-    if (!process.env.APPIMAGE) return { platform: 'linux', canInstall: false, installed: false, reason: 'Available when Mural runs as an AppImage' };
+    if (!process.env.APPIMAGE) return { platform: 'linux', canInstall: false, installed: false, reason: 'Available when Uriel runs as an AppImage' };
     return { platform: 'linux', canInstall: true, installed: fs.existsSync(linuxDesktopPath()), reason: '' };
   }
   return { platform: process.platform, canInstall: false, installed: false, reason: 'Not supported on this system' };

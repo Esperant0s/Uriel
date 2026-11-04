@@ -1,6 +1,6 @@
 // The songs already on the phone, for My files (server.js setDeviceSongs, device-library.js):
 //  - Android: the phone's music library (android/.../DeviceMusicPlugin.java), after asking once for "Music and audio"
-//  - iPhone: audio files in Mural's folder in the Files app (On My iPhone → Mural), including Mural's own downloads.
+//  - iPhone: audio files in Uriel's folder in the Files app (On My iPhone → Uriel), including Uriel's own downloads.
 //    Apple doesn't let apps read the files of the Music app's library, so that's the place to put songs.
 // Each song plays from where it is: its path goes to the server as /device/<path>, and mobile/shims/store.js
 // turns that into a URL the WebView loads. Looked at again whenever the app comes back to the foreground.
@@ -35,7 +35,7 @@ async function androidSongs(plugin, mayAsk) {
   }).filter((s) => lib.AUDIO_EXTS.has(s.ext));
 }
 
-// Documents is the folder the Files app shows as "Mural"; Mural keeps its own data in Documents/Mural, where only
+// Documents is the folder the Files app shows as "Uriel"; Uriel keeps its own data in Documents/Mural, where only
 // the Downloads folder holds songs
 async function iosSongs() {
   const out = [];

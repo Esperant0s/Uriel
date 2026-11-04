@@ -1,5 +1,5 @@
 // iPhone: play again once another app's sound is over (#26). A call, Siri or a video in another app pauses
-// Mural; iOS then says when it's done and whether to start again, but by then Mural sits paused in the
+// Uriel; iOS then says when it's done and whether to start again, but by then Uriel sits paused in the
 // background and WebKit didn't start the song again. The app (MurielAudioSessionPlugin in
 // ios/App/App/AppDelegate.swift) passes on the start and end of each interruption, and this plays the song
 // again when it was playing and nobody paused it meanwhile.

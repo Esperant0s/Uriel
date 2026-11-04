@@ -1,5 +1,5 @@
-// Music already on the device, found instead of imported: the computer's Music folder and the folder Mural
-// downloads into (server.js scans and watches them), Android's music library and the iPhone's Mural folder in
+// Music already on the device, found instead of imported: the computer's Music folder and the folder Uriel
+// downloads into (server.js scans and watches them), Android's music library and the iPhone's Uriel folder in
 // the Files app (mobile/device-music.js hands those over). The songs play from where they are: nothing is copied.
 //
 // A found song gets the id an import of the same file gets (main.js and mobile/electron-api.js: name + size), so

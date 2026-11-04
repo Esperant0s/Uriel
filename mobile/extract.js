@@ -1,4 +1,4 @@
-// In-app replacement for the parts of yt-dlp Mural uses: YouTube/YouTube Music search,
+// In-app replacement for the parts of yt-dlp Uriel uses: YouTube/YouTube Music search,
 // SoundCloud search, and resolving a track page to a direct audio URL.
 // All network calls go through globalThis.__murielFetch (native HTTP in the app, dev proxy in a browser).
 const { Innertube, Platform, Constants } = require('youtubei.js/web');
@@ -194,7 +194,7 @@ async function scCanonicalUrl(pageUrl) {
   return `https://soundcloud.com${u.pathname.replace(/\/+$/, '')}`;
 }
 
-// Which of a track's transcodings Mural can play, best first. Many tracks no longer have a progressive MP3,
+// Which of a track's transcodings Uriel can play, best first. Many tracks no longer have a progressive MP3,
 // only HLS: plain HLS (MP3 segments, or AAC in fragmented MP4) is downloaded segment by segment and joined;
 // encrypted HLS (ctr-/cbc-encrypted-hls) needs DRM and can't be played outside SoundCloud's own player.
 function scCandidates(list) {

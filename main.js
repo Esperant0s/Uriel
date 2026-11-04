@@ -1,5 +1,5 @@
 const { app, BrowserWindow, dialog, ipcMain, screen, shell, Tray, Menu, nativeImage, globalShortcut, powerMonitor, clipboard } = require('electron');
-// Muriel's data comes over on Mural's first start, before platform.js or Chromium open any of these folders
+// Mural's (or Muriel's) data comes over on Uriel's first start, before platform.js or Chromium open any of these folders
 if (!process.env.MURIEL_DATA_DIR) { try { require('./migrate-muriel').migrate(app.getPath('appData')); } catch (e) {} }
 const fs = require('fs');
 const path = require('path');
@@ -36,7 +36,7 @@ if (process.platform === 'linux') {
 }
 
 if (process.platform === 'win32') {
-  // MediaSessionService: Chromium's own media session, so the Windows media overlay and lock screen show Mural
+  // MediaSessionService: Chromium's own media session, so the Windows media overlay and lock screen show Uriel
   enabledFeatures.push('HardwareMediaKeyHandling', 'MediaSessionService');
   app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion');
 }
@@ -227,7 +227,7 @@ function runGUI() {
       minWidth: 360,
                                    minHeight: 500,
                                    backgroundColor: firstRun ? '#0A0A0A' : '#000000',
-                                   title: 'Mural',
+                                   title: 'Uriel',
                                    icon: path.join(__dirname, 'assets', 'icon.png'),
                                    // macOS keeps its frame so the native traffic lights, rounded corners and shadow are
                                    // used; Windows and Linux draw their own controls
@@ -277,7 +277,7 @@ function runGUI() {
       try { if (new URL(url).protocol === 'https:') shell.openExternal(url); } catch (e) {}
       return { action: 'deny' };
     });
-    // the window only ever shows Mural's own pages; anything else would get the preload API and the server token
+    // the window only ever shows Uriel's own pages; anything else would get the preload API and the server token
     const isAppPage = (u) => {
       try {
         const x = new URL(u);
@@ -380,7 +380,7 @@ function runGUI() {
     });
 
     ipcMain.handle('get-diagnostics', async () => {
-      const lines = [`Mural ${app.getVersion()}`, `OS ${process.platform} ${process.arch} ${os.release()}`, `Electron ${process.versions.electron} Chromium ${process.versions.chrome} Node ${process.versions.node}`, `Locale ${app.getLocale()}`, `Data ${DATA_DIR}`];
+      const lines = [`Uriel ${app.getVersion()}`, `OS ${process.platform} ${process.arch} ${os.release()}`, `Electron ${process.versions.electron} Chromium ${process.versions.chrome} Node ${process.versions.node}`, `Locale ${app.getLocale()}`, `Data ${DATA_DIR}`];
       for (const name of ['yt-dlp', 'ffmpeg']) {
         const bin = resolveBinary(name);
         lines.push(`${name}: ${bin || 'NOT FOUND'}`);
@@ -562,7 +562,7 @@ function runGUI() {
       });
 
       // set-data-dir / set-download-dir accept only the folder the user just picked in the dialog, not any
-      // path a script in the window passes in (with "move", the old folder's Mural files get deleted)
+      // path a script in the window passes in (with "move", the old folder's Uriel files get deleted)
       let pickedDataDir = null;
       let pickedDownloadDir = null;
       const isPicked = (picked, dir) => !!picked && path.resolve(String(dir)) === path.resolve(picked);
@@ -606,7 +606,7 @@ function runGUI() {
           return { ok: false, error: 'That folder is not writable' };
         }
 
-        // only Mural's own files move (and get deleted afterwards): the old folder may hold other things too
+        // only Uriel's own files move (and get deleted afterwards): the old folder may hold other things too
         if (move) {
           try {
             await platform.copyDirContents(current, target, undefined, platform.MURIEL_DATA_ENTRIES);
@@ -767,7 +767,7 @@ function runGUI() {
           let trayIcon = nativeImage.createFromPath(iconPath);
           trayIcon = trayIcon.resize({ width: 22, height: 22 });
           tray = new Tray(trayIcon);
-          tray.setToolTip('Mural');
+          tray.setToolTip('Uriel');
           const contextMenu = Menu.buildFromTemplate([
             {
               label: 'Show/Hide',

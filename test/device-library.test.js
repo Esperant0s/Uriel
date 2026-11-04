@@ -9,7 +9,7 @@ const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
 
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mural-device-'));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'uriel-device-'));
 for (const key of ['HOME', 'USERPROFILE', 'XDG_CONFIG_HOME']) process.env[key] = tmp;
 process.env.MURIEL_DATA_DIR = path.join(tmp, 'data');
 const music = path.join(tmp, 'Music');

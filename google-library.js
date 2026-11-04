@@ -1,8 +1,8 @@
 // YouTube / YouTube Music library import (desktop): log in to Google in a separate window, then read the liked
 // songs and playlists of that account. Registered by main.js.
-// The Google login lives in its own persistent browser storage, one per Mural profile ("persist:muriel-google"
-// for the first one), apart from the app's own pages: Mural's window never gets the Google cookies, and the
-// login window gets neither Mural's preload API nor its server token. Only "logged in or not" and the songs
+// The Google login lives in its own persistent browser storage, one per Uriel profile ("persist:muriel-google"
+// for the first one), apart from the app's own pages: Uriel's window never gets the Google cookies, and the
+// login window gets neither Uriel's preload API nor its server token. Only "logged in or not" and the songs
 // (checked and capped here) go back to the page.
 const { BrowserWindow, ipcMain, session, shell } = require('electron');
 const crypto = require('crypto');
@@ -284,7 +284,7 @@ function login(parent, profile) {
 const YT_COOKIE_DOMAIN = /(^|\.)youtube\.com$/;
 
 function netscapeCookies(cookies) {
-  const lines = ['# Netscape HTTP Cookie File', '# Written by Mural for yt-dlp. It holds your YouTube sign-in: keep it private.', ''];
+  const lines = ['# Netscape HTTP Cookie File', '# Written by Uriel for yt-dlp. It holds your YouTube sign-in: keep it private.', ''];
   for (const c of cookies || []) {
     const domain = String((c && c.domain) || '');
     if (!c || !YT_COOKIE_DOMAIN.test(domain.replace(/^\./, '')) || /[\t\r\n]/.test(`${c.name}${c.value}${c.path}`)) continue;

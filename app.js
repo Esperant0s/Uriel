@@ -72,7 +72,7 @@
   });
 })();
 
-// Riff 43 splash: Mural's star (styles.css animates it) stays up until start-up is done and the page runs smoothly,
+// Riff 43 splash: Uriel's star (styles.css animates it) stays up until start-up is done and the page runs smoothly,
 // so the app appears ready instead of stuttering through its first second (computers only; phones show their own
 // launch screen). styles.css also fades it out on its own after 8 s, so a startup error can't leave it up.
 (function murielSplash() {
@@ -886,7 +886,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   ]);
 
   // The preset themes of Majd's website (Esperant0s.github.io, js/themes.js and style.css): the same seven base
-  // colors, and Mural's surfaces, text and accents are worked out from them. All of them are dark themes.
+  // colors, and Uriel's surfaces, text and accents are worked out from them. All of them are dark themes.
   const SITE_THEMES = [
     { id: 'halloween', name: 'Halloween Glow', tag: 'Fall · default', bg: '#0A0A0A', bg2: '#1A121A', bg3: '#3D1A3D', text: '#F7EBDD', accent: '#FFB627', accent2: '#FF6700', pop: '#9B1D20' },
     { id: 'synthwave', name: 'Synthwave Night', tag: 'Neon', bg: '#240046', bg2: '#3C096C', bg3: '#7209B7', text: '#FCE7F3', accent: '#FFD60A', accent2: '#F72585', pop: '#B57BE8' },
@@ -3825,7 +3825,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let navigatingBack = false;
 
   const shuffleBag = { queue: null, played: new Set(), next: [] }; // see pickShuffleIndex
-  // every song that has played since Mural opened (any queue, shuffle or not), by id and by artist + title, so the
+  // every song that has played since Uriel opened (any queue, shuffle or not), by id and by artist + title, so the
   // same song from another list or source counts too: shuffle leaves them for last
   const sessionPlayed = new Set();
   const playedThisSession = (t) => !!t && (sessionPlayed.has(getTrackCanonicalId(t)) || sessionPlayed.has(getTrackNormalizedKey(t.artist, t.title)));
@@ -5072,7 +5072,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       bannerSrc = songArt.banner;
     }
 
-    // no banner (they're gone in Mural): use the custom background if there is one, else the cover
+    // no banner (they're gone in Uriel): use the custom background if there is one, else the cover
     const customBg = localStorage.getItem('muriel_bg_url') || '';
     if (bannerType === 'none' && customBg) {
       bannerType = /\.(mp4|webm)($|\?)/i.test(customBg) ? 'video' : 'img';
@@ -6423,7 +6423,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Shuffle picks the next song while this one plays, so it can be downloaded in time: songs are fetched
-  // ahead, and a gap between songs could let iOS suspend Mural with the screen locked.
+  // ahead, and a gap between songs could let iOS suspend Uriel with the screen locked.
   function planShuffleNext() {
     const q = state.queue;
     if (q.length < 2) return null;
@@ -9880,7 +9880,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const i = shuffle ? Math.floor(Math.random() * list.length) : 0;
     playTrack(list[i], list, i, 'playlist');
   }
-  // Share: the playlist goes inside a link (share-link.js) that opens in the web player or in Mural
+  // Share: the playlist goes inside a link (share-link.js) that opens in the web player or in Uriel
   async function sharePlaylist(pl) {
     const S = window.MurielShare;
     if (!pl || !S) return;
@@ -9890,7 +9890,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const skipped = (pl.tracks || []).length - count;
     const note = skipped > 0 ? ` (${skipped === 1 ? T('1 song from your own files left out') : Tf('{0} songs from your own files left out', skipped)})` : '';
     if (window.electronAPI && window.electronAPI.shareText) { // phones: the share sheet
-      const r = await window.electronAPI.shareText(pl.name, `${pl.name} on Mural 🎧 ${link}`);
+      const r = await window.electronAPI.shareText(pl.name, `${pl.name} on Uriel 🎧 ${link}`);
       if (r === 'copied') showToast(Tm('Link copied{0}', note), 'success');
       else if (r === 'shared' && note) showToast(Tm('Shared{0}', note), 'info');
       else if (r === 'failed') showToast(Tm("Couldn't share the link"), 'error');
@@ -9898,7 +9898,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     try {
       await navigator.clipboard.writeText(link);
-      showToast(Tm('Link copied. Anyone can open it in the browser or in Mural{0}', note), 'success');
+      showToast(Tm('Link copied. Anyone can open it in the browser or in Uriel{0}', note), 'success');
     } catch (e) { window.prompt(T('Copy this link'), link); }
   }
   // ---- the playlist's "More" menu: the things Spotify keeps behind its ⋯ ----
@@ -9984,7 +9984,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     importingShare = payload;
     try {
       const { name, tracks } = await S.decode(payload);
-      if (!tracks.length) { showToast(Tm('That playlist link has no songs Mural can play'), 'info'); return true; }
+      if (!tracks.length) { showToast(Tm('That playlist link has no songs Uriel can play'), 'info'); return true; }
       // short links carry only YouTube ids: look up titles and artists first
       if (tracks.some(t => t.needsInfo)) { showToast(Tm('Adding "{0}"…', name), 'info'); await S.fillInfo(tracks); }
       const key = (list) => list.map(t => `${t.platform}:${t.id}`).join('|');
@@ -12483,7 +12483,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const next = !btnHwAccel.classList.contains('active');
       btnHwAccel.classList.toggle('active', next);
       window.electronAPI.setHwAccel(next);
-      showToast(Tm('Restart Mural to apply'), 'info');
+      showToast(Tm('Restart Uriel to apply'), 'info');
     });
   }
 
@@ -13448,7 +13448,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (loadedPlugins.has(p.file)) return;
     try {
       const api = createPluginApi(p);
-      const fn = new Function('Mural', 'plugin', `${p.code}\n//# sourceURL=muriel-plugin-${p.file}`);
+      const fn = new Function('Uriel', 'plugin', `${p.code}\n//# sourceURL=muriel-plugin-${p.file}`);
       const result = fn(api, api.plugin);
       loadedPlugins.set(p.file, { stop: result && typeof result.stop === 'function' ? result.stop : null });
     } catch (e) { reportPluginError(p.file, e); }
@@ -13460,7 +13460,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll(`style[data-plugin="${p.file}"]`).forEach((n) => n.remove());
     const hadStop = !!(entry && entry.stop);
     loadedPlugins.delete(p.file);
-    if (!silent && !hadStop) showToast(Tm('Restart Mural to fully unload "{0}"', p.name), 'info');
+    if (!silent && !hadStop) showToast(Tm('Restart Uriel to fully unload "{0}"', p.name), 'info');
   }
   let pluginsCache = [];
   function renderPluginCards() {
@@ -13669,7 +13669,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     settingWinMediaKeys.style.display = isWindows ? '' : 'none';
   }
 
-  // a new key, off by default: the old one was on for everyone, which hid Mural from the Windows media overlay
+  // a new key, off by default: the old one was on for everyone, which hid Uriel from the Windows media overlay
   const savedWinMediaKeys = localStorage.getItem('muriel_win_global_media_keys') === 'true';
   if (btnWinMediaKeys) {
     btnWinMediaKeys.classList.toggle('active', savedWinMediaKeys);
@@ -13728,7 +13728,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const btnConfirm = document.getElementById('btn-confirm-spotify-import');
       if (btnConfirm) btnConfirm.click();
     }
-    showToast(Tm('Welcome to Mural!'), 'info');
+    showToast(Tm('Welcome to Uriel!'), 'info');
   }
   if (window.electronAPI && window.electronAPI.onWelcomeResult) window.electronAPI.onWelcomeResult((d) => applyWelcomeResult(d));
 
@@ -16125,7 +16125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (loggedOut) googleConnected = false;
         setLinkImportBusy(false);
         updateGoogleAuthUI();
-        setLinkStatus(loggedOut ? 'Google logged Mural out. Log in again.' : `Couldn't read your library: ${(res && res.error) || 'try again later'}`, true);
+        setLinkStatus(loggedOut ? 'Google logged Uriel out. Log in again.' : `Couldn't read your library: ${(res && res.error) || 'try again later'}`, true);
         return;
       }
       const likes = Array.isArray(res.likes) ? res.likes : [];
@@ -17896,7 +17896,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (firstSongs) warmHomeSongs(firstSongs.tracks, 1);
   }
 
-  // ---- Home layout: Mural (the carousel; the default) or Spotify-style rows (Settings > Advanced > Home layout) ----
+  // ---- Home layout: Uriel (the carousel; the default) or Spotify-style rows (Settings > Advanced > Home layout) ----
   // The Spotify layout trades the carousel for quick picks (Liked songs, what you played last), "Made for you"
   // (My Wave and up to five Daily Mixes, new every day), Trending now and the artists you follow. Sync invite,
   // Your playlists, On repeat and For you stay below in both layouts.
@@ -18905,7 +18905,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       const move = window.confirm(
         T('Move your existing music to the new folder?') + '\n\n' +
-        T('OK: move all downloaded and imported files, then restart Mural.') + '\n' +
+        T('OK: move all downloaded and imported files, then restart Uriel.') + '\n' +
         T('Cancel: switch to the new folder without moving (files stay in the old one).')
       );
       btnChangeMusicFolder.disabled = true;
@@ -18925,7 +18925,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       btnChangeMusicFolder.textContent = 'Restarting...';
-      showToast(Tm('Restarting Mural...'));
+      showToast(Tm('Restarting Uriel...'));
       setTimeout(() => { if (window.electronAPI.restartApp) window.electronAPI.restartApp(); }, 400);
     });
   }
@@ -19269,9 +19269,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           // Muriel's old folder) is shown as Ready and isn't downloaded again
           const desc = document.getElementById('tools-modal-desc');
           if (desc) {
-            if (!data.ytDlp && !data.ffmpeg) I18N.text(desc, 'Mural needs yt-dlp and ffmpeg to play and save tracks (~400 MB).');
-            else if (!data.ytDlp) I18N.text(desc, 'Mural needs yt-dlp to play and save tracks. ffmpeg is already installed.');
-            else I18N.text(desc, 'Mural needs ffmpeg to save tracks. yt-dlp is already installed.');
+            if (!data.ytDlp && !data.ffmpeg) I18N.text(desc, 'Uriel needs yt-dlp and ffmpeg to play and save tracks (~400 MB).');
+            else if (!data.ytDlp) I18N.text(desc, 'Uriel needs yt-dlp to play and save tracks. ffmpeg is already installed.');
+            else I18N.text(desc, 'Uriel needs ffmpeg to save tracks. yt-dlp is already installed.');
           }
           if (modal) openModal(modal);
         }
@@ -19335,7 +19335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (typeof api.getDiagnostics === 'function') text = await api.getDiagnostics();
         else {
           // phones: no main process to ask, so the app's own details and its error log
-          text = [`Mural ${(window.MURIEL_BUILD && window.MURIEL_BUILD.version) || ''} (${(window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform()) || 'web'})`,
+          text = [`Uriel ${(window.MURIEL_BUILD && window.MURIEL_BUILD.version) || ''} (${(window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform()) || 'web'})`,
             navigator.userAgent, `Language ${navigator.language}`, '--- log ---', window.MurielLog ? window.MurielLog.text() : 'no log'].join('\n');
         }
       } catch (e) { text = `Diagnostics failed: ${e && e.message}`; }
@@ -19351,7 +19351,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (typeof api.openLogsFolder === 'function') api.openLogsFolder();
       // phones have no folder to open: share the log instead
       else if (typeof api.shareText === 'function') {
-        const res = await api.shareText('Mural error log', window.MurielLog ? window.MurielLog.text() : 'no log');
+        const res = await api.shareText('Uriel error log', window.MurielLog ? window.MurielLog.text() : 'no log');
         if (res === 'copied') showToast(Tm('Log copied to clipboard'), 'info');
       }
     });
@@ -19913,7 +19913,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       { label: 'Open local library', hint: 'View', run: () => switchView('local') },
       { label: 'Open queue', hint: 'View', run: () => switchView('queue') },
       { label: 'Open history', hint: 'View', run: () => switchView('history') },
-      { label: 'Mural Encore', hint: 'Your stats', run: () => window.MurielEncore && window.MurielEncore.open('month') },
+      { label: 'Uriel Encore', hint: 'Your stats', run: () => window.MurielEncore && window.MurielEncore.open('month') },
       { label: 'Open discover', hint: 'View', run: () => switchView('discover') },
       { label: 'Open settings', hint: 'View', run: () => switchView('settings') },
       { label: 'Audio settings', hint: 'Audio', run: () => openAudioTab('tempo') },
@@ -20106,7 +20106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (el.btnDedupePlaylist) el.btnDedupePlaylist.addEventListener('click', removePlaylistDuplicates);
 
   // ======================= Riff 43: player & look =======================
-  // Everything below is from Riff 43, fitted to Mural. Variables are `var` because code above (lyrics, the
+  // Everything below is from Riff 43, fitted to Uriel. Variables are `var` because code above (lyrics, the
   // player events) can call these functions before this part of the file has run.
 
   // ---- hide the titlebar (desktop): it slides down when the pointer touches the top edge ----
@@ -20249,10 +20249,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   applyIconPack(localStorage.getItem('muriel_icon_pack') || 'material');
   wireSettingDropdown('icon-pack', 'muriel_icon_pack', 'material', applyIconPack);
 
-  // ---- the icon on the Home button: the classic glyph, Mural's app icon or one of its styles, or your own ----
+  // ---- the icon on the Home button: the classic glyph, Uriel's app icon or one of its styles, or your own ----
   var HOME_ICONS = [
     { id: 'classic', label: 'Classic' },
-    { id: 'muriel', label: 'Mural', src: 'assets/icon.svg' },
+    { id: 'muriel', label: 'Uriel', src: 'assets/icon.svg' },
     { id: '01-default', label: 'Default' },
     { id: '02-editor', label: 'Editor' },
     { id: '03-orbit', label: 'Orbit' },
@@ -20776,7 +20776,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   })();
 
-  // ---- share the playing song: a one-song Mural link, the same kind playlists use ----
+  // ---- share the playing song: a one-song Uriel link, the same kind playlists use ----
   (function setupPlaybarShare() {
     const btn = document.getElementById('btn-playbar-share');
     if (!btn) return;

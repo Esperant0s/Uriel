@@ -35,7 +35,7 @@ function ffmpegAsset() {
 // refuses to start again while it says that. 60s without a single byte counts as failed.
 function get(url, redirects = 6) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers: { 'User-Agent': 'Mural' }, timeout: 60000 }, (res) => {
+    const req = https.get(url, { headers: { 'User-Agent': 'Uriel' }, timeout: 60000 }, (res) => {
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0) {
         res.resume();
         return resolve(get(new URL(res.headers.location, url).toString(), redirects - 1));
@@ -242,7 +242,7 @@ async function ensureTools() {
 
 async function updateYtDlpIfManaged() {
   const bin = resolveBinary('yt-dlp');
-  // only the copies Mural (or Muriel before it) downloaded: one from a package manager is that manager's to update
+  // only the copies Uriel (or Muriel before it) downloaded: one from a package manager is that manager's to update
   if (!bin || ![BIN_DIR, ...LEGACY_BIN_DIRS].includes(path.dirname(bin))) return false;
   if (hasSlowMacYtDlp()) {
     try {

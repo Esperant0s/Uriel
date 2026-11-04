@@ -8,7 +8,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mural-ytsignin-'));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'uriel-ytsignin-'));
 process.env.MURIEL_DATA_DIR = path.join(tmp, 'data');
 test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 

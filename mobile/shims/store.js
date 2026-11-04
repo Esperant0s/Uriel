@@ -45,7 +45,7 @@ function where(vpath) {
 }
 
 // where a file being saved goes. On Android 10 and older the first download asks for the permission, without
-// waiting for the answer: with Mural in the background the question waits for its return, and the music (which
+// waiting for the answer: with Uriel in the background the question waits for its return, and the music (which
 // waits for files to be saved) would too. Songs saved meanwhile stay private and move once it's given.
 function saveTo(vpath) {
   if (isDownload(vpath) && !pub && mayAsk && !asked) {

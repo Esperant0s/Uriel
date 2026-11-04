@@ -8,7 +8,7 @@
   const EMOJI = ['', '🎧', '🎸', '🎹', '🎤', '🥁', '🦊', '🐱', '🐼', '🌙', '⭐', '🔥', '🌈', '🍀'];
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const toast = (m, kind) => { try { window.MurielCore && window.MurielCore.toast(m, kind || 'info'); } catch (e) {} };
-  // UI language (i18n.js): data-i18n marks Mural's own words in the HTML below; profile names only go into {0} slots
+  // UI language (i18n.js): data-i18n marks Uriel's own words in the HTML below; profile names only go into {0} slots
   const I18n = window.MurielI18n || (() => { const f = (s, ...a) => String(s).replace(/\{(\d)\}/g, (_, i) => (a[i] != null ? a[i] : '')); return { T: (s) => s, Tf: f, Tm: f, Th: f, text: (el, s, ...a) => { if (el) el.textContent = f(s, ...a); } }; })();
   const initial = (name) => (Array.from(String(name || '').trim())[0] || '?').toUpperCase();
   // dark letters on light colors, white on dark ones
@@ -168,8 +168,8 @@
     const all = P.list();
     const parts = ['<span class="settings-section-title" data-i18n>Profiles</span>'];
     parts.push(`<div class="m3-group"><div class="setting-item"><div class="sync-intro">
-      <b data-i18n>A Mural for everyone who uses this device</b>
-      <span data-i18n>Each profile has its own playlists, favorites, history, Encore stats, theme, sound and lyrics settings, and links to its own devices in Sync. Switching profiles restarts Mural.</span>
+      <b data-i18n>A Uriel for everyone who uses this device</b>
+      <span data-i18n>Each profile has its own playlists, favorites, history, Encore stats, theme, sound and lyrics settings, and links to its own devices in Sync. Switching profiles restarts Uriel.</span>
     </div></div></div>`);
     const rows = all.map((p) => {
       if (editing === p.id) return `<div class="setting-item profile-row editing">${form(p)}</div>`;

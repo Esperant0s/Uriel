@@ -3,7 +3,7 @@
 **Status:** Implemented in `stream-resolver.js` (desktop and phones), follows ADR-0001 action item 2
 **Date:** 2026-11-03
 
-How Mural turns "play this song" into an audio URL, today two separate pipelines (desktop `server.js`, phones
+How Uriel turns "play this song" into an audio URL, today two separate pipelines (desktop `server.js`, phones
 `mobile/extract.js`), as one resolver with shared health rules.
 
 ## 1. Requirements
@@ -28,7 +28,7 @@ How Mural turns "play this song" into an audio URL, today two separate pipelines
 
 ### Constraints
 - One maintainer; JavaScript only; must run in Node (desktop server) and in a WebView through shims (phones).
-- No server of Mural's own: everything runs on the user's device, from the user's IP address.
+- No server of Uriel's own: everything runs on the user's device, from the user's IP address.
 - YouTube changes its clients and its bot checks without notice; the resolver must degrade, not break.
 
 ## 2. High-level design

@@ -1,4 +1,4 @@
-# ADR-0001: Evolving Mural's architecture
+# ADR-0001: Evolving Uriel's architecture
 
 **Status:** Proposed
 **Date:** 2026-11-03
@@ -6,7 +6,7 @@
 
 ## Context
 
-Mural is a music player for Windows, macOS, Linux (Electron), Android and iPhone (Capacitor). One web front end
+Uriel is a music player for Windows, macOS, Linux (Electron), Android and iPhone (Capacitor). One web front end
 runs everywhere; a local HTTP server does the work the page can't (finding streams, downloading, files, lyrics).
 
 | Part | Today | Size |

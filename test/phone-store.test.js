@@ -208,7 +208,7 @@ test('Android 10 and older: no question at launch, one when the first song is sa
   assert.strictEqual(asked.length, 0);
   assert.ok(![...disk.keys()].some((k) => k.startsWith('EXTERNAL_STORAGE:')), 'shared storage untouched before the permission');
   assert.strictEqual(store.downloadsFolder(), 'Music/Mural');
-  // the question is still open (Mural in the background, say): saving doesn't wait for it
+  // the question is still open (Uriel in the background, say): saving doesn't wait for it
   await store.copy('/data/tracks/abc123.webm', '/data/Downloads/A - One.webm');
   await store.copy('/data/tracks/abc123.webm', '/data/Downloads/A - Two.webm');
   assert.strictEqual(asked.length, 1);

@@ -100,7 +100,7 @@ struct LockScreenLyrics: View {
     }
 
     private var header: String {
-        hasLyrics ? [state.title, state.artist].filter { !$0.isEmpty }.joined(separator: " · ") : "Mural"
+        hasLyrics ? [state.title, state.artist].filter { !$0.isEmpty }.joined(separator: " · ") : "Uriel"
     }
 
     private var hasLyrics: Bool { !state.line.isEmpty || !state.next.isEmpty }
@@ -115,7 +115,7 @@ struct LyricLines: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             if state.line.isEmpty && state.next.isEmpty {
-                Text(state.title.isEmpty ? "Mural" : state.title)
+                Text(state.title.isEmpty ? "Uriel" : state.title)
                     .font(.system(size: big, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .lineLimit(2)

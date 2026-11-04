@@ -6,7 +6,7 @@ const SHA = 'a'.repeat(64);
 const asset = (name, extra = {}) => ({ name, size: 10, digest: `sha256:${SHA}`, browser_download_url: `https://github.com/cloverscripts/riff-muriel/releases/download/v1.4.0/${name}`, ...extra });
 const versioned = { tag_name: 'v1.4.0', target_commitish: 'b'.repeat(40), html_url: 'https://github.com/cloverscripts/riff-muriel/releases/tag/v1.4.0', assets: [
   asset('muriel-1.4.0-win-x64.exe'), asset('muriel-1.4.0-linux-x86_64.AppImage'),
-  asset('Mural-1.4.0-mac-arm64.zip'), asset('Mural-1.4.0-mac-x64.zip'), asset('Mural-1.4.0-mac-x64.dmg'),
+  asset('Uriel-1.4.0-mac-arm64.zip'), asset('Uriel-1.4.0-mac-x64.zip'), asset('Uriel-1.4.0-mac-x64.dmg'),
 ] };
 
 test('each channel asks its own release', () => {
@@ -31,7 +31,7 @@ test('versioned builds update to a higher version only', () => {
 });
 
 test('rolling builds update to a later build from another commit', () => {
-  const rel = { target_commitish: 'new', published_at: '2026-11-02T00:00:00Z', body: 'run 90 <!-- muriel-version: 1.3.11 -->', assets: [asset('Mural.exe')] };
+  const rel = { target_commitish: 'new', published_at: '2026-11-02T00:00:00Z', body: 'run 90 <!-- muriel-version: 1.3.11 -->', assets: [asset('Uriel.exe')] };
   const build = { sha: 'old', builtAt: '2026-11-01T00:00:00Z', version: '1.3.10' };
   assert.equal(core.isNewer(rel, build, 'windows'), true);
   assert.equal(core.isNewer(rel, { ...build, sha: 'new' }, 'windows'), false);
@@ -39,30 +39,30 @@ test('rolling builds update to a later build from another commit', () => {
   const update = core.describe(rel, build, 'windows');
   assert.equal(update.version, '1.3.11');
   assert.equal(update.run, 90);
-  assert.match(update.url, /Mural\.exe$/);
+  assert.match(update.url, /Uriel\.exe$/);
 });
 
 test('the in-app download is the right file for the install, with GitHub\'s checksum', () => {
   assert.match(core.installAsset(versioned, 'nsis').name, /win-x64\.exe$/);
   assert.match(core.installAsset(versioned, 'appimage').name, /AppImage$/);
-  assert.equal(core.installAsset(versioned, 'mac', 'arm64').name, 'Mural-1.4.0-mac-arm64.zip');
-  assert.equal(core.installAsset(versioned, 'mac', 'x64').name, 'Mural-1.4.0-mac-x64.zip');
+  assert.equal(core.installAsset(versioned, 'mac', 'arm64').name, 'Uriel-1.4.0-mac-arm64.zip');
+  assert.equal(core.installAsset(versioned, 'mac', 'x64').name, 'Uriel-1.4.0-mac-x64.zip');
   assert.equal(core.installAsset(versioned, 'mac', 'x64').sha256, SHA);
   assert.equal(core.installAsset(versioned, 'portable'), null);
 });
 
 test('no checksum or a link off GitHub: no in-app update', () => {
   const rel = (a) => ({ assets: [a] });
-  assert.equal(core.installAsset(rel(asset('Mural.exe', { digest: null })), 'portable'), null);
-  assert.equal(core.installAsset(rel(asset('Mural.exe', { digest: 'sha256:short' })), 'portable'), null);
-  assert.equal(core.installAsset(rel(asset('Mural.exe', { browser_download_url: 'https://example.com/Mural.exe' })), 'portable'), null);
+  assert.equal(core.installAsset(rel(asset('Uriel.exe', { digest: null })), 'portable'), null);
+  assert.equal(core.installAsset(rel(asset('Uriel.exe', { digest: 'sha256:short' })), 'portable'), null);
+  assert.equal(core.installAsset(rel(asset('Uriel.exe', { browser_download_url: 'https://example.com/Uriel.exe' })), 'portable'), null);
   assert.equal(core.isGithubUrl('http://github.com/x'), false);
   assert.equal(core.isGithubUrl('https://release-assets.githubusercontent.com/x'), true);
   assert.equal(core.isGithubUrl('https://github.com.evil.com/x'), false);
 });
 
 test('Android updates carry the APK to download; iOS has none', () => {
-  const rel = { target_commitish: 'new', published_at: '2026-11-02T00:00:00Z', html_url: 'https://github.com/x/y/releases/tag/ios-latest', assets: [asset('Mural.apk')] };
+  const rel = { target_commitish: 'new', published_at: '2026-11-02T00:00:00Z', html_url: 'https://github.com/x/y/releases/tag/ios-latest', assets: [asset('Uriel.apk')] };
   const build = { sha: 'old', builtAt: '2026-11-01T00:00:00Z' };
   assert.equal(core.describe(rel, build, 'android').apk.sha256, SHA);
   const ios = core.describe(rel, build, 'ios');

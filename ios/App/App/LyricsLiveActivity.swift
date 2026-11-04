@@ -209,7 +209,7 @@ final class LyricsActivity {
             return
         }
         activity = nil
-        // only while something plays, and iOS only allows starting one while Mural is open
+        // only while something plays, and iOS only allows starting one while Uriel is open
         guard playing, !title.isEmpty, UIApplication.shared.applicationState == .active,
               ActivityAuthorizationInfo().areActivitiesEnabled else { return }
         do {

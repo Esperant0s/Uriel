@@ -1,11 +1,11 @@
 // In-app updates for the computer: "Update" in the update banner (update-notifier.js) downloads the new build here,
 // checks it against GitHub's SHA-256 for that file, and puts it in place of this one on "Restart now", or when
-// Mural quits after "Later". Nothing opens in the browser. What gets replaced depends on how Mural was installed:
-//  - portable: the single Mural.exe from windows-latest (windows.yml); swapped by a small PowerShell script once
-//    Mural has let go of the file
+// Uriel quits after "Later". Nothing opens in the browser. What gets replaced depends on how Uriel was installed:
+//  - portable: the single Uriel.exe from windows-latest (windows.yml); swapped by a small PowerShell script once
+//    Uriel has let go of the file
 //  - nsis: the installer from a versioned release, run silently
 //  - appimage: the AppImage file itself, renamed over (Linux lets a running file be replaced)
-//  - mac: the Mural.app bundle, swapped by a shell script; the builds are unsigned, so macOS's own updater can't
+//  - mac: the Uriel.app bundle, swapped by a shell script; the builds are unsigned, so macOS's own updater can't
 // Builds without a stamped channel (local and dev builds, `npm start`) never update themselves.
 const fs = require('fs');
 const os = require('os');
@@ -28,7 +28,7 @@ function writable(dir) {
   try { fs.accessSync(dir, fs.constants.W_OK); return true; } catch (e) { return false; }
 }
 
-// how this copy of Mural was installed, or null when it can't replace itself
+// how this copy of Uriel was installed, or null when it can't replace itself
 function installKind({ build, platform = process.platform, env = process.env, exePath = '', packaged = true }) {
   if (!build || !build.sha || build.sha === 'dev' || !packaged) return null;
   if (platform === 'win32' && build.channel === 'windows' && env.PORTABLE_EXECUTABLE_FILE) return 'portable';
@@ -42,7 +42,7 @@ function installKind({ build, platform = process.platform, env = process.env, ex
   return null;
 }
 
-// .../Mural.app/Contents/MacOS/Mural -> .../Mural.app
+// .../Uriel.app/Contents/MacOS/Uriel -> .../Uriel.app
 function macBundle(exePath) {
   const bundle = path.resolve(String(exePath || ''), '..', '..', '..');
   return /\.app$/.test(bundle) ? bundle : null;
@@ -80,7 +80,7 @@ async function download({ fetch, url, sha256, size, dest, onProgress = () => {},
   }
 }
 
-// Windows: wait until Mural has let go of its exe (the portable launcher holds it a moment after the app quits),
+// Windows: wait until Uriel has let go of its exe (the portable launcher holds it a moment after the app quits),
 // then put the new one in its place or run the installer
 const WINDOWS_SCRIPT = `param([int]$WaitPid, [string]$Kind, [string]$Src, [string]$Dst, [int]$Relaunch)
 Wait-Process -Id $WaitPid -Timeout 60 -ErrorAction SilentlyContinue
@@ -98,7 +98,7 @@ while ($true) {
 if ($Relaunch -eq 1) { Start-Process -FilePath $Dst }
 `;
 
-// Mac: once Mural has quit, swap the bundle (keeping the old one until the new one is in place), clear the
+// Mac: once Uriel has quit, swap the bundle (keeping the old one until the new one is in place), clear the
 // download quarantine the unsigned app would otherwise be stopped by, and open it again
 const MAC_SCRIPT = `#!/bin/sh
 pid="$1"; new="$2"; app="$3"; relaunch="$4"
@@ -155,7 +155,7 @@ function register() {
     return downloading;
   });
 
-  // "Restart now": on success Mural exits here and the answer never arrives
+  // "Restart now": on success Uriel exits here and the answer never arrives
   ipcMain.handle('updater-install', () => {
     if (!staged || applied) return { ok: false, error: 'nothing downloaded' };
     try {
@@ -167,7 +167,7 @@ function register() {
     }
   });
 
-  // "Later": the downloaded update goes in as Mural quits
+  // "Later": the downloaded update goes in as Uriel quits
   app.on('will-quit', () => {
     if (staged && !applied) { try { apply(false); } catch (e) {} }
   });
@@ -216,7 +216,7 @@ function register() {
     const { file } = staged;
     if (kind === 'appimage') {
       fs.renameSync(file, process.env.APPIMAGE);
-      // not app.relaunch(): its helper is this build's binary, inside the AppImage's mount that goes away as Mural
+      // not app.relaunch(): its helper is this build's binary, inside the AppImage's mount that goes away as Uriel
       // quits, and the new AppImage then can't mount ("Cannot mount AppImage, please check your FUSE setup")
       if (relaunch) {
         runDetached('/bin/sh', ['-c', APPIMAGE_RELAUNCH, 'muriel-update', String(process.pid), process.env.APPIMAGE],

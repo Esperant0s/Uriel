@@ -15,7 +15,7 @@ import android.os.Looper;
 import androidx.core.app.ServiceCompat;
 
 /**
- * Keeps Mural in the foreground while a song plays (Android stops background apps to save memory,
+ * Keeps Uriel in the foreground while a song plays (Android stops background apps to save memory,
  * which cut the music off) and receives the buttons of the playback notification on Android 12 and
  * older; newer versions call the media session directly. MediaControlsPlugin owns everything else.
  */
@@ -31,7 +31,7 @@ public class PlaybackService extends Service {
     static final String ACTION_ISLAND_DISMISSED = "io.github.cloverscripts.muriel.ISLAND_DISMISSED";
     // set when started with startForegroundService(): Android then insists on startForeground()
     static final String EXTRA_FOREGROUND = "foreground";
-    // Paused, Mural stays in the foreground this much longer. Android doesn't let an app in the background
+    // Paused, Uriel stays in the foreground this much longer. Android doesn't let an app in the background
     // come back into the foreground on its own, so the next song, or the music coming back after a call,
     // would otherwise stay silent (Android 15+ even stops it).
     static final long PAUSED_FOREGROUND_MS = 10 * 60 * 1000;
