@@ -1,4 +1,4 @@
-## Mural 1.5.4
+## Mural 1.5.5
 
 Mural is the new name of the Esperant0s fork of [Muriel](https://github.com/cloverscripts/riff-muriel) by cloverscripts, itself based on [Riff](https://github.com/rootscripts/riff) by rootscripts (MIT). It is its own app now and installs next to Muriel.
 
@@ -8,6 +8,19 @@ Mural is the new name of the Esperant0s fork of [Muriel](https://github.com/clov
 - **Windows:** installer below, or the portable exe on [windows-latest](https://github.com/Esperant0s/riff-muriel/releases/tag/windows-latest). Windows SmartScreen may warn because the files are unsigned: More info → Run anyway.
 - **macOS:** `.dmg` / `.zip` below, for Apple Silicon and Intel. The app is unsigned: if macOS blocks it, open System Settings → Privacy & Security → Open Anyway.
 - **Linux:** `.AppImage` below (needs FUSE 2: `fuse2` / `libfuse2`)
+
+**New in 1.5.5**
+- **More song and playlist controls:** a song's menu can share it or copy its link, and every playlist has a ⋯ menu with Play next, Add to queue, Start radio, Edit details, Duplicate, Share, Export and Delete.
+- **See what's downloaded:** playlists show how many of their songs are already on your device ("12 of 40 downloaded"), the Download button how many are left, and the download dialog how many it will skip.
+- **Less waiting on Home:** My Wave and For you show your last recommendations right away while new ones load, and the first few songs are prepared ahead so they start quickly (on phones only on Wi-Fi, never with Data Saver).
+- **Smarter shuffle:** songs you've already heard since opening Mural wait until everything else in the queue has played.
+
+**Fixed in 1.5.5**
+- **One loading circle:** a song that's loading shows its spinner in the play button only, not a second one over the player bar.
+- **No broken pictures:** a cover or photo that won't load tries other sizes, then steps aside instead of showing a broken-image icon.
+- **Player bar:** the cover sits inside the bar, the buttons and seek bar are centred together, and the song title always has room.
+- **Android:** pages have their titles back, the bottom bar's buttons are evenly spaced, the status and gesture bars take your theme's colours, and the now-playing controls are centred.
+- **Faster with big libraries:** lists with many favourites draw much quicker, and a long queue no longer slows down saving.
 
 **New in 1.5.4**
 - **No size limit for your library:** playlists, favorites and history now live in the app's database instead of the browser storage that capped everything at about 5 MB. They move over by themselves the first time you open 1.5.4.
