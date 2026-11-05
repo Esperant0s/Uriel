@@ -482,9 +482,23 @@ function youtubeVideoId(trackUrl) {
   } catch (_) {}
   return '';
 }
+// Deezer and Apple Music songs (dz_30879048, am_123) have no video yet: the id is the catalogue's and the url a
+// YouTube search page, and the video is found by search. `unresolved`: there is nothing to give yt-dlp yet.
+const CATALOG_TRACK_ID = /^(dz|am)_/;
+function youtubeSearchPageQuery(trackUrl) {
+  try {
+    const u = new URL(trackUrl);
+    const host = u.hostname.replace(/^www\./, '');
+    if ((host === 'youtube.com' || host.endsWith('.youtube.com')) && u.pathname === '/results') return u.searchParams.get('search_query') || '';
+  } catch (_) {}
+  return '';
+}
 function youtubeExtractTarget(trackUrl, trackId, platform) {
+  // a search for yt-dlp (a download with no video in mind): the id only names its cache file
+  if (/^ytsearch\d*:/.test(trackUrl || '')) return { url: trackUrl, youtube: true };
   const fromUrl = trackUrl ? youtubeVideoId(trackUrl) : '';
   const isYt = platform === 'youtube' || platform === 'ytmusic' || !!fromUrl;
+  if (!fromUrl && (youtubeSearchPageQuery(trackUrl) || (isYt && CATALOG_TRACK_ID.test(trackId || '')))) return { url: '', youtube: false, unresolved: true };
   if (!isYt) return { url: trackUrl, youtube: false };
   const id = cleanTrackId(fromUrl || trackId);
   if (!/^[A-Za-z0-9_-]{6,}$/.test(id)) return { url: trackUrl, youtube: platform === 'youtube' };
@@ -1815,6 +1829,7 @@ async function cacheThumbnailToDisk(cleanId, thumbnailUrl) {
 async function downloadTrackToDisk(trackUrl, trackId, platform, meta = {}, priority = 'background', clients = YT_PLAYER_CLIENTS) {
   const cleanId = cleanTrackId(trackId);
   const target = youtubeExtractTarget(trackUrl, trackId, platform);
+  if (target.unresolved) return;
   trackUrl = target.url;
   if (priority === 'background' && ytdlpQueue.backingOff(`dl:${cleanId}`)) return;
   // a prefetch may already be fetching this song: wait for it instead of reporting it missing
@@ -1940,6 +1955,15 @@ async function downloadTrackToDisk(trackUrl, trackId, platform, meta = {}, prior
 // priority 'normal' for the song that plays next (the app asks near the end of the current one, and it
 // should be ready in time), 'background' for guesses such as the top search result
 async function prefetchTrack(trackUrl, trackId, platform, meta = null, priority = 'background') {
+  // a song without a video yet: prepare the video the app will find when it is played (the same search)
+  if (youtubeExtractTarget(trackUrl, trackId, platform).unresolved) {
+    if (prefetchingSet.size > 2) return;
+    if (meta && findLocalSong(meta.title, meta.artist, meta.duration)) return;
+    const query = youtubeSearchPageQuery(trackUrl) || (meta ? `${meta.artist || ''} ${meta.title || ''}`.trim() : '');
+    const [found] = query ? await directYoutubeSearch(query).catch(() => []) : [];
+    if (found && found.url) await prefetchTrack(found.url, found.id, 'youtube', meta, priority);
+    return;
+  }
   let cleanId = cleanTrackId(trackId);
   if (!cleanId && trackUrl && trackUrl.includes('v=')) {
     cleanId = cleanTrackId(trackUrl.split('v=')[1].split('&')[0]);
@@ -2575,7 +2599,7 @@ async function downloadInto(s, url, platform) {
   return null;
 }
 const PHONE_STRATEGIES = [
-  { name: 'download', source: (s) => (s.youtube ? 'youtube-fast' : null), maxMs: 60000, canHandle: (s) => !!s.cleanId,
+  { name: 'download', source: (s) => (s.youtube ? 'youtube-fast' : null), maxMs: 60000, canHandle: (s) => !!s.cleanId && !!s.trackUrl,
     attempt: (s) => downloadInto(s, s.trackUrl, s.platform) },
   // any song that won't play (SoundCloud and YouTube Music included) tries other YouTube uploads of it
   { name: 'otherUploads', source: 'youtube-fast', maxMs: 90000, canHandle: (s) => !!s.cleanId && s.platform !== 'local' && !!(s.title || s.artist),
@@ -3522,7 +3546,7 @@ async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3',
   const tempTemplate = isRaw ? path.join(tmpDir, tempName.replace(/\.wav$/, '.%(ext)s')) : path.join(downloadsDir, `${tplSafe(cleanArtist)} - ${tplSafe(cleanTitle)}.%(ext)s`);
 
   let targetUrl = trackUrl;
-  if (!isSafeMediaUrl(targetUrl) || targetUrl.includes('deezer.com')) {
+  if (!isSafeMediaUrl(targetUrl) || targetUrl.includes('deezer.com') || youtubeSearchPageQuery(targetUrl)) {
     targetUrl = `ytsearch1:${cleanArtist} ${cleanTitle} official audio`;
   }
 
@@ -7339,7 +7363,7 @@ function stopServer() {
   });
 }
 
-module.exports = { startServer, stopServer, PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, streamHealthStats, _test: { withYtDlpCookies } };
+module.exports = { startServer, stopServer, PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, streamHealthStats, _test: { withYtDlpCookies, youtubeExtractTarget } };
 
 if (require.main === module) {
   startServer();
