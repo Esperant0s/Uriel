@@ -341,6 +341,7 @@ function saveTrackMetadata(cleanId, meta) {
     ...meta,
     lastPlayed: Date.now()
   };
+  cachedSongIndex = null;
   try {
     writeJsonFile(METADATA_PATH, trackMetadataIndex);
   } catch (e) {}
@@ -523,6 +524,18 @@ async function findCachedFile(trackId) {
     } catch (e) {}
   }
   return null;
+}
+
+// A Deezer or Apple Music song has no video until it is searched for, and its copy is saved under the video's id,
+// so its own id never finds it. The saved title and artist do (the same rule as songs on the device).
+let cachedSongIndex = null;
+async function findCachedSong(title, artist, duration) {
+  if (!title) return null;
+  if (!cachedSongIndex) {
+    cachedSongIndex = createLocalIndex(Object.entries(trackMetadataIndex).map(([id, m]) => ({ id, title: m && m.title, artist: m && m.artist, duration: m && m.duration })));
+  }
+  const song = cachedSongIndex.find({ title, artist, duration: Number(duration) || 0 });
+  return song && await findCachedFile(song.id) ? song.id : null;
 }
 
 // The offline songs' size limit (Settings → Storage). 0 until the page says, so nothing is removed before then.
@@ -1959,7 +1972,7 @@ async function prefetchTrack(trackUrl, trackId, platform, meta = null, priority 
   // a song without a video yet: prepare the video the app will find when it is played (the same search)
   if (youtubeExtractTarget(trackUrl, trackId, platform).unresolved) {
     if (prefetchingSet.size > 2) return;
-    if (meta && findLocalSong(meta.title, meta.artist, meta.duration)) return;
+    if (meta && (findLocalSong(meta.title, meta.artist, meta.duration) || await findCachedSong(meta.title, meta.artist, meta.duration))) return;
     const query = youtubeSearchPageQuery(trackUrl) || (meta ? `${meta.artist || ''} ${meta.title || ''}`.trim() : '');
     const [found] = query ? await directYoutubeSearch(query).catch(() => []) : [];
     if (found && found.url) await prefetchTrack(found.url, found.id, 'youtube', meta, priority);
@@ -2664,51 +2677,44 @@ async function alternativeUploads(cleanId, title, artist, duration) {
     .map((t) => `https://www.youtube.com/watch?v=${t.id}`);
 }
 
-// fresh: the app could not play the URL it got last time (or the lookup failed): skip the remembered URL
-async function handleStreamInfo(req, res, trackUrl, trackId, platform = 'youtube', title = '', artist = '', duration = 0, thumbnail = '', fresh = false) {
+// The answer for a song already on this device, or null. Touches no network.
+async function localCopyAnswer(cleanId, trackUrl, trackId, platform, title, artist, duration) {
+  const [cachedFile, downloadedName] = await Promise.all([
+    cleanId ? findCachedFile(cleanId) : Promise.resolve(null),
+    (title || artist) ? findDownloadedFile(title, artist) : Promise.resolve(null)
+  ]);
+  if (cachedFile) {
+    return { success: true, isLocal: true, streamUrl: withToken(`${serverOrigin()}/api/local-track?id=${encodeURIComponent(cleanId)}`) };
+  }
+  if (downloadedName) {
+    return { success: true, isLocal: true, isDownload: true, streamUrl: withToken(`${serverOrigin()}/api/downloaded-track?name=${encodeURIComponent(downloadedName)}`) };
+  }
+  // the same song is on the device already (Music folder, phone library, imported): play that file
+  const localSong = findLocalSong(title, artist, duration);
+  if (localSong) {
+    return { success: true, isLocal: true, localId: localSong.id, streamUrl: withToken(`${serverOrigin()}/api/library-file?id=${encodeURIComponent(localSong.id)}`) };
+  }
+  // only a song with no video in mind: one picked by its video plays that video, not another upload of the song
+  if (!cleanId || youtubeExtractTarget(trackUrl, trackId, platform).unresolved) {
+    const savedId = await findCachedSong(title, artist, duration);
+    if (savedId) return { success: true, isLocal: true, streamUrl: withToken(`${serverOrigin()}/api/local-track?id=${encodeURIComponent(savedId)}`) };
+  }
+  return null;
+}
+
+// fresh: the app could not play the URL it got last time (or the lookup failed): skip the remembered URL.
+// localOnly: answer from this device or not at all, so the app can ask before it searches online.
+async function handleStreamInfo(req, res, trackUrl, trackId, platform = 'youtube', title = '', artist = '', duration = 0, thumbnail = '', fresh = false, localOnly = false) {
   let cleanId = cleanTrackId(trackId);
   if (!cleanId && trackUrl && trackUrl.includes('v=')) {
     cleanId = cleanTrackId(trackUrl.split('v=')[1].split('&')[0]);
   }
   const meta = { title, artist, duration, thumbnail };
 
-  const [cachedFile, downloadedName] = await Promise.all([
-    cleanId ? findCachedFile(cleanId) : Promise.resolve(null),
-    (title || artist) ? findDownloadedFile(title, artist) : Promise.resolve(null)
-  ]);
-
-  if (cachedFile) {
-    const data = {
-      success: true,
-      isLocal: true,
-      streamUrl: withToken(`${serverOrigin()}/api/local-track?id=${encodeURIComponent(cleanId)}`)
-    };
+  const localCopy = await localCopyAnswer(cleanId, trackUrl, trackId, platform, title, artist, duration);
+  if (localCopy || localOnly) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify(data));
-  }
-
-  if (downloadedName) {
-    const data = {
-      success: true,
-      isLocal: true,
-      isDownload: true,
-      streamUrl: withToken(`${serverOrigin()}/api/downloaded-track?name=${encodeURIComponent(downloadedName)}`)
-    };
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify(data));
-  }
-
-  // the same song is on the device already (Music folder, phone library, imported): play that file
-  const localSong = findLocalSong(title, artist, duration);
-  if (localSong) {
-    const data = {
-      success: true,
-      isLocal: true,
-      localId: localSong.id,
-      streamUrl: withToken(`${serverOrigin()}/api/library-file?id=${encodeURIComponent(localSong.id)}`)
-    };
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify(data));
+    return res.end(JSON.stringify(localCopy || { success: false, notLocal: true }));
   }
 
   const cacheKey = (cleanId || trackUrl || `${artist}_${title}`).toLowerCase();
@@ -6989,7 +6995,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
     const artist = parsedUrl.query.artist || '';
     const duration = parsedUrl.query.duration || 0;
     const thumbnail = parsedUrl.query.thumbnail || '';
-    return handleStreamInfo(req, res, trackUrl, trackId, platform, title, artist, duration, thumbnail, parsedUrl.query.fresh === '1');
+    return handleStreamInfo(req, res, trackUrl, trackId, platform, title, artist, duration, thumbnail, parsedUrl.query.fresh === '1', parsedUrl.query.localOnly === '1');
   }
 
   if (parsedUrl.pathname === '/api/local-track') {

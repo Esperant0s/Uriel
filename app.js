@@ -4056,6 +4056,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if ((!resolvedUrl && !resolvedId) || (resolvedUrl && resolvedUrl.includes('/results?search_query='))) {
         if (track.searchQuery) {
+          // a song already on this device plays from there at once; only otherwise is its video searched for
+          if (await attachStream(track, resolvedUrl, resolvedId, currentToken, signal, false, true)) {
+            applyAudioSettings();
+            return;
+          }
+          if (currentToken !== state.loadToken) return;
           try {
             const searchRes = await fetch(`http://127.0.0.1:${state.serverPort}/api/search?q=${encodeURIComponent(track.searchQuery)}&platform=youtube&limit=1`, { signal });
             const sData = await searchRes.json();
@@ -4084,13 +4090,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Looks the song up (/api/stream-info) and gives its stream to the audio element. Resolves false when
-  // another song was started meanwhile; throws when there is nothing to play.
-  async function attachStream(track, resolvedUrl, resolvedId, currentToken, signal, fresh) {
-    const streamInfoUrl = `http://127.0.0.1:${state.serverPort}/api/stream-info?url=${encodeURIComponent(resolvedUrl || '')}&id=${encodeURIComponent(resolvedId || '')}${fresh ? '&fresh=1' : ''}&platform=${track.platform || state.platform}&title=${encodeURIComponent(track.title || '')}&artist=${encodeURIComponent(track.artist || '')}&duration=${encodeURIComponent(track.duration || 0)}&thumbnail=${encodeURIComponent(track.thumbnail || '')}`;
+  // another song was started meanwhile; throws when there is nothing to play. localOnly: only a copy on this
+  // device counts, and without one it resolves false.
+  async function attachStream(track, resolvedUrl, resolvedId, currentToken, signal, fresh, localOnly = false) {
+    const streamInfoUrl = `http://127.0.0.1:${state.serverPort}/api/stream-info?url=${encodeURIComponent(resolvedUrl || '')}&id=${encodeURIComponent(resolvedId || '')}${fresh ? '&fresh=1' : ''}${localOnly ? '&localOnly=1' : ''}&platform=${track.platform || state.platform}&title=${encodeURIComponent(track.title || '')}&artist=${encodeURIComponent(track.artist || '')}&duration=${encodeURIComponent(track.duration || 0)}&thumbnail=${encodeURIComponent(track.thumbnail || '')}`;
     const res = await fetch(streamInfoUrl, { signal });
     const data = await res.json();
 
     if (currentToken !== state.loadToken) return false;
+    if (localOnly && !(data && data.success)) return false;
 
     // a downloaded, cached or device copy plays: the song is available offline
     if (data && data.success && data.isLocal) { try { offlineChanged(track, true); } catch (e) {} }
