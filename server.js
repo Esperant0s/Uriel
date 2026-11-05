@@ -5,7 +5,8 @@ const url = require('url');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { spawn } = require("child_process");
+const childProcs = require('./child-procs');
+const spawn = (...args) => childProcs.track(require('child_process').spawn(...args));
 const { StringDecoder } = require("string_decoder");
 const dns = require('dns');
 const net = require('net');
@@ -7363,7 +7364,7 @@ function stopServer() {
   });
 }
 
-module.exports = { startServer, stopServer, PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, streamHealthStats, _test: { withYtDlpCookies, youtubeExtractTarget } };
+module.exports = { startServer, stopServer, stopChildren: () => childProcs.stopAll(), PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, streamHealthStats, _test: { withYtDlpCookies, youtubeExtractTarget } };
 
 if (require.main === module) {
   startServer();

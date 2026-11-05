@@ -3986,6 +3986,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     scrubProgress = 0;
 
     state.loadToken++;
+    state.queueRestorePosition = 0; // a place in the song before this one (Play reads it before it gets here)
     const currentToken = state.loadToken;
     if (advancing || SKIP_CONTEXTS.has(context)) skipOnFailToken = currentToken;
     setTrackLoading(true);
@@ -4131,6 +4132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           hls._urielRecovered = true;
           try { hls.recoverMediaError(); return; } catch (e) {}
         }
+        if (recoverMidSong(currentToken, track)) return;
         try { hls.destroy(); } catch (e) {}
         if (hlsInstance === hls) hlsInstance = null;
         state.isPlaying = false;
@@ -4197,6 +4199,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return line;
   }
   function retryFresh(token, track) {
+    if (resumeAt && resumeAt.token === token) return recoverMidSong(token, track);
     if (token !== state.loadToken || freshRetryToken === token || !state.trackLoading || !track || track !== state.currentTrack || track.platform === 'local') return false;
     if (!navigator.onLine) return false;
     freshRetryToken = token;
@@ -4214,6 +4217,82 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     return true;
   }
+
+  // A song that was playing and lost its stream continues where it stopped (playback-recovery.js). When it won't
+  // come back the song is unloaded, so that Play looks it up again at the same place. False: not for this path.
+  const midSongRecovery = window.UrielPlaybackRecovery.createMidSongRecovery();
+  let midSongLookup = -1; // loadToken of the look-up under way
+  let waitingForNet = null;
+  let resumeAt = null;
+  function unloadAtPosition(pos) {
+    const a = el.nativeAudio;
+    if (hlsInstance) { try { hlsInstance.destroy(); } catch (e) {} hlsInstance = null; }
+    try { a.pause(); a.removeAttribute('src'); a.load(); } catch (e) {}
+    state.queueRestorePosition = pos;
+    state.isPlaying = false;
+    document.body.classList.remove('is-playing');
+  }
+  function recoverMidSong(token, track) {
+    if (token !== state.loadToken || !track || track !== state.currentTrack) return false;
+    // a look-up that came back with a stream that fails too is still the same recovery, with the same place to continue
+    const resuming = !!resumeAt && resumeAt.token === token;
+    if (state.trackLoading && !resuming) return false;
+    if (midSongLookup === token || (waitingForNet && waitingForNet.token === token)) return true;
+    const a = el.nativeAudio;
+    const pos = resuming ? resumeAt.pos : (a.currentTime || 0);
+    // nearly over anyway: on to the next song rather than the same one from the start
+    if (a.duration && pos > 1 && !window.UrielPlaybackRecovery.resumePosition(pos, a.duration)) { resumeAt = null; playNext(); return true; }
+    const action = midSongRecovery.decide({ song: token, local: track.platform === 'local', online: navigator.onLine });
+    if (action === 'give-up') {
+      resumeAt = null;
+      if (track.platform === 'local') return false;
+      // it stops here rather than skipping on: a song that played until now is rarely the problem, the connection is
+      unloadAtPosition(pos);
+      setTrackLoading(false);
+      updatePlayPauseButton(false, false);
+      showToast(Tm('Could not play this song. Try again or skip.'), 'error');
+      return true;
+    }
+    if (action === 'wait-online') {
+      resumeAt = null;
+      setTrackLoading(false);
+      waitingForNet = { token, track, pos };
+      updatePlayPauseButton(true, true);
+      showToast(Tm('Connection lost. The song continues when it is back.'));
+      return true;
+    }
+    if (!resuming) { resumeStream(token, track, pos); return true; }
+    midSongLookup = token; // a connection that is only just coming back gets a moment between tries
+    setTimeout(() => {
+      if (midSongLookup === token) midSongLookup = -1;
+      if (token === state.loadToken && track === state.currentTrack) resumeStream(token, track, pos);
+    }, 3000);
+    return true;
+  }
+  function resumeStream(token, track, pos) {
+    console.warn('Track playback: stream lost, looking it up again');
+    midSongLookup = token;
+    resumeAt = { token, pos };
+    setTrackLoading(true); // nothing is audible until it continues (phones keep themselves running on this)
+    updatePlayPauseButton(true, true);
+    const signal = state.currentAbortController ? state.currentAbortController.signal : undefined;
+    attachStream(track, track.url, track.id, token, signal, true).then((ok) => {
+      if (midSongLookup === token) midSongLookup = -1;
+      if (ok) applyAudioSettings();
+    }, (err) => {
+      if (midSongLookup === token) midSongLookup = -1;
+      if ((err && err.name === 'AbortError') || token !== state.loadToken) return;
+      logPlaybackIssue('Track playback notice (mid-song look-up)', err);
+      recoverMidSong(token, track);
+    });
+  }
+  window.addEventListener('online', () => {
+    const w = waitingForNet;
+    waitingForNet = null;
+    if (!w || w.token !== state.loadToken || w.track !== state.currentTrack) return;
+    if (!state.isPlaying || el.nativeAudio.paused) { unloadAtPosition(w.pos); updatePlayPauseButton(false, false); return; } // paused meanwhile: it stays paused
+    resumeStream(w.token, w.track, w.pos);
+  });
 
   function flipAnimate(elements, mutateFn, duration = 380) {
     const validElements = (elements || []).filter(item => item && item.getBoundingClientRect);
@@ -6628,6 +6707,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // only an error on the song that is actually loaded counts (unloading one between songs is not a failure)
       if (!state.currentTrack || (!el.nativeAudio.src && !hlsInstance)) return;
       logPlaybackIssue('Audio element error', null);
+      if (recoverMidSong(state.loadToken, state.currentTrack)) return;
       state.isPlaying = false;
       document.body.classList.remove('is-playing');
       if (tryProxyFallback(state.loadToken, state.currentTrack)) return;
@@ -6657,22 +6737,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         stallTimer = null;
         const a = el.nativeAudio;
         if (token !== state.loadToken || track !== state.currentTrack || a.paused || a.readyState >= 3) return;
-        if (!track || track.platform === 'local' || state.trackLoading || !navigator.onLine) return;
-        const pos = a.currentTime || 0;
-        console.warn('Track playback: stalled, looking the stream up again');
-        const resume = () => { a.removeEventListener('loadedmetadata', resume); if (token === state.loadToken && pos > 1 && (!a.duration || pos < a.duration - 2)) a.currentTime = pos; };
-        a.addEventListener('loadedmetadata', resume);
-        const signal = state.currentAbortController ? state.currentAbortController.signal : undefined;
-        attachStream(track, track.url, track.id, token, signal, true).then((ok) => { if (ok) applyAudioSettings(); else a.removeEventListener('loadedmetadata', resume); }, (err) => {
-          a.removeEventListener('loadedmetadata', resume);
-          // the fresh look-up failed too: stop the spinner and move on, as retryFresh does
-          if ((err && err.name === 'AbortError') || token !== state.loadToken) return;
-          logPlaybackIssue('Track playback notice (stall retry)', err);
-          updatePlayPauseButton(false, false);
-          if (!skipUnplayable(token, track)) showToast((err && err.message) || Tm('Could not load audio stream'), 'error');
-        });
+        if (!track || track.platform === 'local' || state.trackLoading) return;
+        recoverMidSong(token, track);
       }, 12000);
     }
+
+    // whichever look-up brings the stream back (a failed one is tried again): it continues at the saved place
+    el.nativeAudio.addEventListener('loadedmetadata', () => {
+      const r = resumeAt;
+      if (!r || r.token !== state.loadToken) return;
+      const pos = window.UrielPlaybackRecovery.resumePosition(r.pos, el.nativeAudio.duration);
+      if (pos) el.nativeAudio.currentTime = pos;
+    });
 
     // Each look-up starts yt-dlp, which can run a JavaScript runtime at full CPU (#16), so the computer
     // only looks up the one song that plays next, and only near the end of this one. Phones download
@@ -6686,6 +6762,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     el.nativeAudio.addEventListener('playing', () => {
       notePlayedThisSession(state.currentTrack);
+      resumeAt = null;
       failStreak = 0;
       state.isPlaying = true;
       setTrackLoading(false);

@@ -6,7 +6,9 @@
 // without re-encoding, anything else (AAC, MP3, SoundCloud's HLS) is converted to Opus 128k like
 // yt-dlp did. When the URL no longer works (expired, 403) the caller falls back to yt-dlp.
 
-const { spawn } = require('child_process');
+const { spawn: startProcess } = require('child_process');
+const { track } = require('./child-procs');
+const spawn = (...args) => track(startProcess(...args));
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 

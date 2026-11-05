@@ -819,6 +819,9 @@ function runGUI() {
       app.on('before-quit', () => {
         isQuitting = true;
       });
+      app.on('will-quit', () => {
+        try { require('./server').stopChildren(); } catch (e) {}
+      });
 
       app.whenReady().then(() => {
         setupTray();
