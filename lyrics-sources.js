@@ -258,7 +258,34 @@
     return Math.min(1, Math.max(0, done / total));
   }
 
-  const api = { extractGeniusLyrics, pickGeniusHit, parseYrc, pickNetEaseSong, parseEnhancedLrcWords, lineSimilarity, alignWordTimings, timedWords, timedProgress };
+  // Which lyric line is playing at time t: the line whose start has passed and whose next timed line hasn't begun.
+  // startOf(i) is a line's start in seconds, below 0 for a line without a time. This runs every frame, so `last`
+  // (the line from the previous frame) is checked first; nearly always it is still the one.
+  function activeLineIndex(count, startOf, t, last = -1) {
+    if (last >= 0 && last < count) {
+      const start = startOf(last);
+      if (start >= 0 && t >= start) {
+        let next = Infinity;
+        for (let j = last + 1; j < count; j++) {
+          const s = startOf(j);
+          if (s >= 0) { next = s; break; }
+        }
+        if (t < next) return last;
+      }
+    }
+    let line = -1;
+    let lineStart = 0;
+    for (let i = 0; i < count; i++) {
+      const s = startOf(i);
+      if (s < 0) continue;
+      if (line >= 0 && t >= lineStart && t < s) return line;
+      line = i;
+      lineStart = s;
+    }
+    return line >= 0 && t >= lineStart ? line : -1;
+  }
+
+  const api = { activeLineIndex, extractGeniusLyrics, pickGeniusHit, parseYrc, pickNetEaseSong, parseEnhancedLrcWords, lineSimilarity, alignWordTimings, timedWords, timedProgress };
   if (typeof module !== 'undefined') module.exports = api;
   else window.UrielLyricsSources = api;
 })();

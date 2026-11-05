@@ -129,14 +129,21 @@ async function youtubeAudio(id) {
 }
 
 // ---- SoundCloud (public api-v2 with the web client's client_id) ----
+// finding it downloads a script of about 3 MB, so it is kept between starts; scApi reads a new one when it's refused
+const SC_ID_KEY = 'uriel_sc_client_id';
 let scClientId = null;
 async function scId(force) {
+  if (!scClientId && !force) { try { scClientId = localStorage.getItem(SC_ID_KEY); } catch (e) {} }
   if (scClientId && !force) return scClientId;
   const html = await (await globalThis.__urielFetch('https://soundcloud.com/', { headers: { 'User-Agent': DESKTOP_UA } })).text();
   const scripts = [...html.matchAll(/<script[^>]+src="(https:\/\/a-v2\.sndcdn\.com\/assets\/[^"]+\.js)"/g)].map((m) => m[1]).reverse();
   for (const s of scripts) {
     const m = (await (await globalThis.__urielFetch(s)).text()).match(/client_id\s*[:=]\s*"([a-zA-Z0-9]{20,})"/);
-    if (m) return (scClientId = m[1]);
+    if (m) {
+      scClientId = m[1];
+      try { localStorage.setItem(SC_ID_KEY, scClientId); } catch (e) {}
+      return scClientId;
+    }
   }
   throw new Error('SoundCloud client id not found');
 }

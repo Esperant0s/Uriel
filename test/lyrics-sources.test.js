@@ -120,3 +120,25 @@ test('line similarity shrugs off punctuation and a dropped word', () => {
   assert.ok(S.lineSimilarity('Oh look at the stars', 'Look at the stars') >= 0.6);
   assert.ok(S.lineSimilarity('Look at the stars', 'Completely unrelated') < 0.6);
 });
+
+test('activeLineIndex finds the playing line and skips lines without a time', () => {
+  const times = [5, -1, 10, 10, 20];
+  const start = (i) => times[i];
+  assert.strictEqual(S.activeLineIndex(5, start, 1), -1, 'before the first line');
+  assert.strictEqual(S.activeLineIndex(5, start, 5), 0);
+  assert.strictEqual(S.activeLineIndex(5, start, 9.9), 0, 'an untimed line in between changes nothing');
+  assert.strictEqual(S.activeLineIndex(5, start, 10), 3, 'of two lines at the same time, the later one');
+  assert.strictEqual(S.activeLineIndex(5, start, 99), 4, 'the last line stays');
+  assert.strictEqual(S.activeLineIndex(0, start, 3), -1);
+});
+
+test('activeLineIndex gives the same answer with any hint, and reads few lines when the hint is right', () => {
+  const times = [0, 2, 4, 6, 8, 10];
+  for (let t = -1; t < 12; t += 0.5) {
+    const plain = S.activeLineIndex(6, (i) => times[i], t);
+    for (const hint of [-1, 0, 3, 5, 9]) assert.strictEqual(S.activeLineIndex(6, (i) => times[i], t, hint), plain);
+  }
+  let reads = 0;
+  assert.strictEqual(S.activeLineIndex(6, (i) => { reads++; return times[i]; }, 5, 2), 2);
+  assert.strictEqual(reads, 2, 'only this line and the next');
+});

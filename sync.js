@@ -87,7 +87,11 @@
   const settingValues = () => Object.fromEntries(SETTINGS.map((k) => [k, localStorage.getItem(k)]));
   const lists = () => meta.lists || (meta.lists = {});
 
+  // the lists couldn't be read (library-store.js): what looks missing isn't deleted, so nothing here may say it is
+  const libraryUnavailable = () => { const L = window.UrielLibraryStore; return !!(L && L.store && L.store.mode() === 'unavailable'); };
+
   function stamp(name) {
+    if (libraryUnavailable()) return;
     const now = Date.now();
     if (name === 'settings') meta.settings = Core.stampMap(meta.settings || null, settingValues(), now);
     else lists()[name] = Core.pruneMeta(Core.stampList(lists()[name] || null, listItems(name), LISTS[name].id, now), now, KEEP_TOMBSTONES);
@@ -234,7 +238,7 @@
   };
 
   function startPeer() {
-    if (peer || !active() || !havePeer(startPeer)) return;
+    if (peer || !active() || libraryUnavailable() || !havePeer(startPeer)) return;
     try { peer = new window.Peer(peerId(device.id), serverOpts()); } catch (e) { peer = null; return; }
     peer.on('open', () => { dialAll(); });
     peer.on('connection', (conn) => accept(conn, false));
@@ -351,7 +355,7 @@
   }
 
   function startLinking() {
-    if (!havePeer(startLinking)) return;
+    if (libraryUnavailable() || !havePeer(startLinking)) return;
     stopLinking();
     ensureGroup();
     startPeer();
@@ -387,6 +391,7 @@
 
   let joining = null;
   function joinWithCode(raw) {
+    if (libraryUnavailable()) return;
     const code = cleanCode(raw);
     if (code.length !== 8) { joining = { error: 'The code has 8 letters and numbers, like K7M2-9QXP.' }; render(); return; }
     if (!havePeer(() => joinWithCode(raw))) return;

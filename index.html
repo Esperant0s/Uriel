@@ -1779,6 +1779,21 @@
                 <button class="btn-outline-pill" id="btn-clear-offline">Clear</button>
               </div>
             </div>
+            <div class="setting-item" id="offline-limit-item">
+              <div class="setting-item-top" style="align-items: center;">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <span class="setting-name" data-i18n>Song storage limit</span>
+                  <span style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);" data-i18n>Songs you play are kept for offline use. Over this limit, the ones played longest ago are removed.</span>
+                </div>
+              </div>
+              <div class="theme-mode-toggle" style="margin-top: 10px;">
+                <button class="fps-cap-btn" data-limit="5120">5 GB</button>
+                <button class="fps-cap-btn" data-limit="10240">10 GB</button>
+                <button class="fps-cap-btn" data-limit="25600">25 GB</button>
+                <button class="fps-cap-btn" data-limit="51200">50 GB</button>
+                <button class="fps-cap-btn" data-limit="0" data-i18n>No limit</button>
+              </div>
+            </div>
             <div class="setting-item clickable clear-cache-row" id="btn-open-clear-cache">
               <div class="setting-item-top" style="cursor: pointer; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 12px;">

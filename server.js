@@ -21,6 +21,7 @@ const libraryPages = require('./library-pages');
 const recommendCore = require('./recommend-core');
 const { createTaskQueue, lowerPriority } = require('./ytdlp-queue');
 const { searchSoundcloudApi } = require('./soundcloud-search');
+const diskCache = require('./disk-cache');
 const { copyStreamToCache } = require('./cache-copy');
 const streamSource = require('./stream-source');
 const ytFast = require('./yt-fast');
@@ -509,6 +510,30 @@ async function findCachedFile(trackId) {
   return null;
 }
 
+// The offline songs' size limit (Settings → Storage). 0 until the page says, so nothing is removed before then.
+let cacheLimitBytes = 0;
+let cacheLimitRunning = false;
+async function enforceCacheLimit() {
+  if (!cacheLimitBytes || cacheLimitRunning) return;
+  cacheLimitRunning = true;
+  let changed = false;
+  try {
+    await diskCache.enforceLimit(CACHE_DIR, cacheLimitBytes, {
+      lastPlayed: (id) => (trackMetadataIndex[id] && trackMetadataIndex[id].lastPlayed) || 0,
+      onRemoved: (id) => {
+        delete trackMetadataIndex[id];
+        changed = true;
+        fs.promises.unlink(path.join(THUMBNAILS_DIR, `${id}.jpg`)).catch(() => {});
+      },
+    });
+  } catch (e) {
+    try { logger.log('warn', `cache limit: ${e && e.message}`); } catch (_) {}
+  } finally {
+    cacheLimitRunning = false;
+  }
+  if (changed) try { writeJsonFile(METADATA_PATH, trackMetadataIndex); } catch (e) {}
+}
+
 async function pruneDiskCache() {
   try {
     const files = await fs.promises.readdir(CACHE_DIR);
@@ -670,15 +695,33 @@ const recentlyRecommendedTrackIds = new Set();
 const recentlyRecommendedKeys = new Set();
 
 // The SoundCloud web client's public client_id, read from soundcloud.com's script bundles (it rotates now and then).
-let scClientIdCache = { id: '', at: 0 };
+// Finding it means downloading a script of about 3 MB, so it is kept between starts. If it rotated sooner, the calls
+// that get refused (401/403) reset it and read it again.
+const SC_CLIENT_ID_PATH = path.join(DATA_DIR, 'soundcloud-client.json');
+const SC_CLIENT_ID_MAX_AGE = 7 * 24 * 3600 * 1000;
+let scClientIdCache = null;
+function scClientIdKept() {
+  if (scClientIdCache) return scClientIdCache;
+  scClientIdCache = { id: '', at: 0 };
+  try {
+    const kept = JSON.parse(fs.readFileSync(SC_CLIENT_ID_PATH, 'utf8'));
+    if (kept && typeof kept.id === 'string' && Number.isFinite(kept.at)) scClientIdCache = kept;
+  } catch (_) {}
+  return scClientIdCache;
+}
 async function soundcloudClientId(html) {
-  if (scClientIdCache.id && Date.now() - scClientIdCache.at < 6 * 3600 * 1000) return scClientIdCache.id;
+  const kept = scClientIdKept();
+  if (kept.id && Date.now() - kept.at < SC_CLIENT_ID_MAX_AGE) return kept.id;
   const page = html || await fetchWithTimeout('https://soundcloud.com/', { headers: { 'User-Agent': 'Mozilla/5.0' } }, 8000).then((r) => r.text());
   const scripts = [...page.matchAll(/src="(https:\/\/a-v2\.sndcdn\.com\/assets\/[^"]+\.js)"/g)].map((x) => x[1]).reverse();
   for (const s of scripts) {
     try {
       const m = (await fetchWithTimeout(s, {}, 8000).then((r) => r.text())).match(/client_id\s*[:=]\s*["']([a-zA-Z0-9]{20,})["']/);
-      if (m) { scClientIdCache = { id: m[1], at: Date.now() }; return m[1]; }
+      if (m) {
+        scClientIdCache = { id: m[1], at: Date.now() };
+        try { writeJsonFile(SC_CLIENT_ID_PATH, scClientIdCache); } catch (_) {}
+        return m[1];
+      }
     } catch (_) {}
   }
   throw new Error('SoundCloud client id not found');
@@ -1834,6 +1877,7 @@ async function downloadTrackToDisk(trackUrl, trackId, platform, meta = {}, prior
       const stat = await fs.promises.stat(tempPath);
       await fs.promises.rename(tempPath, path.join(CACHE_DIR, `${cleanId}.opus`));
       saveTrackMetadata(cleanId, { id: trackId, title: meta.title || '', artist: meta.artist || '', duration: meta.duration || 0, thumbnail: meta.thumbnail || '', platform: platform || 'youtube', fileSize: stat.size });
+      enforceCacheLimit();
     } catch (e) { return false; }
     if (downloadProcs.get(cleanId) === placeholder) downloadProcs.delete(cleanId);
     return true;
@@ -1863,6 +1907,7 @@ async function downloadTrackToDisk(trackUrl, trackId, platform, meta = {}, prior
               platform: platform || 'youtube',
               fileSize: stat.size
             });
+            enforceCacheLimit();
           } else {
             try { await fs.promises.unlink(found); } catch (e) {}
           }
@@ -7183,6 +7228,20 @@ const server = http.createServer(guardHandler(async (req, res) => {
     try { if (fs.existsSync(thumbPath)) await fs.promises.unlink(thumbPath); } catch (e) {}
     delete trackMetadataIndex[cleanId];
     try { writeJsonFile(METADATA_PATH, trackMetadataIndex); } catch (e) {}
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ success: true }));
+  }
+
+  // apply=1: the user just changed it, so it applies now. Otherwise it applies after the next finished download,
+  // so opening the app never deletes anything by itself.
+  if (parsedUrl.pathname === '/api/cache-limit' && req.method === 'POST') {
+    const mb = Number(parsedUrl.query.mb);
+    if (!Number.isFinite(mb) || mb < 0) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: false, error: 'bad limit' }));
+    }
+    cacheLimitBytes = mb * 1024 * 1024;
+    if (parsedUrl.query.apply === '1') await enforceCacheLimit();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ success: true }));
   }

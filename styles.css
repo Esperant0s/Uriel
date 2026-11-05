@@ -9145,3 +9145,11 @@ body.hide-titlebar:not(.mini) .update-banner { top: 76px; }
   html:not(.is-mobile) body:not(.mini) .playback-controls .btn-play-pause:active { transform: scale(0.96); }
   html:not(.is-mobile) body:not(.mini) .playback-controls .btn-play-pause svg { width: 20px; height: 20px; }
 }
+
+/* the saved library couldn't be opened (app.js, libraryUnavailableScreen) */
+#library-unavailable { position: fixed; inset: 0; z-index: 2147483000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; background: var(--md-sys-color-surface, #111); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); color: var(--md-sys-color-on-surface, #eee); }
+#library-unavailable h2 { margin: 0; font-size: 22px; }
+#library-unavailable p { margin: 0; max-width: 460px; line-height: 1.5; opacity: 0.8; }
+#library-unavailable button { min-width: 200px; min-height: 44px; padding: 0 20px; border: 1px solid currentColor; border-radius: 22px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+#library-unavailable button:first-of-type { border-color: transparent; background: var(--md-sys-color-primary, #fa3); color: var(--md-sys-color-on-primary, #111); }
+#library-unavailable button:focus-visible { outline: 2px solid currentColor !important; outline-offset: 2px; }

@@ -83,9 +83,56 @@ test('a stuck database is skipped before the move (localStorage has it all), wai
   const before = L.createStore(local({ devsize_playlists: PL }), idb({}, { hang: true }), { timeoutMs: 20 });
   assert.equal(await before.ready, 'local');
   assert.equal(before.get('devsize_playlists'), PL);
-  const after = L.createStore(local({ [L.MOVED]: '1' }), idb({}, { hang: true }), { timeoutMs: 20 });
+  const after = L.createStore(local({ [L.MOVED]: '1' }), idb({}, { hang: true }), { timeoutMs: 20, movedTimeoutMs: 200 });
   const won = await Promise.race([after.ready, new Promise((r) => setTimeout(() => r('still waiting'), 60))]);
   assert.equal(won, 'still waiting', 'showing empty lists would let the next change overwrite the real ones');
+});
+
+test('a failed load after the move never overwrites the real lists', async () => {
+  const ls = local({ [L.MOVED]: '1' });
+  const broken = idb({ devsize_playlists: PL }, { fail: true });
+  const s = L.createStore(ls, broken, { retryMs: [1] });
+  assert.equal(await s.ready, 'unavailable');
+  assert.equal(s.get('devsize_favorites'), null);
+  s.set('devsize_favorites', '[1]');
+  assert.equal(s.get('devsize_favorites'), '[1]', 'this session still works, in memory');
+  s.closing(true);
+  await settle();
+  assert.equal(ls.m.has('devsize_favorites'), false, 'a copy here would win at the next start');
+  // the database recovers: everything is still there
+  const fixed = idb(Object.fromEntries(broken.m));
+  const next = L.createStore(ls, fixed);
+  assert.equal(await next.ready, 'idb');
+  assert.equal(next.get('devsize_playlists'), PL);
+  assert.equal(next.get('devsize_favorites'), null);
+});
+
+test('a failed load is tried again before giving up', async () => {
+  let calls = 0;
+  const good = idb({ devsize_playlists: PL });
+  const flaky = { ...good, loadAll: () => (++calls < 3 ? Promise.reject(new Error('busy')) : good.loadAll()) };
+  const s = L.createStore(local({ [L.MOVED]: '1' }), flaky, { retryMs: [1, 1] });
+  assert.equal(await s.ready, 'idb');
+  assert.equal(calls, 3);
+  assert.equal(s.get('devsize_playlists'), PL);
+});
+
+test('a database stuck for good after the move ends in unavailable, not a blank window', async () => {
+  const s = L.createStore(local({ [L.MOVED]: '1' }), idb({}, { hang: true }), { movedTimeoutMs: 10 });
+  assert.equal(await s.ready, 'unavailable');
+});
+
+test('removing a list while unavailable leaves the saved copies alone', async () => {
+  const ls = local({ [L.MOVED]: '1', devsize_history: '[9]', uriel_font: 'serif' });
+  const s = L.createStore(ls, idb({}, { fail: true }), { retryMs: [] });
+  await s.ready;
+  assert.equal(s.get('devsize_history'), '[9]', 'kept while closing last time');
+  s.remove('devsize_history');
+  assert.equal(s.get('devsize_history'), null);
+  assert.equal(ls.get('devsize_history'), '[9]');
+  assert.equal(s.keys().includes('devsize_history'), false);
+  s.set('uriel_font', 'sans');
+  assert.equal(ls.get('uriel_font'), 'sans', 'other settings save as usual');
 });
 
 test("a change saved before the database opened isn't lost", async () => {

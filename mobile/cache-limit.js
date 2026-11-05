@@ -31,7 +31,7 @@ function lastPlayedById() {
 function enforceCacheLimit() {
   // History is still loading from IndexedDB (library-store.js): without it every song looks unplayed
   const L = window.UrielLibraryStore;
-  if (L && L.store && L.store.mode() === 'starting') return;
+  if (L && L.store && (L.store.mode() === 'starting' || L.store.mode() === 'unavailable')) return;
   const limit = limitBytes();
   const played = lastPlayedById();
   let files;

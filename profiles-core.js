@@ -18,7 +18,7 @@
     // the window, the tray and the keyboard belong to the computer
     'uriel_tray_on_close', 'uriel_global_media_keys', 'uriel_win_global_media_keys', 'uriel_hide_titlebar',
     // what this device can handle
-    'uriel_perf_mode', 'uriel_battery_saver', 'uriel_fps_cap', 'uriel_cache_limit_mb', 'uriel_stream_timeout', 'uriel_audio_output_device',
+    'uriel_perf_mode', 'uriel_battery_saver', 'uriel_fps_cap', 'uriel_cache_limit_mb', 'uriel_sc_client_id', 'uriel_stream_timeout', 'uriel_audio_output_device',
     // asked, shown or done once per device
     'uriel_update_found', 'uriel_update_last', 'uriel_update_snooze', 'uriel_welcome_done', 'uriel_bg_asked',
     'uriel_scale_rebased_v2', 'uriel_debug_log',

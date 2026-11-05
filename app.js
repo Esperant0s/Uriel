@@ -103,9 +103,38 @@
   requestAnimationFrame(tick);
 })();
 
+// The saved lists couldn't be read (library-store.js). They are safe as long as nothing replaces them, so say so
+// and let the user try again; "Continue" runs this session on an empty library that isn't saved.
+function libraryUnavailableScreen() {
+  const L = window.UrielLibraryStore;
+  if (!L || !L.store || L.store.mode() !== 'unavailable') return Promise.resolve();
+  const T = (s) => (window.UrielI18n && window.UrielI18n.T ? window.UrielI18n.T(s) : s);
+  document.getElementById('splash')?.remove();
+  return new Promise((resolve) => {
+    const box = document.createElement('div');
+    box.id = 'library-unavailable';
+    box.setAttribute('role', 'alertdialog');
+    box.setAttribute('aria-modal', 'true');
+    const h = document.createElement('h2');
+    h.textContent = T("Your library couldn't be opened");
+    const p = document.createElement('p');
+    p.textContent = T("Your playlists, favorites and history haven't been changed. Try again, or restart your computer or phone if this keeps happening. If you continue, your library will look empty and nothing you add will be saved.");
+    const retry = document.createElement('button');
+    retry.textContent = T('Try again');
+    retry.addEventListener('click', () => location.reload());
+    const go = document.createElement('button');
+    go.textContent = T('Continue for now');
+    go.addEventListener('click', () => { box.remove(); resolve(); });
+    box.append(h, p, retry, go);
+    document.body.appendChild(box);
+    retry.focus();
+  });
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   // playlists, favorites and history are read from IndexedDB before anything uses them (library-store.js)
   try { if (window.UrielLibraryStore) await window.UrielLibraryStore.ready; } catch (e) {}
+  await libraryUnavailableScreen();
   try { localStorage.removeItem('uriel_stats'); } catch (e) {}
 
   const THUMB_FALLBACK = "if(window.urielArtNext){window.urielArtNext(this)}else if(this.dataset.full&&this.src!==this.dataset.full){this.src=this.dataset.full}else{this.style.visibility='hidden'}";
@@ -566,6 +595,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                           presetToRenameId: null,
                           serverPort: 38472,
                           lastBroadcastStateKey: null,
+                          lyricWordsLine: null,
+                          lyricWords: [],
+                          lyricSweptEl: null,
+                          lyricWordKey: null,
                           syncTimeout: null,
                           scrubberDragTargetTime: undefined,
                           riffFont: localStorage.getItem('uriel_font') || 'google'
@@ -601,6 +634,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.warn('Failed to get server port:', e);
     }
   }
+
+  // Settings → Storage → Song storage limit. Phones have their own row and clean-up (mobile/mobile-ui.js).
+  (() => {
+    const row = document.getElementById('offline-limit-item');
+    if (!row) return;
+    if (document.documentElement.classList.contains('is-mobile') || !state.serverPort) { row.remove(); return; }
+    const tell = (mb, apply) => fetch(`http://127.0.0.1:${state.serverPort}/api/cache-limit?mb=${mb}${apply ? '&apply=1' : ''}`, { method: 'POST' }).catch(() => {});
+    const buttons = row.querySelectorAll('[data-limit]');
+    const show = (mb) => buttons.forEach((b) => b.classList.toggle('active', b.dataset.limit === mb));
+    const current = localStorage.getItem('uriel_cache_limit_mb') || '10240';
+    show(current);
+    tell(current, false);
+    buttons.forEach((b) => b.addEventListener('click', () => {
+      localStorage.setItem('uriel_cache_limit_mb', b.dataset.limit);
+      show(b.dataset.limit);
+      tell(b.dataset.limit, true).then(updateOfflineStorageUI);
+    }));
+  })();
 
   // other languages: what this device translated before, then whatever is still missing (English: nothing)
   I18N.connect(`http://127.0.0.1:${state.serverPort}`);
@@ -3608,7 +3659,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function getTrackArt(t) {
     try {
-      return JSON.parse(localStorage.getItem('uriel_track_art') || '{}')[getTrackCanonicalId(t)] || {};
+      // every list row asks while it is built: parse only when the saved text changed (Sync and backups write it too)
+      const raw = localStorage.getItem('uriel_track_art') || '{}';
+      if (getTrackArt.raw !== raw) {
+        getTrackArt.parsed = JSON.parse(raw);
+        getTrackArt.raw = raw;
+      }
+      return getTrackArt.parsed[getTrackCanonicalId(t)] || {};
     } catch (e) {
       return {};
     }
@@ -4864,28 +4921,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   function updateSyncedLyricsHighlight(currentTime) {
     if (miniLyricsShown()) updateMiniLyricsHighlight(currentTime);
     if (state.syncedLyrics.length === 0 || !state.isWindowVisible) return;
-    let activeIndex = -1;
-
-    const validLines = [];
-    for (let i = 0; i < state.syncedLyrics.length; i++) {
-      const startTime = getLineStartTime(i);
-      if (startTime >= 0) {
-        validLines.push({ time: startTime, index: i });
-      }
-    }
-
     const lookAhead = state.isCustomLyrics ? 0.25 : 0.0;
     const matchTime = currentTime + lookAhead;
-
-    for (let i = 0; i < validLines.length; i++) {
-      const current = validLines[i];
-      const next = validLines[i + 1];
-      const nextTime = next ? next.time : Infinity;
-      if (matchTime >= current.time && matchTime < nextTime) {
-        activeIndex = current.index;
-        break;
-      }
-    }
+    const activeIndex = window.UrielLyricsSources.activeLineIndex(state.syncedLyrics.length, getLineStartTime, matchTime, state.lastActiveLyricIdx);
 
     if (activeIndex >= 0 && state.isPlaying) {
       const currentLineTime = getLineStartTime(activeIndex);
@@ -4893,8 +4931,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       const lineDur = Math.max(0.5, nextLineTime - currentLineTime);
       const progress = Math.min(Math.max((matchTime - currentLineTime) / lineDur, 0), 0.999);
 
-      const cleanText = state.syncedLyrics[activeIndex].text.replace(/<[^>]+>/g, '').trim();
-      const words = cleanText.split(/\s+/).filter(Boolean);
+      // this runs every frame: split a line once, when it becomes the active one
+      const activeLine = state.syncedLyrics[activeIndex];
+      if (state.lyricWordsLine !== activeLine) {
+        state.lyricWordsLine = activeLine;
+        state.lyricWords = activeLine.text.replace(/<[^>]+>/g, '').trim().split(/\s+/).filter(Boolean);
+      }
+      const words = state.lyricWords;
       const totalWords = words.length;
       const currentWordIndex = totalWords > 0 ? Math.floor(progress * totalWords) : 0;
       const activeWordText = totalWords > 0 ? words[currentWordIndex] : '';
@@ -4911,7 +4954,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const lineChanged = state.lastActiveLyricIdx !== activeIndex || state.forceLyricsScroll;
     const shouldSnap = state.forceSnapLyrics;
     let targetY = null;
-    if (hasLayout && (lineChanged || shouldSnap) && getAdv('lyrics_autoscroll', true)) {
+    const autoscroll = !(lineChanged || shouldSnap) || getAdv('lyrics_autoscroll', true);
+    if (hasLayout && (lineChanged || shouldSnap) && autoscroll) {
       if (activeIndex >= 0) {
         const activeEl = document.getElementById(`lyric-line-${activeIndex}`);
         if (activeEl) {
@@ -4926,51 +4970,71 @@ document.addEventListener('DOMContentLoaded', async () => {
         state.forceSnapLyrics = false;
         state.lastActiveLyricIdx = activeIndex;
       }
-    } else if (hasLayout && !state.forceLyricsScroll) {
+    } else if (hasLayout && (!state.forceLyricsScroll || !autoscroll)) {
       state.lastActiveLyricIdx = activeIndex;
+      // with auto-scroll off nothing else clears these, and every frame would count as a new line
+      if (!autoscroll) { state.forceLyricsScroll = false; state.forceSnapLyrics = false; }
     }
 
-    document.querySelectorAll('.lyric-line').forEach((lineEl, idx) => {
-      if (lineChanged) lineEl.style.setProperty('--dist', activeIndex >= 0 ? Math.abs(idx - activeIndex) : 0);
-      if (idx === activeIndex) {
-        if (!lineEl.classList.contains('active')) lineEl.classList.add('active');
+    const gradientMode = isGradientMode();
+    const wordMode = !gradientMode && state.lyricsMode === 'word' && getAdv('karaoke_words', true);
+    const activeLineEl = activeIndex >= 0 ? document.getElementById(`lyric-line-${activeIndex}`) : null;
 
-        if (isGradientMode()) {
-          updateActiveGradient();
-          startGradientLoop();
-        } else if (getAdv('karaoke_words', true) && state.lyricsMode === 'word') {
-          const currentLineTime = getLineStartTime(idx);
-          const nextLineTime = getLineEndTime(idx);
-          const lineDur = Math.max(0.5, nextLineTime - currentLineTime);
-          const progress = Math.min(Math.max((matchTime - currentLineTime) / lineDur, 0), 0.999);
-
-          const wordSpans = lineEl.querySelectorAll('.lyric-word');
-          const totalWords = wordSpans.length;
-          const timed = lineTimedWords(state.syncedLyrics[idx]);
-          const currentWordIndex = timed && timed.length === totalWords ? timedWordIndex(timed, matchTime) : Math.floor(progress * totalWords);
-
-          wordSpans.forEach((wSpan, wIdx) => {
-            if (wIdx < currentWordIndex) {
-              wSpan.className = 'lyric-word past-word';
-            } else if (wIdx === currentWordIndex) {
-              wSpan.className = 'lyric-word active-word';
-            } else {
-              wSpan.className = 'lyric-word';
-            }
-          });
+    // Every line only needs touching when the active line changes (or the lines were rebuilt)
+    if (lineChanged || activeLineEl !== state.lyricSweptEl) {
+      state.lyricSweptEl = activeLineEl;
+      state.lyricWordKey = null;
+      document.querySelectorAll('.lyric-line').forEach((lineEl, idx) => {
+        if (lineChanged) {
+          // the blur and fade stop changing 4 lines away: far lines keep their value and aren't restyled
+          const dist = activeIndex >= 0 ? Math.min(Math.abs(idx - activeIndex), 5) : 0;
+          if (lineEl._lyricDist !== dist) {
+            lineEl._lyricDist = dist;
+            lineEl.style.setProperty('--dist', dist);
+          }
         }
-      } else {
+        if (idx === activeIndex) {
+          lineEl.classList.add('active');
+          return;
+        }
         lineEl.classList.remove('active');
         if (lineEl.classList.contains('gradient-line')) {
           lineEl.firstElementChild && lineEl.firstElementChild.style.setProperty('--k', '0');
         }
-        if (!isGradientMode() && getAdv('karaoke_words', true) && state.lyricsMode === 'word') {
+        if (wordMode) {
           lineEl.querySelectorAll('.lyric-word').forEach(wSpan => {
             wSpan.className = idx < activeIndex ? 'lyric-word past-word' : 'lyric-word';
           });
         }
+      });
+    }
+
+    if (activeLineEl && gradientMode) {
+      // the running loop draws it; when it isn't running (paused, seeking) draw once here
+      if (!gradientRaf) updateActiveGradient();
+      startGradientLoop();
+    } else if (activeLineEl && wordMode) {
+      const currentLineTime = getLineStartTime(activeIndex);
+      const lineDur = Math.max(0.5, getLineEndTime(activeIndex) - currentLineTime);
+      const progress = Math.min(Math.max((matchTime - currentLineTime) / lineDur, 0), 0.999);
+      const wordSpans = activeLineEl.querySelectorAll('.lyric-word');
+      const totalWords = wordSpans.length;
+      const timed = lineTimedWords(state.syncedLyrics[activeIndex]);
+      const currentWordIndex = timed && timed.length === totalWords ? timedWordIndex(timed, matchTime) : Math.floor(progress * totalWords);
+      if (state.lyricWordKey !== currentWordIndex) {
+        state.lyricWordKey = currentWordIndex;
+        wordSpans.forEach((wSpan, wIdx) => {
+          if (wIdx < currentWordIndex) {
+            wSpan.className = 'lyric-word past-word';
+          } else if (wIdx === currentWordIndex) {
+            wSpan.className = 'lyric-word active-word';
+          } else {
+            wSpan.className = 'lyric-word';
+          }
+        });
       }
-    });
+    }
+
     if (targetY !== null && parent) {
       if (shouldSnap) {
         cancelAnimationFrame(lyricsScrollRaf);
@@ -8431,19 +8495,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       container._lastStartIndex = startIndex;
       container._lastEndIndex = endIndex;
       
+      // keep the rows still in view (their images, focus and listeners stay) and only add or remove the difference
       const currentCanonicalId = state.currentTrack ? getTrackCanonicalId(state.currentTrack) : '';
-      const fragment = document.createDocumentFragment();
+      const kept = new Map();
+      container.querySelectorAll(':scope > .track-row').forEach((row) => {
+        const idx = Number(row.dataset.trackIndex);
+        if (idx >= startIndex && idx < endIndex && !kept.has(idx)) kept.set(idx, row);
+        else row.remove();
+      });
+      const added = [];
+      let cursor = container.firstElementChild;
       for (let idx = startIndex; idx < endIndex; idx++) {
-         const track = tracks[idx];
-         const row = createTrackRow(track, idx, currentCanonicalId, context, tracks, container);
-         if (container._hasInitialRendered) row.style.animation = 'none';
-         fragment.appendChild(row);
+        let row = kept.get(idx);
+        if (!row) {
+          row = createTrackRow(tracks[idx], idx, currentCanonicalId, context, tracks, container);
+          if (container._hasInitialRendered) row.style.animation = 'none';
+          added.push(tracks[idx]);
+        }
+        if (row === cursor) cursor = cursor.nextElementSibling;
+        else container.insertBefore(row, cursor);
       }
-      
-      container.innerHTML = '';
       container.style.paddingTop = `${startIndex * itemHeight}px`;
       container.style.paddingBottom = `${(tracks.length - endIndex) * itemHeight}px`;
-      container.appendChild(fragment);
       container._hasInitialRendered = true;
       const measured = measureRowHeight();
       if (measured && Math.abs(measured - itemHeight) > 0.5) {
@@ -8455,7 +8528,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
       highlightPlayingRow();
-      checkOffline(tracks.slice(startIndex, endIndex));
+      checkOffline(added);
     }
     
     container._vScrollHandler = () => {

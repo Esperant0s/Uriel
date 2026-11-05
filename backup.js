@@ -122,8 +122,16 @@
     return out;
   }
 
+  // the lists couldn't be read (library-store.js): a backup would be missing them and a restore couldn't save them
+  function libraryUnavailable() {
+    const L = window.UrielLibraryStore;
+    if (!L || !L.store || L.store.mode() !== 'unavailable') return false;
+    toast("Your library couldn't be opened. Restart Uriel and try again", 'error');
+    return true;
+  }
+
   async function exportBackup() {
-    if (!core) return;
+    if (!core || libraryUnavailable()) return;
     const me = P() ? P().current() : { name: '' };
     const data = B.makeBackup(ownEntries(), { profileName: me.name, appVersion: await appVersion(), isDevice });
     const day = new Date().toISOString().slice(0, 10);
@@ -140,7 +148,7 @@
   }
 
   async function restoreBackup(file) {
-    if (!file || !core) return;
+    if (!file || !core || libraryUnavailable()) return;
     let backup;
     try {
       if (file.size > B.LIMITS.fileBytes) throw new Error('That file is too big');
