@@ -1181,6 +1181,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   let cachedPrimaryColor = '';
   let cachedDimColor = '';
   let animationFrameId = null;
+  let vizFrameTimer = 0;
+  // Asking for a frame and then skipping it still makes the browser produce one on every refresh of a fast screen,
+  // so a capped loop waits on a timer first. The timer ends a little early to catch the frame the cap wants: rAF
+  // then lands on the next refresh, and a 60 Hz screen doesn't drop to every other frame.
+  function scheduleVizFrame(callback, fps) {
+    if (!fps) return requestAnimationFrame(callback);
+    vizFrameTimer = setTimeout(() => {
+      vizFrameTimer = 0;
+      animationFrameId = requestAnimationFrame(callback);
+    }, Math.max(0, 1000 / fps - 7));
+    return -1;
+  }
+  function cancelVizFrame() {
+    if (vizFrameTimer) clearTimeout(vizFrameTimer);
+    vizFrameTimer = 0;
+    if (animationFrameId > 0) cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
   function refreshCachedThemeColors() {
     const rootStyle = getComputedStyle(document.documentElement);
     cachedPrimaryColor = rootStyle.getPropertyValue('--md-sys-color-primary').trim() || '#6750A4';
@@ -2835,10 +2853,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let lastFrameTime = 0;
   // Settings → frame rate, read once instead of from storage on every frame of renderLoop (the Settings buttons update it)
-  var userFpsCap = parseInt(localStorage.getItem('uriel_fps_cap') || '0', 10) || 0;
+  // 60 unless Native (0) was chosen: drawing the visualizers at 165 fps costs a lot and looks the same
+  var userFpsCap = parseInt(localStorage.getItem('uriel_fps_cap') || '60', 10) || 0;
   function startVisualizers() {
     if (!state.isWindowVisible) return;
-    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    cancelVizFrame();
 
     const analyserNode = audioEngine && audioEngine.getAnalyserNode ? audioEngine.getAnalyserNode() : null;
     const miniCanvas = el.visualizerCanvas;
@@ -2876,9 +2895,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      animationFrameId = requestAnimationFrame(renderLoop);
-
       const fpsCap = document.body.classList.contains('perf') ? 30 : isPhoneApp ? 20 : userFpsCap;
+      animationFrameId = scheduleVizFrame(renderLoop, fpsCap);
       if (fpsCap && timestamp - lastFrameTime < 1000 / fpsCap - 1) return;
       lastFrameTime = timestamp;
 
@@ -3199,10 +3217,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         cancelAnimationFrame(gradientRaf);
         gradientRaf = 0;
       }
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
+      if (typeof gradientTimer !== 'undefined' && gradientTimer) {
+        clearTimeout(gradientTimer);
+        gradientTimer = 0;
       }
+      cancelVizFrame();
       if (typeof cacheRafId !== 'undefined' && cacheRafId) {
         cancelAnimationFrame(cacheRafId);
         cacheRafId = 0;
@@ -3411,7 +3430,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.dispatchEvent(new CustomEvent('uriel:track', { detail: track }));
     if (el.playbarTitle) el.playbarTitle.textContent = track.title || 'Untitled';
     if (el.playbarTitle) el.playbarTitle.dataset.origTitle = track.title || '';
-    if (el.playbarArtist) el.playbarArtist.textContent = track.artist || 'Unknown artist';
+    if (el.playbarArtist) {
+      el.playbarArtist.textContent = track.artist || 'Unknown artist';
+      el.playbarArtist.classList.remove('play-failed');
+      el.playbarArtist.removeAttribute('title');
+    }
 
     const thumb = getTrackThumbUrl(track);
     if (thumb) {
@@ -3918,6 +3941,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.trackLoading = on;
     window.dispatchEvent(new Event('uriel:loading'));
   }
+  // Nothing is playing any more: without this a failed start left is-playing on, and the background and cover
+  // animations kept running with no sound
+  function stopAfterFailure() {
+    state.isPlaying = false;
+    document.body.classList.remove('is-playing');
+    if (el.coverContainer) el.coverContainer.classList.remove('spinning');
+    if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
+    updatePlayPauseButton(false, false);
+  }
+  // The toast goes away after a few seconds; the player keeps saying why it is sitting at 0:00 until the next song.
+  function showPlayFailure(message, type = 'error') {
+    showToast(message, type, 8000);
+    if (!el.playbarArtist) return;
+    el.playbarArtist.textContent = Tm("Couldn't play");
+    el.playbarArtist.title = message;
+    el.playbarArtist.classList.add('play-failed');
+  }
   // every failure path asks this; a false answer means nothing else will be loaded, so loading is over
   function skipUnplayable(token, track) {
     if (token !== state.loadToken) return false;
@@ -4083,8 +4123,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (currentToken === state.loadToken) {
         logPlaybackIssue('Track playback notice', err);
         if (retryFresh(currentToken, track)) return;
-        updatePlayPauseButton(false, false);
-        if (!skipUnplayable(currentToken, track)) showToast(err.message || Tm('Could not load audio stream'), 'error');
+        stopAfterFailure();
+        if (!skipUnplayable(currentToken, track)) showPlayFailure(err.message || Tm('Could not load audio stream'));
       }
     }
   }
@@ -4093,7 +4133,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // another song was started meanwhile; throws when there is nothing to play. localOnly: only a copy on this
   // device counts, and without one it resolves false.
   async function attachStream(track, resolvedUrl, resolvedId, currentToken, signal, fresh, localOnly = false) {
-    const streamInfoUrl = `http://127.0.0.1:${state.serverPort}/api/stream-info?url=${encodeURIComponent(resolvedUrl || '')}&id=${encodeURIComponent(resolvedId || '')}${fresh ? '&fresh=1' : ''}${localOnly ? '&localOnly=1' : ''}&platform=${track.platform || state.platform}&title=${encodeURIComponent(track.title || '')}&artist=${encodeURIComponent(track.artist || '')}&duration=${encodeURIComponent(track.duration || 0)}&thumbnail=${encodeURIComponent(track.thumbnail || '')}`;
+    const streamInfoUrl = `http://127.0.0.1:${state.serverPort}/api/stream-info?url=${encodeURIComponent(resolvedUrl || '')}&id=${encodeURIComponent(resolvedId || '')}${fresh ? '&fresh=1' : ''}${localOnly || navigator.onLine === false ? '&localOnly=1' : ''}&platform=${track.platform || state.platform}&title=${encodeURIComponent(track.title || '')}&artist=${encodeURIComponent(track.artist || '')}&duration=${encodeURIComponent(track.duration || 0)}&thumbnail=${encodeURIComponent(track.thumbnail || '')}`;
     const res = await fetch(streamInfoUrl, { signal });
     const data = await res.json();
 
@@ -4104,10 +4144,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (data && data.success && data.isLocal) { try { offlineChanged(track, true); } catch (e) {} }
 
     if (!data || !data.success || !data.streamUrl) {
-      if (!navigator.onLine) {
-        showToast(Tm('Offline: this track is not available in local cache'));
-        throw new Error('Offline: track not cached locally');
-      }
+      // offline only saved copies are looked up (above), so this answers at once instead of trying every source
+      if (!navigator.onLine) throw new Error(Tm('Offline: this track is not available in local cache'));
       throw new Error((data && data.error) || 'Failed to extract audio stream');
     }
 
@@ -4147,7 +4185,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.body.classList.remove('is-playing');
         updatePlayPauseButton(false, false);
         if (retryFresh(currentToken, track)) return;
-        if (!skipUnplayable(currentToken, track)) showToast(Tm('Could not play this song. Try again or skip.'), 'error');
+        if (!skipUnplayable(currentToken, track)) showPlayFailure(Tm('Could not play this song. Try again or skip.'));
       });
     } else {
       // #17: a YouTube media URL is bound to the player client yt-dlp resolved it with; Chromium fetching it
@@ -4220,8 +4258,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (err && err.name === 'AbortError') return;
       if (token !== state.loadToken) return;
       logPlaybackIssue('Track playback notice (fresh retry)', err);
-      updatePlayPauseButton(false, false);
-      if (!skipUnplayable(token, track)) showToast((err && err.message) || Tm('Could not load audio stream'), 'error');
+      stopAfterFailure();
+      if (!skipUnplayable(token, track)) showPlayFailure((err && err.message) || Tm('Could not load audio stream'));
     });
     return true;
   }
@@ -4919,6 +4957,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   let gradientRaf = 0;
+  let gradientTimer = 0;
   function updateActiveGradient() {
     const lineEl = document.querySelector('.lyric-line.active.gradient-line');
     if (!lineEl || !el.nativeAudio) return;
@@ -4970,12 +5009,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     fill.style.setProperty('--k', k.toFixed(4));
   }
   function startGradientLoop() {
-    if (gradientRaf) return;
+    if (gradientRaf || gradientTimer) return;
     const tick = () => {
       gradientRaf = 0;
       if (!state.isPlaying || !state.isWindowVisible || !isGradientMode()) return;
       updateActiveGradient();
-      gradientRaf = requestAnimationFrame(tick);
+      // the word fill restyles the lyrics each time: 30 fps on phones and the Settings cap here look just as smooth
+      const fps = isPhoneApp ? 30 : userFpsCap;
+      if (!fps) { gradientRaf = requestAnimationFrame(tick); return; }
+      gradientTimer = setTimeout(() => { gradientTimer = 0; gradientRaf = requestAnimationFrame(tick); }, Math.max(0, 1000 / fps - 7));
     };
     gradientRaf = requestAnimationFrame(tick);
   }
@@ -5098,7 +5140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (activeLineEl && gradientMode) {
       // the running loop draws it; when it isn't running (paused, seeking) draw once here
-      if (!gradientRaf) updateActiveGradient();
+      if (!gradientRaf && !gradientTimer) updateActiveGradient();
       startGradientLoop();
     } else if (activeLineEl && wordMode) {
       const currentLineTime = getLineStartTime(activeIndex);
@@ -6722,8 +6764,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (retryFresh(state.loadToken, state.currentTrack)) return;
       updatePlayPauseButton(false, false);
       if (skipUnplayable(state.loadToken, state.currentTrack)) return;
-      if (state.currentTrack.platform === 'local') showToast(Tm('File missing from library'));
-      else showToast(Tm('Could not play this song. Try again or skip.'), 'error');
+      if (state.currentTrack.platform === 'local') showPlayFailure(Tm('File missing from library'), 'info');
+      else showPlayFailure(Tm('Could not play this song. Try again or skip.'));
     });
 
     el.nativeAudio.addEventListener('waiting', () => {
@@ -8603,7 +8645,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       container.style.paddingTop = `${startIndex * itemHeight}px`;
       container.style.paddingBottom = `${(tracks.length - endIndex) * itemHeight}px`;
       container._hasInitialRendered = true;
-      const measured = measureRowHeight();
+      // reading a row's position makes the browser lay out the page right here, while scrolling: rows only change
+      // height with the list's width (or when the list is drawn again), so once per width is enough
+      const measured = container._rowMeasuredFor === parentRect.width ? 0 : measureRowHeight();
+      if (measured) container._rowMeasuredFor = parentRect.width;
       if (measured && Math.abs(measured - itemHeight) > 0.5) {
         itemHeight = measured;
         container._rowHeight = measured;
@@ -8631,6 +8676,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     container._hasInitialRendered = false;
+    container._rowMeasuredFor = -1;
     container._lastStartIndex = -1;
     container._lastEndIndex = -1;
     renderChunk();
@@ -9471,12 +9517,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // A song's cover that loaded in place of its saved (missing or dead) one is saved with the song.
+  // Saved in one go once the covers stop arriving: saving per cover wrote the whole library again for every row that
+  // scrolled into view, and on a phone a long list ran the page out of memory within seconds. A cover not saved
+  // before the app closes is just found again next time.
+  const rememberedArt = new Map();
+  let rememberedArtTimer = 0;
   function rememberTrackArt(canonicalId, url) {
     if (!canonicalId || !/^https:\/\//.test(url || '')) return;
+    if (state.currentTrack && getTrackCanonicalId(state.currentTrack) === canonicalId && !getTrackArt(state.currentTrack).cover) state.currentTrack.thumbnail = url;
+    rememberedArt.set(canonicalId, url);
+    clearTimeout(rememberedArtTimer);
+    rememberedArtTimer = setTimeout(saveRememberedArt, 2000);
+  }
+  function saveRememberedArt() {
+    const art = new Map(rememberedArt);
+    rememberedArt.clear();
     const fix = (arr) => {
       let changed = false;
       (arr || []).forEach((t) => {
-        if (t && t.thumbnail !== url && getTrackCanonicalId(t) === canonicalId && !getTrackArt(t).cover) { t.thumbnail = url; changed = true; }
+        const url = t && art.get(getTrackCanonicalId(t));
+        if (url && t.thumbnail !== url && !getTrackArt(t).cover) { t.thumbnail = url; changed = true; }
       });
       return changed;
     };
@@ -9486,7 +9546,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       let pl = false;
       (state.playlists || []).forEach((p) => { if (p && fix(p.tracks)) pl = true; });
       if (pl) localStorage.setItem('devsize_playlists', JSON.stringify(state.playlists));
-      if (state.currentTrack && getTrackCanonicalId(state.currentTrack) === canonicalId && !getTrackArt(state.currentTrack).cover) state.currentTrack.thumbnail = url;
     } catch (e) {}
   }
 
@@ -12702,7 +12761,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const fpsBtns = document.querySelectorAll('[data-fps-cap]');
   const syncFpsBtns = () => {
-    const cur = localStorage.getItem('uriel_fps_cap') || '0';
+    const cur = localStorage.getItem('uriel_fps_cap') || '60';
     fpsBtns.forEach(b => b.classList.toggle('active', b.dataset.fpsCap === cur));
   };
   fpsBtns.forEach(b => b.addEventListener('click', () => { localStorage.setItem('uriel_fps_cap', b.dataset.fpsCap); userFpsCap = parseInt(b.dataset.fpsCap, 10) || 0; syncFpsBtns(); }));
@@ -13154,12 +13213,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    if (now - m3c.last >= 24) {
+    if (now - m3c.last >= Math.max(24, userFpsCap ? 1000 / userFpsCap - 1 : 0)) {
       m3c.last = now;
       if (state.isPlaying) m3c.phase += 0.18;
       m3cDraw(now);
     }
-    m3c.raf = requestAnimationFrame(m3cLoop);
+    // the hover grows a bit each frame, so it needs every frame; the morph only draws every 24 ms (or slower under
+    // the Settings cap), so between those it waits on a timer instead of waking the page on every screen refresh
+    if (isHoverAnimating) m3c.raf = requestAnimationFrame(m3cLoop);
+    else m3c.raf = setTimeout(() => requestAnimationFrame(m3cLoop), Math.max(0, Math.max(24, userFpsCap ? 1000 / userFpsCap : 0) - 7));
   }
   function m3cStart() { if (!m3c.raf) m3c.raf = requestAnimationFrame(m3cLoop); }
   function applyM3Cover() {
@@ -21117,7 +21179,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.body.classList.remove('is-playing');
       if (retryFresh(token, state.currentTrack)) return;
       updatePlayPauseButton(false, false);
-      if (!skipUnplayable(token, state.currentTrack)) showToast('This song took too long to load. Try again or skip.', 'error');
+      if (!skipUnplayable(token, state.currentTrack)) showPlayFailure(Tm('This song took too long to load. Try again or skip.'));
     };
     const arm = () => {
       stop();
