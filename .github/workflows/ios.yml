@@ -42,7 +42,7 @@ jobs:
       - name: Compile (unsigned)
         run: |
           xcodebuild -quiet \
-            -project ios/App/App.xcodeproj \
+            -project mobile/ios/App/App.xcodeproj \
             -scheme App \
             -configuration Release \
             -sdk iphoneos \

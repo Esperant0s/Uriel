@@ -4,7 +4,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const crypto = require('crypto');
-const C = require('../sync-core.js');
+const C = require('../shared/sync-core.js');
 
 const byId = (x) => x && x.id;
 const side = (items, prev, now, base) => ({ items, meta: C.stampList(prev, items, byId, now, base) });
@@ -100,7 +100,7 @@ test('old removals are forgotten, recent ones kept', () => {
 });
 
 test("sync doesn't try PeerJS's TURN relays, which no longer exist", () => {
-  const src = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'sync.js'), 'utf8');
+  const src = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'shared/sync.js'), 'utf8');
   assert.match(src, /config: \{ iceServers: ICE_SERVERS \}/);
   assert.equal(/turn\.peerjs\.com:/.test(src.replace(/\/\/.*$/gm, '')), false);
 });

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const core = require('../update-core');
+const core = require('../shared/update-core');
 
 const SHA = 'a'.repeat(64);
 const asset = (name, extra = {}) => ({ name, size: 10, digest: `sha256:${SHA}`, browser_download_url: `https://github.com/Esperant0s/Uriel/releases/download/v1.4.0/${name}`, ...extra });

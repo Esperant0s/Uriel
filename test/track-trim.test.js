@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const T = require('../track-trim');
+const T = require('../shared/track-trim');
 
 test('a trim that keeps the whole song is no trim', () => {
   assert.strictEqual(T.normalizeTrim(0, 200, 200), null);
@@ -64,12 +64,12 @@ test('crossfade fades the song out over its last seconds instead of ending it ea
 test('the timeupdate handler never starts the next song itself', () => {
   const fs = require('node:fs');
   const path = require('node:path');
-  const src = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'shared/app.js'), 'utf8');
   const start = src.indexOf("el.nativeAudio.addEventListener('timeupdate'");
   const body = src.slice(start, src.indexOf('let isDraggingScrubber', start));
   assert.ok(start > 0 && body.includes('endFadeSeconds'));
   assert.ok(!/playNext\(/.test(body), 'only the ended handler (or a trim end) may advance');
-  assert.match(fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8'), /id="slider-crossfade"[^>]*value="0"/);
+  assert.match(fs.readFileSync(path.join(__dirname, '..', 'shared/index.html'), 'utf8'), /id="slider-crossfade"[^>]*value="0"/);
 });
 
 test('crossfade with overlap: the next song starts X seconds before the end, the old one plays out on a second player', () => {
@@ -91,7 +91,7 @@ test('crossfade with overlap: the next song starts X seconds before the end, the
 test('the crossfade hands over only after the old song is playing on its tail player', () => {
   const fs = require('node:fs');
   const path = require('node:path');
-  const src = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'shared/app.js'), 'utf8');
   const start = src.indexOf('function startCrossfade(');
   const body = src.slice(start, src.indexOf('function crossfadeFadeIn(', start));
   assert.ok(start > 0);

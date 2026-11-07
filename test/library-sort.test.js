@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { LIBRARY_SORT_MODES, librarySortMode, sortLibrary } = require('../track-sort');
+const { LIBRARY_SORT_MODES, librarySortMode, sortLibrary } = require('../shared/track-sort');
 
 const albums = [
   { id: '1', title: 'Zebra', artist: 'Beach House', year: '2010' },

@@ -1,9 +1,13 @@
 {
   "appId": "io.github.esperant0s.mural",
   "appName": "Uriel",
-  "webDir": "www",
+  "webDir": "mobile/www",
+  "android": {
+    "path": "mobile/android"
+  },
   "backgroundColor": "#121214",
   "ios": {
+    "path": "mobile/ios",
     "contentInset": "never",
     "scheme": "Muriel",
     "limitsNavigationsToAppBoundDomains": false

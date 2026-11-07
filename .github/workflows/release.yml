@@ -61,7 +61,7 @@ jobs:
       - run: npm ci
       - name: Stamp the build for update checks
         shell: bash
-        run: node tools/build-info.mjs build-info.js ${{ matrix.channel }}
+        run: node tools/build-info.mjs shared/build-info.js ${{ matrix.channel }}
       - name: Build and upload to the release
         shell: bash
         env:

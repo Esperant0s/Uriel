@@ -13,24 +13,24 @@ const { NAMES } = require('../mobile/app-icon');
 const names = Object.values(NAMES).sort();
 
 test('every icon style the picker offers has a phone icon name', () => {
-  const styles = fs.readdirSync(path.join(root, 'assets', 'app-icons')).map((f) => f.replace(/\.svg$/, '')).concat('uriel').sort();
+  const styles = fs.readdirSync(path.join(root, 'shared', 'assets', 'app-icons')).map((f) => f.replace(/\.svg$/, '')).concat('uriel').sort();
   assert.deepEqual(Object.keys(NAMES).sort(), styles);
-  const app = read('app.js');
+  const app = read('shared/app.js');
   for (const id of Object.keys(NAMES)) assert.ok(app.includes(`id: '${id}'`), `${id} is in HOME_ICONS`);
 });
 
 test('Android: a launcher alias and PNGs for each, and the plugin knows them all', () => {
-  const manifest = read('android/app/src/main/AndroidManifest.xml');
-  const java = read('android/app/src/main/java/io/github/esperant0s/uriel/AppIconPlugin.java');
+  const manifest = read('mobile/android/app/src/main/AndroidManifest.xml');
+  const java = read('mobile/android/app/src/main/java/io/github/esperant0s/uriel/AppIconPlugin.java');
   const javaNames = [...java.match(/ICONS = \{([^}]+)\}/)[1].matchAll(/"([a-z0-9_]+)"/g)].map((m) => m[1]).sort();
   assert.deepEqual(javaNames, names);
   for (const n of names) {
     assert.match(manifest, new RegExp(`android:name="io\\.github\\.cloverscripts\\.muriel\\.LauncherIcon_${n}"[\\s\\S]*?android:icon="@mipmap/ic_uriel_${n}"[\\s\\S]*?android:enabled="false"`));
     for (const d of ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi']) {
-      assert.ok(fs.existsSync(path.join(root, 'android/app/src/main/res', `mipmap-${d}`, `ic_uriel_${n}.png`)), `${d} ${n}`);
-      assert.ok(fs.existsSync(path.join(root, 'android/app/src/main/res', `mipmap-${d}`, `ic_uriel_${n}_full.png`)), `${d} ${n} full`);
+      assert.ok(fs.existsSync(path.join(root, 'mobile/android/app/src/main/res', `mipmap-${d}`, `ic_uriel_${n}.png`)), `${d} ${n}`);
+      assert.ok(fs.existsSync(path.join(root, 'mobile/android/app/src/main/res', `mipmap-${d}`, `ic_uriel_${n}_full.png`)), `${d} ${n} full`);
     }
-    assert.ok(fs.existsSync(path.join(root, 'android/app/src/main/res/mipmap-anydpi-v26', `ic_uriel_${n}.xml`)));
+    assert.ok(fs.existsSync(path.join(root, 'mobile/android/app/src/main/res/mipmap-anydpi-v26', `ic_uriel_${n}.xml`)));
   }
   // exactly one launcher entry is on at first, and the main screen itself is no longer one
   assert.equal((manifest.match(/android:enabled="true"/g) || []).length, 1);
@@ -39,10 +39,10 @@ test('Android: a launcher alias and PNGs for each, and the plugin knows them all
 });
 
 test('iOS: an alternate icon set for each, included in the build, and the plugin knows them all', () => {
-  const swift = read('ios/App/App/AppDelegate.swift');
+  const swift = read('mobile/ios/App/App/AppDelegate.swift');
   const swiftNames = [...swift.match(/static let icons: Set<String> = \[([^\]]+)\]/)[1].matchAll(/"([a-z0-9_]+)"/g)].map((m) => m[1]).sort();
   assert.deepEqual(swiftNames, names);
-  for (const n of names) assert.ok(fs.existsSync(path.join(root, 'ios/App/App/Assets.xcassets', `AppIcon-${n}.appiconset`, 'icon-1024.png')), n);
-  assert.match(read('ios/App/App.xcodeproj/project.pbxproj'), /ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;/);
+  for (const n of names) assert.ok(fs.existsSync(path.join(root, 'mobile/ios/App/App/Assets.xcassets', `AppIcon-${n}.appiconset`, 'icon-1024.png')), n);
+  assert.match(read('mobile/ios/App/App.xcodeproj/project.pbxproj'), /ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;/);
   assert.match(swift, /registerPluginInstance\(UrielAppIconPlugin\(\)\)/);
 });

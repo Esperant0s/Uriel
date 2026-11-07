@@ -51,7 +51,7 @@
               cp ${desktop}/share/applications/*.desktop $out/share/applications/
 
               mkdir -p $out/share/icons/hicolor/256x256/apps
-              cp ${appDir}/assets/icon.png $out/share/icons/hicolor/256x256/apps/uriel.png
+              cp ${appDir}/shared/assets/icon.png $out/share/icons/hicolor/256x256/apps/uriel.png
 
               runHook postInstall
             '';

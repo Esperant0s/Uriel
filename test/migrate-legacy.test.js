@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { migrate, folderPairs } = require('../migrate-legacy');
+const { migrate, folderPairs } = require('../desktop/migrate-legacy');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'uriel-migrate-'));
 test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));

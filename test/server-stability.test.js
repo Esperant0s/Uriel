@@ -53,8 +53,8 @@ const crashes = [];
 process.on('unhandledRejection', (e) => crashes.push(e));
 process.on('uncaughtException', (e) => crashes.push(e));
 
-const { startServer, stopServer, getServerToken } = require('../server');
-const { CACHE_DIR } = require('../platform');
+const { startServer, stopServer, getServerToken } = require('../shared/server');
+const { CACHE_DIR } = require('../desktop/platform');
 let port;
 
 before(async () => {
@@ -249,12 +249,12 @@ test('aborting a proxied stream closes the upstream connection', async () => {
 });
 
 test('a stalled tool download ends in an error instead of "downloading" forever', async (t) => {
-  const { resolveBinary } = require('../platform');
+  const { resolveBinary } = require('../desktop/platform');
   if (resolveBinary('yt-dlp') && resolveBinary('ffmpeg')) return t.skip('yt-dlp and ffmpeg are already installed');
   outbound = (req, res) => { res.writeHead(200, { 'Content-Length': 100000 }); res.write('abc'); }; // then silence
   outboundTimeout = 300;
   try {
-    const tools = require('../tools');
+    const tools = require('../desktop/tools');
     const status = await Promise.race([tools.ensureTools(), new Promise((resolve) => setTimeout(() => resolve(null), 5000))]);
     assert.ok(status, 'ensureTools never finished');
     assert.equal(status.progress.status, 'error');

@@ -16,8 +16,8 @@ const music = path.join(tmp, 'Music');
 fs.mkdirSync(music, { recursive: true });
 fs.writeFileSync(path.join(music, 'Daft Punk - Get Lucky.mp3'), Buffer.alloc(4000, 1));
 
-const { startServer, stopServer, getServerToken, rescanDeviceMusic, setDeviceSongs } = require('../server');
-const lib = require('../device-library');
+const { startServer, stopServer, getServerToken, rescanDeviceMusic, setDeviceSongs } = require('../shared/server');
+const lib = require('../shared/device-library');
 let port;
 test.before(async () => { port = await startServer(0); });
 test.after(async () => { await stopServer(); fs.rmSync(tmp, { recursive: true, force: true }); });

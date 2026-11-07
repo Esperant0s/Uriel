@@ -5,7 +5,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { createMidSongRecovery, resumePosition, MAX_TRIES, CALM_MS } = require('../playback-recovery.js');
+const { createMidSongRecovery, resumePosition, MAX_TRIES, CALM_MS } = require('../shared/playback-recovery.js');
 
 function clock() {
   let t = 1000000;
@@ -53,7 +53,7 @@ test('it continues where it stopped, unless that is the very start or end', () =
 });
 
 test('loaded before app.js, on computers and phones', () => {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'shared/index.html'), 'utf8');
   const at = (f) => html.indexOf(`<script src="${f}"></script>`);
   assert.ok(at('playback-recovery.js') >= 0 && at('playback-recovery.js') < at('app.js'));
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'mobile', 'build.mjs'), 'utf8'), /'playback-recovery\.js'/);

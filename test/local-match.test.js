@@ -3,7 +3,7 @@
 // A playlist song that is already on the device (local-match.js): matched by title, artist and length.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createLocalIndex } = require('../local-match');
+const { createLocalIndex } = require('../shared/local-match');
 
 const songs = [
   { id: 'local_000000000001', title: 'Get Lucky', artist: 'Daft Punk', duration: 248 },

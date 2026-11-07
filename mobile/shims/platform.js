@@ -1,4 +1,4 @@
-// iOS stand-in for ../../platform.js: same exports, paths live in the app's virtual data dir.
+// iOS stand-in for ../../desktop/platform.js: same exports, paths live in the app's virtual data dir.
 const path = require('path');
 
 const DATA_DIR = '/data';

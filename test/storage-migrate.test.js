@@ -1,7 +1,7 @@
 // storage-migrate.js: saved settings move from their Muriel/Mural names (muriel_x, mural_x) to uriel_x
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { migrate } = require('../storage-migrate');
+const { migrate } = require('../shared/storage-migrate');
 
 function store(init) {
   const m = new Map(Object.entries(init));

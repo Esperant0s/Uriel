@@ -57,7 +57,7 @@ https.request = () => {
   return req;
 };
 
-const { startServer, stopServer, getServerToken, _test: { youtubeExtractTarget } } = require('../server');
+const { startServer, stopServer, getServerToken, _test: { youtubeExtractTarget } } = require('../shared/server');
 let port;
 before(async () => { port = await startServer(0); });
 after(async () => {

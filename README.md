@@ -53,6 +53,23 @@ npm run dist
 
 Installers land in `dist/`. Builds are unsigned: on macOS, right-click Uriel in Applications and choose Open; if macOS says the app is damaged, run `xattr -cr /Applications/Uriel.app`.
 
+To build the phone apps, run these from the repo root, then build the APK or IPA from `mobile/android` or `mobile/ios`:
+
+```bash
+node mobile/build.mjs
+npx cap sync
+```
+
+## Project layout
+
+| Folder | What goes here | Used by |
+| --- | --- | --- |
+| `desktop/` | Electron window and menus, PC updater, yt-dlp and ffmpeg handling, Discord, welcome page | PC only |
+| `mobile/` | Android and iOS projects, phone interface (`mobile-ui.js`, `mobile.css`), native bridges, and `shims/`, which replace PC-only code on phones | Phones only |
+| `shared/` | The main interface (`app.js`, `index.html`, `styles.css`), `server.js`, playback, library, lyrics, sync, icons | Both |
+
+A change in `desktop/` or `mobile/` affects only that version. A change in `shared/` reaches both. `shared/server.js` loads four PC files from `desktop/` (`platform`, `tools`, `logger`, `audio-output`), and `mobile/build.mjs` swaps them for the versions in `mobile/shims/` when building for phones. A new browser script in `shared/` also needs adding to the file list in `mobile/build.mjs`.
+
 ## Data
 
 - Windows: `%LOCALAPPDATA%\Uriel`

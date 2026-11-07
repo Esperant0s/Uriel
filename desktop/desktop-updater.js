@@ -13,9 +13,9 @@ const path = require('path');
 const crypto = require('crypto');
 const { once } = require('events');
 const { spawn, execFile } = require('child_process');
-const updateCore = require('./update-core');
+const updateCore = require('../shared/update-core');
 
-function readBuildInfo(dir = __dirname) {
+function readBuildInfo(dir = path.join(__dirname, '..', 'shared')) {
   try {
     const text = fs.readFileSync(path.join(dir, 'build-info.js'), 'utf8');
     return JSON.parse(text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1));

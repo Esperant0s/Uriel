@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { runDownloadBatch, classifyError, backoffMs } = require('../download-batch');
+const { runDownloadBatch, classifyError, backoffMs } = require('../shared/download-batch');
 
 // a fake clock: sleep advances time instantly
 function clock() {

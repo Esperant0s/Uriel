@@ -1,10 +1,10 @@
-// Dev harness: serves www/ and a /__proxy that stands in for CapacitorHttp (no CORS) in a desktop browser.
+// Dev harness: serves mobile/www/ and a /__proxy that stands in for CapacitorHttp (no CORS) in a desktop browser.
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, resolve, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const www = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'www');
+const www = resolve(dirname(fileURLToPath(import.meta.url)), 'www');
 const port = Number(process.env.PORT) || 5173;
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml', '.map': 'application/json' };
 

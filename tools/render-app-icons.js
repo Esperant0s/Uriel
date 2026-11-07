@@ -1,4 +1,4 @@
-// Renders the app icon styles (assets/app-icons/*.svg, and assets/icon.svg as "mural") to the PNGs the phones need
+// Renders the app icon styles (shared/assets/app-icons/*.svg, and shared/assets/icon.svg as "mural") to the PNGs the phones need
 // for switching their home-screen icon (Settings → Theme → App icon). Run with Electron after changing an icon:
 //   npx electron tools/render-app-icons.js
 // Android: res/mipmap-<density>/ic_uriel_<name>.png (round and square launchers) and ic_uriel_<name>_full.png
@@ -9,17 +9,17 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
-const RES = path.join(ROOT, 'android', 'app', 'src', 'main', 'res');
-const XCASSETS = path.join(ROOT, 'ios', 'App', 'App', 'Assets.xcassets');
+const RES = path.join(ROOT, 'mobile', 'android', 'app', 'src', 'main', 'res');
+const XCASSETS = path.join(ROOT, 'mobile', 'ios', 'App', 'App', 'Assets.xcassets');
 const LEGACY = { mdpi: 48, hdpi: 72, xhdpi: 96, xxhdpi: 144, xxxhdpi: 192 };
 const ADAPTIVE = { mdpi: 108, hdpi: 162, xhdpi: 216, xxhdpi: 324, xxxhdpi: 432 };
 
 // the styles, by the name the app uses for them (app.js HOME_ICONS) -> resource-safe name
 function icons() {
-  const out = [{ id: 'uriel', name: 'mural', file: path.join(ROOT, 'assets', 'icon.svg') }];
-  for (const f of fs.readdirSync(path.join(ROOT, 'assets', 'app-icons')).filter((f) => f.endsWith('.svg')).sort()) {
+  const out = [{ id: 'uriel', name: 'mural', file: path.join(ROOT, 'shared', 'assets', 'icon.svg') }];
+  for (const f of fs.readdirSync(path.join(ROOT, 'shared', 'assets', 'app-icons')).filter((f) => f.endsWith('.svg')).sort()) {
     const id = f.replace(/\.svg$/, '');
-    out.push({ id, name: id.replace(/^\d+-/, '').replace(/[^a-z0-9]+/g, '_'), file: path.join(ROOT, 'assets', 'app-icons', f) });
+    out.push({ id, name: id.replace(/^\d+-/, '').replace(/[^a-z0-9]+/g, '_'), file: path.join(ROOT, 'shared', 'assets', 'app-icons', f) });
   }
   return out;
 }

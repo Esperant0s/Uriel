@@ -4,7 +4,7 @@ name: Website
 on:
   push:
     branches: [main]
-    paths: ['site/**', 'share-link.js', '.github/workflows/pages.yml']
+    paths: ['site/**', 'shared/share-link.js', '.github/workflows/pages.yml']
   workflow_dispatch:
   # the download counter: GitHub's API allows a visitor only 60 requests an hour, and people behind one address
   # (phone networks, schools) share that, so the numbers are published with the site (site/stats.json) instead
@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
       # the web player reads shared playlist links with the same code as the app
-      - run: cp share-link.js site/play/share-link.js
+      - run: cp shared/share-link.js site/play/share-link.js
       # what the page needs from the releases, plus the stars; the page counts them the same way as before
       - name: Download counts
         env:

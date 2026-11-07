@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { parseForLyrics, pickBest } = require('../lyrics-match');
+const { parseForLyrics, pickBest } = require('../shared/lyrics-match');
 
 test('YouTube titles become song + artist the way lyrics sites list them', () => {
   const cases = [

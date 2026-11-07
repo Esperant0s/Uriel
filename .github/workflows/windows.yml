@@ -5,7 +5,7 @@ name: Windows build
 on:
   push:
     branches: [main]
-    paths-ignore: ['**.md', 'LICENSE', 'ios/**', 'android/**', 'site/**']
+    paths-ignore: ['**.md', 'LICENSE', 'mobile/**', 'site/**']
   workflow_dispatch:
 
 permissions:
@@ -36,7 +36,7 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: |
-          node tools/build-info.mjs build-info.js windows
+          node tools/build-info.mjs shared/build-info.js windows
           npx electron-builder --win portable --x64 --publish never -c.artifactName='Uriel.${ext}'
           ls -la dist
           cp dist/Uriel.exe Uriel.exe

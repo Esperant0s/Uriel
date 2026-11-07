@@ -56,11 +56,11 @@ jobs:
           echo "$URIEL_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/uriel-release.p12"
           export URIEL_KEYSTORE="$RUNNER_TEMP/uriel-release.p12"
           export URIEL_VERSION_NAME="$(node -p "require('./package.json').version")"
-          cd android
+          cd mobile/android
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
-          cp app/build/outputs/apk/release/app-release.apk ../Uriel.apk
-          ls -lh ../Uriel.apk
+          cp app/build/outputs/apk/release/app-release.apk ../../Uriel.apk
+          ls -lh ../../Uriel.apk
 
       - uses: actions/upload-artifact@v4
         with:

@@ -4,7 +4,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
-const C = require('../child-procs.js');
+const C = require('../shared/child-procs.js');
 
 const alive = (pid) => { try { process.kill(pid, 0); return true; } catch (e) { return false; } };
 const closed = (p) => new Promise((r) => { if (p.exitCode !== null || p.signalCode) r(); else p.once('close', r); });
@@ -61,7 +61,7 @@ test("the ffmpeg that copies a playing song to the cache stops too", { skip: pro
   const fs = require('node:fs');
   const os = require('node:os');
   const path = require('node:path');
-  const { copyStreamToCache } = require('../cache-copy.js');
+  const { copyStreamToCache } = require('../shared/cache-copy.js');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'uriel-procs-'));
   const fake = path.join(dir, 'ffmpeg');
   fs.writeFileSync(fake, '#!/bin/sh\nexec sleep 60\n');

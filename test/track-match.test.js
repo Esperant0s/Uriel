@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { pickBestMatch, splitArtists, cleanTitle, matchQueries } = require('../track-match');
+const { pickBestMatch, splitArtists, cleanTitle, matchQueries } = require('../shared/track-match');
 
 const r = (artist, title, duration = 0) => ({ artist, title, duration });
 

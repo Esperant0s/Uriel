@@ -7,7 +7,7 @@
 const { Capacitor, registerPlugin } = require('@capacitor/core');
 const { App } = require('@capacitor/app');
 const { Filesystem, Directory } = require('@capacitor/filesystem');
-const lib = require('../device-library');
+const lib = require('../shared/device-library');
 
 const ASKED = 'uriel_device_music_asked';
 const IOS_SKIP = new Set(['tracks', 'lyrics', 'custom-lyrics', 'thumbnails', 'library', 'logs', 'i18n', 'bin', 'plugins']);

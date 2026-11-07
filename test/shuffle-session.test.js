@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+const app = fs.readFileSync(path.join(__dirname, '..', 'shared/app.js'), 'utf8');
 const src = app.slice(app.indexOf('  function shufflePool(q, played) {'), app.indexOf('  function pickShuffleIndex() {'));
 // shufflePool(q, played) with the rest of the app replaced by what each case says
 function poolWith({ queueIndex = 0, heard = [], blocked = [] }) {

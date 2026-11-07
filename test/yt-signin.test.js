@@ -12,7 +12,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'uriel-ytsignin-'));
 process.env.URIEL_DATA_DIR = path.join(tmp, 'data');
 test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-const { netscapeCookies } = require('../google-library')._test;
+const { netscapeCookies } = require('../desktop/google-library')._test;
 
 test("only YouTube's cookies go into the file (not the Google account's), in the format yt-dlp reads", () => {
   const text = netscapeCookies([
@@ -29,7 +29,7 @@ test("only YouTube's cookies go into the file (not the Google account's), in the
   assert.equal(text.includes('bad'), false);
 });
 
-const server = require('../server');
+const server = require('../shared/server');
 
 test('every yt-dlp run uses the cookie file while it is set, and the bot pause ends', () => {
   const file = path.join(tmp, 'youtube-cookies.txt');

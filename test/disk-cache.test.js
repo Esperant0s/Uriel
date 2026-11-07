@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { planEviction, enforceLimit } = require('../disk-cache.js');
+const { planEviction, enforceLimit } = require('../shared/disk-cache.js');
 
 const song = (id, size, used, temp = false) => ({ id, name: `${id}.opus`, size, used, temp });
 

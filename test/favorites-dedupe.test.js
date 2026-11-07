@@ -4,7 +4,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { favoriteTrackKey, isSameSong, dedupeFavoriteTracks } = require('../track-sort');
+const { favoriteTrackKey, isSameSong, dedupeFavoriteTracks } = require('../shared/track-sort');
 
 const yt = { id: 'dQw4w9WgXcQ', title: 'Never Gonna Give You Up (Official Video)', artist: 'Rick Astley', duration: 213, platform: 'youtube' };
 

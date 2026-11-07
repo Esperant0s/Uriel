@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { dedupeTracks } = require('../library-tools');
+const { dedupeTracks } = require('../shared/library-tools');
 
 const sameById = (a, b) => a.id === b.id;
 

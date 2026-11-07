@@ -6,8 +6,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const zlib = require('node:zlib');
-const B = require('../backup-core.js');
-const P = require('../profiles-core.js');
+const B = require('../shared/backup-core.js');
+const P = require('../shared/profiles-core.js');
 
 const YT = 'dQw4w9WgXcQ';
 

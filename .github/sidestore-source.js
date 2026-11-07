@@ -7,7 +7,7 @@ const { RUN, REPO, SHA } = process.env;
 const base = require('../package.json').version.split('.').slice(0, 2).join('.');
 const version = `${base}.${RUN}`;
 const ipa = `https://github.com/${REPO}/releases/download/ios-latest/Uriel.ipa`;
-const icon = `https://raw.githubusercontent.com/${REPO}/${SHA}/assets/icon-ios.png`;
+const icon = `https://raw.githubusercontent.com/${REPO}/${SHA}/shared/assets/icon-ios.png`;
 const now = new Date().toISOString();
 const size = fs.statSync('Uriel.ipa').size;
 

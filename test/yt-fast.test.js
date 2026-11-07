@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const ytFast = require('../yt-fast');
+const ytFast = require('../shared/yt-fast');
 
 test('fast lookup picks plain-link audio formats, Opus first', () => {
   const player = { streamingData: { adaptiveFormats: [
@@ -23,7 +23,7 @@ test('video ids come from links and bare ids only', () => {
 });
 
 test('song start, the next song and other uploads try the fast way before yt-dlp', () => {
-  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'shared/server.js'), 'utf8');
   const order = (list) => list.map((name) => server.indexOf(name, server.indexOf('const DESKTOP_STRATEGIES')));
   // the resolver's computer strategies, in this order
   const [fast, ytDlp, other, sc] = order(["name: 'fast'", "name: 'ytDlp'", "name: 'otherUploads'", "name: 'soundcloud'"]);
@@ -36,7 +36,7 @@ test('song start, the next song and other uploads try the fast way before yt-dlp
 });
 
 test("YouTube's \"confirm you're not a bot\" is a block for the shared stream health, and a sign-in clears it", () => {
-  const server = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  const server = fs.readFileSync(path.join(__dirname, '..', 'shared/server.js'), 'utf8');
   assert.match(server, /const YT_BOT_RE = \/confirm you\.\?re not a bot\/i;/);
   assert.ok("ERROR: [youtube] sBzrzS1Ag_g: Sign in to confirm you’re not a bot.".match(/confirm you.?re not a bot/i));
   assert.match(server, /isBlocked: isStreamBlock/);

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const TA = require('../track-audio');
+const TA = require('../shared/track-audio');
 
 const G = { speed: 1.0, speedPitch: 1.0, pitch: 0, volume: 1.0, reverb: 30, echo: 0 };
 

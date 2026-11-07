@@ -27,8 +27,8 @@ const outbound = [];
 https.get = (target) => { outbound.push(String(target)); throw new Error('no network in tests'); };
 https.request = (target) => { outbound.push(String(target)); throw new Error('no network in tests'); };
 
-const { startServer, stopServer, getServerToken } = require('../server');
-const { LIBRARY_PATH, METADATA_PATH } = require('../platform');
+const { startServer, stopServer, getServerToken } = require('../shared/server');
+const { LIBRARY_PATH, METADATA_PATH } = require('../desktop/platform');
 let port;
 
 before(async () => { port = await startServer(0); });

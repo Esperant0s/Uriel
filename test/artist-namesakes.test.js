@@ -12,7 +12,7 @@ const path = require('node:path');
 const http = require('node:http');
 const https = require('node:https');
 
-const ytm = require('../ytm-artist');
+const ytm = require('../shared/ytm-artist');
 
 const FAMOUS = 'UCfamousfamousfamous0001';
 const SMALL = 'UCsmallsmallsmallsmall01';
@@ -156,7 +156,7 @@ https.request = (target, opts, cb) => {
   return http.request(toInternet(target), opts || {}, cb);
 };
 
-const { startServer, stopServer, getServerToken } = require('../server');
+const { startServer, stopServer, getServerToken } = require('../shared/server');
 let port;
 
 before(async () => {

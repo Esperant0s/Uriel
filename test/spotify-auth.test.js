@@ -107,7 +107,7 @@ test('Spotify login persists securely, refreshes, restores, and rejects partial 
       throw new Error(`Unexpected request: ${url}`);
     };
 
-    server = require('../server');
+    server = require('../shared/server');
     let port = await server.startServer(0);
     const token = server.getServerToken();
     const start = await get(port, `/api/spotify-auth-start?clientId=${'a'.repeat(32)}`, token);
@@ -139,8 +139,8 @@ test('Spotify login persists securely, refreshes, restores, and rejects partial 
     assert.deepStrictEqual(available.data.tracks.map(track => track.title), ['One']);
 
     await server.stopServer();
-    delete require.cache[require.resolve('../server')];
-    server = require('../server');
+    delete require.cache[require.resolve('../shared/server')];
+    server = require('../shared/server');
     port = await server.startServer(0);
     const restoredToken = server.getServerToken();
     assert.strictEqual((await get(port, '/api/spotify-status', restoredToken)).data.connected, true);
@@ -167,8 +167,8 @@ test('Spotify login persists securely, refreshes, restores, and rejects partial 
     const againState = new URL(again.data.url).searchParams.get('state');
     assert.strictEqual((await get(port, `/api/spotify-callback?state=${againState}&code=ok`, restoredToken)).status, 200);
     await server.stopServer();
-    delete require.cache[require.resolve('../server')];
-    server = require('../server');
+    delete require.cache[require.resolve('../shared/server')];
+    server = require('../shared/server');
     port = await server.startServer(0);
     rejectRefresh = true;
     const expired = await get(port, '/api/spotify-status', server.getServerToken());

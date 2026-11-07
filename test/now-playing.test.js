@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const N = require('../now-playing');
+const N = require('../shared/now-playing');
 
 test('positionState: uses the element rate and clamps the position', () => {
   assert.deepStrictEqual(N.positionState({ duration: 200, currentTime: 50, playbackRate: 1.25 }), { duration: 200, position: 50, playbackRate: 1.25 });

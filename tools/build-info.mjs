@@ -18,7 +18,7 @@ export function buildInfo(channel = '') {
 export const buildInfoScript = (channel) => `window.URIEL_BUILD = ${JSON.stringify(buildInfo(channel))};\n`;
 
 if (process.argv[1] && process.argv[1].endsWith('build-info.mjs')) {
-  const [out = 'build-info.js', channel = ''] = process.argv.slice(2);
+  const [out = 'shared/build-info.js', channel = ''] = process.argv.slice(2);
   writeFileSync(out, buildInfoScript(channel));
   console.log(`${out}: ${buildInfoScript(channel).trim()}`);
 }

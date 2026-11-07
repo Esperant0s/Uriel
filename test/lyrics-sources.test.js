@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const S = require('../lyrics-sources');
+const S = require('../shared/lyrics-sources');
 
 const YRC = [
   '[0,1000](0,1000,0) 作词 : Chris Martin/Guy Berryman',

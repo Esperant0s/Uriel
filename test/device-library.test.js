@@ -19,7 +19,7 @@ put(path.join(music, 'Albums', 'Random Access Memories', '01 - Daft Punk - Give 
 put(path.join(music, 'notes.txt'), 10);
 put(path.join(music, '.hidden', 'secret.mp3'), 10);
 
-const lib = require('../device-library');
+const lib = require('../shared/device-library');
 
 test('a found song gets the id an import of the same file gets', () => {
   assert.equal(lib.idFor('Daft Punk - Get Lucky.mp3', 4000), lib.songFromFile('/x/Daft Punk - Get Lucky.mp3', 4000, 'music').id);
@@ -36,7 +36,7 @@ test('folders are scanned deep or only at the top, without hidden folders', asyn
   assert.equal(top[0].source, 'downloads');
 });
 
-const { startServer, stopServer, getServerToken, rescanDeviceMusic } = require('../server');
+const { startServer, stopServer, getServerToken, rescanDeviceMusic } = require('../shared/server');
 let port;
 test.before(async () => { port = await startServer(0); });
 test.after(async () => { await stopServer(); fs.rmSync(tmp, { recursive: true, force: true }); });

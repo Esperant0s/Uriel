@@ -7,8 +7,8 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const { searchSoundcloudApi } = require('../soundcloud-search');
-const { cacheCopyArgs, copyStreamToCache } = require('../cache-copy');
+const { searchSoundcloudApi } = require('../shared/soundcloud-search');
+const { cacheCopyArgs, copyStreamToCache } = require('../shared/cache-copy');
 
 const tc = (protocol, extra = {}) => ({ url: 'https://api-v2.soundcloud.com/media/x', format: { protocol, mime_type: 'audio/mpeg' }, snipped: false, ...extra });
 const hit = (id, o = {}) => ({ kind: 'track', id, title: 'Song ' + id, user: { username: 'Artist' }, duration: 200000, permalink_url: `https://soundcloud.com/a/s${id}`, artwork_url: `https://i1.sndcdn.com/a${id}-large.jpg`, policy: 'ALLOW', media: { transcodings: [tc('progressive')] }, ...o });

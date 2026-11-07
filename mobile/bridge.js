@@ -92,7 +92,7 @@ let ready;
 let server = null;
 async function start() {
   await fs.init();
-  server = require('../server.js');
+  server = require('../shared/server.js');
   server.startServer(PORT);
 }
 

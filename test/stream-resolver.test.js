@@ -3,7 +3,7 @@
 // The shared stream resolver (stream-resolver.js), driven with fake strategies and a fake clock
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { createHealth, createResolver, BLOCK_MS, REST_MS } = require('../stream-resolver');
+const { createHealth, createResolver, BLOCK_MS, REST_MS } = require('../shared/stream-resolver');
 
 function clock() { let t = 1000; return { now: () => t, advance: (ms) => { t += ms; } }; }
 const blockedErr = () => new Error("Sign in to confirm you're not a bot");

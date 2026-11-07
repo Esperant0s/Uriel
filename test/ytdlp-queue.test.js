@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const { createTaskQueue, lowerPriority } = require('../ytdlp-queue');
+const { createTaskQueue, lowerPriority } = require('../shared/ytdlp-queue');
 
 // a task the test finishes by hand
 function deferred() {

@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
-const share = require('../share-link.js');
+const share = require('../shared/share-link.js');
 
 const yt = (id, title, artist, duration, platform = 'youtube') => ({ id, title, artist, duration, platform, url: `https://www.youtube.com/watch?v=${id}`, thumbnail: 'x' });
 

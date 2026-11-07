@@ -7,12 +7,12 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
-const app = read('app.js');
+const app = read('shared/app.js');
 
 test("a song's menu can share it and copy its link; a playlist has a ⋯ menu", () => {
   assert.match(app, /label: 'Share…', run: \(\) => sharePlaylist\(\{ name: \[track\.title, track\.artist\]/);
   assert.match(app, /label: 'Copy song link'/);
-  assert.match(read('index.html'), /id="btn-playlist-more"/);
+  assert.match(read('shared/index.html'), /id="btn-playlist-more"/);
   for (const label of ['Play next', 'Add to queue', 'Edit details', 'Duplicate', 'Export as file', 'Delete playlist']) {
     assert.ok(app.includes(`{ label: '${label}', `), label);
   }
@@ -52,13 +52,13 @@ test('phones: the now-playing controls and the row under them share one five-col
 });
 
 test('the playlist buttons wrap instead of running off the page; the edit buttons live in ⋯', () => {
-  const css = read('styles.css');
+  const css = read('shared/styles.css');
   assert.match(css, /\.playlist-actions \{ flex-wrap: wrap !important;/);
   assert.match(css, /#btn-share-playlist, #btn-rename-playlist, #btn-export-playlist, #btn-delete-playlist \{ display: none !important; \}/);
 });
 
 test('computers: a round play button and plain controls, centred with the seek bar as one block', () => {
-  const css = read('styles.css');
+  const css = read('shared/styles.css');
   assert.match(css, /:is\(\.btn-play-pause, \.btn-play-pause\.playing\) \{\s*width: 40px !important; height: 40px !important;[^}]*border-radius: 50% !important;/);
   assert.match(css, /\.playbar-center \{ padding-top: 18px; \}/);
 });

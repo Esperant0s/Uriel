@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { TRACK_SORT_MODES, sortTracks, backfillAddedAt } = require('../track-sort');
+const { TRACK_SORT_MODES, sortTracks, backfillAddedAt } = require('../shared/track-sort');
 
 function track(id, addedAt) {
   return addedAt === undefined ? { id } : { id, addedAt };
@@ -133,7 +133,7 @@ test('every listed sort mode is handled', () => {
 });
 
 test('favoriteIndex gives the same answers as comparing with every favourite', () => {
-  const { favoriteIndex, isSameSong } = require('../track-sort.js');
+  const { favoriteIndex, isSameSong } = require('../shared/track-sort.js');
   const favs = [
     { id: 'dQw4w9WgXcQ', platform: 'youtube', title: 'Never Gonna Give You Up', artist: 'Rick Astley', duration: 213 },
     { id: 'sc123', platform: 'soundcloud', title: 'Lofi Beat (Official Audio)', artist: 'Some Producer', duration: 120 },

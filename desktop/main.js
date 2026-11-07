@@ -1,5 +1,5 @@
 const { app, BrowserWindow, dialog, ipcMain, screen, shell, Tray, Menu, nativeImage, globalShortcut, powerMonitor, clipboard } = require('electron');
-require('./legacy-env');
+require('../shared/legacy-env');
 // Mural's (or Muriel's) data comes over on Uriel's first start, before platform.js or Chromium open any of these folders
 if (!process.env.URIEL_DATA_DIR) { try { require('./migrate-legacy').migrate(app.getPath('appData')); } catch (e) {} }
 const fs = require('fs');
@@ -108,7 +108,7 @@ if (process.argv.includes('lyrics') || process.argv.includes('--lyrics')) {
 }
 
 function runGUI() {
-  const { startServer, PORT, getServerToken } = require('./server');
+  const { startServer, PORT, getServerToken } = require('../shared/server');
 
   let mainWindow = null;
   // Must match build.appId so the NSIS shortcut, pinned icons and the running window share one taskbar identity.
@@ -229,7 +229,7 @@ function runGUI() {
                                    minHeight: 500,
                                    backgroundColor: firstRun ? '#0A0A0A' : '#000000',
                                    title: 'Uriel',
-                                   icon: path.join(__dirname, 'assets', 'icon.png'),
+                                   icon: path.join(__dirname, '..', 'shared', 'assets', 'icon.png'),
                                    // macOS keeps its frame so the native traffic lights, rounded corners and shadow are
                                    // used; Windows and Linux draw their own controls
                                    ...(process.platform === 'darwin'
@@ -259,7 +259,7 @@ function runGUI() {
       mainWindow.show();
     });
 
-    mainWindow.loadFile(path.join(__dirname, firstRun ? 'welcome.html' : 'index.html'));
+    mainWindow.loadFile(firstRun ? path.join(__dirname, 'welcome.html') : path.join(__dirname, '..', 'shared', 'index.html'));
     if (firstRun) {
       ipcMain.removeAllListeners('welcome-finish');
       ipcMain.once('welcome-finish', (e, detail) => {
@@ -269,7 +269,7 @@ function runGUI() {
         const result = detail && !detail.skipped ? detail : null;
         mainWindow.setBackgroundColor('#000000');
         mainWindow.webContents.once('did-finish-load', () => { if (result) mainWindow.webContents.send('welcome-result', result); });
-        mainWindow.loadFile(path.join(__dirname, 'index.html'));
+        mainWindow.loadFile(path.join(__dirname, '..', 'shared', 'index.html'));
       });
     }
 
@@ -282,7 +282,7 @@ function runGUI() {
     const isAppPage = (u) => {
       try {
         const x = new URL(u);
-        return x.protocol === 'file:' && path.resolve(fileURLToPath(x)).startsWith(path.resolve(__dirname) + path.sep);
+        return x.protocol === 'file:' && path.resolve(fileURLToPath(x)).startsWith(path.resolve(__dirname, '..') + path.sep);
       } catch (e) { return false; }
     };
     mainWindow.webContents.on('will-navigate', (e, url) => { if (!isAppPage(url)) e.preventDefault(); });
@@ -388,7 +388,7 @@ function runGUI() {
       }
       // how each stream source has been doing this session (stream-resolver.js): "youtube-ytdlp: 2 ok, 6 blocked"
       try {
-        const stats = require('./server').streamHealthStats();
+        const stats = require('../shared/server').streamHealthStats();
         for (const [src, st] of Object.entries(stats)) lines.push(`stream ${src}: ${st.ok} ok, ${st.blocked} blocked, ${st.failed} failed${st.waiting ? `, skipped for ${Math.ceil(st.waiting / 60000)} more min` : ''}`);
       } catch (e) {}
       lines.push('--- last log lines ---', ...tail(60));
@@ -411,14 +411,14 @@ function runGUI() {
           if (typeof src === 'string' && src.startsWith('data:image/png;base64,') && src.length < 4e6) img = nativeImage.createFromDataURL(src);
           else if (typeof src === 'string' && src.startsWith('file:')) img = nativeImage.createFromPath(fileURLToPath(src));
         } catch (err) { img = null; }
-        if (!img || img.isEmpty()) img = nativeImage.createFromPath(path.join(__dirname, 'assets', 'icon.png'));
+        if (!img || img.isEmpty()) img = nativeImage.createFromPath(path.join(__dirname, '..', 'shared', 'assets', 'icon.png'));
         try { if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setIcon(img); } catch (err) {}
         try { if (process.platform === 'darwin' && app.dock) app.dock.setIcon(img); } catch (err) {}
         // Linux taskbars and docks take the icon from the launcher entry, not the window (linux-icon.js)
         if (process.platform === 'linux') {
           try {
             const custom = typeof src === 'string' && !img.isEmpty() ? img.resize({ width: 512, height: 512, quality: 'best' }).toPNG() : null;
-            if (require('./linux-icon').setLauncherIcon({ png: custom, defaultPng: fs.readFileSync(path.join(__dirname, 'assets', 'icon.png')) })) {
+            if (require('./linux-icon').setLauncherIcon({ png: custom, defaultPng: fs.readFileSync(path.join(__dirname, '..', 'shared', 'assets', 'icon.png')) })) {
               execFile('update-desktop-database', [require('./linux-icon').paths().apps], () => {});
             }
           } catch (err) {}
@@ -773,7 +773,7 @@ function runGUI() {
 
       function setupTray() {
         try {
-          const iconPath = path.join(__dirname, 'assets', 'icon.png');
+          const iconPath = path.join(__dirname, '..', 'shared', 'assets', 'icon.png');
           let trayIcon = nativeImage.createFromPath(iconPath);
           trayIcon = trayIcon.resize({ width: 22, height: 22 });
           tray = new Tray(trayIcon);
@@ -820,7 +820,7 @@ function runGUI() {
         isQuitting = true;
       });
       app.on('will-quit', () => {
-        try { require('./server').stopChildren(); } catch (e) {}
+        try { require('../shared/server').stopChildren(); } catch (e) {}
       });
 
       app.whenReady().then(() => {

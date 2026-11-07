@@ -107,7 +107,7 @@ https.request = (target, opts, cb) => {
   return http.request(toInternet(target), opts || {}, cb);
 };
 
-const { startServer, stopServer, getServerToken } = require('../server');
+const { startServer, stopServer, getServerToken } = require('../shared/server');
 let port;
 
 before(async () => {

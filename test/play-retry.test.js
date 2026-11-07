@@ -10,7 +10,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
-const { createTaskQueue } = require('../ytdlp-queue');
+const { createTaskQueue } = require('../shared/ytdlp-queue');
 
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const tick = () => new Promise((r) => setImmediate(r));
@@ -74,7 +74,7 @@ echo "https://rr1.googlevideo.com/videoplayback?n=$n"
   fs.chmodSync(fake, 0o755);
   process.env.URIEL_YTDLP = fake;
   process.env.URIEL_FFMPEG = fake;
-  server = require('../server.js');
+  server = require('../shared/server.js');
   port = await server.startServer(0);
   token = server.getServerToken();
 });
@@ -124,7 +124,7 @@ test('fresh=1 skips the remembered stream URL', async () => {
 });
 
 test('the app looks a failing song up once more, afresh, before telling the listener', () => {
-  const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+  const app = fs.readFileSync(path.join(__dirname, '..', 'shared/app.js'), 'utf8');
   assert.match(app, /function retryFresh\(token, track\)/);
   assert.match(app, /fresh \? '&fresh=1' : ''/);
   // every place that shows "try again or skip" (lookup, audio element error, HLS error, nothing loading) tries it first

@@ -49,8 +49,8 @@ test('Yandex Music: public playlists are read, anything else is refused before a
       if (u.pathname === '/users/locked/playlists/1') return new Response('{}', { status: 403 });
       return new Response('{}', { status: 404 });
     };
-    delete require.cache[require.resolve('../server')];
-    server = require('../server');
+    delete require.cache[require.resolve('../shared/server')];
+    server = require('../shared/server');
     const port = await server.startServer(0);
     const token = server.getServerToken();
     const q = (u) => `/api/yandex-import?url=${encodeURIComponent(u)}`;
@@ -101,13 +101,13 @@ test('Yandex Music: public playlists are read, anything else is refused before a
     assert.equal(locked.data.code, 'yandex_private');
   } finally {
     if (server) await server.stopServer();
-    delete require.cache[require.resolve('../server')];
+    delete require.cache[require.resolve('../shared/server')];
     globalThis.fetch = oldFetch;
   }
 });
 
 test('YouTube library: songs and playlists are picked out of youtubei answers and checked', () => {
-  const G = require('../google-library.js')._test;
+  const G = require('../desktop/google-library.js')._test;
   const runs = (t) => ({ runs: [{ text: t }] });
   const ytm = { contents: { singleColumnBrowseResultsRenderer: { tabs: [{ tabRenderer: { content: { sectionListRenderer: { contents: [{ musicShelfRenderer: { contents: [
     { musicResponsiveListItemRenderer: { playlistItemData: { videoId: 'dQw4w9WgXcQ' }, flexColumns: [{ musicResponsiveListItemFlexColumnRenderer: { text: runs('Never Gonna') } }, { musicResponsiveListItemFlexColumnRenderer: { text: { runs: [{ text: 'Rick Astley' }, { text: ' • ' }, { text: 'Album' }] } } }], fixedColumns: [{ musicResponsiveListItemFixedColumnRenderer: { text: runs('3:33') } }], thumbnail: { musicThumbnailRenderer: { thumbnail: { thumbnails: [{ url: 'https://lh3.googleusercontent.com/a=w60' }, { url: 'https://lh3.googleusercontent.com/a=w120' }] } } } } },

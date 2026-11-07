@@ -1,9 +1,9 @@
 {
   "name": "uriel",
   "version": "1.5.5",
-  "main": "main.js",
+  "main": "desktop/main.js",
   "bin": {
-    "uriel": "./cli.js"
+    "uriel": "./desktop/cli.js"
   },
   "scripts": {
     "start": "electron .",
@@ -61,16 +61,13 @@
       "**/*",
       "!.github/**",
       "!dist/**",
-      "!bin/**",
+      "!desktop/bin/**",
       "!mobile/**",
-      "!www/**",
-      "!ios/**",
-      "!android/**",
       "!tools/**",
       "!docs/**",
       "!capacitor.config.json",
       "!.claude/**",
-      "!vendor/**",
+      "!shared/vendor/**",
       "!*.md",
       "!strip_comments.js",
       "!package-lock.json"
@@ -84,7 +81,7 @@
           ]
         }
       ],
-      "icon": "assets/icon.png"
+      "icon": "shared/assets/icon.png"
     },
     "nsis": {
       "oneClick": true,
@@ -100,7 +97,7 @@
           ]
         }
       ],
-      "icon": "assets/icon.png",
+      "icon": "shared/assets/icon.png",
       "category": "AudioVideo"
     },
     "mac": {

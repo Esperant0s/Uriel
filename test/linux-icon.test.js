@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { paths, setLauncherIcon } = require('../linux-icon');
+const { paths, setLauncherIcon } = require('../desktop/linux-icon');
 
 const IMAGE = '/home/me/Applications/uriel-1.5.5-linux-x86_64.AppImage';
 const entry = (icon) => `[Desktop Entry]\nType=Application\nName=Uriel\nExec="${IMAGE}" %U\nIcon=${icon}\n`;

@@ -32,8 +32,8 @@ test('image proxy: needs the token, refuses private hosts, fetches and keeps pub
       if (String(url) === 'https://93.184.216.34/cover.png') return new Response(png, { status: 200 });
       return new Response('', { status: 404 });
     };
-    delete require.cache[require.resolve('../server')];
-    server = require('../server');
+    delete require.cache[require.resolve('../shared/server')];
+    server = require('../shared/server');
     const port = await server.startServer(0);
     const token = server.getServerToken();
     const q = (u) => `/api/image-proxy?url=${encodeURIComponent(u)}`;
@@ -53,7 +53,7 @@ test('image proxy: needs the token, refuses private hosts, fetches and keeps pub
     assert.equal(asked.length, 1, 'the second time comes from disk');
   } finally {
     if (server) await server.stopServer();
-    delete require.cache[require.resolve('../server')];
+    delete require.cache[require.resolve('../shared/server')];
     globalThis.fetch = oldFetch;
     fs.rmSync(process.env.URIEL_DATA_DIR, { recursive: true, force: true });
   }

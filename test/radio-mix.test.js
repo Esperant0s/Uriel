@@ -2,7 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const { mixRadio } = require('../recommend-core');
+const { mixRadio } = require('../shared/recommend-core');
 
 const t = (artist, title, match = 0.5, id = '') => ({ artist, title, match, ...(id ? { id } : {}) });
 

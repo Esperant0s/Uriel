@@ -9,8 +9,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
-const main = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
+const app = fs.readFileSync(path.join(__dirname, '..', 'shared/app.js'), 'utf8');
+const main = fs.readFileSync(path.join(__dirname, '..', 'desktop/main.js'), 'utf8');
 
 function fnSource(name) {
   const start = app.indexOf(`function ${name}(`);

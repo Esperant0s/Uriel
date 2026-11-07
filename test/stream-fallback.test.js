@@ -56,7 +56,7 @@ https.request = () => {
   return req;
 };
 
-const { startServer, stopServer, getServerToken } = require('../server');
+const { startServer, stopServer, getServerToken } = require('../shared/server');
 let port;
 before(async () => { port = await startServer(0); });
 after(async () => {

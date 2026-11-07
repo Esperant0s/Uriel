@@ -1,4 +1,4 @@
-require('./legacy-env');
+require('../shared/legacy-env');
 
 
 const http = require('http');

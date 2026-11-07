@@ -306,7 +306,7 @@ async function writeYoutubeCookies(profile, file) {
 function playbackSignin() {
   const { readStartupConfig, writeStartupConfig, DATA_DIR } = require('./platform');
   const file = path.join(DATA_DIR, 'youtube-cookies.txt');
-  const server = () => require('./server');
+  const server = () => require('../shared/server');
   const get = () => { const v = readStartupConfig().ytPlaybackSignin; return v && typeof v === 'object' ? v : {}; };
   const use = (on) => { try { server().setYtDlpCookies(on && fs.existsSync(file) ? file : null); } catch (e) {} };
   const drop = () => { use(false); try { fs.rmSync(file, { force: true }); } catch (e) {} };

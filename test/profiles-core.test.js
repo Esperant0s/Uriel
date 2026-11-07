@@ -3,7 +3,7 @@
 // profiles-core.js: each profile is its own set of localStorage keys, the first one keeps the plain keys.
 const test = require('node:test');
 const assert = require('node:assert');
-const P = require('../profiles-core.js');
+const P = require('../shared/profiles-core.js');
 
 // the real localStorage, as profiles-core.js reaches it
 const over = (m) => ({ get: (k) => (m.has(k) ? m.get(k) : null), set: (k, v) => { m.set(k, String(v)); }, remove: (k) => { m.delete(k); }, keys: () => [...m.keys()] });

@@ -1,5 +1,5 @@
-"""Makes Uriel's Home-button icons (assets/app-icons/) from Riff's: every Riff logo shape in an icon (the long
-M/C path, also used for its glow, mask and outline) is swapped for Uriel's sparkle (assets/mark.svg), fitted
+"""Makes Uriel's Home-button icons (shared/assets/app-icons/) from Riff's: every Riff logo shape in an icon (the long
+M/C path, also used for its glow, mask and outline) is swapped for Uriel's sparkle (shared/assets/mark.svg), fitted
 into the same box, so the backgrounds and decorations stay and the logo is Uriel's.
 Usage: python3 tools/uriel-app-icons.py <dir with Riff's NN-name.svg files> [out dir]"""
 import os, re, sys
@@ -34,7 +34,7 @@ def convert(svg):
 
 if __name__ == '__main__':
     src = sys.argv[1]
-    out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.dirname(__file__), '..', 'assets', 'app-icons')
+    out = sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.dirname(__file__), '..', 'shared', 'assets', 'app-icons')
     os.makedirs(out, exist_ok=True)
     for f in sorted(os.listdir(src)):
         if not re.match(r'\d\d-[\w-]+\.svg$', f):

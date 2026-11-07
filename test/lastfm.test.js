@@ -12,7 +12,7 @@ const https = require('node:https');
 const crypto = require('node:crypto');
 const Module = require('node:module');
 const { PassThrough } = require('node:stream');
-const L = require('../lastfm-core.js');
+const L = require('../shared/lastfm-core.js');
 
 test('a song is scrobbled after half its length or 4 minutes, and only if longer than 30 seconds', () => {
   assert.equal(L.scrobbleAfter(30), 0);
@@ -169,8 +169,8 @@ test('server: Last.fm logins are per profile, kept encrypted, and never handed t
       return req;
     };
 
-    delete require.cache[require.resolve('../server')];
-    server = require('../server');
+    delete require.cache[require.resolve('../shared/server')];
+    server = require('../shared/server');
     let port = await server.startServer(0);
     let token = server.getServerToken();
 
@@ -227,8 +227,8 @@ test('server: Last.fm logins are per profile, kept encrypted, and never handed t
 
     // the logins survive a restart
     await server.stopServer();
-    delete require.cache[require.resolve('../server')];
-    server = require('../server');
+    delete require.cache[require.resolve('../shared/server')];
+    server = require('../shared/server');
     port = await server.startServer(0);
     token = server.getServerToken();
     assert.deepEqual((await post(port, '/api/lastfm/status', { profile: 'abcd1234' }, token)).data.username, 'phone');
@@ -250,7 +250,7 @@ test('server: Last.fm logins are per profile, kept encrypted, and never handed t
     assert.equal((await post(port, '/api/lastfm/token', { profile: 'default' }, token)).status, 200);
   } finally {
     if (server) await server.stopServer();
-    delete require.cache[require.resolve('../server')];
+    delete require.cache[require.resolve('../shared/server')];
     https.request = oldRequest;
     Module._load = oldLoad;
     if (oldDataDir === undefined) delete process.env.URIEL_DATA_DIR; else process.env.URIEL_DATA_DIR = oldDataDir;
@@ -273,8 +273,8 @@ test('server: without a keychain the login lasts until Uriel closes, and says so
       req.on = function (ev, fn) { PassThrough.prototype.on.call(this, ev, fn); return this; };
       return req;
     };
-    delete require.cache[require.resolve('../server')];
-    server = require('../server');
+    delete require.cache[require.resolve('../shared/server')];
+    server = require('../shared/server');
     const port = await server.startServer(0);
     const token = server.getServerToken();
     const r = await post(port, '/api/lastfm/mobile-session', { profile: 'default', username: 'u', password: 'p' }, token);
@@ -284,7 +284,7 @@ test('server: without a keychain the login lasts until Uriel closes, and says so
     assert.ok(!fs.existsSync(path.join(dir, 'lastfm-auth.enc')));
   } finally {
     if (server) await server.stopServer();
-    delete require.cache[require.resolve('../server')];
+    delete require.cache[require.resolve('../shared/server')];
     https.request = oldRequest;
     if (oldDataDir === undefined) delete process.env.URIEL_DATA_DIR; else process.env.URIEL_DATA_DIR = oldDataDir;
     fs.rmSync(dir, { recursive: true, force: true });

@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { execFileSync } = require('node:child_process');
-const updater = require('../desktop-updater');
+const updater = require('../desktop/desktop-updater');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'uriel-updater-'));
 test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
@@ -101,10 +101,10 @@ test('the Mac swap script puts the new app in place and keeps the old one if tha
 });
 
 test('the update banner offers the in-app update before the browser one', () => {
-  const notifier = fs.readFileSync(path.join(__dirname, '..', 'update-notifier.js'), 'utf8');
+  const notifier = fs.readFileSync(path.join(__dirname, '..', 'shared/update-notifier.js'), 'utf8');
   assert.match(notifier, /window\.electronAPI && window\.electronAPI\.updates\) \|\| window\.UrielAppUpdater/);
-  const preload = fs.readFileSync(path.join(__dirname, '..', 'preload.js'), 'utf8');
+  const preload = fs.readFileSync(path.join(__dirname, '..', 'desktop/preload.js'), 'utf8');
   assert.match(preload, /invoke\('updater-download'\)/);
-  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'shared/index.html'), 'utf8');
   assert.ok(html.indexOf('update-core.js') < html.indexOf('update-notifier.js'));
 });

@@ -12,11 +12,11 @@ const dns = require('dns');
 const net = require('net');
 
 const PORT = 38472;
-const { DATA_DIR, CACHE_DIR, CUSTOM_LYRICS_DIR, LYRICS_DIR, THUMBNAILS_DIR, METADATA_PATH, LIBRARY_DIR, LIBRARY_PATH, ytDlpCommand, resolveDownloadDir, resolveBinary } = require('./platform');
+const { DATA_DIR, CACHE_DIR, CUSTOM_LYRICS_DIR, LYRICS_DIR, THUMBNAILS_DIR, METADATA_PATH, LIBRARY_DIR, LIBRARY_PATH, ytDlpCommand, resolveDownloadDir, resolveBinary } = require('../desktop/platform');
 // iOS can't hand a cross-origin stream to Web Audio, so it plays everything from the disk cache.
-const STREAM_VIA_CACHE = !!require('./platform').STREAM_VIA_CACHE;
-const logger = require('./logger');
-const { getSystemAudioOutputInfo } = require('./audio-output');
+const STREAM_VIA_CACHE = !!require('../desktop/platform').STREAM_VIA_CACHE;
+const logger = require('../desktop/logger');
+const { getSystemAudioOutputInfo } = require('../desktop/audio-output');
 const ytmArtist = require('./ytm-artist');
 const libraryPages = require('./library-pages');
 const recommendCore = require('./recommend-core');
@@ -6978,11 +6978,11 @@ const server = http.createServer(guardHandler(async (req, res) => {
 
   if (parsedUrl.pathname === '/api/tools-status') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify(require('./tools').toolsStatus()));
+    return res.end(JSON.stringify(require('../desktop/tools').toolsStatus()));
   }
 
   if (parsedUrl.pathname === '/api/tools-install') {
-    require('./tools').ensureTools().catch(() => {});
+    require('../desktop/tools').ensureTools().catch(() => {});
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ started: true }));
   }
@@ -7342,7 +7342,7 @@ function startServer(port = PORT) {
       const address = server.address();
       const bound = address && typeof address === 'object' ? address.port : port;
       console.log(`devsize internal server running on http://127.0.0.1:${bound}`);
-      require('./tools').updateYtDlpIfManaged().catch(() => {});
+      require('../desktop/tools').updateYtDlpIfManaged().catch(() => {});
       if (!process.env.NODE_TEST_CONTEXT) rescanDeviceMusic().catch(() => {});
       resolve(bound);
     }).on('error', (err) => {
@@ -7350,7 +7350,7 @@ function startServer(port = PORT) {
         server.listen(0, '127.0.0.1', () => {
           const p = server.address().port;
           console.log(`devsize internal server running on fallback port http://127.0.0.1:${p}`);
-          require('./tools').updateYtDlpIfManaged().catch(() => {});
+          require('../desktop/tools').updateYtDlpIfManaged().catch(() => {});
           if (!process.env.NODE_TEST_CONTEXT) rescanDeviceMusic().catch(() => {});
           resolve(p);
         });

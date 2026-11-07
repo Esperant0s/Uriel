@@ -4,7 +4,7 @@
 // ios/App/App/AppDelegate.swift) passes on the start and end of each interruption, and this plays the song
 // again when it was playing and nobody paused it meanwhile.
 const { Capacitor, registerPlugin } = require('@capacitor/core');
-const { wasPlayingAtInterruption, resumeAfterInterruption } = require('../now-playing');
+const { wasPlayingAtInterruption, resumeAfterInterruption } = require('../shared/now-playing');
 
 module.exports = function audioInterruption() {
   if (Capacitor.getPlatform() !== 'ios') return;

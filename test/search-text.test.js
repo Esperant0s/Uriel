@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { normalizeSearch } = require('../search-text');
+const { normalizeSearch } = require('../shared/search-text');
 
 test('lowercases and trims', () => {
   assert.strictEqual(normalizeSearch('  Hello World  '), 'hello world');

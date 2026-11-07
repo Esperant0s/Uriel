@@ -5,8 +5,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const L = require('../library-store.js');
-const P = require('../profiles-core.js');
+const L = require('../shared/library-store.js');
+const P = require('../shared/profiles-core.js');
 
 // the real localStorage, as profiles-core.js reaches it
 function local(init = {}) {
@@ -162,7 +162,7 @@ test('every profile has its own lists in IndexedDB; the move flag belongs to the
 });
 
 test('loaded before profiles-core.js, on computers and phones', () => {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'shared/index.html'), 'utf8');
   const at = (f) => html.indexOf(`<script src="${f}"></script>`);
   assert.ok(at('library-store.js') >= 0 && at('library-store.js') < at('profiles-core.js'));
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'mobile', 'build.mjs'), 'utf8'), /'library-store\.js'/);

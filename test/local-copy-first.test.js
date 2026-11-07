@@ -36,12 +36,12 @@ https.request = () => {
 };
 
 // a song saved earlier: its first play found the video, and the copy is kept under that video's id
-const { CACHE_DIR, METADATA_PATH } = require('../platform');
+const { CACHE_DIR, METADATA_PATH } = require('../desktop/platform');
 fs.mkdirSync(CACHE_DIR, { recursive: true });
 fs.writeFileSync(path.join(CACHE_DIR, 'SAVEDvideo1.opus'), Buffer.alloc(70000));
 fs.writeFileSync(METADATA_PATH, JSON.stringify({ SAVEDvideo1: { id: 'SAVEDvideo1', title: 'Saved Song', artist: 'Some Artist', duration: '180', platform: 'youtube' } }));
 
-const { startServer, stopServer, getServerToken } = require('../server');
+const { startServer, stopServer, getServerToken } = require('../shared/server');
 let port;
 before(async () => { port = await startServer(0); });
 after(async () => {

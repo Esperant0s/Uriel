@@ -3,7 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const rec = require('../recommend-core');
+const rec = require('../shared/recommend-core');
 
 const sep = { text: ' • ' };
 function row(videoId, title, artistRuns, length, extra = {}) {

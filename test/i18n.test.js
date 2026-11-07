@@ -11,7 +11,7 @@ const path = require('node:path');
 const http = require('node:http');
 const https = require('node:https');
 
-const I18n = require('../i18n');
+const I18n = require('../shared/i18n');
 
 test('only Uriel\'s own words are worth translating', () => {
   for (const s of ['Play next', 'Add to queue', 'No playlists yet. Create one first.', '{0} songs']) assert.equal(I18n.translatable(s), true, s);
@@ -43,13 +43,13 @@ test('numbers on the page become slots, so counts share one translation and neve
 });
 
 test('the language is per profile, the quick-start copy of its words belongs to the device', () => {
-  const P = require('../profiles-core');
+  const P = require('../shared/profiles-core');
   assert.equal(P.isDevice(I18n.KEY), false);
   assert.equal(P.isDevice(I18n.SNAP), true);
 });
 
 test('i18n.js loads before app.js, after profiles-core.js, on desktop and phones', () => {
-  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'shared/index.html'), 'utf8');
   const at = (f) => html.indexOf(`<script src="${f}"></script>`);
   assert.ok(at('profiles-core.js') >= 0 && at('profiles-core.js') < at('i18n.js') && at('i18n.js') < at('app.js'));
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'mobile', 'build.mjs'), 'utf8'), /'i18n\.js'/);
@@ -92,7 +92,7 @@ https.get = (target, opts, cb) => {
   return http.get(`http://127.0.0.1:${service.address().port}/?u=${encodeURIComponent(String(target))}`, opts || {}, cb);
 };
 
-const { startServer, stopServer, getServerToken } = require('../server');
+const { startServer, stopServer, getServerToken } = require('../shared/server');
 let port;
 before(async () => {
   await new Promise((resolve) => service.listen(0, '127.0.0.1', resolve));
@@ -212,7 +212,7 @@ test('UrielI18n.lang follows setLang (it used to stay at the startup language, s
     document: { body: null, documentElement: { classList: { toggle() {} } } }, setTimeout, clearTimeout, console };
   ctx.window = ctx;
   vm.createContext(ctx);
-  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'i18n.js'), 'utf8').replace(/typeof window !== 'undefined' \? window : globalThis/, 'window'), ctx);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'shared/i18n.js'), 'utf8').replace(/typeof window !== 'undefined' \? window : globalThis/, 'window'), ctx);
   const api = ctx.UrielI18n;
   assert.equal(api.lang, 'en');
   api.setLang('de');

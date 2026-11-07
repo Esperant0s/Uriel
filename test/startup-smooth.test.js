@@ -11,7 +11,7 @@ const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 test('the four artwork shapes are ready as soon as m3shapes.js runs, without touching the page', () => {
   const win = {};
   const doc = { readyState: 'loading', addEventListener: () => assert.fail('nothing should wait for the page'), createElementNS: () => assert.fail('no SVG measuring at start-up') };
-  new Function('window', 'document', read('m3shapes.js'))(win, doc);
+  new Function('window', 'document', read('shared/m3shapes.js'))(win, doc);
   const S = win.RiffShapes;
   assert.equal(S.ready(), true);
   assert.equal(S.count(), 4);
@@ -25,12 +25,12 @@ test('the four artwork shapes are ready as soon as m3shapes.js runs, without tou
 });
 
 test('the splash waits for the app and for smooth frames, with a cap; it only animates transform and opacity', () => {
-  const app = read('app.js');
+  const app = read('shared/app.js');
   const splash = app.slice(app.indexOf('(function urielSplash()'), app.indexOf("document.addEventListener('DOMContentLoaded'"));
   assert.match(splash, /addEventListener\('uriel:ready'/);
   assert.match(splash, /MAX_MS/);
   assert.match(splash, /smooth >= SMOOTH_MS/);
-  const css = read('styles.css');
+  const css = read('shared/styles.css');
   for (const name of ['splashBloom', 'splashBreathe']) {
     const kf = css.slice(css.indexOf(`@keyframes ${name}`), css.indexOf('}\n', css.indexOf(`@keyframes ${name}`)) + 1);
     const props = [...kf.matchAll(/([a-z-]+):/g)].map((m) => m[1]);
