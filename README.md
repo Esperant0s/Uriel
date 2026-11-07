@@ -40,7 +40,7 @@ Requires Node.js 18 or newer.
 
 ```bash
 git clone https://github.com/Esperant0s/Uriel.git
-cd riff-uriel
+cd Uriel
 npm install
 npm start
 ```

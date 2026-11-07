@@ -680,3 +680,7 @@ html.is-mobile #right-panel.lyrics-empty .right-panel-title-row { position: rela
 html.is-mobile #right-panel.lyrics-empty .right-panel-title { flex: 0 1 auto !important; text-align: center !important; }
 html.is-mobile #right-panel.lyrics-empty .right-panel-artist { display: block !important; width: 100% !important; text-align: center !important; padding: 0 44px !important; box-sizing: border-box !important; }
 html.is-mobile #right-panel.lyrics-empty #np-like { position: absolute !important; right: 0 !important; top: 50% !important; margin-top: -20px !important; }
+
+/* ---------- Finger-sized controls: these were 22-26px tall on a phone ---------- */
+html.is-mobile .search-clear-btn { width: 36px !important; height: 36px !important; }
+html.is-mobile :is(.theme-mode-btn, .fps-cap-btn) { min-height: 36px; }
