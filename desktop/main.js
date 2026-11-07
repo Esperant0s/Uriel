@@ -286,6 +286,13 @@ function runGUI() {
       } catch (e) { return false; }
     };
     mainWindow.webContents.on('will-navigate', (e, url) => { if (!isAppPage(url)) e.preventDefault(); });
+    // Zoom in listens for Ctrl and "+", which on most keyboards needs Shift, so Ctrl+- shrank the window and the key
+    // beside it did nothing (#41). Ctrl and "=" zooms in too.
+    mainWindow.webContents.on('before-input-event', (e, input) => {
+      if (input.type !== 'keyDown' || input.key !== '=' || input.shift || input.alt || !(input.control || input.meta)) return;
+      e.preventDefault();
+      mainWindow.webContents.zoomLevel += 0.5;
+    });
 
     mainWindow.on('minimize', () => {
       if (mainWindow && !mainWindow.isDestroyed()) {

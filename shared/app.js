@@ -5736,14 +5736,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     el.nativeAudio.addEventListener('playing', () => { if (outputDeviceId) applyOutputDevice(); });
   }
 
+  // Following the system's output, headphones going away must pause too, not carry on out loud from the speakers (#32).
+  // On Windows and macOS the "default" entry shares a groupId with the real device it stands for. On Linux its groupId
+  // is just "default", so which device was in use is unknown and any device going away pauses: pausing needlessly when
+  // another device is unplugged beats suddenly playing out loud.
+  let lastOutputs = null;
+  if (canPickOutput) listOutputDevices().then((list) => { lastOutputs = list; });
+  function defaultOutputLost(before, after) {
+    if (!before) return false;
+    const realOf = (list) => list.filter((d) => d.deviceId && d.deviceId !== 'default' && d.deviceId !== 'communications');
+    const was = realOf(before);
+    const now = realOf(after);
+    const def = before.find((d) => d.deviceId === 'default');
+    const group = def && def.groupId;
+    if (group && was.some((d) => d.groupId === group)) return !now.some((d) => d.groupId === group);
+    return was.some((d) => !now.some((n) => n.deviceId === d.deviceId));
+  }
   if (navigator.mediaDevices && typeof navigator.mediaDevices.addEventListener === 'function') {
     navigator.mediaDevices.addEventListener('devicechange', async () => {
       updateTvkOutput();
       if (!canPickOutput) return;
       const before = knownOutputIds;
-      const now = new Set((await listOutputDevices()).map((d) => d.deviceId).filter((id) => id && id !== 'default' && id !== 'communications'));
+      const outputs = await listOutputDevices();
+      const now = new Set(outputs.map((d) => d.deviceId).filter((id) => id && id !== 'default' && id !== 'communications'));
       const lostChosen = !!outputDeviceId && !!before && before.has(outputDeviceId) && !now.has(outputDeviceId);
-      if (state.isPlaying && lostChosen && el.nativeAudio && !el.nativeAudio.paused) {
+      const lostDefault = !outputDeviceId && defaultOutputLost(lastOutputs, outputs);
+      lastOutputs = outputs;
+      if (state.isPlaying && (lostChosen || lostDefault) && el.nativeAudio && !el.nativeAudio.paused) {
         el.nativeAudio.pause();
         showToast(Tm('Paused: the output device was disconnected'), 'info');
       }
@@ -7868,8 +7887,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
     if ((delta < 0 && row.scrollLeft > 0) || (delta > 0 && row.scrollLeft < row.scrollWidth - row.clientWidth - 1)) {
       e.preventDefault();
-      row.scrollBy({ left: e.deltaMode === 1 ? delta * 40 : delta, behavior: 'smooth' });
+      glideRowBy(row, e.deltaMode === 1 ? delta * 40 : delta);
     }
+  }
+  // Each wheel tick adds to where the row is heading (#41). A smooth scrollBy per tick started over from wherever the
+  // row was, so ticks arriving faster than it moved were lost: a fast flick went about 6% of the way.
+  function glideRowBy(row, px) {
+    const max = row.scrollWidth - row.clientWidth;
+    const from = row._glideRaf ? row._glideTo : row.scrollLeft;
+    row._glideTo = Math.max(0, Math.min(max, from + px));
+    if (row._glideRaf) return;
+    row.style.scrollBehavior = 'auto'; // the row's CSS would otherwise animate each step of this animation too
+    let last = performance.now();
+    const step = (now) => {
+      const left = row._glideTo - row.scrollLeft;
+      if (Math.abs(left) < 1) {
+        row.scrollLeft = row._glideTo;
+        row._glideRaf = 0;
+        row.style.scrollBehavior = '';
+        return;
+      }
+      const move = left * (1 - Math.exp(-(now - last) / 70));
+      last = now;
+      row.scrollLeft += Math.abs(move) < 1 ? Math.sign(left) : move;
+      row._glideRaf = requestAnimationFrame(step);
+    };
+    row._glideRaf = requestAnimationFrame(step);
   }
   // rows drawn without bindHorizontalWheel (For you: artists and songs, Your playlists, an artist's namesakes)
   // scrolled the whole page under the wheel (#10): one listener for all of them

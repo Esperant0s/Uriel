@@ -6,11 +6,14 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.AudioManager;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.net.wifi.WifiManager;
@@ -125,10 +128,16 @@ public class MediaControlsPlugin extends Plugin {
     private boolean islandChannel;
     private final Runnable islandPost = this::postIsland;
 
+    // Headphones unplugged or a Bluetooth speaker gone: Android is about to play out loud from the phone, so pause (#32)
+    private final BroadcastReceiver becomingNoisy = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) { send("pause", -1); }
+    };
+
     @Override
     public void load() {
         instance = this;
         Context ctx = getContext();
+        ContextCompat.registerReceiver(ctx, becomingNoisy, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY), ContextCompat.RECEIVER_NOT_EXPORTED);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(CHANNEL, "Playback", NotificationManager.IMPORTANCE_LOW);
             channel.setDescription("The song that's playing, with play, pause and skip");
@@ -666,3 +675,4 @@ public class MediaControlsPlugin extends Plugin {
         super.handleOnDestroy();
     }
 }
+        try { getContext().unregisterReceiver(becomingNoisy); } catch (IllegalArgumentException ignored) {}
