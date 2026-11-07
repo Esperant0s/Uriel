@@ -147,6 +147,11 @@ public class MediaControlsPlugin extends Plugin {
         // one left by an app that was stopped without cleaning up
         try { ctx.getSystemService(NotificationManager.class).cancel(ISLAND_ID); } catch (Exception ignored) {}
         session = new MediaSessionCompat(ctx, "Uriel");
+        // what Android wakes for a tap on earbuds once Uriel isn't running any more (MediaButtonReceiver)
+        Intent button = new Intent(Intent.ACTION_MEDIA_BUTTON).setClass(ctx, MediaButtonReceiver.class);
+        // mutable: Android adds the key that was pressed when it sends this; an immutable one arrived without it
+        int mutable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? PendingIntent.FLAG_MUTABLE : 0;
+        session.setMediaButtonReceiver(PendingIntent.getBroadcast(ctx, 50, button, mutable | PendingIntent.FLAG_UPDATE_CURRENT));
         session.setCallback(new MediaSessionCompat.Callback() {
             @Override public void onPlay() { start("play"); }
             @Override public void onPause() { send("pause", -1); }
@@ -236,6 +241,44 @@ public class MediaControlsPlugin extends Plugin {
                 .build());
         session.setActive(true);
         refreshNotification();
+        call.resolve();
+    }
+
+    // set when earbuds (MediaButtonReceiver) or "Tap to keep listening" opened the app: the page asks once it is ready
+    static volatile boolean startPlayWanted;
+    // ...and earbuds, not a person opening the app: once the music plays it goes back out of sight, as Spotify's would
+    static volatile boolean openedByEarbuds;
+
+    @PluginMethod
+    public void takeStartPlay(PluginCall call) {
+        JSObject out = new JSObject();
+        out.put("start", startPlayWanted);
+        out.put("background", startPlayWanted && openedByEarbuds);
+        startPlayWanted = false;
+        openedByEarbuds = false;
+        call.resolve(out);
+    }
+
+    @PluginMethod
+    public void moveToBack(PluginCall call) {
+        Activity activity = getActivity();
+        if (activity != null) activity.runOnUiThread(() -> activity.moveTaskToBack(true));
+        call.resolve();
+    }
+
+    // downloads are running (the page tells): keeps the app going in the background and shows the progress
+    @PluginMethod
+    public void downloading(PluginCall call) {
+        Context ctx = getContext();
+        try {
+            if (call.getBoolean("active", false)) {
+                DownloadService.show(ctx, call.getString("title", ""), call.getInt("done", 0), call.getInt("total", 0), call.getInt("percent", -1));
+            } else {
+                DownloadService.hide(ctx);
+            }
+        } catch (Exception ignored) {
+            // Android refused a foreground service right now: the download carries on while the app is open
+        }
         call.resolve();
     }
 
@@ -668,6 +711,7 @@ public class MediaControlsPlugin extends Plugin {
 
     @Override
     protected void handleOnDestroy() {
+        try { getContext().unregisterReceiver(becomingNoisy); } catch (IllegalArgumentException ignored) {}
         shutdown();
         if (session != null) session.release();
         artLoader.shutdownNow();
@@ -675,4 +719,3 @@ public class MediaControlsPlugin extends Plugin {
         super.handleOnDestroy();
     }
 }
-        try { getContext().unregisterReceiver(becomingNoisy); } catch (IllegalArgumentException ignored) {}

@@ -3954,6 +3954,16 @@ body.perf #sleep-timer-status.active::before {
   text-overflow: ellipsis;
 }
 
+.download-section.dl-phone-note { display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--md-shape-corner-m); background: var(--md-sys-color-surface-container-high-solid, var(--md-sys-color-surface-container)); color: var(--md-sys-color-on-surface-variant); font-size: calc(13px * var(--font-scale, 1)); line-height: 1.35; }
+.dl-phone-note svg { flex: 0 0 auto; color: var(--md-sys-color-primary); }
+.dl-progress { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.dl-progress-text { font-size: calc(13px * var(--font-scale, 1)); color: var(--md-sys-color-on-surface-variant); line-height: 1.35; overflow-wrap: anywhere; }
+.dl-progress.is-error .dl-progress-text { color: var(--md-sys-color-error); }
+.dl-progress.is-error .dl-progress-track, .dl-progress.is-note .dl-progress-track { display: none; }
+.dl-progress-track { position: relative; height: 6px; border-radius: 3px; overflow: hidden; background: color-mix(in srgb, var(--md-sys-color-on-surface) 14%, transparent); }
+.dl-progress-fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 3px; background: var(--md-sys-color-primary); transition: width .25s ease; }
+.dl-progress.is-waiting .dl-progress-fill { width: 35%; transition: none; animation: dlProgressSlide 1.4s ease-in-out infinite; }
+@keyframes dlProgressSlide { from { left: -35%; } to { left: 100%; } }
 .download-section {
   display: flex;
   flex-direction: column;

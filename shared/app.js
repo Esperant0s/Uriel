@@ -16592,13 +16592,39 @@ document.addEventListener('DOMContentLoaded', async () => {
   let selectedFormat = localStorage.getItem('uriel_download_format') || 'mp3';
   let selectedQuality = '0';
 
+  let singleFailed = false; // the phone's dialog: the last try for this song failed
+  let singleSaved = false; // ...or the song is in Downloads already
+  function setDownloadProgress(p) {
+    const box = document.getElementById('download-progress');
+    if (!box) return;
+    box.classList.toggle('hidden', !p);
+    if (!p) return;
+    box.classList.toggle('is-error', !!p.error);
+    box.classList.toggle('is-note', !!p.note);
+    box.classList.toggle('is-waiting', p.fraction == null && !p.error && !p.note);
+    document.getElementById('download-progress-text').textContent = p.text || '';
+    const fill = document.getElementById('download-progress-fill');
+    fill.style.width = p.fraction == null ? '' : `${Math.round(Math.max(0, Math.min(1, p.fraction)) * 100)}%`;
+  }
+  // running on a phone: the page shows progress, and Cancel and "keep going" take the place of the download button
+  function setDownloadRunning(on) {
+    if (!isPhoneApp) return;
+    if (el.btnConfirmDownload) el.btnConfirmDownload.style.display = on ? 'none' : '';
+    const hide = document.getElementById('btn-hide-download');
+    if (hide) hide.classList.toggle('hidden', !on);
+  }
+  // the phone keeps the app awake and shows a notification while this is on (mobile/media-controls.js)
+  function announceDownloads(active, info = {}) {
+    window.dispatchEvent(new CustomEvent('uriel:downloads', { detail: { active, ...info } }));
+  }
   function updateDownloadBtnLabel() {
     if (!el.downloadBtnText) return;
     if (downloadBatch) {
       const count = downloadBatch.tracks.length;
       el.downloadBtnText.textContent = downloadBatch.retry ? Tf('Retry failed ({0})', count) : `Download ${count} track${count === 1 ? '' : 's'}`;
     } else {
-      el.downloadBtnText.textContent = `Download ${selectedFormat.toUpperCase()}`;
+      // phones save the song as it comes: no format to promise
+      el.downloadBtnText.textContent = !isPhoneApp ? `Download ${selectedFormat.toUpperCase()}` : singleFailed ? T('Try again') : singleSaved ? T('Download again') : T('Download');
     }
   }
 
@@ -16632,6 +16658,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     trackToDownload = track;
     downloadBatch = null;
     el.downloadModal.classList.remove('batch-mode');
+    singleFailed = false;
+    singleSaved = false;
+    if (!downloadAbort) { setDownloadProgress(null); setDownloadRunning(false); }
+    if (isPhoneApp && track.platform !== 'local') {
+      downloadedInFolder([track]).then(([have]) => {
+        if (!have || trackToDownload !== track || downloadAbort) return;
+        singleSaved = true;
+        updateDownloadBtnLabel();
+        setDownloadProgress({ text: T('This song is already in your downloads.'), note: true });
+      }, () => {});
+    }
     const modalTitle = document.getElementById('download-modal-title');
     if (modalTitle) modalTitle.textContent = 'Download track';
     if (el.downloadPreviewTitle) el.downloadPreviewTitle.textContent = track.title || 'untitled';
@@ -16692,6 +16729,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     trackToDownload = null;
     downloadBatch = { name: playlist.name || 'Playlist', tracks, resolve: playlist.resolve, onProgress: playlist.onProgress, onDone: playlist.onDone };
+    if (!downloadAbort) { setDownloadProgress(null); setDownloadRunning(false); }
     const batchShown = downloadBatch;
     el.downloadModal.classList.add('batch-mode');
     showDownloadPane('download');
@@ -16756,6 +16794,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.btnConfirmDownload.style.display = '';
         el.btnConfirmDownload.disabled = false;
       }
+      setDownloadProgress(null);
+      setDownloadRunning(false);
+      announceDownloads(false);
       updateDownloadBtnLabel();
       showToast(Tm('Download cancelled'), 'info');
       if (el.downloadModal) closeModal(el.downloadModal);
@@ -16779,6 +16820,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     });
   }
+
+  const btnHideDownload = document.getElementById('btn-hide-download');
+  if (btnHideDownload) btnHideDownload.addEventListener('click', () => { if (el.downloadModal) closeModal(el.downloadModal); });
+  // Cancel in the phone's download notification
+  window.addEventListener('uriel:cancel-downloads', () => {
+    if (!downloadAbort) return;
+    if (!cancelCurrentDownload()) { try { downloadAbort.abort(); } catch (_) {} downloadAbort = null; }
+    setDownloadProgress(null);
+    setDownloadRunning(false);
+    announceDownloads(false);
+  });
 
   if (el.btnPlaybarMore) {
     el.btnPlaybarMore.addEventListener('click', () => {
@@ -16915,9 +16967,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tracks = present ? batch.tracks.filter((_, i) => !present[i]) : batch.tracks;
         const skipped = total - tracks.length;
         const setProgress = (p) => {
-          if (el.downloadBtnText && shown()) el.downloadBtnText.textContent = Tf('Downloading {0}/{1}', Math.min(tracks.length, p.done + p.failed + 1), tracks.length) + (p.failed ? ` · ${Tf('{0} failed', p.failed)}` : '');
+          const label = Tf('Downloading {0}/{1}', Math.min(tracks.length, p.done + p.failed + 1), tracks.length) + (p.failed ? ` · ${Tf('{0} failed', p.failed)}` : '');
+          if (el.downloadBtnText && shown()) el.downloadBtnText.textContent = label;
+          if (shown()) setDownloadProgress({ text: label, fraction: tracks.length ? (p.done + p.failed) / tracks.length : 0 });
+          announceDownloads(true, { title: batch.name || '', done: p.done + p.failed, total: tracks.length });
           if (typeof batch.onProgress === 'function') batch.onProgress(p.done + p.failed, tracks.length);
         };
+        setDownloadRunning(true);
         setProgress({ done: 0, failed: 0 });
         const downloadOne = async (t, { fresh }) => {
           // an album's songs are found on YouTube first (the file keeps the album's title and artist)
@@ -16926,7 +16982,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const found = await batch.resolve(t).catch(() => null);
             if (found && found.url) src = { ...t, url: found.url, id: found.id || t.id };
           }
-          const downloadUrl = `http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(src.url || '')}&id=${encodeURIComponent(src.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${selectedFormat}&quality=${selectedQuality}${fresh ? '&fresh=1' : ''}`;
+          const downloadUrl = `http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(src.url || '')}&id=${encodeURIComponent(src.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${selectedFormat}&quality=${selectedQuality}&platform=${encodeURIComponent(src.platform || t.platform || 'youtube')}&duration=${encodeURIComponent(t.duration || 0)}${fresh ? '&fresh=1' : ''}`;
           const res = await fetch(downloadUrl, { signal: batchAbort.signal });
           const text = await res.text();
           let data;
@@ -16941,7 +16997,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         for (const f of result.failed) console.error('Download failed:', f.item.title || f.item.url || '', f.error && f.error.message);
         const done = result.done.length;
         const failedTracks = result.failed.map((f) => f.item);
-        if (shown()) el.btnConfirmDownload.disabled = false;
+        if (shown()) { el.btnConfirmDownload.disabled = false; setDownloadRunning(false); setDownloadProgress(null); }
+        announceDownloads(false);
         if (downloadAbort === batchAbort) downloadAbort = null;
         if (typeof batch.onDone === 'function') batch.onDone(done + skipped, total);
         // the playlist page's "12 of 40 downloaded" and its Download button follow
@@ -16997,7 +17054,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.btnConfirmDownload.style.display = 'none';
       }
       const spinnerEl = el.downloadSpinner || document.getElementById('download-spinner');
-      if (spinnerEl) {
+      if (spinnerEl && !isPhoneApp) {
         spinnerEl.innerHTML = `
           <div class="m3-spinner-container" style="width: 32px; height: 32px; padding: 4px; background: transparent;">
             <svg class="m3-circular-progress" viewBox="0 0 48 48" style="width: 24px; height: 24px;">
@@ -17008,7 +17065,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
       }
 
-      showToast(Tm('Downloading: {0}', `${t.title || T('Track')} (.${selectedFormat})`), 'info');
+      if (!isPhoneApp) showToast(Tm('Downloading: {0}', `${t.title || T('Track')} (.${selectedFormat})`), 'info');
       // its own controller: Cancel clears the shared one, and a download started after this one replaces it
       const singleAbort = new AbortController();
       downloadAbort = singleAbort;
@@ -17019,12 +17076,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         // (the decode-and-encode path below always ended in "Download failed" there)
         if (isPhoneApp) {
           if (t.platform === 'local') throw new Error('This song is already on your phone');
-          const r = await fetch(`http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(t.url || '')}&id=${encodeURIComponent(t.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${selectedFormat}&quality=${selectedQuality}`, { signal: singleAbort.signal });
-          const d = await r.json();
-          if (!d.success) throw new Error(d.error || 'Download failed');
+          singleFailed = false;
+          const onTrack = () => trackToDownload === t;
+          const showing = (p) => { if (onTrack()) setDownloadProgress(p); };
+          const onPart = (e) => {
+            if (!singleAbort.signal.aborted && e.detail && e.detail.total && (!t.id || String(t.id).includes(e.detail.id))) {
+              const percent = e.detail.done / e.detail.total;
+              showing({ text: Tf('Downloading {0}%', Math.round(percent * 100)), fraction: percent });
+              announceDownloads(true, { title: t.title || '', total: 1, done: 0, percent: Math.round(percent * 100) });
+            }
+          };
+          window.addEventListener('uriel:dl-progress', onPart);
+          setDownloadRunning(true);
+          showing({ text: T('Finding the song…') });
+          announceDownloads(true, { title: t.title || '', total: 1, done: 0 });
+          let saved = null;
+          let result;
+          try {
+            result = await window.UrielDownloadBatch.runDownloadBatch([t], async (_, { fresh }) => {
+              const r = await fetch(`http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(t.url || '')}&id=${encodeURIComponent(t.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${selectedFormat}&quality=${selectedQuality}&platform=${encodeURIComponent(t.platform || 'youtube')}&duration=${encodeURIComponent(t.duration || 0)}${fresh ? '&fresh=1' : ''}`, { signal: singleAbort.signal });
+              const d = await r.json();
+              if (!d.success) throw Object.assign(new Error(d.error || 'Download failed'), { status: r.status });
+              saved = d;
+            }, { concurrency: 1, retries: 1, finalPass: false, signal: singleAbort.signal, backoff: { baseMs: 1500, rateBaseMs: 3000 } });
+          } finally {
+            window.removeEventListener('uriel:dl-progress', onPart);
+            announceDownloads(false);
+          }
+          if (result.aborted) return;
+          if (!saved) throw (result.failed[0] && result.failed[0].error) || new Error('Download failed');
           offlineChanged(t, true);
-          showToast(Tm('Download complete: saved as {0}', d.filename), 'info');
-          if (el.downloadModal && downloadAbort === singleAbort) closeModal(el.downloadModal);
+          let folder = '';
+          try { folder = (await window.electronAPI.getDownloadDir()).dir || ''; } catch (e) {}
+          showToast(folder ? Tm('Saved to {0}', folder) : Tm('Download complete: saved as {0}', saved.filename), 'success');
+          if (el.downloadModal && downloadAbort === singleAbort && onTrack()) closeModal(el.downloadModal);
           return;
         }
         let audioSourceUrl = null;
@@ -17121,7 +17206,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       } catch (err) {
         if (err.name === 'AbortError') return;
         console.error('Download error:', err);
-        showToast(Tm('Download failed: {0}', err.message), 'error');
+        if (isPhoneApp && trackToDownload === t) {
+          // the dialog stays open with the reason, and its button tries again
+          singleFailed = true;
+          setDownloadProgress({ text: err.message, error: true });
+        } else {
+          showToast(Tm('Download failed: {0}', err.message), 'error');
+        }
       } finally {
         // cancelled (Cancel already reset the dialog) or replaced by a newer download: leave its state alone
         if (downloadAbort === singleAbort) {
@@ -17132,6 +17223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             el.btnConfirmDownload.style.display = '';
             el.btnConfirmDownload.disabled = false;
           }
+          setDownloadRunning(false);
           updateDownloadBtnLabel();
         }
       }

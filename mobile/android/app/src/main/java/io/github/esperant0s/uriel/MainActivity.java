@@ -49,7 +49,26 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(DeviceMusicPlugin.class);
         registerPlugin(AppIconPlugin.class);
         registerPlugin(SystemBarsPlugin.class);
+        if (getIntent() != null && MediaButtonReceiver.ACTION_RESUME.equals(getIntent().getAction())) {
+            MediaControlsPlugin.startPlayWanted = true;
+            MediaControlsPlugin.openedByEarbuds = false; // the person opened it from the notification: it stays open
+        }
         super.onCreate(savedInstanceState);
         watchNetwork();
+        clearResumeNotice();
+    }
+
+    // "Tap to keep listening" (MediaButtonReceiver) once Uriel is open; tapping it while Uriel runs plays straight away
+    private void clearResumeNotice() {
+        try { getSystemService(android.app.NotificationManager.class).cancel(MediaButtonReceiver.RESUME_NOTIFICATION_ID); } catch (Exception ignored) {}
+    }
+
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        clearResumeNotice();
+        if (intent == null || !MediaButtonReceiver.ACTION_RESUME.equals(intent.getAction())) return;
+        MediaControlsPlugin plugin = MediaControlsPlugin.instance;
+        if (plugin != null) plugin.start("play"); else MediaControlsPlugin.startPlayWanted = true;
     }
 }

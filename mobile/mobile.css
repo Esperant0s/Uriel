@@ -125,7 +125,9 @@ html.is-mobile .playbar {
   bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 6px) !important;
   top: auto !important;
   height: var(--mini-h) !important;
-  padding: 0 8px 0 8px !important;
+  /* the progress line takes the bottom 5px: the content is centred in what's left, not in the whole bar, which left
+     3px under the cover and 8px above it */
+  padding: 0 8px 5px 8px !important;
   border-radius: 24px !important;
   /* phones draw no blur, so the bar floating over the list stays solid at any UI opacity */
   background: var(--md-sys-color-surface-container-solid, #1E1F22) !important;
@@ -492,7 +494,7 @@ html.is-mobile .setting-item:has(#toggle-m3-cover) { display: none !important; }
    Change and Reset did nothing there */
 html.is-mobile #btn-change-download-folder, html.is-mobile #btn-reset-download-folder { display: none !important; }
 /* mini player cover: Uriel's 48px square inside the bar, not Riff 42.3's 72px one that pokes out above it */
-html.is-mobile #playbar-artwork-wrapper, html.is-mobile #m3c-wrap { width: 48px !important; height: 48px !important; margin-top: 0 !important; }
+html.is-mobile #playbar-artwork-wrapper, html.is-mobile #m3c-wrap { width: 44px !important; height: 44px !important; margin-top: 0 !important; }
 html.is-mobile #playbar-artwork-wrapper { overflow: hidden !important; border-radius: var(--md-shape-corner-s); }
 /* update banner sits just under the status bar on phones */
 html.is-mobile .update-banner { top: calc(var(--safe-top) + 10px); width: calc(100vw - 24px); }
@@ -684,3 +686,6 @@ html.is-mobile #right-panel.lyrics-empty #np-like { position: absolute !importan
 /* ---------- Finger-sized controls: these were 22-26px tall on a phone ---------- */
 html.is-mobile .search-clear-btn { width: 36px !important; height: 36px !important; }
 html.is-mobile :is(.theme-mode-btn, .fps-cap-btn) { min-height: 36px; }
+
+/* ---------- Download dialog: phones save the song as it comes, so there are no formats or bitrates to pick ---------- */
+html.is-mobile #download-modal :is(.download-section:has(#format-chips-grid), .download-section:has(#quality-chips-grid), #download-effects-section) { display: none !important; }

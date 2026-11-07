@@ -3596,9 +3596,27 @@ async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3',
     // (YouTube refusing a long "Download all", #29) was skipped without a try for the next minutes, so retrying
     // it failed at once. A retry (fresh=1) also forgets that failure.
     if (/[?&]fresh=1(&|$)/.test(req.url || '')) ytdlpQueue.forget(`dl:${cacheId}`);
-    if (!await findCachedFile(cacheId)) await downloadTrackToDisk(targetUrl, cacheId, 'youtube', { title, artist }, 'normal');
-    const cached = await findCachedFile(cacheId);
-    if (!cached) return sendDownloadResponse(500, { success: false, error: STREAM_FAILED });
+    // the same routes as playback, not only YouTube's first answer: a song that plays could still fail to download
+    // when YouTube refused the download but another upload or SoundCloud had it
+    let cached = await findCachedFile(cacheId);
+    let blocked = false;
+    if (!cached) {
+      const query = url.parse(req.url || '', true).query;
+      const platform = String(query.platform || 'youtube');
+      const ytTarget = youtubeExtractTarget(targetUrl, cacheId, platform);
+      const skip = { aborted: false };
+      res.on('close', () => {
+        if (!abandoned()) return;
+        skip.aborted = true;
+        const proc = downloadProcs.get(cacheId);
+        if (proc) { try { proc.kill(); } catch (e) {} }
+      });
+      try {
+        await streamResolver.resolve({ id: cacheId, cleanId: cacheId, trackUrl: ytTarget.url, platform, title, artist, duration: Number(query.duration) || 0, meta: { title, artist }, youtube: ytTarget.youtube }, { reason: 'play', deadlineMs: 180000, signal: skip });
+      } catch (e) { blocked = !!e && e.code === 'blocked'; }
+      cached = await findCachedFile(cacheId);
+    }
+    if (!cached) return sendDownloadResponse(blocked ? 429 : 500, { success: false, blocked, error: blocked ? STREAM_BLOCKED : "Couldn't get this song right now. Try again later, or another version from search" });
     const savedName = `${cleanArtist} - ${cleanTitle}${path.extname(cached)}`;
     await fs.promises.mkdir(downloadsDir, { recursive: true });
     await fs.promises.copyFile(cached, path.join(downloadsDir, savedName));

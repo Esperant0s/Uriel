@@ -67,7 +67,7 @@ function concat(pieces) {
 }
 
 // Fetches every segment of an HLS media playlist and joins them into one file.
-async function downloadHls(playlistUrl, headers, signal, container) {
+async function downloadHls(playlistUrl, headers, signal, container, onPart) {
   const m3u = await (await globalThis.__urielFetch(playlistUrl, { headers, signal })).text();
   const lines = m3u.split('\n').map((l) => l.trim());
   const key = lines.find((l) => l.startsWith('#EXT-X-KEY') && !/METHOD=NONE/.test(l));
@@ -77,13 +77,14 @@ async function downloadHls(playlistUrl, headers, signal, container) {
   const map = lines.map((l) => l.startsWith('#EXT-X-MAP') && (l.match(/URI="([^"]+)"/) || [])[1]).find(Boolean);
   if (map) urls.unshift(new URL(map, playlistUrl).href);
   if (!urls.length) throw new Error('empty HLS playlist');
-  return joinSegments(await fetchAll(urls, headers, signal), container);
+  return joinSegments(await fetchAll(urls, headers, signal, onPart), container);
 }
 
 // Fetches every URL (4 at a time) and returns their bodies in order.
-async function fetchAll(urls, headers, signal) {
+async function fetchAll(urls, headers, signal, onPart) {
   const parts = new Array(urls.length);
   let next = 0;
+  let finished = 0;
   // once one segment has failed for good (or the download was cancelled) the other workers stop too,
   // instead of fetching the rest of a song that can't be finished
   let failed = null;
@@ -97,6 +98,7 @@ async function fetchAll(urls, headers, signal) {
           const r = await globalThis.__urielFetch(urls[i], { headers, signal });
           if (!r.ok) throw Object.assign(new Error(`segment ${i} failed: ${r.status}`), { status: r.status });
           parts[i] = new Uint8Array(await r.arrayBuffer());
+          if (onPart) onPart(++finished, urls.length);
           break;
         } catch (e) {
           // a 403/404 won't change on retry
@@ -112,17 +114,25 @@ async function fetchAll(urls, headers, signal) {
 
 // A googlevideo file in 1 MiB ranges (like yt-dlp: long single requests get throttled or cut off),
 // checked to have arrived whole.
-async function downloadRanges(url, headers, signal, size) {
+async function downloadRanges(url, headers, signal, size, onPart) {
   const step = 1 << 20;
   const urls = [];
   for (let a = 0; a < size; a += step) urls.push(`${url}&range=${a}-${Math.min(size, a + step) - 1}`);
-  const bytes = concat(await fetchAll(urls, headers, signal));
+  const bytes = concat(await fetchAll(urls, headers, signal, onPart));
   if (bytes.length !== size) throw new Error(`incomplete download: ${bytes.length} of ${size} bytes`);
   return bytes;
 }
 
 // Android plays Opus (WebM) natively; set by bridge.js. iOS keeps the AAC stream.
 const playsOpus = () => !!globalThis.__urielPlaysOpus;
+
+// How far a song's download has got, for the download dialog. The file is named after the song's id.
+const progressOf = (template) => {
+  const id = String(template || '').split('/').pop().split('.')[0];
+  return (done, total) => {
+    if (typeof window !== 'undefined' && typeof CustomEvent === 'function') window.dispatchEvent(new CustomEvent('uriel:dl-progress', { detail: { id, done, total } }));
+  };
+};
 
 async function download(args, target, signal) {
   const audio = await ex.resolveAudio(target);
@@ -133,7 +143,7 @@ async function download(args, target, signal) {
   let out = named(audio.ext);
   let size;
   // full-quality Opus when the extractor found it; any failure falls back to the stream below
-  const opus = audio.opus && playsOpus() ? await downloadRanges(audio.opus.url, audio.headers, signal, audio.opus.size).catch((e) => {
+  const opus = audio.opus && playsOpus() ? await downloadRanges(audio.opus.url, audio.headers, signal, audio.opus.size, progressOf(template)).catch((e) => {
     if (signal && signal.aborted) throw e;
     console.warn('[uriel] Opus download failed, using AAC', e && e.message);
     return null;
@@ -143,7 +153,7 @@ async function download(args, target, signal) {
     await store.writeBytes(out, opus);
     size = opus.length;
   } else if (audio.kind === 'hls') {
-    const bytes = await downloadHls(audio.url, audio.headers, signal, audio.container);
+    const bytes = await downloadHls(audio.url, audio.headers, signal, audio.container, progressOf(template));
     await store.writeBytes(out, bytes);
     size = bytes.length;
   } else {

@@ -88,9 +88,29 @@ module.exports = function mediaControls() {
     window.addEventListener('uriel:modes', update);
     ['playing', 'pause', 'seeked', 'ratechange', 'durationchange', 'ended'].forEach((ev) => c.audio.addEventListener(ev, update));
     c.audio.addEventListener('playing', askOnce, { once: true });
+    window.addEventListener('uriel:downloads', ({ detail: d = {} }) => {
+      Promise.resolve().then(() => plugin.downloading({ active: !!d.active, title: d.title || '', done: d.done || 0, total: d.total || 0, percent: d.percent == null ? -1 : d.percent })).catch(() => {});
+    });
+    // earbuds or a headset asked for music: the last song, or from the top of favourites if there is none yet
+    const startMusic = () => {
+      const c = core();
+      const st = c.state;
+      if (st.currentTrack) { if (!st.isPlaying) c.togglePlay(); return true; }
+      const list = (st.favorites && st.favorites.length ? st.favorites : st.history) || [];
+      if (!list.length) return false;
+      c.playTrack(list[0], list, 0);
+      return true;
+    };
+    // opened for earbuds or a headset that asked for music while Uriel wasn't running (MediaButtonReceiver): play
+    // and when earbuds opened it (not a person), it steps back out of sight once the music plays, as Spotify's would
+    Promise.resolve().then(() => plugin.takeStartPlay()).then(({ start, background } = {}) => {
+      if (!start || !startMusic() || !background) return;
+      c.audio.addEventListener('playing', () => Promise.resolve().then(() => plugin.moveToBack()).catch(() => {}), { once: true });
+    }).catch(() => {});
     plugin.addListener('action', ({ action, position } = {}) => {
       const st = core().state;
-      if (action === 'play') { if (!st.isPlaying) core().togglePlay(); }
+      if (action === 'cancel-downloads') { window.dispatchEvent(new Event('uriel:cancel-downloads')); return; }
+      if (action === 'play') { if (!st.isPlaying && !startMusic()) update(); }
       else if (action === 'pause') { if (st.isPlaying) core().togglePlay(); }
       else if (action === 'next') core().next();
       else if (action === 'prev') core().prev();
