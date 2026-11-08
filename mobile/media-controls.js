@@ -24,13 +24,15 @@ module.exports = function mediaControls() {
     let art = '';
     try { art = (c.thumb && c.thumb(t)) || t.thumbnail || ''; } catch (e) { art = t.thumbnail || ''; }
     const duration = Number.isFinite(a.duration) && a.duration > 0 ? a.duration : Number(t.duration) || 0;
+    // the song brought back from last time isn't loaded yet: where it will start
+    const position = a.src ? a.currentTime || 0 : Number(c.state.queueRestorePosition) || 0;
     plugin.update({
       title: t.title || '',
       artist: t.artist || '',
       album: t.album || '',
       artwork: /^https:\/\//.test(art) ? art : '',
       duration,
-      position: Math.min(a.currentTime || 0, duration || Infinity),
+      position: Math.min(position, duration || Infinity),
       playing: !!c.state.isPlaying,
       // between two songs nothing plays, but Uriel still has to stay in the foreground (see MediaControlsPlugin)
       loading: !c.state.isPlaying && !!c.state.trackLoading,
@@ -107,6 +109,10 @@ module.exports = function mediaControls() {
       if (!start || !startMusic() || !background) return;
       c.audio.addEventListener('playing', () => Promise.resolve().then(() => plugin.moveToBack()).catch(() => {}), { once: true });
     }).catch(() => {});
+    // Uriel just started with last time's song on screen but nothing playing: Android only sends earbud and
+    // headset taps to a media session that is switched on, and until now that happened when a song first played,
+    // so a tap went nowhere (or to another app) until a song was started by hand. Paused, with the song.
+    if (core().state.currentTrack) update();
     plugin.addListener('action', ({ action, position } = {}) => {
       const st = core().state;
       if (action === 'cancel-downloads') { window.dispatchEvent(new Event('uriel:cancel-downloads')); return; }
