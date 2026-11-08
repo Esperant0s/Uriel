@@ -64,3 +64,9 @@ test('the mini player centres its content above the progress line', () => {
   assert.match(css, /padding: 0 8px 5px 8px !important;/);
   assert.match(css, /#m3c-wrap \{ width: 44px !important; height: 44px !important;/);
 });
+
+test('the queue in the player sheet does not scroll sideways', () => {
+  const css = read('shared/styles.css');
+  assert.match(css, /#drawer-queue \{ overflow-y: auto; overflow-x: hidden; display: block; padding-inline: 8px; margin-inline: -8px; \}/);
+  assert.match(css, /#drawer-queue \.tracks-list \{ margin: 0 -8px; \}/);
+});
