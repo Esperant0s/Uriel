@@ -2252,22 +2252,46 @@ document.addEventListener('DOMContentLoaded', async () => {
   }, true);
 
   const RIPPLE_SEL = '.btn-pill-primary, .btn-outline-pill, .btn-icon-pill, .chip-btn, .control-btn, .rail-icon-btn, .preset-chip, .theme-mode-btn, .nav-item, .settings-nav-btn, .audio-tab, .titlebar-btn, .mix-card, .track-row';
+  // A finger landing on a button may be starting a scroll: its ripple waits a moment, and moving or scrolling calls
+  // it off. Started on pointerdown, every swipe that began on a button or a song lit it up as if it were pressed.
+  // A quick tap still ripples at once (on release), and the mouse doesn't wait.
+  let pendingRipple = null;
+  const dropRipple = () => { if (pendingRipple) { clearTimeout(pendingRipple.timer); pendingRipple = null; } };
   document.addEventListener('pointerdown', (e) => {
     if (e.button !== 0 || document.body.classList.contains('perf')) return;
     const el = e.target.closest(RIPPLE_SEL);
     if (!el || el.disabled) return;
+    if (e.pointerType === 'mouse') { spawnRipple(el, e.clientX, e.clientY); return; }
+    dropRipple();
+    const p = { el, x: e.clientX, y: e.clientY, id: e.pointerId };
+    p.timer = setTimeout(() => { if (pendingRipple === p) { pendingRipple = null; spawnRipple(el, p.x, p.y); } }, 120);
+    pendingRipple = p;
+  }, true);
+  document.addEventListener('pointermove', (e) => {
+    const p = pendingRipple;
+    if (p && e.pointerId === p.id && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 10) dropRipple();
+  }, true);
+  document.addEventListener('pointercancel', dropRipple, true);
+  document.addEventListener('scroll', dropRipple, true);
+  document.addEventListener('pointerup', (e) => {
+    const p = pendingRipple;
+    if (!p || e.pointerId !== p.id) return;
+    dropRipple();
+    spawnRipple(p.el, p.x, p.y);
+  }, true);
+  function spawnRipple(el, x, y) {
     let host = el.querySelector(':scope > .ripple-host');
     if (!host) {
       if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
       host = document.createElement('span'); host.className = 'ripple-host'; el.appendChild(host);
     }
     const r = el.getBoundingClientRect();
-    const size = Math.hypot(Math.max(e.clientX - r.left, r.right - e.clientX), Math.max(e.clientY - r.top, r.bottom - e.clientY)) * 2;
+    const size = Math.hypot(Math.max(x - r.left, r.right - x), Math.max(y - r.top, r.bottom - y)) * 2;
     const d = document.createElement('span'); d.className = 'ripple';
-    d.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - r.left - size / 2}px;top:${e.clientY - r.top - size / 2}px`;
+    d.style.cssText = `width:${size}px;height:${size}px;left:${x - r.left - size / 2}px;top:${y - r.top - size / 2}px`;
     host.appendChild(d);
     d.addEventListener('animationend', () => d.remove());
-  }, true);
+  }
 
   // Holding a finger on a song opens its menu. iOS never sends 'contextmenu' for a held finger, and
   // Android sends it mid-hold, where it fights hold-to-reorder, so the menu opens on release instead.

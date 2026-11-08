@@ -70,3 +70,15 @@ test('the queue in the player sheet does not scroll sideways', () => {
   assert.match(css, /#drawer-queue \{ overflow-y: auto; overflow-x: hidden; display: block; padding-inline: 8px; margin-inline: -8px; \}/);
   assert.match(css, /#drawer-queue \.tracks-list \{ margin: 0 -8px; \}/);
 });
+
+test('a swipe that starts on a button does not light it up: a finger waits before the ripple', () => {
+  assert.match(app, /if \(e\.pointerType === 'mouse'\) \{ spawnRipple\(el, e\.clientX, e\.clientY\); return; \}/);
+  assert.match(app, /document\.addEventListener\('pointercancel', dropRipple, true\);/);
+  assert.match(app, /document\.addEventListener\('scroll', dropRipple, true\);/);
+});
+
+test('the mini player draws only the played part of its progress line, no grey track that looks like a scrollbar', () => {
+  const css = read('mobile/mobile.css');
+  assert.match(css, /calc\(var\(--mini-progress, 0\) \* 100%\), transparent 0\);/);
+  assert.doesNotMatch(css, /--mini-progress, 0\) \* 100%\), (rgba|color-mix)/);
+});
