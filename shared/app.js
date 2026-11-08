@@ -2252,27 +2252,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   }, true);
 
   const RIPPLE_SEL = '.btn-pill-primary, .btn-outline-pill, .btn-icon-pill, .chip-btn, .control-btn, .rail-icon-btn, .preset-chip, .theme-mode-btn, .nav-item, .settings-nav-btn, .audio-tab, .titlebar-btn, .mix-card, .track-row';
-  // A finger landing on a button may be starting a scroll: its ripple waits a moment, and moving or scrolling calls
-  // it off. Started on pointerdown, every swipe that began on a button or a song lit it up as if it were pressed.
-  // A quick tap still ripples at once (on release), and the mouse doesn't wait.
+  // A finger landing on a button may be starting a scroll, and it rests a moment before it moves, so no delay tells
+  // the two apart: a finger's ripple shows when it lifts after a real tap. Started on pointerdown (and then after a
+  // 120 ms wait), every swipe that began on a button or a song lit it up as if it were pressed. Scrolling also fades
+  // out any ripple already showing. The mouse ripples on press as before.
   let pendingRipple = null;
-  const dropRipple = () => { if (pendingRipple) { clearTimeout(pendingRipple.timer); pendingRipple = null; } };
+  const dropRipple = () => { pendingRipple = null; };
   document.addEventListener('pointerdown', (e) => {
     if (e.button !== 0 || document.body.classList.contains('perf')) return;
     const el = e.target.closest(RIPPLE_SEL);
     if (!el || el.disabled) return;
     if (e.pointerType === 'mouse') { spawnRipple(el, e.clientX, e.clientY); return; }
-    dropRipple();
-    const p = { el, x: e.clientX, y: e.clientY, id: e.pointerId };
-    p.timer = setTimeout(() => { if (pendingRipple === p) { pendingRipple = null; spawnRipple(el, p.x, p.y); } }, 120);
-    pendingRipple = p;
+    pendingRipple = { el, x: e.clientX, y: e.clientY, id: e.pointerId };
   }, true);
   document.addEventListener('pointermove', (e) => {
     const p = pendingRipple;
     if (p && e.pointerId === p.id && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 10) dropRipple();
   }, true);
-  document.addEventListener('pointercancel', dropRipple, true);
-  document.addEventListener('scroll', dropRipple, true);
+  const fadeRipples = () => {
+    dropRipple();
+    document.querySelectorAll('.ripple-host > .ripple').forEach((r) => { r.style.transition = 'opacity .15s'; r.style.opacity = '0'; setTimeout(() => r.remove(), 160); });
+  };
+  document.addEventListener('pointercancel', fadeRipples, true);
+  document.addEventListener('scroll', () => { if (pendingRipple || document.querySelector('.ripple-host > .ripple')) fadeRipples(); }, true);
   document.addEventListener('pointerup', (e) => {
     const p = pendingRipple;
     if (!p || e.pointerId !== p.id) return;

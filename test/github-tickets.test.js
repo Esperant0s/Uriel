@@ -73,8 +73,10 @@ test('the queue in the player sheet does not scroll sideways', () => {
 
 test('a swipe that starts on a button does not light it up: a finger waits before the ripple', () => {
   assert.match(app, /if \(e\.pointerType === 'mouse'\) \{ spawnRipple\(el, e\.clientX, e\.clientY\); return; \}/);
-  assert.match(app, /document\.addEventListener\('pointercancel', dropRipple, true\);/);
-  assert.match(app, /document\.addEventListener\('scroll', dropRipple, true\);/);
+  assert.match(app, /document\.addEventListener\('pointercancel', fadeRipples, true\);/);
+  // no timer: a finger rests a moment before it scrolls, so a delay still lit the button up
+  const start = app.indexOf('let pendingRipple = null;');
+  assert.doesNotMatch(app.slice(start, app.indexOf('function spawnRipple(', start)), /setTimeout\(\(\) => \{ if \(pendingRipple/);
 });
 
 test('the mini player draws only the played part of its progress line, no grey track that looks like a scrollbar', () => {
