@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
     namespace = "io.github.esperant0s.uriel"
@@ -39,6 +40,12 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
+    }
+}
+
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
@@ -52,6 +59,10 @@ dependencies {
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     // media session + media-style notification for the "now playing" controls (MediaControlsPlugin)
     implementation "androidx.media:media:1.7.0"
+    // The native player (PlayerService.kt): ExoPlayer plays the songs, and Media3's session gives the notification,
+    // lock screen, earbuds, Bluetooth, audio focus and starting again from earbuds once Uriel was closed
+    implementation "androidx.media3:media3-exoplayer:1.8.0"
+    implementation "androidx.media3:media3-session:1.8.0"
     // the version Capacitor already ships; named here because MediaControlsPlugin uses its Live Update calls
     // (NotificationCompat.Builder#setRequestPromotedOngoing / setShortCriticalText, in 1.17)
     implementation "androidx.core:core:$androidxCoreVersion"

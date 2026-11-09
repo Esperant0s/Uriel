@@ -113,6 +113,8 @@ public class MediaControlsPlugin extends Plugin {
     private WifiManager.WifiLock wifiLock;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable releaseLater = this::releaseLocks;
+    // the native player (PlayerService.kt) plays the songs and shows them; this keeps the island and the wake locks
+    private volatile boolean external;
     // the page's play state at the last update: the Live Update's clock runs from it
     private boolean nowPlaying;
     private long positionMs;
@@ -147,11 +149,7 @@ public class MediaControlsPlugin extends Plugin {
         // one left by an app that was stopped without cleaning up
         try { ctx.getSystemService(NotificationManager.class).cancel(ISLAND_ID); } catch (Exception ignored) {}
         session = new MediaSessionCompat(ctx, "Uriel");
-        // what Android wakes for a tap on earbuds once Uriel isn't running any more (MediaButtonReceiver)
-        Intent button = new Intent(Intent.ACTION_MEDIA_BUTTON).setClass(ctx, MediaButtonReceiver.class);
-        // mutable: Android adds the key that was pressed when it sends this; an immutable one arrived without it
-        int mutable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? PendingIntent.FLAG_MUTABLE : 0;
-        session.setMediaButtonReceiver(PendingIntent.getBroadcast(ctx, 50, button, mutable | PendingIntent.FLAG_UPDATE_CURRENT));
+        session.setMediaButtonReceiver(mediaButtonIntent(ctx));
         session.setCallback(new MediaSessionCompat.Callback() {
             @Override public void onPlay() { start("play"); }
             @Override public void onPause() { send("pause", -1); }
@@ -164,6 +162,14 @@ public class MediaControlsPlugin extends Plugin {
                 else if (CUSTOM_REPEAT.equals(action)) send("repeat", -1);
             }
         });
+    }
+
+    // what Android wakes for a tap on earbuds once Uriel isn't running any more (MediaButtonReceiver)
+    static PendingIntent mediaButtonIntent(Context ctx) {
+        Intent button = new Intent(Intent.ACTION_MEDIA_BUTTON).setClass(ctx, MediaButtonReceiver.class);
+        // mutable: Android adds the key that was pressed when it sends this; an immutable one arrived without it
+        int mutable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? PendingIntent.FLAG_MUTABLE : 0;
+        return PendingIntent.getBroadcast(ctx, 50, button, mutable | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     // the repeat button: dim when off, lit for the playlist, lit with a 1 for the song
@@ -187,7 +193,8 @@ public class MediaControlsPlugin extends Plugin {
     // foreground play (the song stopped again right away). Such a button press may bring the app back into
     // the foreground, so that happens first.
     void start(String action) {
-        if (!playing) {
+        // the native player plays the songs: it has the foreground and the notification
+        if (!playing && !external) {
             playing = true;
             holdLocks();
             refreshNotification();
@@ -197,6 +204,12 @@ public class MediaControlsPlugin extends Plugin {
 
     @PluginMethod
     public void update(PluginCall call) {
+        // the page is running now: a song earbuds started without it stops, and the page carries on (takeStartPlay)
+        if (ColdPlayer.isActive()) {
+            JSObject h = ColdPlayer.takeOver(getContext());
+            if (h != null) pendingHandover = h;
+        }
+        rememberForEarbuds(call);
         title = call.getString("title", "");
         artist = call.getString("artist", "");
         album = call.getString("album", "");
@@ -225,6 +238,22 @@ public class MediaControlsPlugin extends Plugin {
             handler.postDelayed(releaseLater, LOCK_RELEASE_MS);
         }
 
+        // The native player (PlayerService.kt) plays this song and shows it itself: no second notification or
+        // session here, only the island and staying awake while the next song loads.
+        external = Boolean.TRUE.equals(call.getBoolean("external", false));
+        // which player earbuds should wake once Uriel is closed (MediaButtonReceiver)
+        getContext().getSharedPreferences(ColdPlayer.PREFS, Context.MODE_PRIVATE).edit()
+                .putString(ColdPlayer.KEY_PLAYER, external ? "native" : "web").apply();
+        if (external) {
+            if (session.isActive()) session.setActive(false);
+            Context ctx = getContext();
+            try { if (PlaybackService.running) ctx.stopService(new Intent(ctx, PlaybackService.class)); } catch (Exception ignored) {}
+            try { ctx.getSystemService(NotificationManager.class).cancel(NOTIFICATION_ID); } catch (Exception ignored) {}
+            scheduleIsland();
+            call.resolve();
+            return;
+        }
+
         session.setMetadata(metadata());
         session.setPlaybackState(new PlaybackStateCompat.Builder()
                 .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE
@@ -249,14 +278,38 @@ public class MediaControlsPlugin extends Plugin {
     // ...and earbuds, not a person opening the app: once the music plays it goes back out of sight, as Spotify's would
     static volatile boolean openedByEarbuds;
 
+    // where ColdPlayer had got to when update() stopped it, for takeStartPlay
+    private volatile JSObject pendingHandover;
+
+    // What the page should do now that it is running. start: play (earbuds or "Tap to keep listening" opened the app);
+    // background: earbuds opened it, so it goes back out of sight once the music plays; native: where ColdPlayer got
+    // to, playing the songs saved on the phone without the page: { qi (in the queue as the page last told it), title,
+    // artist, position, playing, live (it was still playing just now), ended (its songs ran out: carry on after this
+    // one), needsApp (it couldn't play this one) }.
     @PluginMethod
     public void takeStartPlay(PluginCall call) {
         JSObject out = new JSObject();
+        JSObject nat = ColdPlayer.takeOver(getContext());
+        if (nat == null) nat = pendingHandover;
+        pendingHandover = null;
+        if (nat != null) out.put("native", nat);
         out.put("start", startPlayWanted);
         out.put("background", startPlayWanted && openedByEarbuds);
         startPlayWanted = false;
         openedByEarbuds = false;
         call.resolve(out);
+    }
+
+    // What ColdPlayer plays when earbuds ask for music while the page isn't running: this song from where it is,
+    // then the next songs saved on the phone (see media-controls.js).
+    private void rememberForEarbuds(PluginCall call) {
+        try {
+            JSObject cur = call.getObject("resume");
+            if (cur == null) return;
+            org.json.JSONArray upcoming = call.getArray("upcoming", new com.getcapacitor.JSArray());
+            ColdPlayer.remember(getContext(), cur, upcoming, call.getDouble("resumePosition", 0.0),
+                    Boolean.TRUE.equals(call.getBoolean("shuffle", false)), call.getString("repeat", "off"));
+        } catch (Exception ignored) {}
     }
 
     @PluginMethod
@@ -453,23 +506,29 @@ public class MediaControlsPlugin extends Plugin {
 
     // posts the notification; while playing, the service holds it as its foreground notification
     private synchronized void refreshNotification() {
-        Context ctx = getContext();
-        notification = buildNotification(ctx);
-        Intent service = new Intent(ctx, PlaybackService.class).setAction(PlaybackService.ACTION_REFRESH);
-        try {
-            if (playing) ContextCompat.startForegroundService(ctx, service.putExtra(PlaybackService.EXTRA_FOREGROUND, true));
-            else if (PlaybackService.running) ctx.startService(service);
-            else ctx.getSystemService(NotificationManager.class).notify(NOTIFICATION_ID, notification);
-        } catch (Exception e) {
-            // Android 12+ refuses to start a foreground service from the background (say, a headset
-            // button while the app is closed); the notification still updates
-            try { ctx.getSystemService(NotificationManager.class).notify(NOTIFICATION_ID, notification); } catch (Exception ignored) {}
-        }
+        if (external) return;
+        post(getContext(), buildNotification(getContext()), playing);
         scheduleIsland();
     }
 
+    // Shows the playback notification; while playing (also ColdPlayer's), the service holds it in the foreground.
+    static synchronized void post(Context ctx, Notification n, boolean nowPlaying) {
+        notification = n;
+        playing = nowPlaying;
+        Intent service = new Intent(ctx, PlaybackService.class).setAction(PlaybackService.ACTION_REFRESH);
+        try {
+            if (nowPlaying) ContextCompat.startForegroundService(ctx, service.putExtra(PlaybackService.EXTRA_FOREGROUND, true));
+            else if (PlaybackService.running) ctx.startService(service);
+            else ctx.getSystemService(NotificationManager.class).notify(NOTIFICATION_ID, n);
+        } catch (Exception e) {
+            // Android 12+ refuses to start a foreground service from the background (say, a headset
+            // button while the app is closed); the notification still updates
+            try { ctx.getSystemService(NotificationManager.class).notify(NOTIFICATION_ID, n); } catch (Exception ignored) {}
+        }
+    }
+
     // tapping a notification opens the app
-    private static PendingIntent openApp(Context ctx) {
+    static PendingIntent openApp(Context ctx) {
         Intent open = ctx.getPackageManager().getLaunchIntentForPackage(ctx.getPackageName());
         return PendingIntent.getActivity(ctx, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
@@ -653,7 +712,7 @@ public class MediaControlsPlugin extends Plugin {
         });
     }
 
-    private static Bitmap download(String url) {
+    static Bitmap download(String url) {
         HttpURLConnection conn = null;
         try {
             conn = (HttpURLConnection) new URL(url).openConnection();
@@ -661,6 +720,18 @@ public class MediaControlsPlugin extends Plugin {
             conn.setReadTimeout(8000);
             byte[] bytes;
             try (InputStream in = conn.getInputStream()) { bytes = readAll(in); }
+            return decode(bytes);
+        } catch (Exception e) {
+            return null;
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+    }
+
+    // a cover small enough for the system (see below), or null
+    static Bitmap decode(byte[] bytes) {
+        if (bytes == null || bytes.length == 0) return null;
+        try {
             BitmapFactory.Options bounds = new BitmapFactory.Options();
             bounds.inJustDecodeBounds = true;
             BitmapFactory.decodeByteArray(bytes, 0, bytes.length, bounds);
@@ -679,8 +750,6 @@ public class MediaControlsPlugin extends Plugin {
             return scaled;
         } catch (Exception e) {
             return null;
-        } finally {
-            if (conn != null) conn.disconnect();
         }
     }
 

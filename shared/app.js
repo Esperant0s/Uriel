@@ -2001,7 +2001,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                           playlistPickList: document.getElementById('playlist-pick-list'),
                           btnCancelAddPlaylist: document.getElementById('btn-cancel-add-playlist'),
 
-                          nativeAudio: document.getElementById('native-audio'),
+                          // Android: a stand-in that plays through the native player (mobile/native-audio.js)
+                          nativeAudio: (window.UrielAudioElement && window.UrielAudioElement(document.getElementById('native-audio'))) || document.getElementById('native-audio'),
 
                           btnAddCustomLyrics: document.getElementById('btn-add-custom-lyrics'),
                           btnSyncLyrics: document.getElementById('btn-sync-lyrics'),
@@ -2470,7 +2471,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderPresets();
 
   function initAudioContext() {
-    audioEngine.init(el.nativeAudio);
+    // the Web Audio graph needs the real element (on Android el.nativeAudio may stand in for it)
+    audioEngine.init(el.nativeAudio.webElement || el.nativeAudio);
     
     if (audioEngine.ctx && audioEngine.needsResume()) {
       audioEngine.ctx.resume().catch(() => {});
@@ -2517,7 +2519,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function applyAudioSettings() {
     audioEngine.setAudioSettings(effectiveAudioSettings());
     audioEngine.setVolume(state.volume, state.isMuted);
-    audioEngine.applySettings(el.nativeAudio);
+    audioEngine.applySettings(el.nativeAudio.webElement || el.nativeAudio);
     persistSoundSettings();
     
     if (el.settingsModifiedDot) {
@@ -3755,6 +3757,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   // and on iPhones, where a player's volume can't be changed (so neither song could fade).
   const xfade = { prep: null, tail: null, handingOver: false, fadeInRaf: 0 };
   const crossfadeSeconds = () => parseInt(localStorage.getItem('uriel_crossfade') || '0', 10) || 0;
+  // Whether the sound settings need Web Audio, which only a real <audio> element can feed: on Android the native
+  // player (mobile/native-audio.js) steps aside for the page's own while one is on. Speed and pitch it does itself.
+  window.UrielNeedsWebAudio = () => {
+    if (crossfadeSeconds() > 0 || normalizeEnabled() || state.hqEnabled) return true;
+    const s = effectiveAudioSettings() || {};
+    const eq = s.eq && (s.eq.low || s.eq.mid || s.eq.high);
+    const bands = Array.isArray(s.eqBands) && s.eqBands.some((v) => v);
+    return !!(eq || bands || s.reverb || s.echo || s.distortion || (Number(s.volume) || 1) > 1.001);
+  };
   let volumeWorks = null;
   function elementVolumeWorks() {
     if (volumeWorks === null) {
@@ -4190,7 +4201,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (data.isHls && window.Hls && Hls.isSupported()) {
       hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 30, maxMaxBufferLength: 60, maxBufferSize: 30 * 1000 * 1000 });
       hlsInstance.loadSource(data.streamUrl);
-      hlsInstance.attachMedia(el.nativeAudio);
+      // hls.js needs the real element: this song plays there (mobile/native-audio.js)
+      if (el.nativeAudio.useWeb) el.nativeAudio.useWeb();
+      hlsInstance.attachMedia(el.nativeAudio.webElement || el.nativeAudio);
       hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
         if (currentToken === state.loadToken) {
           playSmooth();
@@ -6637,6 +6650,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       playSmooth();
     }
+  }
+
+  // The phone's earbuds played songs while this page wasn't running (mobile/media-controls.js, ColdPlayer.java), and
+  // may have got further in the queue: carry on from that song and place, as if it had played here. Only before
+  // anything is loaded here (the page has just started). False when it can't.
+  function restoreQueueAt(index, position, play) {
+    const t = state.queue[index];
+    if (!t || state.isPlaying || (el.nativeAudio && el.nativeAudio.src)) return false;
+    state.queueIndex = index;
+    state.queueHistory = [index];
+    state.currentTrack = t;
+    state.queueRestorePosition = Math.max(0, Number(position) || 0);
+    updateNowPlayingUI(t);
+    onTrackAudioTrackChange();
+    updateQueueBadge();
+    renderQueueView();
+    saveQueueState();
+    if (play) togglePlayPause();
+    return true;
+  }
+
+  // The native player was already playing a song of the queue when this page started (earbuds started it while
+  // Uriel was closed; mobile/media-controls.js): the page shows it as its own, without loading anything.
+  function adoptQueueAt(index) {
+    const t = state.queue[index];
+    if (!t || state.isPlaying) return false;
+    state.queueIndex = index;
+    state.queueHistory = [index];
+    state.currentTrack = t;
+    state.queueRestorePosition = 0;
+    updateNowPlayingUI(t);
+    onTrackAudioTrackChange();
+    updateQueueBadge();
+    renderQueueView();
+    return true;
   }
 
   // Shuffle used to roll any index, the current song included (a third of Nexts in a 3-song queue replayed
@@ -20303,7 +20351,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   function saveQueueState() {
     if (!state._queueRestored) return;
     try {
-      const position = el.nativeAudio && Number.isFinite(el.nativeAudio.currentTime) ? el.nativeAudio.currentTime : 0;
+      // the song brought back from last time isn't loaded until it plays: its place is still the one it was saved at
+      // (going to the background before playing used to save 0, and the song then started over)
+      const loaded = el.nativeAudio && el.nativeAudio.src;
+      const position = loaded ? (Number.isFinite(el.nativeAudio.currentTime) ? el.nativeAudio.currentTime : 0) : (Number(state.queueRestorePosition) || 0);
       // up to 1000 songs around the current one: a queue made from a long Liked Songs list was megabytes, filled
       // the browser storage and made every save fail and retry (seconds, on each pause and on closing)
       const all = Array.isArray(state.queue) ? state.queue : [];
@@ -21671,6 +21722,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     thumb: (t) => getTrackThumbUrl(t),
     playTrack: (track, list, index) => playTrack(track, list || null, typeof index === 'number' ? index : -1),
     togglePlay: () => togglePlayPause(),
+    restoreAt: (index, position, play) => restoreQueueAt(index, position, play),
+    adoptAt: (index) => adoptQueueAt(index),
     resumeAudio: () => audioEngine && audioEngine.resumeAudioContext && audioEngine.resumeAudioContext(),
     next: () => playNext(),
     prev: () => playPrev(),

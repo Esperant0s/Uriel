@@ -124,6 +124,9 @@ async function resolveLocalUrl(u) {
   throw new Error(`no file behind ${u} (${r.status})`);
 }
 
+// the native player (mobile/native-audio.js) loads songs by file, not through <audio src>
+window.__urielResolveLocal = resolveLocalUrl;
+
 window.fetch = async (input, init = {}) => {
   const url = typeof input === 'string' ? input : input && input.url;
   if (!url || !url.startsWith(BASE)) return pageFetch(input, init);
@@ -194,6 +197,8 @@ new MutationObserver((muts) => {
 // Android hardware back: close whatever is on top instead of quitting the app.
 // On Home it backgrounds the app (music keeps playing) rather than closing it.
 if (Capacitor.getPlatform() === 'android') {
+  // app.js plays through the native player (android/.../PlayerService.kt) in place of its <audio> element
+  window.UrielAudioElement = require('./native-audio');
   // YouTube songs download as Opus (WebM) instead of AAC (shims/child_process.js)
   globalThis.__urielPlaysOpus = true;
   const { App } = require('@capacitor/app');

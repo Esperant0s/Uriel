@@ -69,7 +69,15 @@ public class PlaybackService extends Service {
         else if (ACTION_PREV.equals(action) && plugin != null) plugin.start("prev");
         else if (ACTION_SHUFFLE.equals(action) && plugin != null) plugin.send("shuffle", -1);
         else if (ACTION_REPEAT.equals(action) && plugin != null) plugin.send("repeat", -1);
-        else if (ACTION_DISMISS.equals(action)) { stopSelf(); return START_NOT_STICKY; }
+        // the song ColdPlayer plays while Uriel's page isn't running (earbuds started it)
+        else if (ACTION_TOGGLE.equals(action) && ColdPlayer.isActive()) ColdPlayer.togglePressed();
+        else if (ACTION_NEXT.equals(action) && ColdPlayer.isActive()) ColdPlayer.nextPressed();
+        else if (ACTION_PREV.equals(action) && ColdPlayer.isActive()) ColdPlayer.prevPressed();
+        else if (ACTION_DISMISS.equals(action)) {
+            if (plugin == null) ColdPlayer.dismissed();
+            stopSelf();
+            return START_NOT_STICKY;
+        }
         show(intent != null && intent.getBooleanExtra(EXTRA_FOREGROUND, false));
         return START_NOT_STICKY;
     }
@@ -85,6 +93,8 @@ public class PlaybackService extends Service {
                 int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK : 0;
                 ServiceCompat.startForeground(this, MediaControlsPlugin.NOTIFICATION_ID, n, type);
                 foreground = true;
+                // the song earbuds started can have the sound now (Android 15+, see ColdPlayer.takeFocus)
+                ColdPlayer.foregroundStarted();
             } else {
                 // also how the notification of a service already in the foreground is updated
                 getSystemService(NotificationManager.class).notify(MediaControlsPlugin.NOTIFICATION_ID, n);

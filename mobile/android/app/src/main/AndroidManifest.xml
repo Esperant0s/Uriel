@@ -203,12 +203,24 @@
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
+        <!-- the native player (PlayerService.kt, Media3): the songs, the notification, earbuds and Bluetooth, and
+             starting the last song again from earbuds or the quick-settings player once Uriel was closed -->
+        <service
+            android:name=".PlayerService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+        </service>
+
         <service
             android:name=".DownloadService"
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
-        <!-- a tap on earbuds when Uriel isn't running -->
+        <!-- a tap on earbuds when Uriel isn't running, for either player (Media3 allows one such receiver per app) -->
         <receiver
             android:name=".MediaButtonReceiver"
             android:exported="true">
