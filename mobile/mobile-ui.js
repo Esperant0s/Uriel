@@ -6,6 +6,8 @@
 // routes the element through an AudioContext. Speed/pitch still work (they're element properties);
 // EQ, reverb, distortion and the visualizer need the graph and are off. app.js builds the engine on
 // DOMContentLoaded, which hasn't fired yet when this script runs.
+// Android has no graph either, but its native player does the sound settings itself (EffectsProcessor.kt): the
+// engine still keeps them, and mobile/native-audio.js sends them on.
 (() => {
   // desktop's default text scale (1.25x) is sized for a monitor; phones start at 1.0x unless the user picked one
   if (!localStorage.getItem('uriel_font_scale')) localStorage.setItem('uriel_font_scale', '80');

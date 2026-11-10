@@ -8,14 +8,14 @@ const path = require('path');
 
 const tick = (ms = 5) => new Promise((r) => setTimeout(r, ms));
 
-function setup({ webAudio = false, attach = {} } = {}) {
+function setup({ attach = {}, engine = null } = {}) {
   const calls = [];
   const listeners = {};
   const player = {
     addListener: (name, cb) => { listeners[name] = cb; return Promise.resolve({ remove() {} }); },
     attach: () => Promise.resolve(attach),
   };
-  for (const m of ['load', 'play', 'pause', 'seek', 'setSpeed', 'setVolume', 'clear', 'setModes']) {
+  for (const m of ['load', 'play', 'pause', 'seek', 'setSpeed', 'setVolume', 'setEffects', 'clear', 'setModes', 'tailLoad', 'tailSet', 'tailStop']) {
     player[m] = (arg) => { calls.push(arg === undefined ? m : [m, arg]); return Promise.resolve(); };
   }
   const fakeCore = { Capacitor: { getPlatform: () => 'android' }, registerPlugin: () => player };
@@ -30,7 +30,7 @@ function setup({ webAudio = false, attach = {} } = {}) {
   global.window = new EventTarget();
   global.localStorage = { getItem: () => null, setItem() {} };
   global.DOMException = global.DOMException || class extends Error {};
-  window.UrielNeedsWebAudio = () => webAudio;
+  window.audioEngine = engine;
   window.__urielResolveLocal = (u) => Promise.resolve('https://localhost/_capacitor_file_/data/user/0/x/files/Mural/tracks/a%20b.webm');
   window.UrielCore = { state: { currentTrack: { id: 'a', title: 'Song', artist: 'Someone' }, queue: [], queueIndex: 0 } };
   let audio;
@@ -101,14 +101,73 @@ test('another app taking the sound pauses the page too', async () => {
   assert.strictEqual(events[events.length - 1], 'pause');
 });
 
-test('with sound effects on, the song plays through the real element', async () => {
-  const { audio, web, calls } = setup({ webAudio: true });
-  audio.src = 'http://127.0.0.1:1/api/local-track?id=a';
+test('a stream only the page can open plays through the real element', async () => {
+  const { audio, web, calls } = setup();
+  audio.src = 'blob:https://localhost/1234';
   assert.strictEqual(audio.backend, 'web');
-  assert.strictEqual(web.src, 'http://127.0.0.1:1/api/local-track?id=a');
+  assert.strictEqual(web.src, 'blob:https://localhost/1234');
   await audio.play();
   assert.strictEqual(web.paused, false);
   assert.ok(!calls.some((c) => c[0] === 'load'));
+});
+
+test('the sound settings go to the native player with the song, the song\'s own volume among them', async () => {
+  const engine = {
+    volume: 0.5, isMuted: false, hqEnabled: true, hqSettings: { engine: 'fyro1.1', bass: 10, vocal: 0, air: -5 },
+    audioSettings: { volume: 1.5, reverb: 30, echo: 0, distortion: 0, eq: { low: 3, mid: 0, high: 0 }, eqBands: [0, 0, 6] },
+    setVolume() {},
+  };
+  const { audio, calls } = setup({ engine });
+  audio.src = 'http://127.0.0.1:1/api/local-track?id=a';
+  await audio.play();
+  const fx = calls.find((c) => c[0] === 'setEffects')[1];
+  assert.deepStrictEqual(fx, {
+    hq: true, hqEngine: 'fyro1.1', hqBass: 10, hqVocal: 0, hqAir: -5,
+    eq: { low: 3, mid: 0, high: 0 }, eqBands: [0, 0, 6, 0, 0, 0, 0, 0, 0, 0],
+    reverb: 30, echo: 0, distortion: 0, volume: 1.5, normalize: false,
+  });
+  // phones have no volume slider: the app's saved 50% doesn't turn the phone down, and the song's own 150% is the
+  // effects' to make
+  assert.strictEqual(calls.find((c) => c[0] === 'setVolume')[1].volume, 1);
+  assert.strictEqual(audio.backend, 'native');
+});
+
+test('mute silences the native player; unmuting brings it back', async () => {
+  const { audio, web, calls } = setup({ engine: { volume: 0.85, isMuted: false, audioSettings: {}, setVolume() {} } });
+  audio.src = 'http://127.0.0.1:1/api/local-track?id=a';
+  await audio.play();
+  web.muted = true; // what mobile-ui.js does for the mute button
+  audio._watchSettings();
+  assert.strictEqual(calls.filter((c) => c[0] === 'setVolume').pop()[1].volume, 0);
+  web.muted = false;
+  audio._watchSettings();
+  assert.strictEqual(calls.filter((c) => c[0] === 'setVolume').pop()[1].volume, 1);
+});
+
+test('a crossfade\'s second player: opened at its place, silent, then played and let go', async () => {
+  const { audio, calls, listeners } = setup();
+  const t = audio.createTail();
+  const heard = [];
+  t.addEventListener('loadedmetadata', () => heard.push('loadedmetadata'));
+  t.addEventListener('seeked', () => heard.push('seeked'));
+  t.volume = 0;
+  t.currentTime = 170;
+  t.src = 'https://localhost/_capacitor_file_/data/user/0/x/files/Mural/tracks/a.webm';
+  await tick();
+  const load = calls.find((c) => c[0] === 'tailLoad')[1];
+  assert.deepStrictEqual({ path: load.path, startAt: load.startAt }, { path: '/data/user/0/x/files/Mural/tracks/a.webm', startAt: 170 });
+  listeners.tail({ id: load.id, state: 3, playing: false, position: 170, duration: 200, at: Date.now() });
+  t.currentTime = 171;
+  await tick();
+  assert.deepStrictEqual(heard, ['loadedmetadata', 'seeked']);
+  assert.strictEqual(t.paused, true);
+  await t.play();
+  t.volume = 0.4;
+  assert.strictEqual(t.paused, false);
+  assert.ok(calls.some((c) => c[0] === 'tailSet' && c[1].play === true));
+  assert.ok(calls.some((c) => c[0] === 'tailSet' && c[1].volume === 0.4));
+  t.pause(); t.removeAttribute('src'); t.load();
+  assert.ok(calls.some((c) => c[0] === 'tailStop' && c[1].id === load.id));
 });
 
 test('a seek before the song is sent starts it there', async () => {

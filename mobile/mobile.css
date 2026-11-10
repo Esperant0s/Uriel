@@ -572,14 +572,15 @@ html.is-mobile .track-context-menu { background: var(--md-sys-color-surface-cont
 html.is-mobile .uriel-toast { min-width: 0; max-width: 100%; border-radius: 22px; }
 html.is-mobile .uriel-toast .toast-text { white-space: normal; overflow-wrap: anywhere; line-height: 1.35; }
 
-/* phones play through a plain <audio> element (no Web Audio graph, see mobile-ui.js), so the Enhance,
-   Effects and EQ tabs had controls that did nothing; Tempo (speed/pitch) and Sleep still work */
-html.is-mobile .audio-tab[data-audio-tab="enhance"],
-html.is-mobile .audio-tab[data-audio-tab="effects"],
-html.is-mobile .audio-tab[data-audio-tab="eq"],
-html.is-mobile .audio-panel[data-audio-panel="enhance"],
-html.is-mobile .audio-panel[data-audio-panel="effects"],
-html.is-mobile .audio-panel[data-audio-panel="eq"] { display: none !important; }
+/* iPhones play through a plain <audio> element (no Web Audio graph, see mobile-ui.js), so the Enhance,
+   Effects and EQ tabs had controls that did nothing; Tempo (speed/pitch) and Sleep still work.
+   Android has them: its native player does the sound settings itself (android/.../EffectsProcessor.kt) */
+html.is-ios .audio-tab[data-audio-tab="enhance"],
+html.is-ios .audio-tab[data-audio-tab="effects"],
+html.is-ios .audio-tab[data-audio-tab="eq"],
+html.is-ios .audio-panel[data-audio-panel="enhance"],
+html.is-ios .audio-panel[data-audio-panel="effects"],
+html.is-ios .audio-panel[data-audio-panel="eq"] { display: none !important; }
 
 /* no color-mix() in old Android WebViews (see the end of styles.css) */
 @supports not (color: color-mix(in srgb, red 50%, transparent)) {

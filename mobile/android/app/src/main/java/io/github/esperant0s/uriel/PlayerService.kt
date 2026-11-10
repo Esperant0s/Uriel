@@ -15,7 +15,11 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.audio.AudioProcessor
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.extractor.DefaultExtractorsFactory
 import androidx.media3.extractor.mp4.FragmentedMp4Extractor
@@ -61,6 +65,7 @@ class PlayerService : MediaSessionService() {
 
         private const val CMD_SHUFFLE = "io.github.esperant0s.uriel.SHUFFLE"
         private const val CMD_REPEAT = "io.github.esperant0s.uriel.REPEAT"
+        private const val KEY_EFFECTS = "effects"
         // while playing the page hears where the song is this often; it counts the time in between itself
         private const val TICK_MS = 1000L
         // a song this short or less is a broken download (the same check as server.js findCachedFile)
@@ -119,6 +124,11 @@ class PlayerService : MediaSessionService() {
 
     lateinit var exo: ExoPlayer
         private set
+    // the sound settings (Enhance, EQ, Effects, Normalize volume) on the samples as they play
+    private val effects = EffectsProcessor()
+    // The old song's last seconds during a crossfade, each in a player of its own (app.js's "tail"): they fade out
+    // while the main player fades the next song in. No session and no audio focus: they belong to the main one.
+    private val tails = HashMap<String, ExoPlayer>()
     private var session: MediaSession? = null
     private var page: Page? = null
     private var shuffle = false
@@ -219,13 +229,21 @@ class PlayerService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        // Songs saved from YouTube are often its DASH pieces one after another, each with its own index: read as one,
-        // ExoPlayer took the first piece's length (seconds) for the song's and couldn't seek past it. An MP3 without
-        // an index seeks by its bitrate.
-        val extractors = DefaultExtractorsFactory()
-            .setFragmentedMp4ExtractorFlags(FragmentedMp4Extractor.FLAG_MERGE_FRAGMENTED_SIDX)
-            .setConstantBitrateSeekingEnabled(true)
-        exo = ExoPlayer.Builder(this)
+        val extractors = extractors()
+        val renderers = object : DefaultRenderersFactory(this) {
+            override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink =
+                DefaultAudioSink.Builder(context)
+                    .setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                    .setAudioProcessors(arrayOf<AudioProcessor>(effects))
+                    .build()
+        }
+        // as they were last set: earbuds may start this without the page
+        runCatching {
+            val saved = getSharedPreferences(ColdPlayer.PREFS, Context.MODE_PRIVATE).getString(KEY_EFFECTS, null)
+            if (saved != null) effects.setSettings(EffectsProcessor.Settings(JSONObject(saved)))
+        }
+        exo = ExoPlayer.Builder(this, renderers)
             .setMediaSourceFactory(DefaultMediaSourceFactory(this, extractors))
             .setAudioAttributes(
                 AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(),
@@ -261,10 +279,19 @@ class PlayerService : MediaSessionService() {
         updateButtons()
     }
 
+    // Songs saved from YouTube are often its DASH pieces one after another, each with its own index: read as one,
+    // ExoPlayer took the first piece's length (seconds) for the song's and couldn't seek past it. An MP3 without an
+    // index seeks by its bitrate.
+    private fun extractors() = DefaultExtractorsFactory()
+        .setFragmentedMp4ExtractorFlags(FragmentedMp4Extractor.FLAG_MERGE_FRAGMENTED_SIDX)
+        .setConstantBitrateSeekingEnabled(true)
+
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
     override fun onDestroy() {
         main.removeCallbacks(tick)
+        tails.values.forEach { it.release() }
+        tails.clear()
         instance = null
         session?.run {
             player.release()
@@ -332,6 +359,47 @@ class PlayerService : MediaSessionService() {
 
     fun setSpeed(speed: Float, pitch: Float) {
         exo.playbackParameters = PlaybackParameters(speed.coerceIn(0.1f, 8f), pitch.coerceIn(0.1f, 8f))
+    }
+
+    // the page's sound settings (mobile/native-audio.js), kept for a start without the page
+    fun setEffects(settings: JSONObject) {
+        effects.setSettings(EffectsProcessor.Settings(settings))
+        getSharedPreferences(ColdPlayer.PREFS, Context.MODE_PRIVATE).edit().putString(KEY_EFFECTS, settings.toString()).apply()
+    }
+
+    // ---- crossfade tails ----
+
+    // a second player on the same file, opened at `startMs` and waiting; where it is comes back through `report`
+    fun tailLoad(id: String, uri: Uri, startMs: Long, report: (JSONObject) -> Unit) {
+        tailStop(id)
+        val player = ExoPlayer.Builder(this)
+            .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), false)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(this, extractors()))
+            .build()
+        tails[id] = player
+        player.addListener(object : Player.Listener {
+            override fun onEvents(p: Player, events: Player.Events) {
+                if (tails[id] !== player) return
+                val o = JSONObject()
+                o.put("id", id)
+                o.put("state", player.playbackState)
+                o.put("playing", player.isPlaying)
+                o.put("position", player.currentPosition / 1000.0)
+                o.put("duration", if (player.duration == C.TIME_UNSET) -1.0 else player.duration / 1000.0)
+                o.put("at", System.currentTimeMillis())
+                o.put("error", player.playerError?.message ?: "")
+                report(o)
+            }
+        })
+        player.setMediaItem(MediaItem.fromUri(uri), startMs.coerceAtLeast(0))
+        player.volume = 0f
+        player.prepare()
+    }
+
+    fun tail(id: String): ExoPlayer? = tails[id]
+
+    fun tailStop(id: String) {
+        tails.remove(id)?.release()
     }
 
     // shuffle and repeat as the page has them, for the buttons beside previous / next

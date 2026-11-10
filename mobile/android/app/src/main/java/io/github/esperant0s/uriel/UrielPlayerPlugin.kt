@@ -119,7 +119,48 @@ class UrielPlayerPlugin : Plugin(), PlayerService.Page {
         call.resolve()
     }
 
-    // no song any more (the page plays this one through its own player, for the sound effects)
+    // the sound settings: Enhance, EQ, Effects and Normalize volume (EffectsProcessor.Settings)
+    @PluginMethod
+    fun setEffects(call: PluginCall) = withPlayer(call) { s ->
+        s.setEffects(JSONObject(call.data.toString()))
+        call.resolve()
+    }
+
+    // ---- the crossfade's second player (mobile/native-audio.js NativeTail); events: "tail" ----
+
+    @PluginMethod
+    fun tailLoad(call: PluginCall) = withPlayer(call) { s ->
+        val id = call.getString("id") ?: ""
+        val path = call.getString("path", "") ?: ""
+        val url = call.getString("url", "") ?: ""
+        val uri = if (path.startsWith("/")) Uri.fromFile(File(path)) else Uri.parse(url)
+        s.tailLoad(id, uri, ((call.getDouble("startAt") ?: 0.0) * 1000).toLong()) { o -> notifyListeners("tail", JSObject.fromJSONObject(o)) }
+        call.resolve()
+    }
+
+    // play, pause, seek (position), volume, speed (+ preservePitch): whichever are given
+    @PluginMethod
+    fun tailSet(call: PluginCall) = withPlayer(call) { s ->
+        val t = s.tail(call.getString("id") ?: "")
+        if (t != null) {
+            call.getDouble("volume")?.let { t.volume = it.toFloat().coerceIn(0f, 1f) }
+            call.getDouble("speed")?.let {
+                val speed = it.toFloat().coerceIn(0.1f, 8f)
+                t.playbackParameters = androidx.media3.common.PlaybackParameters(speed, if (call.getBoolean("preservePitch", true) == true) 1f else speed)
+            }
+            call.getDouble("position")?.let { t.seekTo((it * 1000).toLong().coerceAtLeast(0)) }
+            call.getBoolean("play")?.let { if (it) t.play() else t.pause() }
+        }
+        call.resolve()
+    }
+
+    @PluginMethod
+    fun tailStop(call: PluginCall) = withPlayer(call) { s ->
+        s.tailStop(call.getString("id") ?: "")
+        call.resolve()
+    }
+
+    // no song any more (the page plays this one through its own player: a stream only it can open)
     @PluginMethod
     fun clear(call: PluginCall) = withPlayer(call) { s ->
         s.clear()

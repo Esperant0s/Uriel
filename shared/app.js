@@ -3757,15 +3757,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // and on iPhones, where a player's volume can't be changed (so neither song could fade).
   const xfade = { prep: null, tail: null, handingOver: false, fadeInRaf: 0 };
   const crossfadeSeconds = () => parseInt(localStorage.getItem('uriel_crossfade') || '0', 10) || 0;
-  // Whether the sound settings need Web Audio, which only a real <audio> element can feed: on Android the native
-  // player (mobile/native-audio.js) steps aside for the page's own while one is on. Speed and pitch it does itself.
-  window.UrielNeedsWebAudio = () => {
-    if (crossfadeSeconds() > 0 || normalizeEnabled() || state.hqEnabled) return true;
-    const s = effectiveAudioSettings() || {};
-    const eq = s.eq && (s.eq.low || s.eq.mid || s.eq.high);
-    const bands = Array.isArray(s.eqBands) && s.eqBands.some((v) => v);
-    return !!(eq || bands || s.reverb || s.echo || s.distortion || (Number(s.volume) || 1) > 1.001);
-  };
   let volumeWorks = null;
   function elementVolumeWorks() {
     if (volumeWorks === null) {
@@ -3826,7 +3817,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   function prepareCrossfade(point, end) {
     const a = el.nativeAudio;
     dropCrossfadePrep();
-    const t = new Audio();
+    // Android: a second native player (mobile/native-audio.js), since the song doesn't play in the page there
+    const t = a.createTail ? a.createTail() : new Audio();
     const p = { el: t, token: state.loadToken, point, end, ready: false, timer: 0 };
     xfade.prep = p;
     try {

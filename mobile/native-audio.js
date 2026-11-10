@@ -4,10 +4,9 @@
 // same properties, methods and events app.js uses, and sends the songs to the native player, which keeps playing in
 // the background, answers earbuds and Bluetooth, and starts the last song again from earbuds once Uriel was closed.
 //
-// The sound effects (EQ, reverb, echo, distortion, HQ, loudness levelling, crossfade, a song louder than 100%) run in
-// the page's Web Audio, which only an <audio> element can feed. While any of them is on, songs play through the real
-// element as before ("web"); with all of them off, through the native player ("native"). Turning one on switches the
-// song that is playing over in place; turning them all off takes effect from the next song.
+// The sound settings (Enhance, EQ, Effects, Normalize volume) run in the native player too (EffectsProcessor.kt): this
+// sends them along. The old song's last seconds during a crossfade play in a second native player (NativeTail).
+// Only a stream the native player can't open (hls.js, a blob) still plays through the real element ("web").
 const { registerPlugin } = require('@capacitor/core');
 const { cachedName, thumbName, fileOfUrl } = require('./song-files');
 
@@ -18,27 +17,6 @@ const EVENTS = ['loadstart', 'emptied', 'loadedmetadata', 'loadeddata', 'duratio
 const STATE = { IDLE: 1, LOADING: 2, READY: 3, ENDED: 4 };
 // HTMLMediaElement error codes
 const ERR = { NETWORK: 2, DECODE: 3, SRC_NOT_SUPPORTED: 4 };
-
-// whether the sound settings need the page's Web Audio: app.js knows (UrielNeedsWebAudio); before it has run, the
-// saved settings tell
-function needsWebAudio() {
-  if (typeof window.UrielNeedsWebAudio === 'function') {
-    try { return !!window.UrielNeedsWebAudio(); } catch (e) {}
-  }
-  let saved = {};
-  try {
-    if (localStorage.getItem('uriel_audio_normalize') === '1') return true;
-    if ((parseInt(localStorage.getItem('uriel_crossfade') || '0', 10) || 0) > 0) return true;
-  } catch (e) {}
-  let hq = false;
-  try { saved = JSON.parse(localStorage.getItem('uriel_audio_settings') || '{}') || {}; } catch (err) {}
-  try { hq = localStorage.getItem('uriel_hq_enabled') === '1'; } catch (err) {}
-  if (hq) return true;
-  const s = saved;
-  const eq = s.eq && (s.eq.low || s.eq.mid || s.eq.high);
-  const bands = Array.isArray(s.eqBands) && s.eqBands.some((v) => v);
-  return !!(eq || bands || s.reverb || s.echo || s.distortion || (Number(s.volume) || 1) > 1.001);
-}
 
 class NativeAudio extends EventTarget {
   constructor(web, player) {
@@ -69,13 +47,13 @@ class NativeAudio extends EventTarget {
     this._cmdAt = 0;
     this._seekAt = 0;
     this._adopted = false;
-    this._switching = false;
     this._timer = null;
     this._sentSpeed = '';
     this._sentVolume = -1;
+    this._sentEffects = '';
 
     for (const type of EVENTS) {
-      web.addEventListener(type, () => { if (this.backend === 'web' && !this._switching) this._fire(type, true); });
+      web.addEventListener(type, () => { if (this.backend === 'web') this._fire(type, true); });
     }
     player.addListener('state', (s) => this._onState(s || {}));
     player.addListener('error', (e) => this._onError(e || {}));
@@ -266,8 +244,8 @@ class NativeAudio extends EventTarget {
     const load = ++this._load;
     const wasWeb = this.backend === 'web';
     if (!v) { this.removeAttribute('src'); return; }
-    // the sound effects need the real element; so do songs only it can open
-    const web = needsWebAudio() || /^(blob|data|mediasource):/i.test(v);
+    // a song only the real element can open
+    const web = /^(blob|data|mediasource):/i.test(v);
     if (web) {
       if (!wasWeb) { this._reset(''); this.player.clear().catch(() => {}); }
       this._setBackend('web');
@@ -403,7 +381,8 @@ class NativeAudio extends EventTarget {
     setTimeout(() => this.dispatchEvent(new Event(type)), 0);
   }
 
-  // speed and pitch (audio-engine.js sets them on the real element) and the volume reach the native player
+  // Speed and pitch (audio-engine.js sets them on the real element), the volume and the sound settings reach the
+  // native player.
   _sendSettings(force = false) {
     const w = this.webElement;
     const rate = Number(w.playbackRate) || 1;
@@ -414,13 +393,18 @@ class NativeAudio extends EventTarget {
       this._rate = rate;
       this.player.setSpeed({ speed: rate, preservePitch: keep }).catch(() => {});
     }
-    const e = window.audioEngine;
-    const master = e ? (e.isMuted ? 0 : Number(e.volume)) : 1;
-    const track = e && e.audioSettings ? Math.min(1, Number(e.audioSettings.volume) || 1) : 1;
-    const v = Math.max(0, Math.min(1, (Number.isFinite(master) ? master : 1) * track * this._volume * (w.muted ? 0 : 1)));
+    // Phones have no volume slider (the phone's own buttons do that): only mute counts, which mobile-ui.js puts on
+    // the real element. The app's saved volume (85% unless changed on a computer) must not turn the phone down.
+    // A song's own volume is part of the sound settings (it may go above 100%).
+    const v = Math.max(0, Math.min(1, this._volume * (w.muted ? 0 : 1)));
     if (force || Math.abs(v - this._sentVolume) > 0.001) {
       this._sentVolume = v;
       this.player.setVolume({ volume: v }).catch(() => {});
+    }
+    const effects = JSON.stringify(soundSettings());
+    if (force || effects !== this._sentEffects) {
+      this._sentEffects = effects;
+      this.player.setEffects(JSON.parse(effects)).catch(() => {});
     }
   }
 
@@ -432,46 +416,143 @@ class NativeAudio extends EventTarget {
       const setVolume = e.setVolume.bind(e);
       e.setVolume = (...args) => { const r = setVolume(...args); if (this.backend === 'native') this._sendSettings(); return r; };
     }
-    if (this.backend === 'native') {
-      if (this._src && needsWebAudio()) { this._toWeb(); return; }
-      this._sendSettings();
-    }
+    if (this.backend === 'native') this._sendSettings();
   }
 
-  // A sound effect was turned on while a song plays natively: it goes on through the real element, from the same place
-  _toWeb() {
-    const src = this._src;
-    const pos = this.currentTime;
-    const playing = !this._paused;
-    const adopted = this._adopted;
-    this._load++;
-    this._switching = true;
-    this._stopTimer();
-    this.player.clear().catch(() => {});
-    this._setBackend('web');
-    const w = this.webElement;
-    const done = () => { this._switching = false; };
-    // a song the native player started by itself has no page address: it starts again from the page
-    if (adopted || !/^http/.test(src)) {
-      done();
-      this._src = '';
-      const c = window.UrielCore;
-      if (c) {
-        c.state.queueRestorePosition = pos;
-        if (playing) { c.state.isPlaying = false; c.togglePlay(); }
-      }
-      return;
+  // The second player of a crossfade (app.js prepareCrossfade): the old song's last seconds, fading out while this
+  // one fades the next song in. A real <audio> element would take the sound away from the native player.
+  createTail() {
+    return new NativeTail(this.player);
+  }
+}
+
+// What the sound settings are right now, for EffectsProcessor.kt: audio-engine.js keeps them (the playing song's own
+// included), the Normalize volume switch is app.js's.
+function soundSettings() {
+  const e = window.audioEngine || {};
+  const s = e.audioSettings || {};
+  const hq = e.hqSettings || {};
+  let normalize = false;
+  try { normalize = localStorage.getItem('uriel_audio_normalize') === '1'; } catch (err) {}
+  const num = (v, d = 0) => (Number.isFinite(Number(v)) ? Number(v) : d);
+  return {
+    hq: !!e.hqEnabled, hqEngine: hq.engine || 'hqmusic-3', hqBass: num(hq.bass), hqVocal: num(hq.vocal), hqAir: num(hq.air),
+    eq: { low: num(s.eq && s.eq.low), mid: num(s.eq && s.eq.mid), high: num(s.eq && s.eq.high) },
+    eqBands: Array.from({ length: 10 }, (_, i) => num(Array.isArray(s.eqBands) ? s.eqBands[i] : 0)),
+    reverb: num(s.reverb), echo: num(s.echo), distortion: num(s.distortion), volume: num(s.volume, 1), normalize,
+  };
+}
+
+// The few things app.js does with a crossfade's second <audio> element, on a second native player.
+let tailCount = 0;
+class NativeTail extends EventTarget {
+  constructor(player) {
+    super();
+    this.player = player;
+    this.id = `tail${++tailCount}`;
+    this.preload = 'auto';
+    this._src = '';
+    this._sent = false;
+    this._startAt = 0;
+    this._pos = 0;
+    this._posAt = Date.now();
+    this._playing = false;
+    this._wantPlay = false;
+    this._rate = 1;
+    this._pitchKept = true;
+    this._volume = 1;
+    this._duration = NaN;
+    this._ready = false;
+    this.ended = false;
+    this._listener = null;
+    this._waiting = [];
+  }
+
+  get src() { return this._src; }
+  set src(v) {
+    this._src = String(v || '');
+    const path = fileOfUrl(this._src);
+    if (!path && !/^https?:\/\//i.test(this._src)) { setTimeout(() => this.dispatchEvent(new Event('error')), 0); return; }
+    Promise.resolve(this.player.addListener('tail', (s) => this._onState(s || {}))).then((l) => {
+      // let go of before it was listening
+      if (!this._src) { if (l && l.remove) l.remove(); } else this._listener = l;
+    });
+    this._sent = true;
+    this.player.tailLoad({ id: this.id, path, url: path ? '' : this._src, startAt: this._startAt })
+      .then(() => this._set({ volume: this._volume, speed: this._rate, preservePitch: this._pitchKept }))
+      .catch(() => this.dispatchEvent(new Event('error')));
+  }
+  get currentSrc() { return this._src; }
+  get paused() { return !this._wantPlay; }
+  get duration() { return this._duration; }
+
+  get currentTime() {
+    if (!this._playing) return this._pos;
+    return this._pos + ((Date.now() - this._posAt) / 1000) * this._rate;
+  }
+  set currentTime(v) {
+    const to = Math.max(0, Number(v) || 0);
+    this._pos = to;
+    this._posAt = Date.now();
+    this._seekAt = Date.now();
+    if (!this._sent) { this._startAt = to; return; }
+    this._set({ position: to }).then(() => this.dispatchEvent(new Event('seeked')));
+  }
+
+  get volume() { return this._volume; }
+  set volume(v) { this._volume = Math.max(0, Math.min(1, Number(v) || 0)); if (this._sent) this._set({ volume: this._volume }); }
+  get playbackRate() { return this._rate; }
+  set playbackRate(v) { this._rate = Number(v) || 1; if (this._sent) this._set({ speed: this._rate, preservePitch: this._pitchKept }); }
+  get defaultPlaybackRate() { return this._rate; }
+  set defaultPlaybackRate(v) {}
+  get preservesPitch() { return this._pitchKept; }
+  set preservesPitch(v) { this._pitchKept = v !== false; if (this._sent) this._set({ speed: this._rate, preservePitch: this._pitchKept }); }
+
+  play() {
+    if (!this._sent) return Promise.reject(new Error('no song'));
+    this._wantPlay = true;
+    return this._set({ play: true });
+  }
+
+  pause() {
+    if (!this._wantPlay) return;
+    this._pos = this.currentTime;
+    this._posAt = Date.now();
+    this._wantPlay = false;
+    this._playing = false;
+    if (this._sent) this._set({ play: false });
+  }
+
+  // app.js lets go of the element with pause(), removeAttribute('src'), load()
+  removeAttribute(name) {
+    if (String(name).toLowerCase() !== 'src') return;
+    this._src = '';
+    this._wantPlay = false;
+    this._playing = false;
+    if (this._listener && this._listener.remove) this._listener.remove();
+    this._listener = null;
+    if (this._sent) this.player.tailStop({ id: this.id }).catch(() => {});
+    this._sent = false;
+  }
+
+  load() {}
+
+  _set(what) {
+    return this.player.tailSet({ id: this.id, ...what }).catch(() => {});
+  }
+
+  _onState(s) {
+    if (s.id !== this.id || !this._src) return;
+    if (s.error) { this.dispatchEvent(new Event('error')); return; }
+    const at = Number(s.at) || Date.now();
+    if (!(at < (this._seekAt || 0))) { this._pos = Number(s.position) || 0; this._posAt = at; }
+    this._playing = !!s.playing;
+    if (s.duration > 0) this._duration = s.duration;
+    if (!this._ready && (s.state === STATE.READY || s.state === STATE.ENDED)) {
+      this._ready = true;
+      this.dispatchEvent(new Event('loadedmetadata'));
     }
-    const onMeta = () => {
-      w.removeEventListener('loadedmetadata', onMeta);
-      try { w.currentTime = pos; } catch (e) {}
-      const e = window.audioEngine;
-      if (e && e.ctx && e.needsResume && e.needsResume()) e.ctx.resume().catch(() => {});
-      if (playing) w.play().catch(() => {}).then(done); else done();
-    };
-    w.addEventListener('loadedmetadata', onMeta);
-    w.src = src;
-    setTimeout(done, 8000);
+    if (s.state === STATE.ENDED) { this.ended = true; this._playing = false; }
   }
 }
 
@@ -484,4 +565,4 @@ module.exports = function create(web) {
     return null;
   }
 };
-module.exports.needsWebAudio = needsWebAudio;
+module.exports.soundSettings = soundSettings;

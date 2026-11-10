@@ -31,6 +31,10 @@ android {
             }
         }
     }
+    // EffectsProcessorTest runs on the computer: Android's own classes answer with defaults there
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
     buildTypes {
         release {
             if (System.getenv("URIEL_KEYSTORE")) signingConfig signingConfigs.release
@@ -68,6 +72,8 @@ dependencies {
     implementation "androidx.core:core:$androidxCoreVersion"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
+    // Android's own org.json is an empty shell in tests on the computer
+    testImplementation "org.json:json:20240303"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
