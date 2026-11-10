@@ -1,3 +1,4 @@
+// @ts-check
 const { app, shell } = require('electron');
 const fs = require('fs');
 const os = require('os');

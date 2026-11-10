@@ -1,3 +1,4 @@
+// @ts-check
 // The chosen theme from the very first frame. app.js works the theme out only after start-up has waited for the
 // library and the in-app server (over a second, longer on phones), and until then the page showed styles.css's
 // default purple. app.js saves what it painted last (saveThemeBoot); this puts it back before anything is drawn.

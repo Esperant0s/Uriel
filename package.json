@@ -8,6 +8,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.js.json",
     "dist": "electron-builder",
     "release": "npm version patch && git push --follow-tags",
     "release:minor": "npm version minor && git push --follow-tags",
@@ -25,6 +26,7 @@
     "@capacitor/filesystem": "^8.1.4",
     "@capacitor/ios": "^8.5.3",
     "@capacitor/share": "^8.0.3",
+    "@types/node": "^22.20.5",
     "buffer": "^6.0.3",
     "electron": "^45.2.3",
     "electron-builder": "^26.18.0",
@@ -33,6 +35,7 @@
     "path-browserify": "^1.0.1",
     "peerjs": "1.5.5",
     "qrcode-generator": "2.0.4",
+    "typescript": "^5.9.3",
     "youtubei.js": "^18.3.0"
   },
   "dependencies": {

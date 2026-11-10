@@ -1,6 +1,6 @@
 // What the system's "now playing" controls are told (lock screen, Control Center, the iPhone widget), and when
 // to start again after another app's sound interrupted Uriel (issue #26). No DOM here: app.js and
-// mobile/audio-interruption.js use it, test/now-playing.test.js runs it.
+// mobile/audio-interruption.ts use it, test/now-playing.test.js runs it.
 (function () {
   // navigator.mediaSession.setPositionState() for an <audio> element: null when the song has no length yet
   // (setPositionState throws on a NaN / 0 duration, or a position past the end). The rate is the element's own,

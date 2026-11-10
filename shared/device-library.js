@@ -1,20 +1,27 @@
+// @ts-check
 // Music already on the device, found instead of imported: the computer's Music folder and the folder Uriel
 // downloads into (server.js scans and watches them), Android's music library and the iPhone's Uriel folder in
-// the Files app (mobile/device-music.js hands those over). The songs play from where they are: nothing is copied.
+// the Files app (mobile/device-music.ts hands those over). The songs play from where they are: nothing is copied.
 //
-// A found song gets the id an import of the same file gets (main.js and mobile/electron-api.js: name + size), so
+// A found song gets the id an import of the same file gets (main.js and mobile/electron-api.ts: name + size), so
 // a song that was imported before isn't listed twice and its favorites and playlist entries keep working.
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
+/** A folder to look in: `deep` goes into its subfolders, `source` says where its songs came from. */
+/** @typedef {{ dir?: string, deep?: boolean, source?: string }} Folder */
+/** @typedef {{ id: string, path: string, ext: string, size: number, source: string, artist: string, title: string }} FoundSong */
+
 const AUDIO_EXTS = new Set(['mp3', 'wav', 'flac', 'opus', 'ogg', 'oga', 'm4a', 'aac', 'webm', 'weba']);
 const MAX_FILES = 20000;
 const MAX_DEPTH = 8;
 
+/** @param {unknown} name @param {unknown} size */
 const idFor = (name, size) => 'local_' + crypto.createHash('sha1').update(String(name) + size).digest('hex').slice(0, 12);
 
 // "03 - Artist - Song" -> { artist: 'Artist', title: 'Song' } (the rule imported files have always used)
+/** @param {unknown} rawName */
 function titleFromName(rawName) {
   const raw = String(rawName || '').trim();
   const clean = raw.replace(/^\d+(?:[.\s-]+)\s*/, '').trim() || raw || 'Untitled';
@@ -24,6 +31,7 @@ function titleFromName(rawName) {
 }
 
 // a song from a file: `size` keeps the id the same as the file's import would get
+/** @param {string} file @param {number} size @param {string} source @returns {FoundSong | null} */
 function songFromFile(file, size, source) {
   const name = path.basename(file);
   const ext = path.extname(name).slice(1).toLowerCase();
@@ -33,9 +41,12 @@ function songFromFile(file, size, source) {
 
 // Every audio file under each folder: `deep` folders to MAX_DEPTH (the Music folder), the others only at the top
 // (Downloads holds everything else people download too). Hidden folders and files are skipped.
+/** @param {(Folder | null | undefined)[]} folders @param {number} [limit] */
 async function scanFolders(folders, limit = MAX_FILES) {
+  /** @type {FoundSong[]} */
   const out = [];
   const seen = new Set();
+  /** @param {string} dir @param {number} depth @param {boolean} deep @param {string} source @returns {Promise<void>} */
   async function walk(dir, depth, deep, source) {
     let entries;
     try { entries = await fs.promises.readdir(dir, { withFileTypes: true }); } catch (e) { return; }
@@ -58,9 +69,12 @@ async function scanFolders(folders, limit = MAX_FILES) {
 
 // Calls onChange (once, after things settle) when files are added, removed or renamed in any of the folders.
 // Returns a function that stops watching.
+/** @param {(Folder | null | undefined)[]} folders @param {() => void} onChange @param {number} [settleMs] */
 function watchFolders(folders, onChange, settleMs = 2000) {
-  let timer = null;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let timer;
   const fire = () => { clearTimeout(timer); timer = setTimeout(onChange, settleMs); };
+  /** @type {import('fs').FSWatcher[]} */
   const watchers = [];
   for (const f of folders) {
     if (!f || !f.dir) continue;

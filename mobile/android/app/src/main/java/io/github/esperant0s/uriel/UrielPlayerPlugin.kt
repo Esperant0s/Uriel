@@ -17,7 +17,7 @@ import org.json.JSONObject
 import java.io.File
 
 /**
- * The page's way to the native player (PlayerService), used by mobile/native-audio.js in place of an <audio>
+ * The page's way to the native player (PlayerService), used by mobile/native-audio.ts in place of an <audio>
  * element. Calls run in the order the page makes them. Events: "state" (where the player is), "action" (a button
  * the page answers: play, pause, next, prev, shuffle, repeat) and "error".
  */
@@ -126,7 +126,7 @@ class UrielPlayerPlugin : Plugin(), PlayerService.Page {
         call.resolve()
     }
 
-    // ---- the crossfade's second player (mobile/native-audio.js NativeTail); events: "tail" ----
+    // ---- the crossfade's second player (mobile/native-audio.ts NativeTail); events: "tail" ----
 
     @PluginMethod
     fun tailLoad(call: PluginCall) = withPlayer(call) { s ->

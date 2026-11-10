@@ -37,7 +37,7 @@ test('the phone dialog promises no format, shows progress and retries', () => {
   assert.match(css, /#download-modal :is\(\.download-section:has\(#format-chips-grid\), \.download-section:has\(#quality-chips-grid\), #download-effects-section\)/);
   assert.match(app, /!isPhoneApp \? `Download \$\{selectedFormat\.toUpperCase\(\)\}`/);
   assert.match(app, /'uriel:dl-progress'/);
-  assert.match(read('mobile/shims/child_process.js'), /uriel:dl-progress/);
+  assert.match(read('mobile/shims/child_process.ts'), /uriel:dl-progress/);
   assert.match(app, /runDownloadBatch\(\[t\]/);
 });
 
@@ -45,7 +45,7 @@ test('downloads keep going in the background with a notification', () => {
   const manifest = read('mobile/android/app/src/main/AndroidManifest.xml');
   assert.match(manifest, /android:name="\.DownloadService"[\s\S]{0,90}foregroundServiceType="dataSync"/);
   assert.match(manifest, /FOREGROUND_SERVICE_DATA_SYNC/);
-  assert.match(read('mobile/media-controls.js'), /plugin\.downloading\(/);
+  assert.match(read('mobile/media-controls.ts'), /plugin\.downloading\(/);
 });
 
 test('a tap on earbuds reaches Uriel even when it is closed', () => {
@@ -53,7 +53,7 @@ test('a tap on earbuds reaches Uriel even when it is closed', () => {
   assert.match(manifest, /android:name="\.MediaButtonReceiver"[\s\S]{0,160}android\.intent\.action\.MEDIA_BUTTON/);
   const plugin = read('mobile/android/app/src/main/java/io/github/esperant0s/uriel/MediaControlsPlugin.java');
   assert.match(plugin, /session\.setMediaButtonReceiver\(/);
-  assert.match(read('mobile/media-controls.js'), /plugin\.takeStartPlay\(\)/);
+  assert.match(read('mobile/media-controls.ts'), /plugin\.takeStartPlay\(\)/);
   // closed by Android, it can't open itself from the background: "Tap to keep listening" opens it and plays
   assert.match(read('mobile/android/app/src/main/java/io/github/esperant0s/uriel/MediaButtonReceiver.java'), /Tap to keep listening/);
   assert.match(read('mobile/android/app/src/main/java/io/github/esperant0s/uriel/MainActivity.java'), /ACTION_RESUME/);

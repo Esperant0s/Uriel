@@ -1,3 +1,4 @@
+// @ts-check
 // Uriel sync, the part that decides what wins: every synced thing (a playlist, a favorite, a history entry,
 // a setting) carries the time it last changed on any device, and when two devices meet the newer version
 // wins item by item. Removing something leaves a dated "tombstone" so the removal spreads too. No network,

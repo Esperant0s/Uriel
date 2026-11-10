@@ -1,0 +1,21 @@
+{
+  // The phone layer (mobile/) is TypeScript; shared/ and desktop/ are still JavaScript and are read for their
+  // types only where mobile/ uses them. `npm run typecheck` checks it; nothing is built from here: the phone app
+  // is bundled by mobile/build.mjs (esbuild), and the tests load .ts files through tools/ts-require.js.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "allowJs": true,
+    "checkJs": false,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["mobile/**/*.ts"],
+  "exclude": ["mobile/www", "mobile/android", "mobile/ios", "node_modules"]
+}

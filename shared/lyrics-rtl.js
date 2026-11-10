@@ -1,3 +1,4 @@
+// @ts-check
 const RTL_RE = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
 const LETTER_RE = /\p{L}/u;
 

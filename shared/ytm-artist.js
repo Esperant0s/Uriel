@@ -1,3 +1,4 @@
+// @ts-check
 // Artist pages by YouTube Music channel. Several artists can share a name ("NobodyKnows"); their channel id
 // (UC…) tells them apart, so tracks from YouTube / YouTube Music keep it as `artistId` and the artist page is
 // built from that channel. Only reads innertube answers (WEB_REMIX client); server.js makes the requests.

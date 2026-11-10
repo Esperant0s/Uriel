@@ -1,3 +1,4 @@
+// @ts-check
 // Saved settings, playlists and the rest used to be stored as muriel_x (Muriel, Mural) and a few as mural_x; they
 // are uriel_x now. The first script on every page: each key with an old name moves to its new one (other profiles'
 // keys too: "muriel_p:<id>:muriel_x" -> "uriel_p:<id>:uriel_x"), so everything after it only knows the new names.

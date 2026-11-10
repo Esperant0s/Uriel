@@ -1,3 +1,4 @@
+// @ts-check
 'use strict';
 
 // SoundCloud search straight from SoundCloud's own api-v2 (#17). Each `yt-dlp scsearch` run started a

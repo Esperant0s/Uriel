@@ -1,7 +1,9 @@
 'use strict';
 
+require('../tools/ts-require');
+
 // Settings → Theme → App icon changes the real app icon: every style has its Android launcher entry and PNGs, its
-// iOS alternate icon, and the same name in both plugins and in mobile/app-icon.js
+// iOS alternate icon, and the same name in both plugins and in mobile/app-icon.ts
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

@@ -1,3 +1,4 @@
+// @ts-check
 // One queue for every yt-dlp run (#16). Each yt-dlp call for a YouTube song can start a JavaScript
 // runtime (deno/node) that solves YouTube's player challenge at full CPU, so the app must never run
 // many of them at once or repeat them needlessly:

@@ -1,5 +1,7 @@
 'use strict';
 
+require('../tools/ts-require');
+
 // Stability regressions for server.js: hangs, crashes and leaks found by fuzzing the local API.
 // Nothing here touches the network or the real data dir: HOME and the data dir point at a temp folder,
 // and every outbound https request is routed to a local server whose behaviour each test sets.

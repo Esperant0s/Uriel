@@ -1,3 +1,4 @@
+// @ts-check
 // Uriel used to be Mural, and Mural used to be Muriel. On the first start of Uriel on a computer, everything the
 // older app kept is brought over (Mural's folders if there are any, else Muriel's): the page's storage (playlists,
 // favorites, history, settings: Electron's userData folder), the music data folder (library, offline songs,

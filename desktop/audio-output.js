@@ -1,3 +1,4 @@
+// @ts-check
 const { exec } = require('child_process');
 
 function getSystemAudioOutputInfo() {

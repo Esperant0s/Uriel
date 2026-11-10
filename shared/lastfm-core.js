@@ -1,3 +1,4 @@
+// @ts-check
 // Last.fm scrobbling, the part that decides what gets sent and when. No DOM, no network: lastfm.js runs it in the
 // app, test/lastfm.test.js in Node.
 // Last.fm's rules (last.fm/api/scrobbling): a song longer than 30 seconds is scrobbled once it has been listened to

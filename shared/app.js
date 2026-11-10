@@ -635,7 +635,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Settings → Storage → Song storage limit. Phones have their own row and clean-up (mobile/mobile-ui.js).
+  // Settings → Storage → Song storage limit. Phones have their own row and clean-up (mobile/mobile-ui.ts).
   (() => {
     const row = document.getElementById('offline-limit-item');
     if (!row) return;
@@ -2001,7 +2001,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                           playlistPickList: document.getElementById('playlist-pick-list'),
                           btnCancelAddPlaylist: document.getElementById('btn-cancel-add-playlist'),
 
-                          // Android: a stand-in that plays through the native player (mobile/native-audio.js)
+                          // Android: a stand-in that plays through the native player (mobile/native-audio.ts)
                           nativeAudio: (window.UrielAudioElement && window.UrielAudioElement(document.getElementById('native-audio'))) || document.getElementById('native-audio'),
 
                           btnAddCustomLyrics: document.getElementById('btn-add-custom-lyrics'),
@@ -2423,7 +2423,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let levelAvgDb = -120;
   function normalizeEnabled() { return localStorage.getItem('uriel_audio_normalize') === '1'; }
   function resetLevelWatcher() { levelAvgDb = -120; if (audioEngine && audioEngine.setNormalizeGainDb) audioEngine.setNormalizeGainDb(0); }
-  // the phone app has no Web Audio graph (see mobile-ui.js), so nothing to measure there
+  // the phone app has no Web Audio graph (see mobile-ui.ts), so nothing to measure there
   const isPhoneApp = document.documentElement.classList.contains('is-mobile');
   // when to look up the next song: phones download it whole, so halfway through; the computer only needs
   // a stream URL (a few seconds of yt-dlp), so in the last 45 seconds (#16)
@@ -3817,7 +3817,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function prepareCrossfade(point, end) {
     const a = el.nativeAudio;
     dropCrossfadePrep();
-    // Android: a second native player (mobile/native-audio.js), since the song doesn't play in the page there
+    // Android: a second native player (mobile/native-audio.ts), since the song doesn't play in the page there
     const t = a.createTail ? a.createTail() : new Audio();
     const p = { el: t, token: state.loadToken, point, end, ready: false, timer: 0 };
     xfade.prep = p;
@@ -3964,7 +3964,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let skipOnFailToken = -1; // loadToken of the song that gets skipped if it fails
   let failStreak = 0;
   // true from the moment a song is asked for until it plays (or fails for good). Nothing is audible in
-  // between, so the phone apps keep themselves running on this (mobile/background-audio.js, media-controls.js).
+  // between, so the phone apps keep themselves running on this (mobile/background-audio.ts, media-controls.ts).
   function setTrackLoading(on) {
     if (!!state.trackLoading === on) return;
     state.trackLoading = on;
@@ -4193,7 +4193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (data.isHls && window.Hls && Hls.isSupported()) {
       hlsInstance = new Hls({ enableWorker: true, lowLatencyMode: true, maxBufferLength: 30, maxMaxBufferLength: 60, maxBufferSize: 30 * 1000 * 1000 });
       hlsInstance.loadSource(data.streamUrl);
-      // hls.js needs the real element: this song plays there (mobile/native-audio.js)
+      // hls.js needs the real element: this song plays there (mobile/native-audio.ts)
       if (el.nativeAudio.useWeb) el.nativeAudio.useWeb();
       hlsInstance.attachMedia(el.nativeAudio.webElement || el.nativeAudio);
       hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -4468,7 +4468,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.isCustomLyrics = false;
     // the previous song's translations were shown under the new song's lines until its own translation loaded
     state.currentTranslations = null;
-    // the iPhone lock screen / Dynamic Island lyrics (mobile/live-activity.js) follow state.syncedLyrics
+    // the iPhone lock screen / Dynamic Island lyrics (mobile/live-activity.ts) follow state.syncedLyrics
     window.dispatchEvent(new Event('uriel:lyrics'));
     renderMiniLyrics();
 
@@ -6477,7 +6477,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function pauseSmooth() {
     const curToken = ++smoothFadeToken;
     state.isPlaying = false;
-    // a pause someone asked for: not undone when another app's sound ends (mobile/audio-interruption.js)
+    // a pause someone asked for: not undone when another app's sound ends (mobile/audio-interruption.ts)
     state.pausedByUser = true;
     setTrackLoading(false);
     updatePlayPauseButton(false, false);
@@ -6644,7 +6644,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // The phone's earbuds played songs while this page wasn't running (mobile/media-controls.js, ColdPlayer.java), and
+  // The phone's earbuds played songs while this page wasn't running (mobile/media-controls.ts, ColdPlayer.java), and
   // may have got further in the queue: carry on from that song and place, as if it had played here. Only before
   // anything is loaded here (the page has just started). False when it can't.
   function restoreQueueAt(index, position, play) {
@@ -6664,7 +6664,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // The native player was already playing a song of the queue when this page started (earbuds started it while
-  // Uriel was closed; mobile/media-controls.js): the page shows it as its own, without loading anything.
+  // Uriel was closed; mobile/media-controls.ts): the page shows it as its own, without loading anything.
   function adoptQueueAt(index) {
     const t = state.queue[index];
     if (!t || state.isPlaying) return false;
@@ -9198,7 +9198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (el.playbarArtist) {
     el.playbarArtist.addEventListener('click', (e) => {
-      // On phones the mini player opens Now Playing wherever it's tapped (mobile-ui.js); the artist is a tap away
+      // On phones the mini player opens Now Playing wherever it's tapped (mobile-ui.ts); the artist is a tap away
       // there. The line spans the whole bar, so only the name itself opens the artist: a tap just under a short
       // title used to.
       if (isPhoneApp && !document.body.classList.contains('np-open')) return;
@@ -16679,7 +16679,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const hide = document.getElementById('btn-hide-download');
     if (hide) hide.classList.toggle('hidden', !on);
   }
-  // the phone keeps the app awake and shows a notification while this is on (mobile/media-controls.js)
+  // the phone keeps the app awake and shows a notification while this is on (mobile/media-controls.ts)
   function announceDownloads(active, info = {}) {
     window.dispatchEvent(new CustomEvent('uriel:downloads', { detail: { active, ...info } }));
   }
@@ -20789,7 +20789,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   // The app's own icon follows the Home button's: on computers the window, taskbar and Dock icon (any picture,
   // set again at every start), on phones the home-screen icon (one of the styles: phones can't use a picked
-  // image, mobile/app-icon.js). Phones only when picked: iOS says "You have changed the icon" each time.
+  // image, mobile/app-icon.ts). Phones only when picked: iOS says "You have changed the icon" each time.
   async function syncAppIcon(val, picked) {
     if (window.UrielAppIcon) {
       if (!picked) return;

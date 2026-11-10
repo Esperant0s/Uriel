@@ -1,0 +1,19 @@
+{
+  // shared/ and desktop/ are still JavaScript. A file is type-checked once it carries `// @ts-check` on its first
+  // line: those that passed as they were have it, the rest get it as they are cleaned up (app.js and server.js are
+  // the big ones left). Looser than the phone layer's tsconfig.json: untyped values are allowed here.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "checkJs": false,
+    "strict": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["shared/*.js", "desktop/*.js"],
+  "exclude": ["shared/vendor", "node_modules"]
+}

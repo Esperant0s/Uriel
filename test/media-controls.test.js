@@ -1,6 +1,8 @@
 'use strict';
 
-// mobile/media-controls.js: the Android "now playing" notification / lock-screen controls.
+require('../tools/ts-require');
+
+// mobile/media-controls.ts: the Android "now playing" notification / lock-screen controls.
 const test = require('node:test');
 const assert = require('node:assert');
 const Module = require('module');
@@ -21,8 +23,8 @@ function setup(platform = 'android', { unrestricted = true, island = null, start
     takeStartPlay: () => Promise.resolve(startPlay || {}),
     moveToBack: () => { asked.push('back'); return Promise.resolve(); },
   };
-  // the song cache, as the app's file index sees it (mobile/shims/fs.js): path -> size
-  const fsFile = path.join(__dirname, '../mobile/shims/fs.js');
+  // the song cache, as the app's file index sees it (mobile/shims/fs.ts): path -> size
+  const fsFile = path.join(__dirname, '../mobile/shims/fs.ts');
   if (files) {
     require.cache[fsFile] = { id: fsFile, filename: fsFile, loaded: true, exports: {
       statSync: (p) => { if (!(p in files)) throw new Error('ENOENT'); return { size: files[p] }; },
@@ -32,10 +34,10 @@ function setup(platform = 'android', { unrestricted = true, island = null, start
   const fakeCore = { Capacitor: { getPlatform: () => platform }, registerPlugin: () => plugin };
   const origLoad = Module._load;
   Module._load = function (request, ...rest) { return request === '@capacitor/core' ? fakeCore : origLoad.call(this, request, ...rest); };
-  const file = path.join(__dirname, '../mobile/media-controls.js');
+  const file = path.join(__dirname, '../mobile/media-controls.ts');
   delete require.cache[file];
   // it keeps the file index it was first given
-  delete require.cache[path.join(__dirname, '../mobile/song-files.js')];
+  delete require.cache[path.join(__dirname, '../mobile/song-files.ts')];
   const audio = new EventTarget();
   Object.assign(audio, { paused: true, currentTime: 0, duration: NaN, playbackRate: 1 });
   const did = [];

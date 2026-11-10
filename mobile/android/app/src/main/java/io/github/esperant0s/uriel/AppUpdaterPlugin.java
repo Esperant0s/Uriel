@@ -26,7 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * In-app updates for Android: "Update" in the update banner (update-notifier.js, through mobile/app-updater.js)
+ * In-app updates for Android: "Update" in the update banner (update-notifier.js, through mobile/app-updater.ts)
  * downloads the new Uriel.apk from the android-latest release into the app's cache, checks it against GitHub's
  * SHA-256 for that file, and hands it to Android's installer. Android always asks the person to confirm the
  * install, and the first time also to allow installs from Uriel (install() opens that setting).

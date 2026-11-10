@@ -1,7 +1,7 @@
 // "Update available": compares this build (build-info.js, stamped in CI) with its channel's GitHub release
 // (update-core.js). Asks GitHub at most every 6 hours; "Later" hides the banner for that build for 3 days. Local and
 // dev builds (sha "dev") never ask.
-// Where the app can install the update itself (the computer: desktop-updater.js; Android: mobile/app-updater.js),
+// Where the app can install the update itself (the computer: desktop-updater.js; Android: mobile/app-updater.ts),
 // "Update" downloads it right here with a progress bar and then offers "Restart now"; on iOS, or if that fails,
 // "Download" opens the release in the browser as before.
 (() => {

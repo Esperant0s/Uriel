@@ -9070,7 +9070,7 @@ body.mini #btn-playbar-radio { display: none !important; }
 .queue-radio-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 
 /* Controls that belong to some builds only (index.html): phones get .is-mobile plus .is-ios or .is-android
-   (mobile/bridge.js), computers .platform-win32 / -darwin / -linux (preload.js). A control that would do nothing
+   (mobile/bridge.ts), computers .platform-win32 / -darwin / -linux (preload.js). A control that would do nothing
    here isn't shown at all. */
 html.is-mobile .desktop-only,
 html:not(.is-mobile) .phone-only,

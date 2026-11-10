@@ -22,7 +22,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * The songs already on the phone, from Android's media library (mobile/device-music.js lists them in My files).
+ * The songs already on the phone, from Android's media library (mobile/device-music.ts lists them in My files).
  * Each comes with its file path: the WebView plays it from there, the way it plays Uriel's own downloads in
  * Music/Mural. Reading the library needs "Music and audio" (Android 13+) or storage access (older), asked once.
  */

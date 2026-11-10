@@ -1,3 +1,4 @@
+// @ts-check
 // Finds the song already on this device (imported, or found by device-library.js) that is the same song as a
 // playlist entry, so it plays from that file and counts as available offline instead of being streamed or
 // downloaded again. Used by server.js, so desktop and phones (where server.js runs in the app) match alike.

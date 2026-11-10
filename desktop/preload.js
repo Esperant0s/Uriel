@@ -1,3 +1,4 @@
+// @ts-check
 const { contextBridge, ipcRenderer, webFrame } = require('electron');
 
 

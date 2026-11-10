@@ -1,3 +1,4 @@
+// @ts-check
 // Profiles: several people on one device, each with their own playlists, favorites, history, Encore stats,
 // queue, look, sound and lyrics settings, and their own Sync group. All of that lives in localStorage, so a
 // profile is simply its own set of keys there: the first profile keeps the plain keys it always had (nothing to
@@ -27,7 +28,7 @@
     // a copy of the open language's translations for a quick start (i18n.js); which language is per profile
     'uriel_i18n_snap',
   ]);
-  // how a song sounds, worked out once per device; logins the in-app server keeps for every profile (bridge.js)
+  // how a song sounds, worked out once per device; logins the in-app server keeps for every profile (bridge.ts)
   const DEVICE_PREFIXES = ['uriel_audio_analysis_', 'uriel_secret_'];
   const isDevice = (k) => DEVICE.has(k) || DEVICE_PREFIXES.some((p) => k.startsWith(p));
 

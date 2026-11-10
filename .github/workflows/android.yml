@@ -39,6 +39,10 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
 
+      # the phone layer (mobile/, TypeScript) and the JavaScript files marked `// @ts-check`
+      - name: Type-check
+        run: npm run typecheck
+
       - name: Build the web bundle
         run: node mobile/build.mjs
 

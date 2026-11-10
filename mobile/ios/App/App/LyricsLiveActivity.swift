@@ -5,7 +5,7 @@ import Capacitor
 import ActivityKit
 #endif
 
-// Lyrics on the lock screen and in the Dynamic Island. The page (mobile/live-activity.js) sends the song,
+// Lyrics on the lock screen and in the Dynamic Island. The page (mobile/live-activity.ts) sends the song,
 // its synced lyrics and every play/pause/seek; the line timing runs here, so the Live Activity keeps up
 // with the song in the background without the web view having to send each line.
 @objc(UrielLiveActivityPlugin)

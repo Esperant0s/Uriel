@@ -35,7 +35,7 @@ import kotlin.math.sqrt
 @OptIn(UnstableApi::class)
 class EffectsProcessor : BaseAudioProcessor() {
 
-    // The settings as the page has them (mobile/native-audio.js sends audio-engine.js's audioSettings, hqEnabled,
+    // The settings as the page has them (mobile/native-audio.ts sends audio-engine.js's audioSettings, hqEnabled,
     // hqSettings and the normalize switch).
     class Settings(o: JSONObject = JSONObject()) {
         val hq = o.optBoolean("hq", false)

@@ -53,7 +53,7 @@ import java.util.concurrent.Executors;
  * The phone's "now playing" controls for Android: a media session plus a playback notification, so
  * Uriel shows up in the notification shade, on the lock screen and in the quick-settings media
  * player, and headset / Bluetooth buttons work. Android's WebView doesn't do this for the page's
- * navigator.mediaSession the way iOS does. The page (mobile/media-controls.js) sends the song and
+ * navigator.mediaSession the way iOS does. The page (mobile/media-controls.ts) sends the song and
  * play state; button presses come back as "action" events.
  *
  * While a song plays, PlaybackService keeps the app in the foreground, so Android doesn't stop the
@@ -64,7 +64,7 @@ import java.util.concurrent.Executors;
  */
 @CapacitorPlugin(
         name = "UrielMedia",
-        // asked for by allowIsland, once when the first song plays (media-controls.js) and from the island row.
+        // asked for by allowIsland, once when the first song plays (media-controls.ts) and from the island row.
         // Android 13+ is meant to show media notifications without it, but many phones hide them too (#25).
         permissions = { @Permission(strings = { Manifest.permission.POST_NOTIFICATIONS }, alias = "notifications") })
 public class MediaControlsPlugin extends Plugin {
@@ -301,7 +301,7 @@ public class MediaControlsPlugin extends Plugin {
     }
 
     // What ColdPlayer plays when earbuds ask for music while the page isn't running: this song from where it is,
-    // then the next songs saved on the phone (see media-controls.js).
+    // then the next songs saved on the phone (see media-controls.ts).
     private void rememberForEarbuds(PluginCall call) {
         try {
             JSObject cur = call.getObject("resume");
@@ -341,7 +341,7 @@ public class MediaControlsPlugin extends Plugin {
         call.resolve();
     }
 
-    // For the island row in Settings (mobile-ui.js)
+    // For the island row in Settings (mobile-ui.ts)
     @PluginMethod
     public void islandStatus(PluginCall call) {
         call.resolve(islandState());
@@ -448,7 +448,7 @@ public class MediaControlsPlugin extends Plugin {
         backgroundStatus(call);
     }
 
-    // A song saved to Music/Mural (mobile/shims/store.js) goes into the phone's media index right away, so music
+    // A song saved to Music/Mural (mobile/shims/store.ts) goes into the phone's media index right away, so music
     // apps list it: Android 10 and older only find new files at their next full scan. Takes a path or file:// URI.
     @PluginMethod
     public void scanFile(PluginCall call) {

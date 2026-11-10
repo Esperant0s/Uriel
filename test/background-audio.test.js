@@ -1,6 +1,8 @@
 'use strict';
 
-// mobile/background-audio.js: on iPhone, silence plays between two songs so iOS doesn't suspend the app.
+require('../tools/ts-require');
+
+// mobile/background-audio.ts: on iPhone, silence plays between two songs so iOS doesn't suspend the app.
 const test = require('node:test');
 const assert = require('node:assert');
 const Module = require('module');
@@ -17,7 +19,7 @@ function setup(platform = 'ios') {
   const fakeCore = { Capacitor: { getPlatform: () => platform } };
   const origLoad = Module._load;
   Module._load = function (request, ...rest) { return request === '@capacitor/core' ? fakeCore : origLoad.call(this, request, ...rest); };
-  const file = path.join(__dirname, '../mobile/background-audio.js');
+  const file = path.join(__dirname, '../mobile/background-audio.ts');
   delete require.cache[file];
   const audio = new EventTarget();
   audio.paused = true;

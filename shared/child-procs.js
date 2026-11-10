@@ -1,3 +1,4 @@
+// @ts-check
 'use strict';
 // yt-dlp and ffmpeg runs must not outlive the app: closing it during a download used to leave them running,
 // using CPU and network with nobody listening. yt-dlp starts processes of its own (ffmpeg, a JavaScript runtime),

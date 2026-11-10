@@ -1,3 +1,4 @@
+// @ts-check
 const { ipcMain, app } = require('electron');
 const net = require('net');
 const os = require('os');

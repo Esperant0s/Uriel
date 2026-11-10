@@ -47,7 +47,7 @@ test('#26: an interrupted audio context is resumed like a suspended one', () => 
   assert.equal(e.needsResume(), false);
   e.resumeAudioContext();
   assert.equal(resumed, 1);
-  const mod = read('mobile/audio-interruption.js');
+  const mod = read('mobile/audio-interruption.ts');
   assert.ok(mod.indexOf('c.resumeAudio()') > mod.indexOf("if (type !== 'ended') return;"));
   assert.match(read('shared/app.js'), /resumeAudio: \(\) => audioEngine && audioEngine\.resumeAudioContext/);
 });

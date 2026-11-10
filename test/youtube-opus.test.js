@@ -1,5 +1,7 @@
 'use strict';
 
+require('../tools/ts-require');
+
 // Phones got YouTube songs as ~128 kbps AAC (the visionOS client's HLS). The same player answer also lists the
 // full-quality Opus file (itag 251); Android, which plays WebM/Opus, now downloads that in ranges and falls back
 // to the AAC stream when it can't. iOS keeps AAC.
@@ -10,18 +12,18 @@ const path = require('node:path');
 
 const written = new Map();
 const fakes = {
-  [path.join(__dirname, '../mobile/shims/fs.js')]: { _register: () => {} },
-  [path.join(__dirname, '../mobile/shims/store.js')]: {
+  [path.join(__dirname, '../mobile/shims/fs.ts')]: { _register: () => {} },
+  [path.join(__dirname, '../mobile/shims/store.ts')]: {
     writeBytes: async (out, bytes) => { written.set(out, bytes); },
     download: async (url, out) => { written.set(out, { direct: url }); return 1000; },
   },
-  [path.join(__dirname, '../mobile/cache-limit.js')]: { enforceCacheLimit: () => {} },
+  [path.join(__dirname, '../mobile/cache-limit.ts')]: { enforceCacheLimit: () => {} },
 };
 const realLoad = Module._load;
 Module._load = function (request, parent, ...rest) {
   if (parent && parent.filename) {
     const resolved = path.resolve(path.dirname(parent.filename), request);
-    for (const ext of ['', '.js']) if (fakes[resolved + ext]) return fakes[resolved + ext];
+    for (const ext of ['', '.js', '.ts']) if (fakes[resolved + ext]) return fakes[resolved + ext];
   }
   return realLoad.call(this, request, parent, ...rest);
 };

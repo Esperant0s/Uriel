@@ -52,7 +52,7 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * What to play comes from the page while it runs (MediaControlsPlugin.update → remember): the song, where it was,
  * and the next songs of the queue that are saved on the phone. This plays through those. Once the app is opened, the
- * page takes over from the same song and place (takeOver, media-controls.js); if it isn't, the place is kept so the
+ * page takes over from the same song and place (takeOver, media-controls.ts); if it isn't, the place is kept so the
  * next start, here or in the app, carries on from it.
  *
  * Main thread only, except remember, takeOver and stored.
@@ -660,7 +660,7 @@ final class ColdPlayer {
     }
 
     // A file the page played (path: a song in the cache, the downloads folder or on the phone), or one in the song
-    // cache by its name (mobile/shims/store.js keeps /data/… in files/Mural/…)
+    // cache by its name (mobile/shims/store.ts keeps /data/… in files/Mural/…)
     private static File songFile(Context ctx, String path, String cache) {
         if (path != null && path.startsWith("/")) return new File(path);
         return cacheFile(ctx, "tracks", cache);

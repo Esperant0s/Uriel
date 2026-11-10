@@ -22,7 +22,7 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 /**
- * The status bar and the gesture bar in the app's colours (mobile/system-bars.js). Where the WebView is too old to
+ * The status bar and the gesture bar in the app's colours (mobile/system-bars.ts). Where the WebView is too old to
  * draw behind them, Capacitor pads it inside the bars and they showed the window's background: light grey on a dark
  * app. The window now paints the page's background behind the status bar and the navigation's behind the gesture
  * bar, and the bars' icons are dark or light to suit. Where the page draws behind the bars, only the icons matter.

@@ -15,7 +15,7 @@
     try { return (window.electronAPI && window.electronAPI.getAppVersion && (await window.electronAPI.getAppVersion())) || ''; } catch (e) { return ''; }
   }
 
-  // desktop: save dialog (main.js); phones: share sheet (mobile/electron-api.js); a plain browser: a download
+  // desktop: save dialog (main.js); phones: share sheet (mobile/electron-api.ts); a plain browser: a download
   async function saveFile(name, text, kind) {
     const api = window.electronAPI;
     if (api && typeof api.saveTextFile === 'function') {

@@ -1,3 +1,4 @@
+// @ts-check
 // Shared playlists: the whole playlist travels inside the link (after the #, so it never reaches a server).
 // https://cloverscripts.github.io/riff-muriel/play/#p=<payload>  — opens the web player
 // uriel://playlist?p=<payload>                                   — opens the app

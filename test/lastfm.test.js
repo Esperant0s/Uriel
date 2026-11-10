@@ -1,5 +1,7 @@
 'use strict';
 
+require('../tools/ts-require');
+
 // Last.fm scrobbling: the rules (lastfm-core.js), the phone's MD5 (Last.fm signs with it) and the server routes,
 // with Last.fm itself faked. The session key must never reach the page, and is only stored encrypted.
 const test = require('node:test');
@@ -99,7 +101,7 @@ test('song names are cleaned up the way Last.fm files them', () => {
 });
 
 test("the phone's MD5 matches Node's (Last.fm signatures are MD5)", () => {
-  const shim = require('../mobile/shims/crypto.js');
+  const shim = require('../mobile/shims/crypto.ts');
   for (const s of ['', 'abc', 'api_keyxmethodauth.getTokensecret', 'ünïcødé ✓'.repeat(40), 'x'.repeat(55), 'x'.repeat(64)]) {
     assert.equal(shim.createHash('md5').update(s).digest('hex'), crypto.createHash('md5').update(s, 'utf8').digest('hex'));
   }

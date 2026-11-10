@@ -1,3 +1,4 @@
+// @ts-check
 // Which release is an update for this build, and which file of it to download. Shared by the page
 // (update-notifier.js) and the computer's main process (desktop-updater.js); test/update-core.test.js runs it in Node.
 //

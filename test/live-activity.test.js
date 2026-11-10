@@ -1,6 +1,8 @@
 'use strict';
 
-// mobile/live-activity.js: what the page sends to the iPhone lock-screen lyrics (Live Activity) plugin.
+require('../tools/ts-require');
+
+// mobile/live-activity.ts: what the page sends to the iPhone lock-screen lyrics (Live Activity) plugin.
 const test = require('node:test');
 const assert = require('node:assert');
 const Module = require('module');
@@ -17,7 +19,7 @@ function setup({ platform = 'ios', stored = {} } = {}) {
   const fakeCore = { Capacitor: { getPlatform: () => platform }, registerPlugin: () => plugin };
   const origLoad = Module._load;
   Module._load = function (request, ...rest) { return request === '@capacitor/core' ? fakeCore : origLoad.call(this, request, ...rest); };
-  const file = path.join(__dirname, '../mobile/live-activity.js');
+  const file = path.join(__dirname, '../mobile/live-activity.ts');
   delete require.cache[file];
   const store = { ...stored };
   const audio = new EventTarget();

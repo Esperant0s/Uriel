@@ -32,7 +32,7 @@ struct UrielLyricsAttributes: ActivityAttributes {
 import AppIntents
 
 /// The buttons in the Dynamic Island (iOS 17+): iOS runs this inside the app, which hands it to the page
-/// (LyricsLiveActivity.swift → mobile/live-activity.js).
+/// (LyricsLiveActivity.swift → mobile/live-activity.ts).
 @available(iOS 17.0, *)
 struct UrielPlayerIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Control Uriel"

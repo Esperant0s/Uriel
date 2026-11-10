@@ -41,7 +41,7 @@ import java.io.File
  * keeping Uriel running in the background.
  *
  * The page (shared/app.js) still decides what plays: it talks to this through UrielPlayerPlugin, and
- * mobile/native-audio.js stands in for its <audio> element. While the page runs it is "attached": the system's
+ * mobile/native-audio.ts stands in for its <audio> element. While the page runs it is "attached": the system's
  * play, pause, next and previous go to the page, which drives the player, so its queue, shuffle, repeat and history
  * work as always.
  *
@@ -115,7 +115,7 @@ class PlayerService : MediaSessionService() {
             return cacheFile(ctx, "tracks", cache)
         }
 
-        // a file in the app's storage (mobile/shims/store.js keeps /data/… in files/Mural/…)
+        // a file in the app's storage (mobile/shims/store.ts keeps /data/… in files/Mural/…)
         private fun cacheFile(ctx: Context, dir: String, name: String): File? {
             if (!name.matches(Regex("[A-Za-z0-9_-]+\\.[A-Za-z0-9]+"))) return null
             return File(ctx.filesDir, "Mural/$dir/$name")
@@ -361,7 +361,7 @@ class PlayerService : MediaSessionService() {
         exo.playbackParameters = PlaybackParameters(speed.coerceIn(0.1f, 8f), pitch.coerceIn(0.1f, 8f))
     }
 
-    // the page's sound settings (mobile/native-audio.js), kept for a start without the page
+    // the page's sound settings (mobile/native-audio.ts), kept for a start without the page
     fun setEffects(settings: JSONObject) {
         effects.setSettings(EffectsProcessor.Settings(settings))
         getSharedPreferences(ColdPlayer.PREFS, Context.MODE_PRIVATE).edit().putString(KEY_EFFECTS, settings.toString()).apply()

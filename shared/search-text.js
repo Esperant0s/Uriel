@@ -1,3 +1,4 @@
+// @ts-check
 function normalizeSearch(value) {
   if (typeof value !== 'string') return '';
   return value

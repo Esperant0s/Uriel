@@ -1,3 +1,4 @@
+// @ts-check
 const fs = require('fs');
 const path = require('path');
 const { DATA_DIR } = require('./platform');

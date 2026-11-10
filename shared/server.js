@@ -3045,7 +3045,7 @@ async function handleLibraryFile(req, res, trackId) {
     res.writeHead(404);
     return res.end('File not found in library');
   }
-  // a phone's own song: the app hands the WebView a URL for the file itself (mobile/shims/store.js)
+  // a phone's own song: the app hands the WebView a URL for the file itself (mobile/shims/store.ts)
   if (item.vpath) {
     if (typeof res.__pipeFile === 'function') return res.__pipeFile(item.vpath);
     res.writeHead(404);
@@ -6185,7 +6185,7 @@ async function handleHotPicks(req, res, parsedUrl) {
 // Every profile can connect its own Last.fm account (the page sends the open profile's id). The session key, and a
 // custom API key pair if one was entered, stay here and never go back to the page. They are kept like the Spotify
 // login: encrypted with the system keychain on desktop (lastfm-auth.enc); on phones in the app's private WebView
-// storage (bridge.js), not under /data, which the Files app shows. Without a keychain (Linux without a secret
+// storage (bridge.ts), not under /data, which the Files app shows. Without a keychain (Linux without a secret
 // service) they last until Uriel closes. The password typed for the direct sign-in goes to Last.fm once and is
 // not kept. Nothing here logs a key, token or password.
 // The default key pair is upstream Riff's Last.fm application (published in its source). Uriel can register its

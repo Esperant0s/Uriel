@@ -1,5 +1,6 @@
+// @ts-check
 // Fast YouTube stream lookup for the computer: one request to YouTube's player API as the visionOS client
-// (the route the phone app uses, mobile/extract.js) instead of starting yt-dlp, which takes seconds per
+// (the route the phone app uses, mobile/extract.ts) instead of starting yt-dlp, which takes seconds per
 // song. YouTube doesn't hand out every song this way, so the link is checked before it's used and the
 // caller falls back to yt-dlp when this returns null.
 const https = require('https');

@@ -74,7 +74,7 @@ class UrielBridgeViewController: CAPBridgeViewController {
     }
 }
 
-// Another app's sound (a call, Siri, a video) interrupting Uriel: the page (mobile/audio-interruption.js) is
+// Another app's sound (a call, Siri, a video) interrupting Uriel: the page (mobile/audio-interruption.ts) is
 // told when it starts and when it ends, and whether iOS says to play again, so a song that was playing starts
 // again like it does in Spotify (#26). Paused in the background the app is suspended soon after; iOS wakes it
 // for the end of the interruption, and a short background task keeps it awake until the page has asked the
@@ -125,7 +125,7 @@ public class UrielAudioSessionPlugin: CAPPlugin, CAPBridgedPlugin {
     }
 }
 
-// The home-screen icon (Settings → Theme → App icon, mobile/app-icon.js): the styles are alternate app icons
+// The home-screen icon (Settings → Theme → App icon, mobile/app-icon.ts): the styles are alternate app icons
 // (Assets.xcassets/AppIcon-<name>, made by tools/render-app-icons.js). iOS shows its own short "You have changed
 // the icon" message; apps can't leave that out.
 @objc(UrielAppIconPlugin)

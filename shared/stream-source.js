@@ -1,3 +1,4 @@
+// @ts-check
 'use strict';
 // #17: how Uriel hands a YouTube media URL to the desktop audio element. yt-dlp resolves the URL with a
 // player client (android, tv, ...) and YouTube serves it only to requests that look like that client;

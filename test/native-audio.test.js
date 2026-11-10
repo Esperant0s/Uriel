@@ -1,6 +1,8 @@
 'use strict';
 
-// mobile/native-audio.js: on Android, app.js's <audio> element played by the native player (PlayerService.kt).
+require('../tools/ts-require');
+
+// mobile/native-audio.ts: on Android, app.js's <audio> element played by the native player (PlayerService.kt).
 const test = require('node:test');
 const assert = require('node:assert');
 const Module = require('module');
@@ -21,9 +23,9 @@ function setup({ attach = {}, engine = null } = {}) {
   const fakeCore = { Capacitor: { getPlatform: () => 'android' }, registerPlugin: () => player };
   const origLoad = Module._load;
   Module._load = function (request, ...rest) { return request === '@capacitor/core' ? fakeCore : origLoad.call(this, request, ...rest); };
-  const file = path.join(__dirname, '../mobile/native-audio.js');
+  const file = path.join(__dirname, '../mobile/native-audio.ts');
   delete require.cache[file];
-  delete require.cache[path.join(__dirname, '../mobile/song-files.js')];
+  delete require.cache[path.join(__dirname, '../mobile/song-files.ts')];
   const web = new EventTarget();
   Object.assign(web, { src: '', currentSrc: '', paused: true, ended: false, playbackRate: 1, preservesPitch: true, volume: 1, muted: false,
     play() { web.paused = false; return Promise.resolve(); }, pause() { web.paused = true; }, load() {}, removeAttribute() { web.src = ''; } });
@@ -136,7 +138,7 @@ test('mute silences the native player; unmuting brings it back', async () => {
   const { audio, web, calls } = setup({ engine: { volume: 0.85, isMuted: false, audioSettings: {}, setVolume() {} } });
   audio.src = 'http://127.0.0.1:1/api/local-track?id=a';
   await audio.play();
-  web.muted = true; // what mobile-ui.js does for the mute button
+  web.muted = true; // what mobile-ui.ts does for the mute button
   audio._watchSettings();
   assert.strictEqual(calls.filter((c) => c[0] === 'setVolume').pop()[1].volume, 0);
   web.muted = false;

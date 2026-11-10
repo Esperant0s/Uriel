@@ -4,7 +4,7 @@
 **Date:** 2026-11-03
 
 How Uriel turns "play this song" into an audio URL, today two separate pipelines (desktop `server.js`, phones
-`mobile/extract.js`), as one resolver with shared health rules.
+`mobile/extract.ts`), as one resolver with shared health rules.
 
 ## 1. Requirements
 
@@ -131,4 +131,4 @@ Each strategy is a small object, so desktop and phones differ only in the list t
 2. Wrap today's steps in `handleStreamInfo` as strategies without changing their order; behaviour tests with
    fake strategies (no network).
 3. Point `prefetchTrack` and the download path at the resolver.
-4. Give `mobile/extract.js` the same resolver with the phone strategy list (fast lookup → SoundCloud).
+4. Give `mobile/extract.ts` the same resolver with the phone strategy list (fast lookup → SoundCloud).

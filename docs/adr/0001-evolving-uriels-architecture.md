@@ -16,7 +16,7 @@ runs everywhere; a local HTTP server does the work the page can't (finding strea
 | Local server | `server.js`, one request handler with an `if` per route | 7,134 lines, 54 routes |
 | Phones | the same `server.js`, run in the WebView through Node shims (`mobile/shims/*`) | 16 shims |
 | Library data | `localStorage` (playlists, favorites, history, queue, Encore), per profile | browser cap ≈ 5 MB |
-| Streams | desktop: yt-fast (one innertube request) → yt-dlp → other uploads → SoundCloud; phones: `mobile/extract.js` | two pipelines |
+| Streams | desktop: yt-fast (one innertube request) → yt-dlp → other uploads → SoundCloud; phones: `mobile/extract.ts` | two pipelines |
 | Sync | PeerJS (public broker `0.peerjs.com`, STUN only) | |
 | Releases | GitHub Actions: rolling `*-latest` builds per push, versioned releases per tag; unsigned | |
 | Tests | `node --test`, 343 tests | many assert on source text, few on behaviour |

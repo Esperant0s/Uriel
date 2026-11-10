@@ -8,7 +8,7 @@ import { buildInfoScript } from '../tools/build-info.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const out = join(root, 'mobile', 'www');
 const shared = join(root, 'shared');
-const shim = (n) => join(root, 'mobile', 'shims', `${n}.js`);
+const shim = (n) => join(root, 'mobile', 'shims', `${n}.ts`);
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
@@ -22,7 +22,7 @@ const swapLocal = {
 };
 
 await build({
-  entryPoints: [join(root, 'mobile', 'bridge.js')],
+  entryPoints: [join(root, 'mobile', 'bridge.ts')],
   outfile: join(out, 'mobile-bridge.js'),
   bundle: true,
   format: 'iife',
@@ -36,7 +36,7 @@ await build({
     os: shim('os'), url: shim('url'), string_decoder: shim('string_decoder'), crypto: shim('crypto'),
     electron: shim('electron'), dns: shim('dns'), net: shim('net'), path: 'path-browserify', events: 'events', buffer: 'buffer',
   },
-  inject: [join(root, 'mobile', 'globals.js')],
+  inject: [join(root, 'mobile', 'globals.ts')],
   define: { 'process.env.NODE_ENV': '"production"', 'require.main': 'undefined' },
   plugins: [swapLocal],
   logLevel: 'warning',
@@ -47,7 +47,9 @@ for (const f of ['storage-migrate.js', 'app.js', 'styles.css', 'audio-engine.js'
 writeFileSync(join(out, 'build-info.js'), buildInfoScript(''));
 cpSync(join(shared, 'assets'), join(out, 'assets'), { recursive: true });
 cpSync(join(root, 'mobile', 'mobile.css'), join(out, 'mobile.css'));
-cpSync(join(root, 'mobile', 'mobile-ui.js'), join(out, 'mobile-ui.js'));
+// mobile-ui.ts is a plain script beside app.js, not part of the bundle: its types are taken off, and it is wrapped
+// so its own helpers stay out of the page's globals
+await build({ entryPoints: [join(root, 'mobile', 'mobile-ui.ts')], outfile: join(out, 'mobile-ui.js'), bundle: false, format: 'iife', target: ['safari16'], legalComments: 'none', logLevel: 'warning' });
 
 // profiles-core.js stays the first script: everything after it (mobile-bridge.js too) sees the open profile's storage
 let html = readFileSync(join(shared, 'index.html'), 'utf8');

@@ -1,6 +1,8 @@
 'use strict';
 
-// mobile/shims/store.js: files reach the phone's storage in pieces. One big FLAC used to cross the native
+require('../tools/ts-require');
+
+// mobile/shims/store.ts: files reach the phone's storage in pieces. One big FLAC used to cross the native
 // bridge as a single base64 string (several copies of it at once), which crashed the app.
 const test = require('node:test');
 const assert = require('node:assert');
@@ -26,7 +28,7 @@ function setup({ failAt = -1 } = {}) {
   };
   const origLoad = Module._load;
   Module._load = function (request, ...rest) { return fakes[request] || origLoad.call(this, request, ...rest); };
-  const file = path.join(__dirname, '../mobile/shims/store.js');
+  const file = path.join(__dirname, '../mobile/shims/store.ts');
   delete require.cache[file];
   try { return { store: require(file), disk, calls }; } finally { Module._load = origLoad; }
 }
@@ -124,7 +126,7 @@ function phone({ platform = 'android', perm = 'granted', answer = 'granted', hol
   };
   const origLoad = Module._load;
   Module._load = function (request, ...rest) { return fakes[request] || origLoad.call(this, request, ...rest); };
-  const file = path.join(__dirname, '../mobile/shims/store.js');
+  const file = path.join(__dirname, '../mobile/shims/store.ts');
   delete require.cache[file];
   try { return { store: require(file), disk, scans, asked, answerQuestion: () => answerQuestion() }; } finally { Module._load = origLoad; }
 }

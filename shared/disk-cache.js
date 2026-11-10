@@ -2,7 +2,7 @@
 
 // Keeps the computer's offline songs under the limit chosen in Settings → Storage: the songs played longest ago
 // go first and the newest few always stay. A song removed here can still be streamed and is cached again when
-// played. Phones do the same with their own file system in mobile/cache-limit.js.
+// played. Phones do the same with their own file system in mobile/cache-limit.ts.
 const fs = require('fs');
 const path = require('path');
 

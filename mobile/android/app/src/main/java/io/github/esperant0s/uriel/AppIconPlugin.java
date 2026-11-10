@@ -10,7 +10,7 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 /**
- * The home-screen icon (Settings → Theme → App icon, mobile/app-icon.js). Each icon style is a launcher
+ * The home-screen icon (Settings → Theme → App icon, mobile/app-icon.ts). Each icon style is a launcher
  * activity-alias in AndroidManifest.xml; this turns the chosen one on and the others off. Some launchers take a
  * moment to show the new icon, and a few drop the old home-screen shortcut, which Android doesn't let apps avoid.
  */

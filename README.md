@@ -65,8 +65,14 @@ npx cap sync
 | Folder | What goes here | Used by |
 | --- | --- | --- |
 | `desktop/` | Electron window and menus, PC updater, yt-dlp and ffmpeg handling, Discord, welcome page | PC only |
-| `mobile/` | Android and iOS projects, phone interface (`mobile-ui.js`, `mobile.css`), native bridges, and `shims/`, which replace PC-only code on phones | Phones only |
+| `mobile/` | Android and iOS projects, phone interface (`mobile-ui.ts`, `mobile.css`), native bridges, and `shims/`, which replace PC-only code on phones | Phones only |
 | `shared/` | The main interface (`app.js`, `index.html`, `styles.css`), `server.js`, playback, library, lyrics, sync, icons | Both |
+
+The phone layer in `mobile/` is TypeScript. `mobile/build.mjs` compiles it with esbuild as it bundles, so nothing else needs building, and the tests load the `.ts` files through `tools/ts-require.js`. `shared/` and `desktop/` are JavaScript that runs as it is; a file there is type-checked once its first line is `// @ts-check`. Check all of it with:
+
+```bash
+npm run typecheck
+```
 
 A change in `desktop/` or `mobile/` affects only that version. A change in `shared/` reaches both. `shared/server.js` loads four PC files from `desktop/` (`platform`, `tools`, `logger`, `audio-output`), and `mobile/build.mjs` swaps them for the versions in `mobile/shims/` when building for phones. A new browser script in `shared/` also needs adding to the file list in `mobile/build.mjs`.
 

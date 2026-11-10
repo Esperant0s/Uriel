@@ -1,3 +1,4 @@
+// @ts-check
 // keyOf (optional) gives each track an identity string; with it the check is one pass instead of comparing every
 // pair, which froze big playlists (2 s for 6,000 songs on every open and every filter keystroke)
 function dedupeTracks(tracks, same, keyOf) {
