@@ -53,6 +53,12 @@ class UrielPlayerPlugin : Plugin(), PlayerService.Page {
         }, ContextCompat.getMainExecutor(context))
     }
 
+    // The page numbers what it asks (native-audio.ts _seq): the player's news says which request it has got to, so
+    // the page can tell news read before its request from news after it.
+    private fun done(call: PluginCall, s: PlayerService) {
+        call.getInt("seq")?.let { s.pageSeq = it }
+    }
+
     // The page is running and takes over: { item, position, duration, playing, ended } when the player has a song
     @PluginMethod
     fun attach(call: PluginCall) = withPlayer(call) { s -> call.resolve(JSObject.fromJSONObject(s.attachPage(this))) }
@@ -61,6 +67,7 @@ class UrielPlayerPlugin : Plugin(), PlayerService.Page {
     // thumb, duration, qi, ... }, given back as "item" in state events), from startAt seconds, playing or not.
     @PluginMethod
     fun load(call: PluginCall) = withPlayer(call) { s ->
+        done(call, s)
         val path = call.getString("path", "") ?: ""
         val url = call.getString("url", "") ?: ""
         val uri = when {
@@ -79,6 +86,7 @@ class UrielPlayerPlugin : Plugin(), PlayerService.Page {
 
     @PluginMethod
     fun play(call: PluginCall) = withPlayer(call) { s ->
+        done(call, s)
         // a finished song plays again from its top, like an <audio> element's play()
         if (s.exo.playbackState == androidx.media3.common.Player.STATE_ENDED) s.exo.seekTo(0)
         if (s.exo.playbackState == androidx.media3.common.Player.STATE_IDLE) s.exo.prepare()
@@ -88,12 +96,16 @@ class UrielPlayerPlugin : Plugin(), PlayerService.Page {
 
     @PluginMethod
     fun pause(call: PluginCall) = withPlayer(call) { s ->
+        done(call, s)
+        // done: the page has moved on from this song (the next one is on its way)
+        if (call.getBoolean("done", false) == true) s.parked = true
         s.exo.pause()
         call.resolve()
     }
 
     @PluginMethod
     fun seek(call: PluginCall) = withPlayer(call) { s ->
+        done(call, s)
         s.exo.seekTo(((call.getDouble("position") ?: 0.0) * 1000).toLong().coerceAtLeast(0))
         call.resolve()
     }

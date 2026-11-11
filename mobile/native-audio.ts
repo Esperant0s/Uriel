@@ -55,9 +55,12 @@ class NativeAudio extends EventTarget {
   private _rate = 1;
   private _volume = 1;
   private _preload: HTMLMediaElement['preload'] = 'auto';
-  // when the page last asked to play / pause, and to seek: older news from the player is out of date
-  private _cmdAt = 0;
-  private _seekAt = 0;
+  // Counts what the page asked of the player (load, play, pause, seek). Each request goes out with its number and
+  // the player's news carries the number of the last one it has done: news with an older number was read before
+  // the player got to what the page asked, so it doesn't say where things stand. Going by the clock instead let a
+  // "not playing yet" that the player read just after play() was asked count as the player pausing by itself: the
+  // next song paused as it started, mostly with the screen off, where the phone is slow to pass the request on.
+  private _seq = 0;
   private _adopted = false;
   private _timer: Timer | null = null;
   private _sentSpeed = '';
@@ -114,12 +117,11 @@ class NativeAudio extends EventTarget {
     const to = Math.max(0, Number(v) || 0);
     this._pos = to;
     this._posAt = Date.now();
-    this._seekAt = Date.now();
     this._ended = false;
     this._fire('seeking');
     if (!this._sent) { this._startAt = to; this._fire('seeked'); return; }
     const load = this._load;
-    this.player.seek({ position: to }).catch(() => {}).then(() => {
+    this.player.seek({ position: to, seq: ++this._seq }).catch(() => {}).then(() => {
       if (load !== this._load || this.backend !== 'native') return;
       this._fire('seeked');
       this._fire('timeupdate');
@@ -149,9 +151,16 @@ class NativeAudio extends EventTarget {
   removeAttribute(name: string): void {
     if (String(name).toLowerCase() !== 'src') { this.webElement.removeAttribute(name); return; }
     if (this.backend === 'web') { this.webElement.removeAttribute('src'); return; }
+    // app.js unloads the old song before it loads the next one (playTrack). The native player keeps it, paused,
+    // until the next one takes its place: emptied, it lets go of its foreground service, and Android doesn't let
+    // an app in the background start one again, nor have the sound without one (Android 15). The next song then
+    // loaded and was paused by the phone at once: music stopped after a song or two with the screen off, until
+    // the app was opened.
+    const sent = this._sent;
     this._load++;
     this._reset('');
-    this.player.clear().catch(() => {});
+    // (done: Play on the earbuds must not bring this song back while the next one loads)
+    if (sent) this.player.pause({ seq: ++this._seq, done: true }).catch(() => {});
   }
   canPlayType(type: string): CanPlayTypeResult { return this.webElement.canPlayType(type); }
 
@@ -166,27 +175,27 @@ class NativeAudio extends EventTarget {
     if (this._error) return Promise.reject(new DOMException(this._error.message || 'The song failed to load.', 'NotSupportedError'));
     const load = this._load;
     this._wantPlay = true;
-    this._cmdAt = Date.now();
+    // asked now, sent once the song is with the player: its news doesn't count until then
+    this._seq++;
     if (this._ended) { this._ended = false; this._pos = 0; this._posAt = Date.now(); }
     if (this._paused) { this._paused = false; this._fire('play'); }
     return Promise.resolve(this._pending).then(() => {
       if (load !== this._load || this.backend !== 'native' || !this._wantPlay) return;
       if (this._error) throw new DOMException(this._error.message || 'The song failed to load.', 'NotSupportedError');
-      return this.player.play();
+      return this.player.play({ seq: ++this._seq });
     }).then(() => undefined);
   }
 
   pause(): void {
     if (this.backend === 'web') { this.webElement.pause(); return; }
     this._wantPlay = false;
-    this._cmdAt = Date.now();
     if (this._paused) return;
     this._pos = this.currentTime;
     this._posAt = Date.now();
     this._paused = true;
     this._playing = false;
     this._stopTimer();
-    if (this._sent) this.player.pause().catch(() => {});
+    if (this._sent) this.player.pause({ seq: ++this._seq }).catch(() => {});
     this._fire('pause');
   }
 
@@ -274,6 +283,7 @@ class NativeAudio extends EventTarget {
     }
     this._reset(v);
     this._wantPlay = false;
+    this._seq++;
     this._fire('emptied');
     this._fire('loadstart');
     const resolve = window.__urielResolveLocal;
@@ -287,7 +297,7 @@ class NativeAudio extends EventTarget {
       const item = { ...this._describe(), load };
       const startAt = this._startAt;
       this._sent = true;
-      return this.player.load({ path, url: path ? '' : real, item, startAt, play: this._wantPlay });
+      return this.player.load({ path, url: path ? '' : real, item, startAt, play: this._wantPlay, seq: ++this._seq });
     }).catch((e: unknown) => {
       if (load !== this._load) return;
       this._failed(ERR.SRC_NOT_SUPPORTED, e instanceof Error ? e.message : String(e));
@@ -319,9 +329,9 @@ class NativeAudio extends EventTarget {
     // news about an earlier song
     if (!(item.load === this._load || (this._adopted && item.load === undefined))) return;
     const at = Number(s.at) || Date.now();
-    // stale: from before the page's last play / pause, or its last seek
-    const freshCmd = at >= this._cmdAt;
-    if (at >= this._seekAt) { this._pos = Number(s.position) || 0; this._posAt = at; }
+    // the player has done everything the page asked: its news says where things stand (see _seq)
+    const current = (Number(s.seq) || 0) === this._seq;
+    if (current) { this._pos = Number(s.position) || 0; this._posAt = at; }
     if (s.rate && s.rate > 0) this._rate = s.rate;
     if (duration > 0 && duration !== this._duration) {
       this._duration = duration;
@@ -345,7 +355,7 @@ class NativeAudio extends EventTarget {
       this._fire('ended');
       return;
     }
-    if (!freshCmd) return;
+    if (!current) return;
     if (s.playing && !this._playing) {
       this._playing = true;
       // another app gave the sound back: the native player plays again by itself

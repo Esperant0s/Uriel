@@ -131,6 +131,10 @@ class PlayerService : MediaSessionService() {
     private val tails = HashMap<String, ExoPlayer>()
     private var session: MediaSession? = null
     private var page: Page? = null
+    // the number of the page's last request done here (UrielPlayerPlugin.done)
+    var pageSeq = 0
+    // The page has moved on from the song that is loaded (the next one is on its way): Play must not bring it back
+    var parked = false
     private var shuffle = false
     private var repeat = "off"
     private val main = Handler(Looper.getMainLooper())
@@ -147,9 +151,15 @@ class PlayerService : MediaSessionService() {
         private fun toPage(action: String): Boolean {
             val p = page ?: return false
             if (!attached) return false
+            // the page may be resting in the background (MainActivity): it is woken for this
+            MainActivity.musicChanged()
             p.onAction(action)
             return true
         }
+
+        // the page's song is here and may play: loaded, and not one the page has moved on from
+        private fun songReady() = !parked && exo.mediaItemCount > 0 &&
+            (exo.playbackState == Player.STATE_READY || exo.playbackState == Player.STATE_BUFFERING)
 
         override fun getAvailableCommands(): Player.Commands {
             val c = super.getAvailableCommands()
@@ -163,11 +173,19 @@ class PlayerService : MediaSessionService() {
         }
 
         override fun isCommandAvailable(command: Int) = availableCommands.contains(command)
-        override fun play() { if (!toPage("play")) super.play() }
-        override fun pause() { if (!toPage("pause")) super.pause() }
-        override fun setPlayWhenReady(playWhenReady: Boolean) {
-            if (!toPage(if (playWhenReady) "play" else "pause")) super.setPlayWhenReady(playWhenReady)
+        // Play and pause for the song that is loaded happen here straight away, and the page is told: it may be
+        // resting in the background (MainActivity), and a tap on the earbuds shouldn't wait for it, or be lost.
+        // Anything else Play can mean (no song yet, the song has ended, the next one is loading) is the page's.
+        override fun play() {
+            if (!attached || page == null) { super.play(); return }
+            if (songReady()) super.play()
+            toPage("play")
         }
+        override fun pause() {
+            super.pause()
+            toPage("pause")
+        }
+        override fun setPlayWhenReady(playWhenReady: Boolean) { if (playWhenReady) play() else pause() }
         override fun seekToNext() { if (!toPage("next")) { super.seekToNext(); revive() } }
         override fun seekToNextMediaItem() { if (!toPage("next")) { super.seekToNextMediaItem(); revive() } }
         override fun seekToPrevious() { if (!toPage("prev")) { super.seekToPrevious(); revive() } }
@@ -254,6 +272,7 @@ class PlayerService : MediaSessionService() {
             .build()
         exo.addListener(object : Player.Listener {
             override fun onEvents(player: Player, events: Player.Events) {
+                MainActivity.musicChanged()
                 report()
                 main.removeCallbacks(tick)
                 if (player.isPlaying) main.postDelayed(tick, TICK_MS)
@@ -307,6 +326,8 @@ class PlayerService : MediaSessionService() {
     // from: { item (the song as the page described it), position, duration, playing, ended }, or {} with no song.
     fun attachPage(p: Page): JSONObject {
         page = p
+        pageSeq = 0
+        parked = false
         session?.player = SessionPlayer(exo, true)
         val out = JSONObject()
         val item = exo.currentMediaItem
@@ -345,7 +366,11 @@ class PlayerService : MediaSessionService() {
         return x.optString("title") == y.optString("title") && x.optString("artist") == y.optString("artist")
     }
 
+    // a song is playing, or about to (MainActivity keeps the page awake for it)
+    fun active() = exo.playWhenReady && (exo.playbackState == Player.STATE_READY || exo.playbackState == Player.STATE_BUFFERING)
+
     fun load(item: MediaItem, startMs: Long, play: Boolean) {
+        parked = false
         exo.setMediaItem(item, startMs.coerceAtLeast(0))
         exo.prepare()
         exo.playWhenReady = play
@@ -450,6 +475,7 @@ class PlayerService : MediaSessionService() {
         o.put("duration", if (exo.duration == C.TIME_UNSET) -1.0 else exo.duration / 1000.0)
         o.put("rate", exo.playbackParameters.speed.toDouble())
         o.put("at", System.currentTimeMillis())
+        o.put("seq", pageSeq)
         p.onState(o)
     }
 }

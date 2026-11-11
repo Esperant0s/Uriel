@@ -96,6 +96,8 @@ declare global {
     duration?: number;
     rate?: number;
     at?: number;
+    // the number of the page's last request the player has done (native-audio.ts)
+    seq?: number;
   }
   interface NativeTailState { id?: string; state?: number; playing?: boolean; position?: number; duration?: number; at?: number; error?: string }
   // a song as the native side shows it, and starts it again later
@@ -125,10 +127,10 @@ declare global {
   // UrielPlayerPlugin.kt
   interface UrielPlayerPlugin {
     attach(): Promise<NativeSnapshot>;
-    load(o: { path: string; url: string; item: Partial<NativeSongInfo>; startAt: number; play: boolean }): Promise<void>;
-    play(): Promise<void>;
-    pause(): Promise<void>;
-    seek(o: { position: number }): Promise<void>;
+    load(o: { path: string; url: string; item: Partial<NativeSongInfo>; startAt: number; play: boolean; seq: number }): Promise<void>;
+    play(o: { seq: number }): Promise<void>;
+    pause(o: { seq: number; done?: boolean }): Promise<void>;
+    seek(o: { position: number; seq: number }): Promise<void>;
     setSpeed(o: { speed: number; preservePitch: boolean }): Promise<void>;
     setVolume(o: { volume: number }): Promise<void>;
     setModes(o: { shuffle: boolean; repeat: string }): Promise<void>;

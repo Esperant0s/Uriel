@@ -39,7 +39,9 @@ function setup({ attach = {}, engine = null } = {}) {
   try { audio = require(file)(web); } finally { Module._load = origLoad; }
   const events = [];
   for (const t of ['play', 'playing', 'pause', 'ended', 'loadedmetadata', 'durationchange', 'error', 'seeked', 'waiting']) audio.addEventListener(t, () => events.push(t));
-  const state = (s) => listeners.state({ at: Date.now(), rate: 1, playWhenReady: true, ...s });
+  // the number of the last request that reached the player, as its news would carry it
+  const lastSeq = () => Math.max(0, ...calls.map((c) => (Array.isArray(c) && c[1] && c[1].seq) || 0));
+  const state = (s) => listeners.state({ at: Date.now(), rate: 1, playWhenReady: true, seq: lastSeq(), ...s });
   return { audio, web, calls, events, state, listeners };
 }
 
@@ -51,7 +53,7 @@ test('a song from the app plays through the native player, by its file', async (
   const load = calls.find((c) => c[0] === 'load')[1];
   assert.strictEqual(load.path, '/data/user/0/x/files/Mural/tracks/a b.webm');
   assert.strictEqual(load.item.title, 'Song');
-  assert.ok(calls.includes('play'));
+  assert.ok(calls.some((c) => c[0] === 'play' && c[1].seq > load.seq));
   assert.strictEqual(audio.backend, 'native');
   // the player reports: metadata once, then playing
   state({ item: JSON.stringify({ load: load.item.load }), state: 3, playing: true, position: 1, duration: 200 });
@@ -67,14 +69,52 @@ test('news about an earlier song, or from before the last pause, is ignored', as
   await audio.play();
   const load = calls.find((c) => c[0] === 'load')[1].item.load;
   state({ item: JSON.stringify({ load: load - 1 }), state: 4, playing: false, position: 0, duration: 10 });
-  const before = Date.now() - 1000;
+  const before = calls.find((c) => c[0] === 'play')[1].seq;
   audio.pause();
   // read before the pause reached the player: still playing there
-  state({ item: JSON.stringify({ load }), state: 3, playing: true, position: 5, duration: 200, at: before });
+  state({ item: JSON.stringify({ load }), state: 3, playing: true, position: 5, duration: 200, seq: before });
   await tick();
   assert.strictEqual(audio.paused, true);
   assert.ok(!events.includes('ended'));
   assert.ok(!events.includes('playing'));
+});
+
+test('"not playing yet" read while play() is on its way is not the player pausing (the next song paused as it started)', async () => {
+  const { audio, calls, events, state } = setup();
+  audio.src = 'http://127.0.0.1:1/api/local-track?id=a';
+  await tick();
+  // the song is with the player, not playing; then the page asks to play
+  const loaded = calls.find((c) => c[0] === 'load')[1];
+  assert.strictEqual(loaded.play, false);
+  const asked = audio.play();
+  // the player's news from before it got the request, whenever it was read: ready, but not playing
+  state({ item: JSON.stringify({ load: loaded.item.load }), state: 3, playing: false, playWhenReady: false, position: 0, duration: 200, seq: loaded.seq, at: Date.now() + 50 });
+  await asked;
+  await tick();
+  assert.strictEqual(audio.paused, false);
+  assert.ok(!events.includes('pause'));
+  // and once it plays, the page hears so
+  state({ item: JSON.stringify({ load: loaded.item.load }), state: 3, playing: true, position: 0.1, duration: 200 });
+  await tick();
+  assert.deepStrictEqual(events, ['play', 'durationchange', 'loadedmetadata', 'playing']);
+  // a pause the player really made itself (after everything the page asked) still counts
+  state({ item: JSON.stringify({ load: loaded.item.load }), state: 3, playing: false, playWhenReady: false, position: 3, duration: 200 });
+  await tick();
+  assert.strictEqual(audio.paused, true);
+});
+
+test('unloading a song for the next one leaves it with the native player, paused (emptied, the player lost the foreground and the next song was refused the sound)', async () => {
+  const { audio, calls } = setup();
+  audio.src = 'http://127.0.0.1:1/api/local-track?id=a';
+  await audio.play();
+  // what app.js's playTrack does before it loads the next song
+  audio.pause(); audio.removeAttribute('src'); audio.load();
+  assert.ok(!calls.includes('clear'));
+  const last = calls.filter((c) => c[0] === 'pause').pop()[1];
+  // and Play on the earbuds must not bring the old song back meanwhile
+  assert.strictEqual(last.done, true);
+  assert.strictEqual(audio.src, '');
+  assert.strictEqual(audio.paused, true);
 });
 
 test('the song ending: pause, then ended, like an <audio> element', async () => {

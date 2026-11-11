@@ -3755,7 +3755,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // in. Everything else (queue, now playing, scrobbling, media session) follows the main player as for any
   // next song. Falls back to the plain fade-out when the song can't be opened twice (hls.js / blob sources),
   // and on iPhones, where a player's volume can't be changed (so neither song could fade).
-  const xfade = { prep: null, tail: null, handingOver: false, fadeInRaf: 0 };
+  const xfade = { prep: null, tail: null, handingOver: false, fadeInTimer: 0 };
   const crossfadeSeconds = () => parseInt(localStorage.getItem('uriel_crossfade') || '0', 10) || 0;
   let volumeWorks = null;
   function elementVolumeWorks() {
@@ -3906,14 +3906,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!elementVolumeWorks()) return;
     const a = el.nativeAudio;
     const started = performance.now();
-    cancelAnimationFrame(xfade.fadeInRaf);
+    clearInterval(xfade.fadeInTimer);
+    // On a timer, like the tail's fade-out, not on frames: a phone with the screen off draws almost none, and the
+    // song came in in a few audible steps (it used to jump to full only at the end, before that).
     const tick = () => {
       const p = (performance.now() - started) / (secs * 1000);
       try { a.volume = p >= 1 ? 1 : window.UrielTrim.fadeInGain(p); } catch (e) {}
-      if (p < 1) xfade.fadeInRaf = requestAnimationFrame(tick);
+      if (p >= 1) clearInterval(xfade.fadeInTimer);
     };
-    // a timer, not only frames: a phone with the screen off draws none
-    const timer = setInterval(() => { if (performance.now() - started > secs * 1000) { clearInterval(timer); try { a.volume = 1; } catch (e) {} } }, 250);
+    xfade.fadeInTimer = setInterval(tick, 40);
     tick();
   }
   // anything but the crossfade itself starting a song (a skip, a pick, Previous) ends the tail quickly
@@ -3928,7 +3929,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     stopCrossfadeTail(0.25);
-    cancelAnimationFrame(xfade.fadeInRaf);
+    clearInterval(xfade.fadeInTimer);
     // a song that ended after the plain fade-out still fades the next one in ('ended' set it)
     if (state._isNaturalEnding) return;
     crossfadeFadeInPending = false;

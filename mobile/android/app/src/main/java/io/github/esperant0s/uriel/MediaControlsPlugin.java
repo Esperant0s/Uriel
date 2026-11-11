@@ -250,6 +250,8 @@ public class MediaControlsPlugin extends Plugin {
             try { if (PlaybackService.running) ctx.stopService(new Intent(ctx, PlaybackService.class)); } catch (Exception ignored) {}
             try { ctx.getSystemService(NotificationManager.class).cancel(NOTIFICATION_ID); } catch (Exception ignored) {}
             scheduleIsland();
+            // playing, or the next song is loading: the page has to stay awake for it (MainActivity)
+            MainActivity.musicChanged();
             call.resolve();
             return;
         }
