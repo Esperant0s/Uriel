@@ -46,6 +46,7 @@ declare global {
 
     // libraries loaded when first needed (shared/assets)
     Peer?: any;
+    monaco?: any;
     qrcode?: any;
     webkitAudioContext?: typeof AudioContext;
   }
