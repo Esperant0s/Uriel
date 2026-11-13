@@ -2,7 +2,7 @@
 // end, and every part it is split into set itself up. `npm run smoke`; CI runs it on every push (test.yml).
 // What it can't see: whether songs play (that needs yt-dlp and the network), and the phone apps.
 import { spawn } from 'node:child_process';
-import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,8 +14,11 @@ const PORT = 9339;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const tmp = mkdtempSync(join(tmpdir(), 'uriel-smoke-'));
-// its own data and settings, so a run never touches a real Uriel on this computer
-const env = { ...process.env, URIEL_DATA_DIR: join(tmp, 'data'), XDG_CONFIG_HOME: join(tmp, 'config'), APPDATA: join(tmp, 'config'), LOCALAPPDATA: join(tmp, 'config') };
+// its own home, data and settings, so a run never reads or touches a real Uriel on this computer
+const env = { ...process.env, HOME: tmp, USERPROFILE: tmp, URIEL_DATA_DIR: join(tmp, 'data'), XDG_CONFIG_HOME: join(tmp, 'config'), APPDATA: join(tmp, 'config'), LOCALAPPDATA: join(tmp, 'config') };
+// as if the welcome screen had been seen: a first run opens welcome.html, and this is about the app itself
+mkdirSync(env.URIEL_DATA_DIR, { recursive: true });
+writeFileSync(join(env.URIEL_DATA_DIR, '.urieltutorial'), '');
 const args = [`--remote-debugging-port=${PORT}`, `--user-data-dir=${join(tmp, 'profile')}`];
 // CI has no user namespace sandbox for Chromium to use, and no graphics card
 if (process.env.CI) args.push('--no-sandbox', '--disable-gpu');
