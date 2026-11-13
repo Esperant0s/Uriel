@@ -1,8 +1,0 @@
-# Deploy: npx wrangler login, then from this folder
-#   npx wrangler secret put TURN_KEY_ID
-#   npx wrangler secret put TURN_KEY_API_TOKEN
-#   npx wrangler deploy
-# Both values come from Cloudflare dashboard -> Realtime -> TURN Server -> Create.
-name = "uriel-relay"
-main = "worker.js"
-compatibility_date = "2026-10-01"

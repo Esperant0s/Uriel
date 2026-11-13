@@ -217,29 +217,7 @@
   // connection logged a burst of "Failed to resolve address" errors trying them. Google's STUN servers find the
   // route between two devices; a sync server set in uriel_sync_server (with its own config) still wins.
   const ICE_SERVERS = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
-  // devices that can't reach each other directly (mobile data, guest Wi-Fi, routers that don't loop back) talk
-  // through Cloudflare's TURN relay; relay/worker.js hands out its short-lived passwords (#39). The relay only
-  // carries the already encrypted connection. Without it, linking still works when a direct connection does.
-  const RELAY_URL = '';
-  // one object that every peer keeps, so fresh passwords reach connections made later without a new peer
-  const iceConfig = { iceServers: ICE_SERVERS };
-  let relayUntil = 0, relayJob = null;
-  const relayReady = () => !RELAY_URL || Date.now() < relayUntil;
-  function refreshRelay() {
-    if (relayReady()) return Promise.resolve();
-    if (relayJob) return relayJob;
-    relayJob = fetch(RELAY_URL, { signal: AbortSignal.timeout(5000) })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (!d || !Array.isArray(d.iceServers) || !d.iceServers.length) throw new Error('no relay');
-        iceConfig.iceServers = [...ICE_SERVERS, ...d.iceServers];
-        relayUntil = Date.now() + (Number(d.ttl) || 3600) * 500; // fetched again halfway through
-      })
-      .catch(() => { relayUntil = Date.now() + 5 * 60e3; }) // down for now: link directly, ask again later
-      .finally(() => { relayJob = null; });
-    return relayJob;
-  }
-  const serverOpts = () => ({ debug: 0, config: iceConfig, ...(read('uriel_sync_server') || {}) });
+  const serverOpts = () => ({ debug: 0, config: { iceServers: ICE_SERVERS }, ...(read('uriel_sync_server') || {}) });
   let peer = null, peerRetry = null, dialTimer = null;
   const conns = new Map(); // deviceId -> { conn, ok }
 
@@ -261,7 +239,6 @@
 
   function startPeer() {
     if (peer || !active() || libraryUnavailable() || !havePeer(startPeer)) return;
-    if (!relayReady()) { refreshRelay().then(startPeer); return; }
     try { peer = new window.Peer(peerId(device.id), serverOpts()); } catch (e) { peer = null; return; }
     peer.on('open', () => { dialAll(); });
     peer.on('connection', (conn) => accept(conn, false));
@@ -288,7 +265,6 @@
   }
   function dialAll() {
     if (!peer || peer.disconnected || document.hidden) return;
-    refreshRelay(); // keeps the relay passwords fresh for the connections made from here on
     for (const [id] of liveMembers()) {
       if (!(device.id < id)) continue;
       const st = conns.get(id);
@@ -383,7 +359,6 @@
 
   function startLinking() {
     if (libraryUnavailable() || !havePeer(startLinking)) return;
-    if (!relayReady()) { refreshRelay().then(startLinking); return; }
     stopLinking();
     ensureGroup();
     startPeer();
@@ -429,7 +404,6 @@
     const code = cleanCode(raw);
     if (code.length !== 8) { joining = { error: 'The code has 8 letters and numbers, like K7M2-9QXP.' }; render(); return; }
     if (!havePeer(() => joinWithCode(raw))) return;
-    if (!relayReady()) { joining = { code, busy: true }; render(); refreshRelay().then(() => joinWithCode(raw)); return; }
     joining = { code, busy: true };
     render();
     const tp = new window.Peer(`uriel-j-${hex(12)}`, serverOpts());
