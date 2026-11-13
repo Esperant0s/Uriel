@@ -19,6 +19,13 @@ const toReal = (vpath: string) => ROOT + vpath.replace(/^\/data/, '');
 const toVirtual = (rpath: string) => '/data' + rpath.slice(ROOT.length);
 const priv = (vpath: string) => ({ path: toReal(vpath), directory: DIR });
 
+// Makes a folder unless it is there. Asking for one that exists fails, and Capacitor logs every failed call as an
+// error: two of them went into the error log people share (bridge.ts) each time the app started.
+async function ensureDir(loc: Loc): Promise<boolean> {
+  try { return (await Filesystem.stat(loc)).type === 'directory'; } catch (e) {}
+  try { await Filesystem.mkdir({ ...loc, recursive: true }); return true; } catch (e) { return false; }
+}
+
 // ---- Android: downloads ----
 // Songs saved with Download (/data/Downloads) go to Music/Mural on the phone's shared storage (Documents/Mural
 // if Music can't be used), where file managers and music apps find them. The song cache and the rest stay private.
@@ -81,8 +88,7 @@ function scan(loc: Loc) {
 
 async function openPublic() {
   for (const root of PUBLIC_ROOTS) {
-    try { await Filesystem.mkdir({ path: root, directory: PUBLIC, recursive: true }); } catch (e) {} // there already
-    try { if ((await Filesystem.stat({ path: root, directory: PUBLIC })).type !== 'directory') continue; } catch (e) { continue; }
+    if (!(await ensureDir({ path: root, directory: PUBLIC }))) continue;
     pub = root;
     setTimeout(moveOldDownloads, 10000); // once the app has started
     return;
@@ -167,7 +173,7 @@ export = {
   isNative: () => Capacitor.isNativePlatform(),
 
   async list() {
-    try { await Filesystem.mkdir({ path: ROOT, directory: DIR, recursive: true }); } catch (e) {}
+    await ensureDir({ path: ROOT, directory: DIR });
     const out: Entry[] = [];
     await walk(ROOT, DIR, toVirtual, out);
     if (ANDROID) await listDownloads(out);
@@ -202,7 +208,7 @@ export = {
   },
 
   async mkdir(vpath: string) {
-    try { await Filesystem.mkdir({ ...where(vpath), recursive: true }); } catch (e) {}
+    await ensureDir(where(vpath));
   },
 
   async rename(from: string, to: string) {
@@ -218,7 +224,7 @@ export = {
     const a = where(from);
     const copyTo = async (b: Loc) => {
       // a download's folder may not be there yet (which one it is can change while the app runs)
-      if (isDownload(to)) await Filesystem.mkdir({ path: path.dirname(b.path), directory: b.directory, recursive: true }).catch(() => {});
+      if (isDownload(to)) await ensureDir({ path: path.dirname(b.path), directory: b.directory });
       await Filesystem.copy({ from: a.path, directory: a.directory, to: b.path, toDirectory: b.directory });
       saved(to, b);
     };
