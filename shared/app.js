@@ -14438,40 +14438,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     return results;
   }
 
-  function normalizeImportText(str) {
-    if (!str) return '';
-    return str
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/\s*[\(\[](?:feat|ft)\.?\s+[^)\]]+[)\]]/gi, '')
-      .replace(/\s*-\s*remaster(?:ed)?\b.*/gi, '')
-      .replace(/[\(\[][^)\]]*remaster(?:ed)?[^)\]]*[)\]]/gi, '')
-      .replace(/[^\p{L}\p{N}\s]/gu, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  // search results give seconds; only a value longer than a day is taken as milliseconds (the old cut-off,
-  // 1000, turned every song or episode over 16 minutes into a few seconds)
-  const MS_DURATION_ABOVE = 86400;
-  function toSeconds(dur) {
-    if (typeof dur === 'string') {
-      const trimmed = dur.trim();
-      if (/^\d+(:\d{1,2}){1,2}$/.test(trimmed)) {
-        return trimmed.split(':').map(Number).reduce((acc, n) => acc * 60 + n, 0);
-      }
-      const num = Number(trimmed);
-      if (!Number.isNaN(num) && num > 0) {
-        return num > MS_DURATION_ABOVE ? Math.round(num / 1000) : Math.round(num);
-      }
-      return 0;
-    }
-    if (typeof dur === 'number' && dur > 0) {
-      return dur > MS_DURATION_ABOVE ? Math.round(dur / 1000) : Math.round(dur);
-    }
-    return 0;
-  }
+  // tidying names for matching and reading lengths: shared with the importers (import-core.js)
+  function normalizeImportText(str) { return window.UrielImportCore.normalizeImportText(str); }
+  function toSeconds(dur) { return window.UrielImportCore.toSeconds(dur); }
 
   // ---- importing from Spotify, Apple Music, YouTube Music and links (app/imports.js) ----
   const importsPart = {};

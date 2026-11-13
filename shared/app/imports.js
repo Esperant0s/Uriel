@@ -8,24 +8,9 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     refreshYtSignin, matchSpotifyTracks,
   });
 
-  function splitArtists(artistStr) {
-    if (!artistStr) return [];
-    const clean = String(artistStr).replace(/\u00a0/g, ' ');
-    return clean
-      .split(/[,;&]|(?:\bfeat\.?\b)|(?:\bft\.?\b)|(?:\s+[xX]\s+)/i)
-      .map(a => normalizeImportText(a))
-      .filter(Boolean);
-  }
+  const Core = window.UrielImportCore;
+  const { normalizeForMatch, parseAppleExportCSV, parseAppleExportJSON } = Core;
 
-  const CYR = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya', і: 'i', ї: 'yi', є: 'ye', ґ: 'g' };
-  function normalizeForMatch(s) {
-    return String(s || '').toLowerCase()
-      .replace(/\(.*?\)|\[.*?\]/g, ' ')
-      .replace(/\b(feat|ft|remaster(ed)?|remix|version|official|audio|video|lyrics?)\b.*$/g, ' ')
-      .split('').map((c) => (CYR[c] !== undefined ? CYR[c] : c)).join('')
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
-  }
   // the artist has to match as well as the title, covers / live / sped-up uploads lose (#18; track-match.js)
   const pickBestMatch = (sp, results) => window.trackMatch.pickBestMatch(sp, results);
 
@@ -185,74 +170,18 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     } catch (e) {}
   }
 
+  const IMPORT_ICONS = {
+    lock: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+    search: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+    clock: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+    network: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>`,
+    restricted: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`,
+    unknown: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+  };
+  // what went wrong, with its picture (import-core.js decides which)
   function classifyImportError(provider, statusOrError, body) {
-    let status = typeof statusOrError === 'number' ? statusOrError : 0;
-    let rawMsg = '';
-    if (statusOrError instanceof Error) {
-      rawMsg = statusOrError.message || String(statusOrError);
-    }
-    if (typeof body === 'string') {
-      rawMsg = rawMsg ? `${rawMsg} ${body}` : body;
-    } else if (body && typeof body === 'object') {
-      if (body.status && !status) status = Number(body.status);
-      if (body.error) rawMsg = rawMsg ? `${rawMsg} ${body.error}` : String(body.error);
-    }
-    const msg = (rawMsg || '').toLowerCase();
-
-    const lockIcon = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
-    const searchIcon = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
-    const clockIcon = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
-    const networkIcon = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>`;
-    const restrictedIcon = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
-    const unknownIcon = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
-    // the song search went quiet partway through matching (matchSpotifyTracks): not a problem with the playlist
-    if (msg.includes('search_unresponsive')) {
-      return { code: 'search_unresponsive', title: 'Search is not responding, so the import stopped', hint: 'Try again later; nothing gets added twice', icon: networkIcon };
-    }
-
-    if (body && typeof body === 'object') {
-      if (body.code === 'spotify_incomplete') {
-        return { code: 'spotify_incomplete', title: 'Spotify returned only part of this playlist', hint: 'Connect your account or use Export files', icon: restrictedIcon };
-      }
-      if (body.code === 'spotify_forbidden' || (provider === 'spotify' && status === 403)) {
-        return { code: 'spotify_forbidden', title: 'Spotify refused this playlist request (403)', hint: 'Try connecting an authorized account or use Export files', icon: restrictedIcon };
-      }
-      if (body.code === 'spotify_rate_limited' || (provider === 'spotify' && status === 429)) {
-        return { code: 'spotify_rate_limited', title: 'Spotify is rate limiting requests. Wait a minute and try again.', hint: '', icon: clockIcon };
-      }
-      if (body.code === 'spotify_not_found' || (provider === 'spotify' && status === 404)) {
-        return { code: 'spotify_not_found', title: 'Playlist not found. Is it public?', hint: '', icon: searchIcon };
-      }
-      if (body.code === 'yandex_region') {
-        return { code: 'yandex_region', title: "Yandex Music isn't available where you are", hint: 'Yandex only serves some countries', icon: restrictedIcon };
-      }
-      if (body.code === 'yandex_private') {
-        return { code: 'yandex_private', title: "Yandex Music didn't share this playlist", hint: 'Make it public in Yandex Music, or use its older link: music.yandex.ru/users/NAME/playlists/NUMBER', icon: lockIcon };
-      }
-      if (body.code === 'yandex_failed') {
-        return { code: 'yandex_failed', title: "Couldn't read this playlist from Yandex Music", hint: 'Try again later, or use Export files', icon: unknownIcon };
-      }
-    }
-
-    if (!navigator.onLine || msg.includes('network') || msg.includes('fetch') || msg.includes('dns') || msg.includes('econnrefused') || msg.includes('timeout') || msg.includes('offline') || msg.includes('etimedout')) {
-      return { code: 'network', title: "Can't reach the service", hint: 'Check your connection', icon: networkIcon };
-    }
-    if (status === 429 || msg.includes('429') || msg.includes('too many requests')) {
-      let hint = 'Try again in a minute';
-      const mRetry = msg.match(/retry-after:?\s*(\d+)/i) || msg.match(/try again in\s*(\d+)/i);
-      if (mRetry) hint = `Try again in ${mRetry[1]}s`;
-      return { code: 'rate_limit', title: 'Too many requests', hint, icon: clockIcon };
-    }
-    if (status === 404 || msg.includes('404') || msg.includes('not found') || msg.includes('deleted') || msg.includes('does not exist') || msg.includes('incomplete youtube id') || msg.includes('unsupported link') || msg.includes('invalid spotify playlist url') || msg.includes('invalid apple music playlist url')) {
-      return { code: 'not_found', title: 'Playlist not found', hint: 'Check the link', icon: searchIcon };
-    }
-    if (msg.includes('private') || msg.includes('isprivate') || msg.includes('sign in') || msg.includes('signin') || status === 401 || (provider !== 'spotify' && (status === 403 || msg.includes('403')))) {
-      return { code: 'private', title: 'Your playlist is private', hint: 'Make it public and try again', icon: lockIcon };
-    }
-    if (status === 403 || msg.includes('403') || msg.includes('forbidden') || msg.includes('restricted') || msg.includes('refused')) {
-      return { code: 'restricted', title: provider === 'spotify' ? "Spotify doesn't allow reading this playlist" : "This service doesn't allow reading this playlist", hint: 'Try the Export files method', icon: restrictedIcon };
-    }
-    return { code: 'unknown', title: "Couldn't read this playlist", hint: (provider === 'spotify' || provider === 'apple') ? 'Try the Export files method' : 'Check the link', icon: unknownIcon };
+    const info = Core.classifyImportError(provider, statusOrError, body, navigator.onLine);
+    return { ...info, icon: IMPORT_ICONS[info.icon] };
   }
 
   function showImportError(containerEl, errInfo) {
@@ -426,51 +355,12 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
         names.push(file.name);
         try {
           const text = await file.text();
-          const json = JSON.parse(text);
-          const rawTracks = Array.isArray(json?.tracks) ? json.tracks : (Array.isArray(json) ? json : null);
-          if (rawTracks) {
-            for (const item of rawTracks) {
-              const title = item.track || item.trackName;
-              const artist = item.artist || item.artistName;
-              // msPlayed (streaming history) is how long it was listened to, not how long the song is
-              const durMs = item.durationMs || item.duration_ms;
-              const duration = durMs ? Math.round(durMs / 1000) : undefined;
-              if (title && artist) {
-                parsedSpotifyExport.likes.push({ title: String(title).trim(), artist: String(artist).trim(), duration });
-              }
-            }
-          }
-          const rawPlaylists = Array.isArray(json?.playlists) ? json.playlists : (Array.isArray(json) && json[0]?.items ? json : null);
-          if (rawPlaylists) {
-            for (const pl of rawPlaylists) {
-              const plName = pl.name || 'Imported Playlist';
-              const plTracks = [];
-              const items = Array.isArray(pl.items) ? pl.items : [];
-              for (const it of items) {
-                if (!it || !it.track) continue;
-                const title = it.track.trackName || it.track.track;
-                const artist = it.track.artistName || it.track.artist;
-                const durMs = it.track.durationMs || it.track.duration_ms;
-                const duration = durMs ? Math.round(durMs / 1000) : undefined;
-                if (title && artist) {
-                  plTracks.push({ title: String(title).trim(), artist: String(artist).trim(), duration });
-                }
-              }
-              if (plTracks.length) {
-                parsedSpotifyExport.playlists.push({ name: plName, tracks: plTracks });
-              }
-            }
-          }
+          const got = Core.parseSpotifyExport(JSON.parse(text));
+          parsedSpotifyExport.likes.push(...got.likes);
+          parsedSpotifyExport.playlists.push(...got.playlists);
         } catch (e) {}
       }
-      // a streaming-history file lists a song once per play: 60 plays of 3 songs meant 60 searches
-      const seenLikes = new Set();
-      parsedSpotifyExport.likes = parsedSpotifyExport.likes.filter((t) => {
-        const k = `${t.title.toLowerCase()}|${t.artist.toLowerCase()}`;
-        if (seenLikes.has(k)) return false;
-        seenLikes.add(k);
-        return true;
-      });
+      parsedSpotifyExport.likes = Core.uniqueSongs(parsedSpotifyExport.likes);
       if (spFileInfo) spFileInfo.textContent = names.join(', ');
     });
   }
@@ -962,142 +852,6 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
 
   let currentAppleImportMode = 'link';
   let parsedAppleExport = { likes: [], playlists: [] };
-
-  // `ms`: the field says milliseconds (durationInMillis, duration_ms, "Milliseconds"). Otherwise only a big number
-  // is taken as milliseconds: the old cut-off, 1000, made a 20-minute track given in seconds last 1 second
-  function parseAppleDuration(val, ms = false) {
-    if (val == null) return undefined;
-    const s = String(val).trim();
-    if (!s) return undefined;
-    if (s.includes(':')) {
-      const parts = s.split(':').map(Number);
-      if (parts.some(isNaN)) return undefined;
-      if (parts.length === 2) return parts[0] * 60 + parts[1];
-      if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-    }
-    const n = Number(s);
-    if (!isNaN(n)) return ms || n > 10000 ? Math.round(n / 1000) : Math.round(n);
-    return undefined;
-  }
-
-  function parseAppleCSV(text) {
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    if (!lines.length) return { headers: [], rows: [] };
-    const delim = lines[0].includes('\t') ? '\t' : (lines[0].includes(';') && !lines[0].includes(',') ? ';' : ',');
-    function splitRow(row) {
-      const res = [];
-      let cur = '';
-      let inQuotes = false;
-      for (let i = 0; i < row.length; i++) {
-        const c = row[i];
-        if (c === '"') {
-          if (inQuotes && row[i + 1] === '"') { cur += '"'; i++; }
-          else inQuotes = !inQuotes;
-        } else if (c === delim && !inQuotes) {
-          res.push(cur.trim());
-          cur = '';
-        } else cur += c;
-      }
-      res.push(cur.trim());
-      return res;
-    }
-    const headers = splitRow(lines[0]).map(h => h.toLowerCase().replace(/['"]/g, ''));
-    const rows = [];
-    for (let i = 1; i < lines.length; i++) {
-      const cols = splitRow(lines[i]);
-      const row = {};
-      for (let j = 0; j < headers.length; j++) row[headers[j]] = cols[j] || '';
-      rows.push(row);
-    }
-    return { headers, rows };
-  }
-
-  function parseAppleExportCSV(text) {
-    const { headers, rows } = parseAppleCSV(text);
-    const titleCol = headers.find(h => /^(title|name|track\s*name|song(\s*name)?|track\s*description)$/i.test(h)) || headers.find(h => /(title|song|track)/i.test(h));
-    const artistCol = headers.find(h => /^(artist(\s*name)?|artist\(s\)|creator|uploader)$/i.test(h)) || headers.find(h => /artist/i.test(h));
-    const durCol = headers.find(h => /(duration|time|length)/i.test(h));
-    const plCol = headers.find(h => /(playlist(\s*name)?|container(\s*description|\s*name)?)/i.test(h));
-
-    const likes = [];
-    const playlistsMap = new Map();
-
-    for (const r of rows) {
-      const title = titleCol ? r[titleCol] : '';
-      const artist = artistCol ? r[artistCol] : '';
-      if (!title || !artist) continue;
-      const dur = durCol ? parseAppleDuration(r[durCol], /milli|\bms\b/i.test(durCol)) : undefined;
-      const pl = plCol ? r[plCol].trim() : '';
-      const track = { title: title.trim(), artist: artist.trim(), duration: dur };
-      if (pl) {
-        if (!playlistsMap.has(pl)) playlistsMap.set(pl, []);
-        playlistsMap.get(pl).push(track);
-      } else {
-        likes.push(track);
-      }
-    }
-    const playlists = [];
-    for (const [name, tracks] of playlistsMap.entries()) playlists.push({ name, tracks });
-    return { likes, playlists };
-  }
-
-  function parseAppleExportJSON(json) {
-    const likes = [];
-    const playlistsMap = new Map();
-
-    function walk(node, currentPl = '') {
-      if (!node || typeof node !== 'object') return;
-      if (Array.isArray(node)) {
-        for (const item of node) walk(item, currentPl);
-        return;
-      }
-      // Apple's own export writes "Title", "Artist", "Track Duration": also look keys up in lower case, like the CSV path
-      const lowered = {};
-      for (const [k, v] of Object.entries(node)) { lowered[k] = v; const lk = k.toLowerCase(); if (!(lk in lowered)) lowered[lk] = v; }
-      node = lowered;
-
-      let pl = currentPl;
-      if (node.playlistName || node.playlist || node['playlist name']) {
-        pl = node.playlistName || node.playlist || node['playlist name'];
-      }
-
-      if (Array.isArray(node.tracks) && (node.name || node.title)) {
-        const pName = node.name || node.title;
-        for (const t of node.tracks) walk(t, pName);
-        return;
-      }
-      if (Array.isArray(node.items) && (node.name || node.title)) {
-        const pName = node.name || node.title;
-        for (const t of node.items) walk(t, pName);
-        return;
-      }
-
-      const title = String(node.title || node.name || node.trackName || node.song || node['track name'] || node['song name'] || '').trim();
-      const artist = String(node.artistName || node.artist || node.artist_name || node['artist name'] || '').trim();
-      const durRaw = node.durationInMillis || node.duration || node.duration_ms || node.time || node.trackDuration || node['track duration'];
-      const duration = parseAppleDuration(durRaw, durRaw != null && (durRaw === node.durationInMillis || durRaw === node.duration_ms));
-
-      if (title && artist && (node.type === 'song' || node.type === 'songs' || duration || pl || node.contentDescriptor)) {
-        const track = { title, artist, duration };
-        if (pl) {
-          if (!playlistsMap.has(pl)) playlistsMap.set(pl, []);
-          playlistsMap.get(pl).push(track);
-        } else {
-          likes.push(track);
-        }
-        return;
-      }
-
-      for (const k of Object.keys(node)) {
-        walk(node[k], pl);
-      }
-    }
-
-    walk(json);
-    const playlists = [];
-    for (const [name, tracks] of playlistsMap.entries()) playlists.push({ name, tracks });
-    return { likes, playlists };
-  }
 
   function setAppleImportMode(mode) {
     currentAppleImportMode = mode || 'link';

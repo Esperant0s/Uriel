@@ -40,6 +40,7 @@ declare global {
     UrielDownloadBatch?: any;
     UrielBackup?: any;
     UrielShare?: any;
+    UrielImportCore?: any;
     RiffShapes?: any;
     trackMatch?: any;
     URIEL_BUILD?: { sha?: string; [key: string]: unknown };
