@@ -103,6 +103,22 @@
     return !(duration > 0 && len > 0 && Math.abs(len - duration) > SYNC_TOLERANCE_S);
   }
 
+  // Saved lyrics carry the length they were timed on, in LRC's own [length: m:ss] tag, so a saved file can be checked
+  // against the cut that plays now: lyrics fetched for the studio song were shown on its music video too (#33).
+  function withLength(lrc, len) {
+    const s = Math.round(Number(len) || 0);
+    return s > 0 ? `[length: ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}]\n${lrc}` : lrc;
+  }
+  const dropLength = (text) => (text ? String(text).replace(/^\[length:[^\]\n]*\]\s*\n?/m, '') : text);
+  // true or false; null for timed lyrics saved before their length was kept
+  function savedFits(text, duration) {
+    if (!(duration > 0) || !/^\[\d+:\d/m.test(text || '')) return true;
+    const m = /^\[length:\s*(\d+):(\d+(?:\.\d+)?)\]/m.exec(text);
+    return m ? syncedFits({ duration: Number(m[1]) * 60 + Number(m[2]) }, duration) : null;
+  }
+  // the words without their timing, for lyrics timed on another cut when there's nothing better
+  const untimed = (text) => dropLength(text).replace(/^\[\d+:\d+(?:\.\d+)?\]\s*/gm, '').replace(/<\d+:\d+(?:\.\d+)?>\s*/g, '');
+
   // lrclib search results -> the best one for this song, or null when nothing really matches. A result whose
   // length is too far off for its timing comes back with its plain lyrics only.
   function pickBest(list, want, duration) {
@@ -125,7 +141,7 @@
     return best;
   }
 
-  const api = { parseForLyrics, pickBest, syncedFits, cleanTitle, cleanArtist, splitArtists, norm };
+  const api = { parseForLyrics, pickBest, syncedFits, withLength, dropLength, savedFits, untimed, cleanTitle, cleanArtist, splitArtists, norm };
   if (typeof module !== 'undefined') module.exports = api;
   else window.UrielLyricsMatch = api; // the page uses it to show clean song names (Encore)
 })();

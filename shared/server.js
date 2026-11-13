@@ -3969,7 +3969,7 @@ async function handleEncode(req, res, parsedUrl) {
   }
 }
 
-const { parseForLyrics, pickBest, syncedFits } = require('./lyrics-match');
+const { parseForLyrics, pickBest, syncedFits, withLength, dropLength, savedFits, untimed } = require('./lyrics-match');
 const LRCLIB_UA = 'Uriel (https://github.com/Esperant0s/Uriel)';
 
 function lrclibJson(pathAndQuery) {
@@ -4003,7 +4003,7 @@ async function fetchLyricsDirect(title, artist, duration = 0) {
   let plain = null;
   for (const hit of exact) {
     // the lookups without a length can return another cut of the song, whose timing doesn't fit (#33)
-    if (hit && hit.syncedLyrics && syncedFits(hit, dur)) return hit.syncedLyrics;
+    if (hit && hit.syncedLyrics && syncedFits(hit, dur)) return withLength(hit.syncedLyrics, hit.duration);
     if (hit && hit.plainLyrics && !plain) plain = hit.plainLyrics;
   }
   const primary = want.artists.find((a) => !/[,&]/.test(a)) || a0 || '';
@@ -4015,7 +4015,7 @@ async function fetchLyricsDirect(title, artist, duration = 0) {
   if (!plain && !searches.some((list) => pickBest(list, want, dur))) searches.push(await lrclibJson(`/api/search?${q({ track_name: t0 })}`));
   for (const list of searches) {
     const best = pickBest(list, want, dur);
-    if (best && best.syncedLyrics) return best.syncedLyrics;
+    if (best && best.syncedLyrics) return withLength(best.syncedLyrics, best.duration);
     if (best && best.plainLyrics && !plain) plain = best.plainLyrics;
   }
   return plain;
@@ -4175,7 +4175,9 @@ async function handleLyrics(req, res, title, artist, allowOnline = true, duratio
   const order = source === 'genius' ? ['genius', 'lrclib'] : ['lrclib', 'genius'];
   const cacheKey = order[0] === 'genius' ? `${artist}:${title}:genius` : `${artist}:${title}`;
   let cached = lyricsCache.get(cacheKey);
-  if (cached && cached.expires && Date.now() > cached.expires) {
+  // kept for another cut of the same song (the studio song, then its music video): look again for this one
+  const otherLength = (c) => !!c && !c.promise && duration > 0 && c.dur > 0 && Math.abs(c.dur - duration) > 6;
+  if ((cached && cached.expires && Date.now() > cached.expires) || otherLength(cached)) {
     lyricsCache.delete(cacheKey);
     cached = undefined;
   }
@@ -4186,7 +4188,7 @@ async function handleLyrics(req, res, title, artist, allowOnline = true, duratio
   }
   if (cached) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    return res.end(JSON.stringify({ success: true, lyrics: cached.text, isCustom: cached.isCustom || false }));
+    return res.end(JSON.stringify({ success: true, lyrics: dropLength(cached.text), isCustom: cached.isCustom || false }));
   }
 
   let resolveLyrics;
@@ -4195,7 +4197,7 @@ async function handleLyrics(req, res, title, artist, allowOnline = true, duratio
   lyricsCache.set(cacheKey, inFlightEntry);
   let outcome = null;
   const sendLyrics = (lyrics, isCustom = false) => {
-    outcome = { success: true, lyrics, isCustom };
+    outcome = { success: true, lyrics: dropLength(lyrics), isCustom };
     resolveLyrics(outcome);
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify(outcome));
@@ -4222,7 +4224,9 @@ async function handleLyrics(req, res, title, artist, allowOnline = true, duratio
 
   // each site's lyrics are saved in their own file; the preferred site (saved or asked) comes first, then the other
   let rawLyrics = null;
+  let stale = null; // saved lyrics timed for another cut (or saved without their length), used when nothing better comes
   for (const backend of order) {
+    let keepTimed = false;
     let fetchedLyricsPath = getFetchedLyricsPath(title, artist, backend);
     if (backend === 'lrclib' && !fs.existsSync(fetchedLyricsPath) && /^[\x00-\x7F]*$/.test((title || '') + (artist || ''))) {
       const legacyFetched = legacyFetchedLyricsPath(title, artist);
@@ -4234,10 +4238,17 @@ async function handleLyrics(req, res, title, artist, allowOnline = true, duratio
     if (fs.existsSync(fetchedLyricsPath)) {
       try {
         const diskLyrics = await fs.promises.readFile(fetchedLyricsPath, 'utf-8');
-        if (lyricsCache.get(cacheKey) === inFlightEntry) {
-          lyricsCache.set(cacheKey, { text: diskLyrics, isCustom: false });
+        const fits = savedFits(diskLyrics, duration);
+        // timed for another cut, or saved before the length was kept: asked again once online (#33)
+        if (fits === false || (fits === null && allowOnline)) {
+          if (!stale) stale = fits === false ? untimed(diskLyrics) : diskLyrics;
+          keepTimed = true;
+        } else {
+          if (lyricsCache.get(cacheKey) === inFlightEntry) {
+            lyricsCache.set(cacheKey, { text: diskLyrics, isCustom: false, dur: duration });
+          }
+          return sendLyrics(diskLyrics);
         }
-        return sendLyrics(diskLyrics);
       } catch (e) {}
     }
 
@@ -4249,21 +4260,25 @@ async function handleLyrics(req, res, title, artist, allowOnline = true, duratio
       rawLyrics = null;
     }
     if (rawLyrics && rawLyrics.trim().length > 0) {
-      try {
-        await fs.promises.writeFile(fetchedLyricsPath, rawLyrics, 'utf-8');
-      } catch (e) {}
+      // timed lyrics already saved (another cut's, or of unknown length) are only replaced by timed ones for this cut
+      if (!keepTimed || /^\[\d+:\d/m.test(rawLyrics)) {
+        try {
+          await fs.promises.writeFile(fetchedLyricsPath, rawLyrics, 'utf-8');
+        } catch (e) {}
+      }
       break;
     }
   }
 
+  if (!rawLyrics && stale) rawLyrics = stale;
   if (!allowOnline) {
-    return sendLyrics('');
+    return sendLyrics(rawLyrics || '');
   }
 
   if (lyricsCache.get(cacheKey) === inFlightEntry) {
     // "nothing found" is also what a network hiccup looks like: look again after 10 minutes
     // instead of showing no lyrics for this song until the app restarts
-    lyricsCache.set(cacheKey, rawLyrics ? { text: rawLyrics, isCustom: false } : { text: rawLyrics, isCustom: false, expires: Date.now() + 10 * 60 * 1000 });
+    lyricsCache.set(cacheKey, rawLyrics ? { text: rawLyrics, isCustom: false, dur: duration } : { text: rawLyrics, isCustom: false, dur: duration, expires: Date.now() + 10 * 60 * 1000 });
   }
   return sendLyrics(rawLyrics);
   } finally {
