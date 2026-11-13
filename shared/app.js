@@ -9585,6 +9585,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     const m = (img.getAttribute('src') || '').match(/^https?:\/\/i\d?\.ytimg\.com\/vi(?:_webp)?\/([\w-]{11})\/(?:maxresdefault|sddefault)\./);
     if (m) img.src = `https://i.ytimg.com/vi/${m[1]}/mqdefault.jpg`;
   }, true);
+  // a widescreen music video has black bars inside its own 16:9 frame, which a square cover showed as bands above
+  // and below the picture (#31). The bars are found on a small copy of the frame and cut off with object-view-box
+  // (Chromium only: Android and computers; elsewhere the cover stays as it was).
+  const ytBars = new Map();
+  function findYtBars(id) {
+    if (ytBars.has(id)) return ytBars.get(id);
+    const job = new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onerror = () => resolve(null);
+      img.onload = () => {
+        try {
+          const W = 64, H = 36;
+          const c = document.createElement('canvas');
+          c.width = W; c.height = H;
+          const ctx = c.getContext('2d', { willReadFrequently: true });
+          ctx.drawImage(img, 0, 0, W, H);
+          const px = ctx.getImageData(0, 0, W, H).data;
+          const dark = (y) => {
+            let n = 0;
+            for (let x = 0; x < W; x++) { const i = (y * W + x) * 4; if (Math.max(px[i], px[i + 1], px[i + 2]) < 28) n++; }
+            return n >= W * 0.75; // a dark scene can run into the bar, so a bar row is mostly black, not all
+          };
+          let top = 0, bottom = 0;
+          while (top < H / 2 && dark(top)) top++;
+          while (bottom < H / 2 && dark(H - 1 - bottom)) bottom++;
+          // both edges dark and the bars a similar size: a letterbox, not just a dark sky or a dark floor
+          const ok = top >= 2 && bottom >= 2 && Math.abs(top - bottom) <= 2 && top + bottom < H * 0.6;
+          resolve(ok ? { top: (top / H) * 100, bottom: (bottom / H) * 100 } : null);
+        } catch (e) { resolve(null); }
+      };
+      img.src = `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
+    });
+    ytBars.set(id, job);
+    return job;
+  }
+  const YT_WIDE = /^https?:\/\/i\d?\.ytimg\.com\/vi(?:_webp)?\/([\w-]{11})\/(?:mqdefault|maxresdefault|hq720)\./;
+  if (typeof CSS !== 'undefined' && CSS.supports && CSS.supports('object-view-box', 'inset(0%)')) {
+    document.addEventListener('load', (e) => {
+      const img = e.target;
+      if (!img || img.tagName !== 'IMG') return;
+      const m = (img.getAttribute('src') || '').match(YT_WIDE);
+      img.style.objectViewBox = '';
+      if (!m) return;
+      const src = img.getAttribute('src');
+      findYtBars(m[1]).then((bars) => {
+        if (bars && img.getAttribute('src') === src) img.style.objectViewBox = `inset(${bars.top}% 0% ${bars.bottom}% 0%)`;
+      });
+    }, true);
+  }
   // other sizes of a cover we already have (YouTube frames, SoundCloud artwork)
   function artVariants(url) {
     if (!url || typeof url !== 'string') return [];
@@ -19606,7 +19656,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     restoreOfflineList.innerHTML = entries.map((e, i) => {
       const t = restoreOfflineTracks[i];
       return `<label class="restore-offline-row"><input type="checkbox" class="m3-checkbox" data-i="${i}" checked>` +
-        `<img src="${escapeHtml(e.localThumbnail || listThumb(getTrackThumbUrl(t)) || '')}" alt="" loading="lazy">` +
+        `<img src="${escapeHtml(listThumb(getTrackThumbUrl(t)) || e.localThumbnail || '')}" alt="" loading="lazy">` +
         `<span class="restore-offline-text"><span>${escapeHtml(t.title)}</span><span>${escapeHtml(t.artist)}</span></span></label>`;
     }).join('');
     updateRestoreOfflineCount();
