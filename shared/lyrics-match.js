@@ -60,7 +60,9 @@
     // channel names often drop the spaces ("TheWeeknd"); lrclib lists "The Weeknd"
     const spaced = (n) => (n && !/\s/.test(n) ? n.replace(/([a-z])([A-Z])/g, '$1 $2') : '');
     const artists = uniq([lead, splitArtists(lead)[0], channel, splitArtists(channel)[0], spaced(lead), spaced(channel)].filter(Boolean));
-    return { titles, artists };
+    // a label or lyrics channel, not the artist: then a result by someone else may still be the song
+    const unsure = !fromTitle && (!channel || /\b(records?|music|entertainment|lyrics?|channel|tv|studios?|productions?)\b/i.test(channel));
+    return { titles, artists, unsure };
   }
 
   function tokens(s) { return new Set(norm(s).split(' ').filter(Boolean)); }
@@ -69,6 +71,27 @@
     if (!A.size || !B.size) return 0;
     let n = 0; A.forEach((t) => { if (B.has(t)) n++; });
     return n / Math.min(A.size, B.size);
+  }
+
+  // How alike two song titles are as a whole: "Drip" isn't "My Drip" and "Love" isn't "Love Again" (#47), but
+  // "(Official Video)", "(feat. X)" and "- Remastered 2011" on the result don't count against it
+  function titleMatch(want, name) {
+    let got = cleanTitle(name);
+    const parts = got.split(DASH);
+    if (parts.length >= 2 && NOISE.test(parts.slice(1).join(' '))) got = parts[0];
+    const A = tokens(want), B = tokens(got);
+    if (!A.size || !B.size) return 0;
+    let n = 0; A.forEach((t) => { if (B.has(t)) n++; });
+    return n / Math.max(A.size, B.size);
+  }
+
+  // like overlap, but words lots of artist names have don't count: "The Weeknd" isn't "The Kid LAROI" (#47)
+  const COMMON = new Set(['the', 'a', 'an', 'and', 'of', 'lil', 'dj', 'mc', 'big', 'young']);
+  function artistOverlap(a, b) {
+    const A = [...tokens(a)].filter((t) => !COMMON.has(t));
+    const B = new Set([...tokens(b)].filter((t) => !COMMON.has(t)));
+    if (!A.length || !B.size) return overlap(a, b);
+    return A.filter((t) => B.has(t)).length / Math.min(A.length, B.size);
   }
 
   // Timed lyrics fit only the cut they were timed on: a music video with an intro (or a longer outro) is longer
@@ -89,11 +112,12 @@
       if (!raw || raw.instrumental) continue;
       const item = raw.syncedLyrics && !syncedFits(raw, duration) ? { ...raw, syncedLyrics: null } : raw;
       if (!item.syncedLyrics && !item.plainLyrics) continue;
-      const t = Math.max(...want.titles.map((w) => overlap(w, item.trackName || item.name)));
-      const a = Math.max(0, ...want.artists.map((w) => overlap(w, item.artistName)));
+      const t = Math.max(...want.titles.map((w) => titleMatch(w, item.trackName || item.name)));
+      const a = Math.max(0, ...want.artists.map((w) => artistOverlap(w, item.artistName)));
       const d = duration > 0 && item.duration > 0 ? Math.abs(item.duration - duration) : null;
-      if (t < 0.6) continue;
-      if (a < 0.5 && !(d !== null && d <= 3)) continue;
+      if (t < 0.75) continue;
+      // another artist's song of the same name and length was taken too (#47): only when ours isn't known
+      if (a < 0.5 && !(want.unsure && d !== null && d <= 3)) continue;
       let score = t * 3 + a * 2 + (item.syncedLyrics ? 1 : 0);
       if (d !== null) score += d <= 2 ? 1.5 : d <= 8 ? 0.5 : -1;
       if (score > bestScore) { best = item; bestScore = score; }
