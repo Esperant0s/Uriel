@@ -3434,7 +3434,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const FADE_IMG_SEL = '.track-row-thumb, .my-wave-track-cover, .quick-play-pill-img';
-  const markImgLoaded = (e) => { const t = e.target; if (t.tagName === 'IMG' && t.matches(FADE_IMG_SEL)) t.classList.add('is-loaded'); };
+  // covers that already loaded once skip the fade: a scrolled list draws its rows again and again, and fading each
+  // cover in from nothing made rows look like they disappeared while scrolling (#40)
+  const shownThumbs = new Set();
+  const markImgLoaded = (e) => {
+    const t = e.target;
+    if (t.tagName !== 'IMG' || !t.matches(FADE_IMG_SEL)) return;
+    t.classList.add('is-loaded');
+    if (e.type === 'load') shownThumbs.add(t.getAttribute('src'));
+  };
   document.addEventListener('load', markImgLoaded, true);
   document.addEventListener('error', markImgLoaded, true);
 
@@ -8302,6 +8310,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       const isFav = isFavoriteSong(track);
       const rowThumb = getTrackThumbUrl(track);
+      const rowListThumb = listThumb(rowThumb) || '';
       const isAlbum = context === 'album';
       const albumArtist = (track.albumArtist || '').trim().toLowerCase();
       const trackArtist = (track.artist || '').trim().toLowerCase();
@@ -8315,7 +8324,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       row.innerHTML = `
       <span class="track-row-index">${(isAlbum && track.no) ? track.no : (idx + 1)}</span>
-      ${!isAlbum ? `<img class="track-row-thumb" src="${escapeHtml(listThumb(rowThumb) || '')}" data-full="${escapeHtml(rowThumb || '')}" data-saved="${escapeHtml(track.thumbnail || '')}" data-art="${escapeHtml(JSON.stringify(trackArtCandidates(track)))}" alt="" loading="lazy" decoding="async" onerror="${THUMB_FALLBACK}">` : ''}
+      ${!isAlbum ? `<img class="track-row-thumb${shownThumbs.has(rowListThumb) ? ' is-loaded' : ''}" src="${escapeHtml(rowListThumb)}" data-full="${escapeHtml(rowThumb || '')}" data-saved="${escapeHtml(track.thumbnail || '')}" data-art="${escapeHtml(JSON.stringify(trackArtCandidates(track)))}" alt="" onerror="${THUMB_FALLBACK}">` : ''}
       <div class="track-row-info">
       <span class="track-row-title">${escapeHtml(track.title || 'untitled')}</span>
       <span class="track-row-artist-wrap">${offlineTag}${explicitTag}${artistSpan}</span>
