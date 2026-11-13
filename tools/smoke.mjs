@@ -16,19 +16,24 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const tmp = mkdtempSync(join(tmpdir(), 'uriel-smoke-'));
 // its own data and settings, so a run never touches a real Uriel on this computer
 const env = { ...process.env, URIEL_DATA_DIR: join(tmp, 'data'), XDG_CONFIG_HOME: join(tmp, 'config'), APPDATA: join(tmp, 'config'), LOCALAPPDATA: join(tmp, 'config') };
-const args = [root, `--remote-debugging-port=${PORT}`, `--user-data-dir=${join(tmp, 'profile')}`];
-// CI has no user namespace sandbox for Chromium to use
-if (process.env.CI) args.push('--no-sandbox');
-const app = spawn(electron, args, { env, stdio: 'ignore' });
+const args = [`--remote-debugging-port=${PORT}`, `--user-data-dir=${join(tmp, 'profile')}`];
+// CI has no user namespace sandbox for Chromium to use, and no graphics card
+if (process.env.CI) args.push('--no-sandbox', '--disable-gpu');
+const app = spawn(electron, [...args, root], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+// what the app itself printed, for when it never gets as far as a window
+let said = '';
+let exited = null;
+for (const out of [app.stdout, app.stderr]) out.on('data', (d) => { said = (said + d).slice(-4000); });
+app.on('exit', (code, signal) => { exited = signal || code; });
 
 let failed = [];
 try {
   let page = null;
-  for (let i = 0; i < 120 && !page; i++) {
+  for (let i = 0; i < 120 && !page && exited === null; i++) {
     try { page = (await (await fetch(`http://127.0.0.1:${PORT}/json`)).json()).find((p) => p.type === 'page' && /index\.html/.test(p.url)); } catch (e) {}
     if (!page) await sleep(500);
   }
-  if (!page) throw new Error("the app's window never appeared");
+  if (!page) throw new Error(`the app's window never appeared${exited !== null ? ` (it quit: ${exited})` : ''}\n--- what the app printed ---\n${said.trim() || '(nothing)'}`);
 
   const ws = new WebSocket(page.webSocketDebuggerUrl);
   await new Promise((resolve, reject) => { ws.addEventListener('open', resolve); ws.addEventListener('error', reject); });
