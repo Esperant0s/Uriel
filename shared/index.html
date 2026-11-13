@@ -1883,6 +1883,15 @@
                 <button class="btn-outline-pill" id="btn-import-account" style="flex-shrink: 0;" data-i18n>Import</button>
               </div>
             </div>
+            <div class="setting-item" id="auto-backup-item">
+              <div class="setting-item-top" style="align-items: center; justify-content: space-between;">
+                <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+                  <span class="setting-name" data-i18n>Automatic backups</span>
+                  <span id="auto-backup-hint" style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);" data-i18n>Saved on this device once a day</span>
+                </div>
+                <button class="btn-outline-pill" id="btn-auto-backups" style="flex-shrink: 0;" data-i18n>Restore…</button>
+              </div>
+            </div>
             <div class="setting-item" id="export-all-playlists-item">
               <div class="setting-item-top" style="align-items: center; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
@@ -3007,6 +3016,17 @@
           New playlist
         </button>
         <button class="btn-outline-pill" id="btn-cancel-add-playlist" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="auto-backup-modal">
+    <div class="dialog-card" style="width: 420px; max-width: calc(100vw - 32px); display: flex; flex-direction: column; gap: 12px; max-height: calc(100vh - 64px);">
+      <h3 style="margin: 0;">Automatic backups</h3>
+      <p style="margin: 0; color: var(--md-sys-color-on-surface-variant); font-size: calc(13px * var(--font-scale, 1));">Restoring one replaces this profile's playlists, favorites, history and settings with what they were that day.</p>
+      <div id="auto-backup-list" class="restore-offline-list"></div>
+      <div class="dialog-actions">
+        <button class="btn-outline-pill" id="btn-close-auto-backups">Close</button>
       </div>
     </div>
   </div>

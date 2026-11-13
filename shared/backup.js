@@ -156,14 +156,23 @@
       if (file.size > B.LIMITS.fileBytes) throw new Error('That file is too big');
       backup = B.readBackup(await B.parseBackupFile(new Uint8Array(await file.arrayBuffer())), { isDevice });
     } catch (e) { toast(e.message || "Couldn't read that file", 'error'); return; }
+    restoreFrom(backup);
+  }
+
+  // asks, then replaces this profile with the backup and restarts. `autoDay`: one of the automatic backups, by its
+  // day. Answers whether the restore went ahead.
+  /** @param {any} backup @param {{ autoDay?: string, lead?: string }} [o] */
+  function restoreFrom(backup, { autoDay = '', lead = '' } = {}) {
+    if (!core || libraryUnavailable()) return false;
     const c = backup.counts;
-    if (!c.keys) { toast('That backup has nothing Uriel can restore', 'error'); return; }
+    if (!c.keys) { toast('That backup has nothing Uriel can restore', 'error'); return false; }
     const me = P() ? P().current().name : '';
     const what = [`${c.playlists} playlist${c.playlists === 1 ? '' : 's'}`, `${c.favorites} favorite${c.favorites === 1 ? '' : 's'}`];
-    const from = backup.source === 'riff' ? 'this Riff account' : (backup.profileName ? `the backup of "${backup.profileName}"` : 'this backup');
+    const from = autoDay ? `the automatic backup of ${niceDay(autoDay)}`
+      : backup.source === 'riff' ? 'this Riff account' : (backup.profileName ? `the backup of "${backup.profileName}"` : 'this backup');
     const linked = (() => { try { return !!localStorage.getItem('uriel_sync_group'); } catch (e) { return false; } })();
-    const ok = window.confirm(`Restore ${from} (${what.join(', ')}) into ${me ? `the profile "${me}"` : 'Uriel'}?\n\nIts playlists, favorites, history and settings are replaced by the backup's.${linked ? ' Devices this profile syncs with get the restored ones too.' : ''} Uriel restarts afterwards.`);
-    if (!ok) return;
+    const ok = window.confirm(`${lead}Restore ${from} (${what.join(', ')}) into ${me ? `the profile "${me}"` : 'Uriel'}?\n\nIts playlists, favorites, history and settings are replaced by the backup's.${linked ? ' Devices this profile syncs with get the restored ones too.' : ''} Uriel restarts afterwards.`);
+    if (!ok) return false;
     // stop what would save over the restored keys while the page goes away
     try { if (core.state && core.state.isPlaying) core.togglePlay(); if (core.audio) core.audio.pause(); } catch (e) {}
     try { if (core.state) core.state._queueRestored = false; } catch (e) {}
@@ -182,6 +191,102 @@
     // Encore and the queue save on the way out; this runs after them (added last), so the backup wins
     window.addEventListener('pagehide', apply);
     setTimeout(() => location.reload(), 700);
+    return true;
+  }
+
+  // ---------- automatic backups ----------
+  // Once a day the profile is saved to a file in the app's data folder (server.js keeps the newest few). The lists
+  // live in the page's own storage; when that is lost, the files are still there, and Uriel offers the newest one.
+  const AUTO_DAY = 'uriel_autobackup_day';
+  const AUTO_DISMISSED = 'uriel_autobackup_dismissed';
+  const niceDay = (day) => { try { return new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return day; } };
+  const profileId = () => { try { return (P() && P().current().id) || 'default'; } catch (e) { return 'default'; } };
+  const autoUrl = (route, more = '') => `${core.base()}/api/${route}?profile=${encodeURIComponent(profileId())}${more}`;
+  const libraryCounts = () => {
+    const s = core.state || {};
+    return { playlists: (s.playlists || []).length, favorites: (s.favorites || []).length, history: (s.history || []).length };
+  };
+  const stored = (k) => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+
+  async function listAutoBackups() {
+    try { return (await (await fetch(autoUrl('auto-backups'))).json()).backups || []; } catch (e) { return []; }
+  }
+  async function readAutoBackup(name) {
+    const r = await fetch(autoUrl('auto-backup', `&name=${encodeURIComponent(name)}`));
+    if (!r.ok) throw new Error("Couldn't read that backup");
+    return B.readBackup(await r.json(), { isDevice });
+  }
+
+  async function saveAutoBackup() {
+    const L = window.UrielLibraryStore;
+    if (!core || (L && L.store && L.store.mode() === 'unavailable')) return;
+    const today = B.dayOf(new Date());
+    if (!B.autoBackupDue({ lastDay: stored(AUTO_DAY), today, counts: libraryCounts() })) return;
+    const me = P() ? P().current() : { name: '' };
+    const data = B.makeBackup(ownEntries(), { profileName: me.name, appVersion: await appVersion(), isDevice });
+    try {
+      const r = await fetch(autoUrl('auto-backup', `&day=${today}`), { method: 'POST', body: JSON.stringify(data) });
+      if (!r.ok) return;
+      try { localStorage.setItem(AUTO_DAY, today); } catch (e) {}
+      showAutoBackupState();
+    } catch (e) {}
+  }
+
+  // the library is empty and a backup isn't: offer the newest such backup, once
+  async function offerAutoRestore() {
+    if (!core || !B.libraryIsEmpty(libraryCounts())) return;
+    const backups = [];
+    for (const b of await listAutoBackups()) {
+      try { const backup = await readAutoBackup(b.name); backups.push({ name: b.name, day: b.day, counts: backup.counts, backup }); } catch (e) {}
+      if (backups.length && !B.libraryIsEmpty(backups[backups.length - 1].counts)) break;
+    }
+    const offer = B.restoreOffer({ counts: libraryCounts(), backups, dismissed: stored(AUTO_DISMISSED) });
+    if (!offer) return;
+    if (!restoreFrom(offer.backup, { autoDay: offer.day, lead: 'Your library is empty, and Uriel has a backup of it.\n\n' })) { try { localStorage.setItem(AUTO_DISMISSED, offer.name); } catch (e) {} }
+  }
+
+  async function showAutoBackupState() {
+    const hint = $('auto-backup-hint');
+    if (!hint) return;
+    const list = await listAutoBackups();
+    hint.textContent = list.length
+      ? `Saved on this device once a day. Newest: ${niceDay(list[0].day)} (${list.length} kept)`
+      : 'Saved on this device once a day, once there is something to save';
+    const btn = $('btn-auto-backups');
+    if (btn) btn.disabled = !list.length;
+  }
+
+  async function openAutoBackups() {
+    const modal = $('auto-backup-modal');
+    const box = $('auto-backup-list');
+    if (!modal || !box) return;
+    box.textContent = '';
+    for (const b of await listAutoBackups()) {
+      const row = document.createElement('div');
+      row.className = 'auto-backup-row';
+      const day = document.createElement('span');
+      day.textContent = niceDay(b.day);
+      const btn = document.createElement('button');
+      btn.className = 'btn-outline-pill';
+      btn.textContent = 'Restore';
+      btn.addEventListener('click', async () => {
+        try { if (restoreFrom(await readAutoBackup(b.name), { autoDay: b.day })) core.closeModal(modal); } catch (e) { toast(e.message || "Couldn't read that backup", 'error'); }
+      });
+      row.append(day, btn);
+      box.appendChild(row);
+    }
+    core.openModal(modal);
+  }
+
+  function startAutoBackups() {
+    const on = (id, fn) => { const b = $(id); if (b) b.addEventListener('click', fn); };
+    on('btn-auto-backups', openAutoBackups);
+    on('btn-close-auto-backups', () => core.closeModal($('auto-backup-modal')));
+    showAutoBackupState();
+    // after start-up has settled: the offer first (an empty library is never saved over a backup), then today's
+    setTimeout(async () => { await offerAutoRestore(); saveAutoBackup(); }, 4000);
+    // an app left open for days still saves each day
+    setInterval(saveAutoBackup, 3 * 3600e3);
   }
 
   function hook() {
@@ -202,6 +307,7 @@
     // with several profiles, say whose backup this is
     const hint = $('export-account-hint');
     if (hint && P() && P().list().length > 1) hint.textContent = `${P().current().name}: playlists, favorites, history, Encore and settings in one file`;
+    startAutoBackups();
   }
 
   if (window.UrielCore) hook();

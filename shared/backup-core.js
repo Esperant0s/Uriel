@@ -142,7 +142,9 @@
   const NEVER = [/^uriel_sync_/, /^uriel_p:/, /^uriel_secret_/, /^uriel_profiles?(?:_|$)/, /^uriel_debug_log$/,
     /^uriel_custom_css/, /^uriel_bg_(?:url|vpath)$/, /^uriel_banner_media$/, /^uriel_lastfm_(?!enabled$)/,
     // a copy of what the theme last painted (theme-boot.js), rebuilt from the theme settings, which are backed up
-    /^uriel_theme_boot$/];
+    /^uriel_theme_boot$/,
+    // when this device last saved an automatic backup, and which one it was told not to offer again
+    /^uriel_autobackup_/];
   const neverKey = (k) => NEVER.some((re) => re.test(k));
   function backupKeyAllowed(key, isDevice) {
     if (typeof key !== 'string' || !KEY_RE.test(key) || neverKey(key)) return false;
@@ -299,6 +301,32 @@
     try { return JSON.parse(json); } catch (e) { throw new Error('That Riff account file is damaged'); }
   }
 
+  // ---- automatic backups: one file a day in the app's data folder, the newest few kept (backup.js makes them,
+  // server.js keeps them). They are there for the day the saved lists are gone but the app's files aren't. ----
+  const AUTO_KEEP = 7;
+  const AUTO_NAME = /^uriel-auto-(\d{4}-\d{2}-\d{2})\.json$/;
+  const autoBackupName = (day) => `uriel-auto-${day}.json`;
+  const autoBackupDay = (name) => { const m = AUTO_NAME.exec(String(name || '')); return m ? m[1] : ''; };
+  // the day as the user's clock has it
+  const dayOf = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const libraryIsEmpty = (c) => !c || !(c.playlists > 0 || c.favorites > 0 || c.history > 0);
+  // once a day, and never an empty library: after a wipe those would push the good backups out
+  /** @param {{ lastDay?: string, today: string, counts?: { playlists?: number, favorites?: number, history?: number } }} o */
+  const autoBackupDue = ({ lastDay, today, counts }) => !libraryIsEmpty(counts) && lastDay !== today;
+  // the files to delete so that the newest `keep` stay (other files in the folder are left alone)
+  function autoBackupsToDrop(names, keep = AUTO_KEEP) {
+    const own = (names || []).filter((n) => AUTO_NAME.test(n)).sort();
+    return own.slice(0, Math.max(0, own.length - keep));
+  }
+  // The library is empty and a backup isn't: the newest such backup, to offer once. `backups` is newest first,
+  // each { name, counts }; `dismissed` is the one the user said no to.
+  /** @param {{ counts?: object, backups?: { name: string, counts?: object }[], dismissed?: string }} o */
+  function restoreOffer({ counts, backups, dismissed }) {
+    if (!libraryIsEmpty(counts)) return null;
+    const best = (backups || []).find((b) => b && AUTO_NAME.test(b.name) && !libraryIsEmpty(b.counts));
+    return best && best.name !== dismissed ? best : null;
+  }
+
   // bytes of a picked backup file -> its parsed contents
   async function parseBackupFile(bytes) {
     if (!bytes || bytes.length > LIMITS.fileBytes) throw new Error('That file is too big');
@@ -306,7 +334,7 @@
     try { return JSON.parse(new TextDecoder().decode(bytes).replace(/^\uFEFF/, '')); } catch (e) { throw new Error("That file isn't a Uriel backup"); }
   }
 
-  const api = { LIMITS, cleanSharedTrack, parsePlaylistFile, exportTrack, playlistFile, fileName, backupKeyAllowed, keepOnRestore, makeBackup, cleanStoredTrack, cleanStoredPlaylists, readBackup, isRiffAccount, readRiffAccount, parseBackupFile };
+  const api = { LIMITS, cleanSharedTrack, parsePlaylistFile, exportTrack, playlistFile, fileName, backupKeyAllowed, keepOnRestore, makeBackup, cleanStoredTrack, cleanStoredPlaylists, readBackup, AUTO_KEEP, AUTO_NAME, autoBackupName, autoBackupDay, dayOf, libraryIsEmpty, autoBackupDue, autoBackupsToDrop, restoreOffer, isRiffAccount, readRiffAccount, parseBackupFile };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.UrielBackup = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -144,3 +144,40 @@ test('downloaded-status says which songs of a list already have a downloaded fil
   const anon = await call('POST', '/api/downloaded-status', { body: '{}', token: false });
   assert.notEqual(anon.status, 200);
 });
+
+test('automatic backups: saved once a day per profile, listed newest first, the newest few kept', async () => {
+  const backup = (n) => JSON.stringify({ app: 'Uriel', kind: 'uriel-backup', version: 1, data: { uriel_n: String(n) } });
+  const dir = path.join(dataDir, 'backups', 'default');
+  for (let d = 1; d <= 9; d++) {
+    const r = await call('POST', `/api/auto-backup?profile=default&day=2026-11-0${d}`, { body: backup(d) });
+    assert.equal(r.status, 200, r.body);
+  }
+  const list = JSON.parse((await call('GET', '/api/auto-backups?profile=default')).body).backups;
+  assert.deepEqual(list.map((b) => b.day), ['2026-11-09', '2026-11-08', '2026-11-07', '2026-11-06', '2026-11-05', '2026-11-04', '2026-11-03']);
+  assert.ok(list.every((b) => b.size > 0));
+  assert.deepEqual(fs.readdirSync(dir).sort(), list.map((b) => b.name).sort(), 'no temp files, no older backups');
+  const read = await call('GET', '/api/auto-backup?profile=default&name=uriel-auto-2026-11-09.json');
+  assert.equal(JSON.parse(read.body).data.uriel_n, '9');
+  assert.equal((await call('GET', '/api/auto-backup?profile=default&name=uriel-auto-2026-11-01.json')).status, 404);
+  // another profile's backups are its own
+  assert.deepEqual(JSON.parse((await call('GET', '/api/auto-backups?profile=other')).body).backups, []);
+});
+
+test("automatic backups: a day's first backup is never replaced", async () => {
+  const small = JSON.stringify({ kind: 'uriel-backup', data: { uriel_n: 'after the wipe' } });
+  assert.equal((await call('POST', '/api/auto-backup?profile=default&day=2026-11-09', { body: small })).status, 200);
+  const read = await call('GET', '/api/auto-backup?profile=default&name=uriel-auto-2026-11-09.json');
+  assert.equal(JSON.parse(read.body).data.uriel_n, '9');
+});
+
+test('automatic backups refuse other files, other folders and requests without the key', async () => {
+  const ok = JSON.stringify({ kind: 'uriel-backup', data: {} });
+  assert.equal((await call('POST', '/api/auto-backup?profile=default&day=2026-11-10', { body: '{"kind":"something else"}' })).status, 400);
+  assert.equal((await call('POST', '/api/auto-backup?profile=default&day=2026-11-10', { body: 'not json' })).status, 400);
+  assert.equal((await call('POST', '/api/auto-backup?profile=default&day=..%2F..%2Fx', { body: ok })).status, 400);
+  assert.equal((await call('POST', '/api/auto-backup?profile=..%2F..&day=2026-11-10', { body: ok })).status, 400);
+  assert.equal((await call('GET', '/api/auto-backup?profile=default&name=..%2F..%2Flibrary.json')).status, 400);
+  assert.equal((await call('GET', '/api/auto-backups?profile=default', { token: false })).status, 403);
+  assert.equal((await call('POST', '/api/auto-backup?profile=default&day=2026-11-10', { body: ok, token: false })).status, 403);
+  assert.equal(fs.existsSync(path.join(dataDir, 'backups', 'default', 'uriel-auto-2026-11-10.json')), false);
+});

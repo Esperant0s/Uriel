@@ -110,7 +110,7 @@ function markTutorialDone() {
 }
 
 // what Uriel itself keeps in its music folder (moving the folder copies and then deletes only these)
-const URIEL_DATA_ENTRIES = ['tracks', 'custom-lyrics', 'lyrics', 'thumbnails', 'library', 'bin', 'plugins', 'logs', 'metadata.json', 'library.json', 'startup.json', 'spotify-auth.enc', 'lastfm-auth.enc', '.urieltutorial', 'i18n'];
+const URIEL_DATA_ENTRIES = ['tracks', 'custom-lyrics', 'lyrics', 'thumbnails', 'library', 'bin', 'plugins', 'logs', 'backups', 'metadata.json', 'library.json', 'startup.json', 'spotify-auth.enc', 'lastfm-auth.enc', '.urieltutorial', 'i18n'];
 
 // `only`: names to take at the top level (deeper levels take everything under them)
 async function copyDirContents(fromDir, toDir, skipNames = new Set(['config.json']), only = null) {

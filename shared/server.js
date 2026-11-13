@@ -4032,6 +4032,10 @@ async function fetchLyricsDirect(title, artist, duration = 0) {
 
 // ---------- Riff 43: Genius (plain lyrics) and NetEase (word timings) ----------
 const lyricsSources = require('./lyrics-sources');
+const backupCore = require('./backup-core');
+// automatic backups (backup.js): in the data folder, beside the songs
+const BACKUPS_DIR = path.join(DATA_DIR, 'backups');
+const AUTO_BACKUP_MAX_BYTES = 64 * 1024 * 1024;
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
 function lyricsPageText(url, headers = {}, timeoutMs = 8000) {
@@ -4122,6 +4126,8 @@ const TOKEN_PROTECTED_ROUTES = new Set([
   '/api/library-remove',
   '/api/device-music',
   '/api/offline-library',
+  '/api/auto-backup',
+  '/api/auto-backups',
   '/api/offline-delete',
   '/api/clear-offline-library',
   '/api/save-custom-lyrics',
@@ -7242,6 +7248,77 @@ const server = http.createServer(guardHandler(async (req, res) => {
     }
     res.writeHead(404);
     return res.end('Thumbnail not cached');
+  }
+
+  // Automatic backups (backup.js): one file a day per profile in the data folder, the newest few kept. They are
+  // files, so they are still there when the saved lists (the page's own storage) are lost.
+  if (parsedUrl.pathname === '/api/auto-backups' || parsedUrl.pathname === '/api/auto-backup') {
+    const profile = parsedUrl.query.profile || '';
+    if (!/^[A-Za-z0-9_-]{1,40}$/.test(profile)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: false, error: 'bad profile' }));
+    }
+    const dir = path.join(BACKUPS_DIR, profile);
+    const names = async () => { try { return (await fs.promises.readdir(dir)).filter((n) => backupCore.AUTO_NAME.test(n)).sort().reverse(); } catch (e) { return []; } };
+    if (parsedUrl.pathname === '/api/auto-backups') {
+      const backups = [];
+      for (const name of await names()) {
+        try { backups.push({ name, day: backupCore.autoBackupDay(name), size: (await fs.promises.stat(path.join(dir, name))).size }); } catch (e) {}
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: true, backups }));
+    }
+    if (req.method === 'POST') {
+      const name = backupCore.autoBackupName(parsedUrl.query.day || '');
+      if (!backupCore.AUTO_NAME.test(name)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ success: false, error: 'bad day' }));
+      }
+      const chunks = [];
+      let size = 0;
+      req.on('data', (chunk) => {
+        if (res.writableEnded) return;
+        size += chunk.length;
+        if (size > AUTO_BACKUP_MAX_BYTES) { res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'backup too large' })); req.resume(); return; }
+        chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+      });
+      req.on('end', async () => {
+        if (res.writableEnded) return;
+        try {
+          const text = Buffer.concat(chunks).toString('utf8');
+          if (JSON.parse(text).kind !== 'uriel-backup') throw new Error('not a backup');
+          await fs.promises.mkdir(dir, { recursive: true });
+          const file = path.join(dir, name);
+          // A day's backup is written once. The app asks again the same day only when it has forgotten that it
+          // saved (its storage was lost), and what it has then must not replace what it had this morning.
+          if (!fs.existsSync(file)) {
+            // written beside and renamed into place, so a crash halfway never leaves half a backup under a good name
+            await fs.promises.writeFile(`${file}.tmp`, text, 'utf-8');
+            await fs.promises.rename(`${file}.tmp`, file);
+          }
+          for (const old of backupCore.autoBackupsToDrop(await names())) await fs.promises.unlink(path.join(dir, old)).catch(() => {});
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, name, kept: (await names()).length }));
+        } catch (e) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: e.message }));
+        }
+      });
+      return;
+    }
+    const name = parsedUrl.query.name || '';
+    if (!backupCore.AUTO_NAME.test(name)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: false, error: 'bad name' }));
+    }
+    try {
+      const text = await fs.promises.readFile(path.join(dir, name), 'utf-8');
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(text);
+    } catch (e) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ success: false, error: 'no such backup' }));
+    }
   }
 
   if (parsedUrl.pathname === '/api/offline-library') {

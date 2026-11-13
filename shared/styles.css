@@ -8358,6 +8358,7 @@ html.theme-vt::view-transition-new(root) {
 }
 
 .restore-offline-list { flex: 1; min-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.auto-backup-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 4px; }
 .restore-offline-row { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-radius: 10px; cursor: pointer; }
 .restore-offline-row:hover { background: var(--md-sys-color-surface-container-high); }
 .restore-offline-row img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: var(--md-sys-color-surface-container-high); }

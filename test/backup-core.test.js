@@ -180,3 +180,43 @@ test('an .rfacc that inflates into something huge is refused', async () => {
   const file = new Uint8Array(Buffer.concat([Buffer.from('RFAC'), iv, c.getAuthTag(), enc]));
   await assert.rejects(B.parseBackupFile(file), /too big/);
 });
+
+test('an automatic backup is due once a day, and never for an empty library', () => {
+  const some = { playlists: 2, favorites: 0, history: 0 };
+  assert.equal(B.autoBackupDue({ lastDay: '2026-11-12', today: '2026-11-13', counts: some }), true);
+  assert.equal(B.autoBackupDue({ lastDay: '', today: '2026-11-13', counts: { playlists: 0, favorites: 0, history: 1 } }), true);
+  assert.equal(B.autoBackupDue({ lastDay: '2026-11-13', today: '2026-11-13', counts: some }), false);
+  // after a wipe the empty lists must not push the good backups out
+  assert.equal(B.autoBackupDue({ lastDay: '', today: '2026-11-13', counts: { playlists: 0, favorites: 0, history: 0 } }), false);
+  assert.equal(B.autoBackupDue({ lastDay: '', today: '2026-11-13' }), false);
+});
+
+test('the newest automatic backups are kept; other files in the folder are left alone', () => {
+  const days = ['01', '02', '03', '04', '05', '06', '07', '08', '09'].map((d) => B.autoBackupName(`2026-11-${d}`));
+  assert.deepEqual(B.autoBackupsToDrop([...days].reverse().concat(['notes.txt', 'uriel-auto-x.json'])), [days[0], days[1]]);
+  assert.deepEqual(B.autoBackupsToDrop(days.slice(0, B.AUTO_KEEP)), []);
+  assert.deepEqual(B.autoBackupsToDrop([]), []);
+  assert.equal(B.autoBackupDay('uriel-auto-2026-11-13.json'), '2026-11-13');
+  assert.equal(B.autoBackupDay('../uriel-auto-2026-11-13.json'), '');
+  assert.equal(B.dayOf(new Date(2026, 10, 3, 23, 59)), '2026-11-03');
+});
+
+test('a restore is offered when the library is empty and a backup is not, once', () => {
+  const empty = { playlists: 0, favorites: 0, history: 0 };
+  const backups = [
+    { name: 'uriel-auto-2026-11-13.json', counts: empty },
+    { name: 'uriel-auto-2026-11-12.json', counts: { playlists: 3, favorites: 40, history: 9 } },
+    { name: 'uriel-auto-2026-11-11.json', counts: { playlists: 3, favorites: 39, history: 5 } },
+  ];
+  assert.equal(B.restoreOffer({ counts: empty, backups }).name, 'uriel-auto-2026-11-12.json', 'the newest one with something in it');
+  assert.equal(B.restoreOffer({ counts: empty, backups, dismissed: 'uriel-auto-2026-11-12.json' }), null, 'said no to it already');
+  assert.equal(B.restoreOffer({ counts: { playlists: 1, favorites: 0, history: 0 }, backups }), null, 'the library has something');
+  assert.equal(B.restoreOffer({ counts: empty, backups: [backups[0]] }), null);
+  assert.equal(B.restoreOffer({ counts: empty, backups: [] }), null);
+});
+
+test("an automatic backup's own bookkeeping is never part of a backup or a restore", () => {
+  assert.equal(B.backupKeyAllowed('uriel_autobackup_day'), false);
+  assert.equal(B.backupKeyAllowed('uriel_autobackup_dismissed'), false);
+  assert.equal(B.keepOnRestore('uriel_autobackup_day'), true);
+});
