@@ -19556,6 +19556,88 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // #46: offline songs outlive a wiped library (their names and covers are saved next to the files), so they can
+  // be put back into a playlist
+  const restoreOfflineModal = document.getElementById('restore-offline-modal');
+  const restoreOfflineList = document.getElementById('restore-offline-list');
+  const restoreOfflineTarget = document.getElementById('restore-offline-target');
+  const restoreOfflineAll = document.getElementById('restore-offline-all');
+  const restoreOfflineCount = document.getElementById('restore-offline-count');
+  let restoreOfflineTracks = [];
+
+  // the saved platform can't be trusted (catalog songs were saved as SoundCloud), so the id decides: a YouTube
+  // video keeps its link, anything else (catalog songs, SoundCloud) gets a YouTube search like catalog songs have,
+  // so it still plays once its file is gone. Until then the file is found by its id.
+  function offlineEntryToTrack(e) {
+    const id = String(e.id || e.cleanId);
+    const title = e.title || id;
+    const artist = e.artist || 'Unknown artist';
+    const t = { id, title, artist, duration: Number(e.duration) || 0, thumbnail: e.thumbnail || '', platform: 'youtube' };
+    if (/^[\w-]{11}$/.test(id) && !/^\d+$/.test(id)) return { ...t, url: `https://www.youtube.com/watch?v=${id}` };
+    const q = `${artist} - ${title} official audio`;
+    return { ...t, url: `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`, searchQuery: q };
+  }
+
+  function updateRestoreOfflineCount() {
+    const boxes = [...restoreOfflineList.querySelectorAll('input[type=checkbox]')];
+    const n = boxes.filter((b) => b.checked).length;
+    restoreOfflineAll.checked = n === boxes.length && n > 0;
+    restoreOfflineCount.textContent = Tm('Select all ({0} of {1})', n, boxes.length);
+    document.getElementById('btn-confirm-restore-offline').disabled = n === 0;
+  }
+
+  async function openRestoreOffline() {
+    restoreOfflineList.innerHTML = `<div class="empty-hint">${escapeHtml(T('Loading...'))}</div>`;
+    restoreOfflineTarget.innerHTML = `<option value="">${escapeHtml(T('New playlist'))}</option>` +
+      state.playlists.map((pl) => `<option value="${escapeHtml(pl.id)}">${escapeHtml(pl.name)}</option>`).join('');
+    openModal(restoreOfflineModal);
+    let entries = [];
+    try {
+      const data = await (await fetch(`http://127.0.0.1:${state.serverPort}/api/offline-library`)).json();
+      entries = (data && data.tracks) || [];
+    } catch (e) {}
+    entries.sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
+    restoreOfflineTracks = entries.map(offlineEntryToTrack);
+    if (!entries.length) {
+      restoreOfflineList.innerHTML = `<div class="empty-hint">${escapeHtml(T('No offline songs found'))}</div>`;
+      updateRestoreOfflineCount();
+      return;
+    }
+    restoreOfflineList.innerHTML = entries.map((e, i) => {
+      const t = restoreOfflineTracks[i];
+      return `<label class="restore-offline-row"><input type="checkbox" class="m3-checkbox" data-i="${i}" checked>` +
+        `<img src="${escapeHtml(e.localThumbnail || listThumb(getTrackThumbUrl(t)) || '')}" alt="" loading="lazy">` +
+        `<span class="restore-offline-text"><span>${escapeHtml(t.title)}</span><span>${escapeHtml(t.artist)}</span></span></label>`;
+    }).join('');
+    updateRestoreOfflineCount();
+  }
+
+  if (restoreOfflineModal) {
+    document.getElementById('btn-restore-offline').addEventListener('click', openRestoreOffline);
+    document.getElementById('btn-cancel-restore-offline').addEventListener('click', () => closeModal(restoreOfflineModal));
+    restoreOfflineList.addEventListener('change', updateRestoreOfflineCount);
+    restoreOfflineAll.addEventListener('change', () => {
+      restoreOfflineList.querySelectorAll('input[type=checkbox]').forEach((b) => { b.checked = restoreOfflineAll.checked; });
+      updateRestoreOfflineCount();
+    });
+    document.getElementById('btn-confirm-restore-offline').addEventListener('click', () => {
+      const picked = [...restoreOfflineList.querySelectorAll('input[type=checkbox]:checked')].map((b) => restoreOfflineTracks[Number(b.dataset.i)]);
+      if (!picked.length) return;
+      const pl = state.playlists.find((p) => p.id === restoreOfflineTarget.value);
+      closeModal(restoreOfflineModal);
+      if (!pl) {
+        createPlaylist(T('Restored songs'), picked);
+        showToast(Tm('Restored {0} songs', picked.length));
+        return;
+      }
+      const fresh = picked.filter((t) => !pl.tracks.some((have) => isSameTrack(have, t)));
+      fresh.forEach((t) => pl.tracks.push(stampAddedAt(t)));
+      savePlaylists();
+      if (state.currentPlaylistId === pl.id) openPlaylistDetail(pl.id);
+      showToast(Tm('Added {0} songs to {1}', fresh.length, pl.name));
+    });
+  }
+
   let toolsPollInterval = null;
   let toolsWavyYt = null;
   let toolsWavyFf = null;

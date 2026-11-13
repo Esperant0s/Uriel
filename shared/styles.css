@@ -7104,15 +7104,32 @@ body.has-video-bg :is(.lyrics-header-actions, .right-panel .lyrics-header-action
   color: var(--md-sys-color-on-surface-variant);
 }
 
+/* drawn by hand: the browser's own box ticks in the accent colour, and with a white accent (dark themes) a
+   ticked box was just a white square */
 .m3-checkbox {
-  appearance: auto;
-  accent-color: var(--md-sys-color-primary);
+  appearance: none;
+  display: inline-grid;
+  place-content: center;
   width: 18px;
   height: 18px;
+  border: 2px solid var(--md-sys-color-on-surface-variant);
   border-radius: var(--md-shape-corner-extra-small, 4px);
+  background: transparent;
   cursor: pointer;
   margin: 0;
   flex-shrink: 0;
+}
+.m3-checkbox:checked {
+  background: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+}
+.m3-checkbox:checked::after {
+  content: '';
+  width: 4px;
+  height: 9px;
+  border: solid var(--md-sys-color-on-primary);
+  border-width: 0 2px 2px 0;
+  transform: translateY(-1px) rotate(45deg);
 }
 
 .sp-pane label {
@@ -8339,6 +8356,14 @@ html.theme-vt::view-transition-new(root) {
 .settings-nav {
   overscroll-behavior: contain;
 }
+
+.restore-offline-list { flex: 1; min-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.restore-offline-row { display: flex; align-items: center; gap: 10px; padding: 6px 4px; border-radius: 10px; cursor: pointer; }
+.restore-offline-row:hover { background: var(--md-sys-color-surface-container-high); }
+.restore-offline-row img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; flex-shrink: 0; background: var(--md-sys-color-surface-container-high); }
+.restore-offline-row .restore-offline-text { display: flex; flex-direction: column; min-width: 0; }
+.restore-offline-row .restore-offline-text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.restore-offline-row .restore-offline-text span + span { font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline); }
 
 /* long libraries: skip layout/paint for off-screen rows */
 .track-row:nth-child(n+25) {

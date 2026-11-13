@@ -1779,6 +1779,15 @@
                 <button class="btn-outline-pill" id="btn-clear-offline">Clear</button>
               </div>
             </div>
+            <div class="setting-item" id="offline-restore-item">
+              <div class="setting-item-top" style="align-items: center; justify-content: space-between;">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <span class="setting-name" data-i18n>Restore from downloads</span>
+                  <span style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);" data-i18n>Lost your playlists? Put your offline songs back into a playlist.</span>
+                </div>
+                <button class="btn-outline-pill" id="btn-restore-offline">Restore</button>
+              </div>
+            </div>
             <div class="setting-item" id="offline-limit-item">
               <div class="setting-item-top" style="align-items: center;">
                 <div style="display: flex; flex-direction: column; gap: 2px;">
@@ -2998,6 +3007,24 @@
           New playlist
         </button>
         <button class="btn-outline-pill" id="btn-cancel-add-playlist" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop hidden" id="restore-offline-modal">
+    <div class="dialog-card" style="width: 480px; max-width: calc(100vw - 32px); display: flex; flex-direction: column; gap: 12px; max-height: calc(100vh - 64px);">
+      <h3 style="margin: 0;">Restore from downloads</h3>
+      <label style="display: flex; align-items: center; gap: 10px; font-size: calc(13px * var(--font-scale, 1));">
+        <span data-i18n>Add to</span>
+        <select class="pill-select" id="restore-offline-target" style="flex: 1; min-width: 0;"></select>
+      </label>
+      <label style="display: flex; align-items: center; gap: 8px; font-size: calc(13px * var(--font-scale, 1)); cursor: pointer;">
+        <input type="checkbox" id="restore-offline-all" class="m3-checkbox" checked> <span id="restore-offline-count" data-i18n>Select all</span>
+      </label>
+      <div id="restore-offline-list" class="restore-offline-list"></div>
+      <div class="dialog-actions">
+        <button class="btn-outline-pill" id="btn-cancel-restore-offline">Cancel</button>
+        <button class="btn-pill-primary" id="btn-confirm-restore-offline">Restore</button>
       </div>
     </div>
   </div>
