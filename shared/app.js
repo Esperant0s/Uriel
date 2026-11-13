@@ -13942,9 +13942,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       const card = document.createElement('div');
       card.className = 'ct-card plugin-card';
       card.innerHTML = '<div class="ct-info"><div class="ct-name"></div><div class="ct-meta"></div></div><button class="btn-icon-pill ct-remove" title="Delete file" data-i18n-attr="title"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button><button class="effect-switch-btn"><span class="thumb"></span></button>';
-      card.querySelector('.ct-name').textContent = `${p.name}${p.version ? ' v' + p.version : ''}`;
-      card.querySelector('.ct-meta').textContent = [p.author && `by ${p.author}`, p.description, p.file].filter(Boolean).join(' · ');
+      card.querySelector('.ct-name').textContent = p.wrongExt ? p.file : `${p.name}${p.version ? ' v' + p.version : ''}`;
+      card.querySelector('.ct-meta').textContent = p.wrongExt
+        ? T('Rename it to end in .js')
+        : [p.author && `by ${p.author}`, p.description, p.file].filter(Boolean).join(' · ');
       const toggle = card.querySelector('.effect-switch-btn');
+      if (p.wrongExt) toggle.remove();
       toggle.classList.toggle('active', !!p.enabled);
       toggle.addEventListener('click', () => {
         p.enabled = !p.enabled;

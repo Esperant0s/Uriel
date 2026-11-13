@@ -7,7 +7,11 @@ const { DATA_DIR } = require('./platform');
 const PLUGINS_DIR = path.join(DATA_DIR, 'plugins');
 const STATE_PATH = path.join(PLUGINS_DIR, 'plugins.json');
 const MAX_BYTES = 1024 * 1024;
-const safeName = (n) => /^[\w.\- ]+\.js$/.test(String(n)) && !String(n).includes('..');
+// any file name ending in .js (#38): only plain letters were allowed before, so "plugin (1).js", "Plugin.JS" or a
+// name in another alphabet was skipped without a word. No slashes or control characters, so it stays in the folder.
+const safeName = (n) => /^[^\x00-\x1f/\\:*?"<>|]+\.js$/i.test(String(n)) && !String(n).startsWith('.');
+// Notepad on Windows saves "plugin.js" as "plugin.js.txt" while hiding the .txt
+const txtName = (n) => /\.js\.txt$/i.test(String(n)) && safeName(String(n).slice(0, -4));
 
 const EXAMPLE = '/**\n * @name Hello plugin\n * @author Uriel\n * @version 1.0.0\n * @description Shows a message when the track changes. Edit or delete this file.\n */\nconst off = Uriel.on(\'trackchange\', (track) => Uriel.toast(\'Now playing: \' + track.title));\nreturn { stop() { off(); } };\n';
 
@@ -42,7 +46,8 @@ function parseMeta(code, fallbackName) {
 function listAll() {
   ensureDir();
   const enabled = readState();
-  return fs.readdirSync(PLUGINS_DIR).filter((f) => f.toLowerCase().endsWith('.js') && safeName(f)).map((f) => {
+  return fs.readdirSync(PLUGINS_DIR).filter((f) => safeName(f) || txtName(f)).map((f) => {
+    if (txtName(f)) return { file: f, name: f.slice(0, -7), wrongExt: true };
     try {
       const full = path.join(PLUGINS_DIR, f);
       if (fs.statSync(full).size > MAX_BYTES) return null;
@@ -63,7 +68,7 @@ function register(getWindow) {
   ipcMain.on('plugins-disable-all', () => writeState({}));
   ipcMain.on('plugins-open-folder', () => { ensureDir(); shell.openPath(PLUGINS_DIR); });
   ipcMain.on('plugins-remove', (e, file) => {
-    if (!safeName(file)) return;
+    if (!safeName(file) && !txtName(file)) return;
     try { fs.unlinkSync(path.join(PLUGINS_DIR, file)); } catch (err) {}
     const s = readState();
     delete s[file];
