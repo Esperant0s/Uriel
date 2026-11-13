@@ -1,3 +1,4 @@
+// @ts-check
 require('./legacy-env');
 const http = require('http');
 const https = require('https');
@@ -6,7 +7,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const childProcs = require('./child-procs');
-const spawn = (...args) => childProcs.track(require('child_process').spawn(...args));
+/** @type {(...args: any[]) => any} */
+const spawn = (...args) => childProcs.track(require('child_process').spawn.apply(null, args));
 const { StringDecoder } = require("string_decoder");
 const dns = require('dns');
 const net = require('net');
@@ -14,7 +16,7 @@ const net = require('net');
 const PORT = 38472;
 const { DATA_DIR, CACHE_DIR, CUSTOM_LYRICS_DIR, LYRICS_DIR, THUMBNAILS_DIR, METADATA_PATH, LIBRARY_DIR, LIBRARY_PATH, ytDlpCommand, resolveDownloadDir, resolveBinary } = require('../desktop/platform');
 // iOS can't hand a cross-origin stream to Web Audio, so it plays everything from the disk cache.
-const STREAM_VIA_CACHE = !!require('../desktop/platform').STREAM_VIA_CACHE;
+const STREAM_VIA_CACHE = !!/** @type {any} */ (require('../desktop/platform')).STREAM_VIA_CACHE;
 const logger = require('../desktop/logger');
 const { getSystemAudioOutputInfo } = require('../desktop/audio-output');
 const ytmArtist = require('./ytm-artist');
@@ -2211,6 +2213,8 @@ async function handleSearch(req, res, query, platform = 'youtube', limit = 20) {
     }
   }
 
+  /** @type {(value: any) => void} */
+
   let resolveSearchOutcome;
   const searchOutcome = new Promise(resolve => { resolveSearchOutcome = resolve; });
   const cacheEntry = { promise: searchOutcome };
@@ -2482,6 +2486,7 @@ async function handleVibeRecommendations(req, res, payload) {
 // Music's radio, Last.fm's similar songs, Deezer), mixed evenly across the seeds (recommend-core.js mixRadio),
 // leaving out the seeds, what this radio already queued, and blocked artists and songs. Unlike My Wave it does not
 // care what was heard before: a radio is about the songs it was started from.
+/** @param {any[]} seeds @param {{ limit?: number, exclude?: { keys?: string[], ids?: string[] }, blocks?: { artists?: string[], songs?: string[] } }} [o] */
 async function songRadioTracks(seeds, { limit = 25, exclude = {}, blocks = {} } = {}) {
   const seedList = (Array.isArray(seeds) ? seeds : []).filter((s) => s && (s.title || s.id)).slice(0, 5).map((s) => ({
     artist: String(s.artist || ''), title: String(s.title || ''), id: String(s.id || ''), platform: s.platform || 'youtube', weight: 1,
@@ -2740,6 +2745,8 @@ async function handleStreamInfo(req, res, trackUrl, trackId, platform = 'youtube
       return res.end(JSON.stringify(cached.data));
     }
   }
+
+  /** @type {(value: any) => void} */
 
   let resolveLookup;
   const lookupPromise = new Promise(resolve => { resolveLookup = resolve; });
@@ -3573,6 +3580,8 @@ async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3',
     return res.end(JSON.stringify(outcome.body));
   }
 
+  /** @type {(value: any) => void} */
+
   let resolveDownload;
   downloadPromise = downloadKey ? new Promise(resolve => { resolveDownload = resolve; }) : null;
   if (downloadKey) downloadInFlight.set(downloadKey, downloadPromise);
@@ -4190,6 +4199,8 @@ async function handleLyrics(req, res, title, artist, allowOnline = true, duratio
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ success: true, lyrics: dropLength(cached.text), isCustom: cached.isCustom || false }));
   }
+
+  /** @type {(value: any) => void} */
 
   let resolveLyrics;
   const lyricsPromise = new Promise(resolve => { resolveLyrics = resolve; });
@@ -5188,8 +5199,7 @@ function spotifyApiFailure(resp, endpoint) {
   const failure = new Error(resp.status === 429
     ? 'Spotify rate limited the request. Try again later.'
     : `Spotify ${endpoint} returned HTTP ${resp.status}${detail ? `: ${detail}` : ''}`);
-  failure.status = resp.status;
-  return failure;
+  return Object.assign(failure, { status: resp.status });
 }
 
 async function handleSpotifyLibrary(req, res, query) {
@@ -5718,6 +5728,8 @@ async function handleAlbumSearch(req, res, parsedUrl) {
     return res.end(JSON.stringify(outcome.body));
   }
 
+  /** @type {(value: any) => void} */
+
   let resolveSearch;
   const searchPromise = new Promise(resolve => { resolveSearch = resolve; });
   const inFlightEntry = { promise: searchPromise };
@@ -6012,6 +6024,8 @@ async function handleAlbumTracks(req, res, parsedUrl) {
     return res.end(JSON.stringify(outcome.body));
   }
 
+  /** @type {(value: any) => void} */
+
   let resolveLookup;
   const lookupPromise = new Promise(resolve => { resolveLookup = resolve; });
   const inFlightEntry = { promise: lookupPromise };
@@ -6025,6 +6039,7 @@ async function handleAlbumTracks(req, res, parsedUrl) {
   };
 
   try {
+    /** @type {any} */
     let found = null;
     let failed = false;
     const attempt = async (fn) => {
@@ -6123,6 +6138,8 @@ async function handleHotPicks(req, res, parsedUrl) {
       tracks: hotPicksCache.data.tracks.slice(0, limit)
     }));
   }
+
+  /** @type {(value: any) => void} */
 
   let resolveLookup;
   const lookupPromise = new Promise(resolve => { resolveLookup = resolve; });
@@ -6652,7 +6669,8 @@ const server = http.createServer(guardHandler(async (req, res) => {
     return res.end();
   }
 
-  const parsedUrl = url.parse(req.url, true);
+  // (the query has single values only: see just below)
+  const parsedUrl = /** @type {Omit<import('url').UrlWithParsedQuery, 'query'> & { query: Record<string, string> }} */ (url.parse(req.url, true));
   // a repeated parameter (?id=a&id=b) arrives as an array, which every route would choke on; keep the last
   // value like the phone build's url shim does
   for (const key of Object.keys(parsedUrl.query)) {
@@ -7026,7 +7044,8 @@ const server = http.createServer(guardHandler(async (req, res) => {
     const platform = parsedUrl.query.platform || 'youtube';
     const title = parsedUrl.query.title || '';
     const artist = parsedUrl.query.artist || '';
-    const duration = parsedUrl.query.duration || 0;
+    // a number: as text it went on into the saved song details ("239")
+    const duration = Number(parsedUrl.query.duration) || 0;
     const thumbnail = parsedUrl.query.thumbnail || '';
     return handleStreamInfo(req, res, trackUrl, trackId, platform, title, artist, duration, thumbnail, parsedUrl.query.fresh === '1', parsedUrl.query.localOnly === '1');
   }
@@ -7378,10 +7397,10 @@ function startServer(port = PORT) {
       require('../desktop/tools').updateYtDlpIfManaged().catch(() => {});
       if (!process.env.NODE_TEST_CONTEXT) rescanDeviceMusic().catch(() => {});
       resolve(bound);
-    }).on('error', (err) => {
+    }).on('error', (/** @type {NodeJS.ErrnoException} */ err) => {
       if (err.code === 'EADDRINUSE') {
         server.listen(0, '127.0.0.1', () => {
-          const p = server.address().port;
+          const p = /** @type {import('net').AddressInfo} */ (server.address()).port;
           console.log(`devsize internal server running on fallback port http://127.0.0.1:${p}`);
           require('../desktop/tools').updateYtDlpIfManaged().catch(() => {});
           if (!process.env.NODE_TEST_CONTEXT) rescanDeviceMusic().catch(() => {});
