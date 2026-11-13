@@ -1,3 +1,4 @@
+// @ts-check
 // Playlist files and profile backups, the part you see: "Export as JSON" on a playlist, Settings → Storage
 // (export / import playlists, back up / restore this profile), Settings → Integrations → Playlist file and the
 // JSON button under "Create playlist". What goes in and what is let back in is in backup-core.js.
@@ -5,6 +6,7 @@
 (function () {
   const B = window.UrielBackup;
   if (!B) return;
+  /** @type {(id: string) => any} */
   const $ = (id) => document.getElementById(id);
   let core = null;
   const toast = (m, kind) => { try { core && core.toast(m, kind || 'info'); } catch (e) {} };

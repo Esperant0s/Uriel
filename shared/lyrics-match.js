@@ -1,3 +1,4 @@
+// @ts-check
 // Turns a YouTube/SoundCloud title and channel into what lyrics sites list ("Artist - Song (Official Video)"
 // on channel "ArtistVEVO" -> song "Song" by "Artist"), and picks the lrclib result that actually matches.
 

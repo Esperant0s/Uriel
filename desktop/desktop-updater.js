@@ -1,3 +1,4 @@
+// @ts-check
 // In-app updates for the computer: "Update" in the update banner (update-notifier.js) downloads the new build here,
 // checks it against GitHub's SHA-256 for that file, and puts it in place of this one on "Restart now", or when
 // Uriel quits after "Later". Nothing opens in the browser. What gets replaced depends on how Uriel was installed:
@@ -49,6 +50,7 @@ function macBundle(exePath) {
 }
 
 // Streams url to dest, checking the size and SHA-256 on the way; dest only appears once both match.
+/** @param {{ fetch: (url: string, init?: any) => Promise<Response>, url: string, sha256?: string, size?: number, dest: string, onProgress?: (p: { received: number, total: number }) => void, signal?: AbortSignal }} o */
 async function download({ fetch, url, sha256, size, dest, onProgress = () => {}, signal }) {
   if (!updateCore.isGithubUrl(url)) throw new Error('not a GitHub download');
   const res = await fetch(url, { redirect: 'follow', signal });

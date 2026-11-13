@@ -1,3 +1,4 @@
+// @ts-check
 // "Update available": compares this build (build-info.js, stamped in CI) with its channel's GitHub release
 // (update-core.js). Asks GitHub at most every 6 hours; "Later" hides the banner for that build for 3 days. Local and
 // dev builds (sha "dev") never ask.
@@ -106,13 +107,13 @@
     const b = banner;
     const title = b.querySelector('b');
     const sub = b.querySelector('span');
-    const bar = b.querySelector('.update-banner-progress');
+    const bar = /** @type {HTMLElement} */ (b.querySelector('.update-banner-progress'));
     const later = b.querySelector('.update-banner-later');
-    const go = b.querySelector('.update-banner-go');
-    b.render = () => {
+    const go = /** @type {HTMLElement} */ (b.querySelector('.update-banner-go'));
+    const render = () => {
       const inProgress = phase === 'downloading';
       bar.hidden = !inProgress;
-      bar.firstElementChild.style.width = `${percent}%`;
+      /** @type {HTMLElement} */ (bar.firstElementChild).style.width = `${percent}%`;
       go.hidden = inProgress;
       later.textContent = inProgress ? 'Hide' : 'Later';
       if (!inApp || phase === 'failed') {
@@ -144,15 +145,15 @@
       if (phase === 'idle') store.set('uriel_update_snooze', { sha: update.sha, until: Date.now() + SNOOZE });
       hideBanner();
     });
-    listeners.add(b.render);
-    b.render();
+    listeners.add(render);
+    render();
     document.body.appendChild(b);
     requestAnimationFrame(() => requestAnimationFrame(() => banner && banner.classList.add('show')));
   }
 
   // Settings > About: status line and "Check now" (then "Update" / "Restart now", or "Download" without an installer)
   const statusEl = document.getElementById('update-status');
-  const checkBtn = document.getElementById('btn-check-updates');
+  const checkBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('btn-check-updates'));
   let current = null;
   let found = '';
   const setStatus = (text) => {

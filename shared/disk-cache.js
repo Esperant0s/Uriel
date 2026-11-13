@@ -1,3 +1,4 @@
+// @ts-check
 'use strict';
 
 // Keeps the computer's offline songs under the limit chosen in Settings → Storage: the songs played longest ago
@@ -26,6 +27,7 @@ function planEviction(files, limitBytes, keepNewest = KEEP_NEWEST) {
 
 // lastPlayed(id) -> ms or 0: the file's time already moves when a song is looked up to play, this adds what the
 // index remembers. onRemoved(id) runs for each song actually deleted.
+/** @param {string} dir @param {number} limitBytes @param {{ lastPlayed?: (id: string) => number, onRemoved?: (id: string) => void, keepNewest?: number }} [o] */
 async function enforceLimit(dir, limitBytes, { lastPlayed = () => 0, onRemoved = () => {}, keepNewest = KEEP_NEWEST } = {}) {
   if (!(limitBytes > 0)) return 0;
   const files = [];

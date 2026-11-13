@@ -1,3 +1,4 @@
+// @ts-check
 'use strict';
 // What happens when a song that was already playing loses its stream (an expired link, a dropped connection):
 // it is looked up again and continues where it stopped, a few times per song. Offline it waits for the

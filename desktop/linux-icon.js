@@ -1,3 +1,4 @@
+// @ts-check
 // Linux: the taskbar and dock draw the icon of the app's launcher entry (~/.local/share/applications/uriel.desktop),
 // not the window's: Wayland has no way for an app to set its own window icon. So the icon picked in Settings →
 // Theme → App icon goes into the launcher entry: the PNG is saved under a new name each time (desktops cache icons
@@ -38,6 +39,7 @@ function adoptOldEntry(home, image) {
 
 // png: the icon's PNG bytes, or null for the app's own icon (defaultPng). Returns the icon path the entry now
 // uses, or null when there is no launcher entry to change (nothing is created here: launcher.js does that).
+/** @param {{ png?: Buffer | null, defaultPng?: Buffer, home?: string, image?: string }} [o] */
 function setLauncherIcon({ png, defaultPng, home = os.homedir(), image = process.env.APPIMAGE } = {}) {
   const p = paths(home);
   adoptOldEntry(home, image);

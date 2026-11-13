@@ -1,3 +1,4 @@
+// @ts-check
 // Per-track speed / pitch / volume (issue #11) and speed & pitch presets. A song can keep its own speed, tape speed,
 // pitch and volume gain ("For this track only" in Audio → Tempo); every other song follows the global values, and a
 // song with its own settings keeps them when the global ones change. "Ignore per-track settings" plays everything

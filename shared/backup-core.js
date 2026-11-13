@@ -1,3 +1,4 @@
+// @ts-check
 // Playlist files and profile backups: what goes into them and what is let back in. No DOM: backup.js runs it in
 // the app, test/backup-core.test.js in Node.
 // - Playlist files (JSON) are meant to be shared, so reading one trusts nothing: only plain text and numbers are
@@ -152,6 +153,7 @@
   const keepOnRestore = (key, isDevice) => !backupKeyAllowed(key, isDevice);
 
   // the open profile's own keys -> a backup file
+  /** @param {any} entries @param {{ profileName?: string, appVersion?: string, isDevice?: (key: string) => boolean }} [o] */
   function makeBackup(entries, { profileName = '', appVersion = '', isDevice } = {}) {
     const data = {};
     for (const [k, v] of entries) if (typeof v === 'string' && backupKeyAllowed(k, isDevice)) data[k] = v;
@@ -217,6 +219,7 @@
   const fromOlder = (k) => (typeof k === 'string' ? k.replace(/^(?:riff|muriel|mural)_/, 'uriel_') : k);
 
   // A backup file's contents (already parsed) -> what a restore writes. Throws an Error with a message for people.
+  /** @param {any} obj @param {{ isDevice?: (key: string) => boolean }} [o] */
   function readBackup(obj, { isDevice } = {}) {
     if (!isObj(obj)) throw new Error("That file isn't a Uriel backup");
     let source = '';

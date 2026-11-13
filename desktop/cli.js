@@ -1,3 +1,4 @@
+// @ts-check
 require('../shared/legacy-env');
 
 

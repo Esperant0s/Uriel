@@ -1,3 +1,4 @@
+// @ts-check
 // What the system's "now playing" controls are told (lock screen, Control Center, the iPhone widget), and when
 // to start again after another app's sound interrupted Uriel (issue #26). No DOM here: app.js and
 // mobile/audio-interruption.ts use it, test/now-playing.test.js runs it.
@@ -5,6 +6,7 @@
   // navigator.mediaSession.setPositionState() for an <audio> element: null when the song has no length yet
   // (setPositionState throws on a NaN / 0 duration, or a position past the end). The rate is the element's own,
   // so a sped-up or slowed song's progress bar keeps pace with what is heard.
+  /** @param {{ duration: number, currentTime: number, playbackRate: number } | null | undefined} audio @param {unknown} [fallbackDuration] */
   function positionState(audio, fallbackDuration) {
     const fb = Number(fallbackDuration);
     const duration = audio && Number.isFinite(audio.duration) && audio.duration > 0
@@ -22,6 +24,7 @@
   const INTERRUPT_GRACE_MS = 3000;
 
   // was Uriel playing when another app took the sound? Not when the listener had paused it themselves.
+  /** @param {{ paused: boolean, ended: boolean, pausedByUser: boolean, lastPlayingAt: number, now: number }} o */
   function wasPlayingAtInterruption({ paused, ended, pausedByUser, lastPlayingAt, now }) {
     if (pausedByUser || ended) return false;
     if (!paused) return true;
@@ -30,11 +33,12 @@
 
   // the interruption is over: start again (as Spotify does) when iOS says so, it was playing before, and
   // nobody pressed pause meanwhile
+  /** @param {{ wasPlaying: boolean, shouldResume: boolean, pausedByUser: boolean, paused: boolean, ended: boolean, hasTrack: boolean }} o */
   function resumeAfterInterruption({ wasPlaying, shouldResume, pausedByUser, paused, ended, hasTrack }) {
     return !!(wasPlaying && shouldResume && !pausedByUser && paused && !ended && hasTrack);
   }
 
   const api = { positionState, wasPlayingAtInterruption, resumeAfterInterruption, INTERRUPT_GRACE_MS };
   if (typeof module !== 'undefined') module.exports = api;
-  else window.UrielNowPlaying = api;
+  else /** @type {any} */ (window).UrielNowPlaying = api;
 })();

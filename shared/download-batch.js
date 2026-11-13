@@ -1,3 +1,4 @@
+// @ts-check
 // "Download all" for a playlist, favorites or an album (#29). A long list used to go one song after another with
 // no retry: once YouTube started refusing (HTTP 429/403 after a couple of hundred lookups) every later song
 // failed straight away, and a failed song was not tried again. Here a few songs download at a time, a refusal

@@ -1,3 +1,4 @@
+// @ts-check
 // Uriel Encore: counts what you actually listen to (a play counts after 30s, or half of a short song) and
 // plays it back: the "On repeat" top 3 on the home page and a story-style recap you can open any time.
 // Everything stays on the device (localStorage). Listening older than ~13 months is folded into one
@@ -105,7 +106,7 @@
     if (!audio) return;
     importHistory();
     if (C.state.currentTrack) start(C.state.currentTrack);
-    window.addEventListener('uriel:track', (e) => { if (!cur || cur.ended || keyOf(e.detail) !== cur.key) start(e.detail); });
+    window.addEventListener('uriel:track', (/** @type {CustomEvent} */ e) => { if (!cur || cur.ended || keyOf(e.detail) !== cur.key) start(e.detail); });
     audio.addEventListener('timeupdate', () => {
       if (!cur) return;
       const t = audio.currentTime || 0, d = t - cur.last;
@@ -218,13 +219,13 @@
             <span class="onrepeat-meta"><b>${esc(s.title)}</b><span>${esc(s.artist)}</span></span>
             <span class="onrepeat-count">${s.plays}<small>${unit(s.plays, 'play', 'plays')}</small></span>
           </button>`).join('')}</div>` : `<div class="onrepeat-empty">${Th("Your most played songs show up here once you've listened for a bit.")}</div>`}`;
-      box.querySelectorAll('.onrepeat-chip').forEach((b) => b.addEventListener('click', () => {
+      box.querySelectorAll('.onrepeat-chip').forEach((/** @type {HTMLElement} */ b) => b.addEventListener('click', () => {
         homePeriod = b.dataset.p;
         try { localStorage.setItem('uriel_onrepeat_period', homePeriod); } catch (e) {}
         renderHome();
       }));
       box.querySelector('.onrepeat-encore').addEventListener('click', () => open(homePeriod === 'all' ? 'all' : homePeriod));
-      box.querySelectorAll('.onrepeat-row').forEach((r) => r.addEventListener('click', () => {
+      box.querySelectorAll('.onrepeat-row').forEach((/** @type {HTMLElement} */ r) => r.addEventListener('click', () => {
         const list = top.map(toTrack);
         window.UrielCore.playTrack(list[+r.dataset.i], list, +r.dataset.i);
       }));
@@ -344,9 +345,9 @@
     try { overlay.focus({ preventScroll: true }); } catch (e) {}
     requestAnimationFrame(() => overlay && overlay.classList.add('open'));
     overlay.addEventListener('click', (e) => {
-      const t = e.target;
+      const t = /** @type {HTMLElement} */ (e.target);
       if (t.closest('.enc-close')) return close();
-      const p = t.closest('[data-period]');
+      const p = /** @type {HTMLElement | null} */ (t.closest('[data-period]'));
       if (p) return render(p.dataset.period);
       if (t.closest('[data-next]')) return show(1);
       if (t.closest('[data-play]')) { const list = current.songs.slice(0, 25).map(toTrack); if (list.length) window.UrielCore.playTrack(list[0], list, 0); return close(); }

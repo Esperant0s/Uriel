@@ -1,3 +1,4 @@
+// @ts-check
 // One way to find a playable stream for a song, on every platform (docs/design/playback-resolution.md).
 // server.js passes the list of strategies it has (computers: fast lookup, yt-dlp, other uploads, SoundCloud;
 // phones: the in-app download, other uploads, SoundCloud) and they all share one health board, so the rules for
@@ -57,9 +58,11 @@ function withTimeout(promise, ms) {
 // strategies: [{ name, source, maxMs, canHandle(song, health), attempt(song, { budgetMs, health, signal }) }]
 //   attempt resolves to a result ({ url, headers } or { local: true }) or to null for "not here"; throws to fail
 // isBlocked(error): true for a definite refusal ("confirm you're not a bot", HTTP 429)
+/** @param {{ strategies: any[], health?: any, isBlocked?: (e: any) => boolean, now?: () => number, log?: (song: any, tried: any[]) => void }} o */
 function createResolver({ strategies, health = createHealth(), isBlocked = () => false, now = () => Date.now(), log = () => {} }) {
   const inFlight = new Map();
 
+  /** @param {any} song @param {{ reason?: string, deadlineMs?: number, signal?: AbortSignal }} [o] */
   async function run(song, { reason = 'play', deadlineMs = 30000, signal } = {}) {
     const start = now();
     const tried = [];

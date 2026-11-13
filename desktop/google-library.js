@@ -1,3 +1,4 @@
+// @ts-check
 // YouTube / YouTube Music library import (desktop): log in to Google in a separate window, then read the liked
 // songs and playlists of that account. Registered by main.js.
 // The Google login lives in its own persistent browser storage, one per Uriel profile ("persist:muriel-google"
@@ -16,10 +17,11 @@ const LIMITS = { likePages: 60, playlists: 200, playlistPages: 40, tracksPerList
 
 const partitionFor = (profile) => (PROFILE_RE.test(String(profile || '')) && profile !== 'default' ? `persist:muriel-google-${profile}` : 'persist:muriel-google');
 
+const readySessions = new WeakSet();
 function googleSession(profile) {
   const s = session.fromPartition(partitionFor(profile));
-  if (!s.__urielReady) {
-    s.__urielReady = true;
+  if (!readySessions.has(s)) {
+    readySessions.add(s);
     try { s.setUserAgent(CHROME_UA); } catch (e) {}
     // the login page needs no camera, microphone, notifications or anything else
     try { s.setPermissionRequestHandler((wc, permission, cb) => cb(false)); } catch (e) {}
@@ -179,7 +181,7 @@ async function importLibrary(opts) {
       credentials: 'include',
       signal: AbortSignal.timeout(20000),
     });
-    if (res.status === 401 || res.status === 403) { const e = new Error('Google refused: log in again'); e.code = 'not_logged_in'; throw e; }
+    if (res.status === 401 || res.status === 403) throw Object.assign(new Error('Google refused: log in again'), { code: 'not_logged_in' });
     if (!res.ok) throw new Error(`YouTube answered ${res.status}`);
     const raw = await res.text();
     if (raw.length > 30e6) throw new Error('YouTube sent too much data');

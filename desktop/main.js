@@ -1,3 +1,4 @@
+// @ts-check
 const { app, BrowserWindow, dialog, ipcMain, screen, shell, Tray, Menu, nativeImage, globalShortcut, powerMonitor, clipboard } = require('electron');
 require('../shared/legacy-env');
 // Mural's (or Muriel's) data comes over on Uriel's first start, before platform.js or Chromium open any of these folders

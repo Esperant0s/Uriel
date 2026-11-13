@@ -1,3 +1,4 @@
+// @ts-check
 // Settings → Integrations → Last.fm: what the open profile listens to goes to its Last.fm account.
 // lastfm-core.js decides when (the scrobbling rules); the in-app server (server.js, /api/lastfm/*) talks to Last.fm
 // and keeps the login, so this page never sees the session key. Works the same on phones.
@@ -5,6 +6,7 @@
   const L = window.UrielLastfm;
   if (!L) return;
   const ENABLED = 'uriel_lastfm_enabled';
+  /** @type {(id: string) => any} */
   const $ = (id) => document.getElementById(id);
   const profileId = () => (window.UrielProfiles && window.UrielProfiles.id) || 'default';
   const isPhone = () => !!(window.electronAPI && window.electronAPI.isMobile);

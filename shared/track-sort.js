@@ -1,3 +1,4 @@
+// @ts-check
 const TRACK_SORT_MODES = ['manual', 'added-desc', 'added-asc', 'title-asc', 'title-desc', 'artist-asc', 'album-asc', 'duration-asc'];
 
 function compareText(a, b, key) {
@@ -73,6 +74,7 @@ function librarySortMode(kind, mode) {
 }
 
 // plays: (item) => number, for 'plays-desc' (the app counts them from the listening history)
+/** @param {string} kind @param {any[]} items @param {string} mode @param {{ plays?: (item: any) => number }} [o] */
 function sortLibrary(kind, items, mode, { plays } = {}) {
   const list = Array.isArray(items) ? items.filter(Boolean) : [];
   const m = librarySortMode(kind, mode);

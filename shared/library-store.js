@@ -1,3 +1,4 @@
+// @ts-check
 // Playlists, favorites and history in IndexedDB instead of localStorage (docs/adr/0001, action item 1).
 // localStorage holds ~5 MB for everything; a big library filled it and saving anything failed. These three lists
 // now live in IndexedDB (no such cap) and every other key stays where it was.
@@ -26,6 +27,7 @@
   const RETRY_MS = [300, 1200];
 
   // base: the real localStorage ({ get, set, remove, keys }); db: { loadAll() -> Map, put(k, v), del(k) }
+  /** @param {any} base @param {any} db @param {{ onError?: (e: any, key?: string) => void, timeoutMs?: number, movedTimeoutMs?: number, retryMs?: number[] }} [o] */
   function createStore(base, db, { onError = () => {}, timeoutMs = FIRST_OPEN_MS, movedTimeoutMs = MOVED_OPEN_MS, retryMs = RETRY_MS } = {}) {
     const mem = new Map();
     const seq = new Map(); // a write's number per key, so an older write finishing late can't undo a newer one

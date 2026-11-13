@@ -1,3 +1,4 @@
+// @ts-check
 // Recommendations (#19), the parts that are plain data: reading YouTube Music's radio for a song (its "Up next"
 // watch playlist) and Last.fm's similar songs and artists, and keeping blocked and just-played songs out.
 // No network: server.js fetches and uses these in My Wave / the Daily Mixes, test/recommend-core.test.js runs them.
@@ -120,6 +121,7 @@
   // Keeps out blocked artists and songs (library-pages.js: "Queen" also blocks "Queen & David Bowie"), songs whose
   // key or id is in `recent` (just played, or recommended a moment ago) and repeats within the list itself.
   // keyOf(track) gives the artist+title key the caller uses everywhere else.
+  /** @param {any[]} tracks @param {{ blocks?: any, recentKeys?: any, recentIds?: any, keyOf?: (t: any) => string }} [o] */
   function dropUnwanted(tracks, { blocks, recentKeys, recentIds, keyOf } = {}) {
     const keys = recentKeys instanceof Set ? recentKeys : new Set(list(recentKeys));
     const ids = recentIds instanceof Set ? recentIds : new Set(list(recentIds));
@@ -145,6 +147,7 @@
   // Song radio (#28): one list of candidates per seed song, mixed evenly (one from each seed in turn, best first),
   // without repeats across seeds, without the seeds themselves and without anything in `exclude` (songs the radio
   // already queued). At most `perArtist` songs by one artist, so one seed's artist doesn't take over.
+  /** @param {any[][]} perSeed @param {{ limit?: number, exclude?: any, keyOf?: (t: any) => string, perArtist?: number }} [o] */
   function mixRadio(perSeed, { limit = 25, exclude, keyOf, perArtist = 3 } = {}) {
     const key = typeof keyOf === 'function' ? keyOf : (t) => `${lib.nameKey(t.artist)}::${lib.nameKey(t.title)}`;
     const ex = exclude || {};

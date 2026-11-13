@@ -1,3 +1,4 @@
+// @ts-check
 // Picks the search result that is the same recording as an imported song (Spotify, Yandex, link imports).
 // Used by app.js (browser global) and tests (CommonJS). #18: matching on title words alone took songs of
 // other artists with the same title, so the artist now has to match too.

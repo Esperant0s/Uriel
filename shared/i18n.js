@@ -1,3 +1,4 @@
+// @ts-check
 // Uriel in other languages (Settings → Interface → Language). Uriel's own words (menus, buttons, settings,
 // messages) are machine-translated through server.js (/api/i18n-batch, the service the lyrics translation uses)
 // the first time each one is needed, and then kept: on disk per language (the data dir; on phones the app's
@@ -145,6 +146,7 @@
   function capture() {
     if (!document.body) return;
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
+      /** @param {any} n */
       acceptNode(n) {
         if (n.nodeType === 3) return BLANK.test(n.data) ? NodeFilter.FILTER_SKIP : NodeFilter.FILTER_ACCEPT;
         if (SKIP.has(n.tagName) || optedOut(n)) return NodeFilter.FILTER_REJECT;
@@ -158,12 +160,13 @@
         return n.hasAttribute('data-i18n') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_SKIP;
       },
     });
-    for (let n = walker.nextNode(); n; n = walker.nextNode()) statics.push({ n, src: n.data, cur: n.data });
+    // only text nodes are taken (acceptNode above)
+    for (let n = /** @type {Text} */ (walker.nextNode()); n; n = /** @type {Text} */ (walker.nextNode())) statics.push({ n, src: n.data, cur: n.data });
   }
 
   function applyStatics(visibleFirst) {
     // what is on screen goes into the first request, so a language switch shows there first
-    let order = statics.keys();
+    let order = [...statics.keys()];
     if (visibleFirst) { const vis = statics.map(visible); order = [...statics.keys()].sort((a, b) => vis[b] - vis[a]); }
     for (const i of order) {
       const r = statics[i];

@@ -1,3 +1,4 @@
+// @ts-check
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -74,7 +75,7 @@ async function downloadFile(url, dest) {
     });
     res.on('error', (e) => { out.destroy(); reject(e); });
     out.on('error', reject);
-    out.on('finish', resolve);
+    out.on('finish', () => resolve());
     res.pipe(out);
   });
   return hash.digest('hex');

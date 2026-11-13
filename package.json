@@ -71,6 +71,7 @@
       "!capacitor.config.json",
       "!.claude/**",
       "!shared/vendor/**",
+      "!shared/globals.d.ts",
       "!*.md",
       "!strip_comments.js",
       "!package-lock.json"

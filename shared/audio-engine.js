@@ -1,3 +1,4 @@
+// @ts-check
 
 (function (global) {
   'use strict';
@@ -5,6 +6,8 @@
   class UrielAudioEngine {
     constructor() {
       this.ctx = null;
+      // set by app.js on phones: true while the context must not be suspended (the app in the background)
+      this.keepRunning = null;
       this.mediaSource = null;
       this.graphInitialized = false;
 

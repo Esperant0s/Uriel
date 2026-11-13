@@ -1,3 +1,4 @@
+// @ts-check
 (function () {
   // The shapes the player bar's artwork morphs between: each one's outline as 360 radii (one per degree, scaled to
   // 160 at the widest). Worked out from SHAPE_PATHS below by buildProfiles() and stored here, because doing it on

@@ -1,3 +1,4 @@
+// @ts-check
 // Profiles, the part you see: the avatar in the top bar (tap it to switch) and Settings → Profiles (add, rename,
 // delete). Which keys belong to a profile and how localStorage keeps them apart is in profiles-core.js. Switching
 // stops the music and reloads the app, so everything in memory starts fresh with the other profile's things.
@@ -90,13 +91,13 @@
     btn.setAttribute('aria-expanded', 'true');
     menu.addEventListener('click', (e) => {
       e.stopPropagation();
-      const b = e.target.closest('.profile-menu-item');
+      const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('.profile-menu-item'));
       if (!b) return;
       if (b.dataset.id) { if (b.dataset.id === P.id) closeMenu(); else switchTo(b.dataset.id); }
       else { closeMenu(); openSettings(b.dataset.act === 'add'); }
     });
     requestAnimationFrame(() => { if (menu) menu.classList.add('open'); });
-    const first = menu.querySelector('.profile-menu-item:not(.current)') || menu.querySelector('.profile-menu-item');
+    const first = /** @type {HTMLElement | null} */ (menu.querySelector('.profile-menu-item:not(.current)') || menu.querySelector('.profile-menu-item'));
     if (first) first.focus({ preventScroll: true });
   }
   function closeMenu() {

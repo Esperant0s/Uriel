@@ -7,3 +7,4 @@ if (typeof process !== 'undefined' && process.env) {
     if (now && process.env[now] === undefined) process.env[now] = process.env[key];
   }
 }
+module.exports = {};

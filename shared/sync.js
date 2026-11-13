@@ -1,3 +1,4 @@
+// @ts-check
 // Uriel sync (free, no account): link your devices with a code or a QR code, and playlists,
 // favorites, history, Encore stats, the look of the app and what you're listening to stay the same on all of
 // them. There is no Uriel server and no account: every device keeps its own data, and linked devices talk to
@@ -81,7 +82,7 @@
     'uriel_icon_pack', 'uriel_adv_intensity_bg', 'uriel_lyrics_source', 'uriel_word_source', 'uriel_track_trims',
     'uriel_blocked_artists', 'uriel_blocked_tracks'];
   const LISTENS_KEY = 'uriel_listens_v1';
-  const WATCH = new Map([...Object.entries(LISTS).map(([n, l]) => [l.key, n]), ...SETTINGS.map((k) => [k, 'settings']), [LISTENS_KEY, 'listens']]);
+  const WATCH = new Map(/** @type {[string, string][]} */ ([...Object.entries(LISTS).map(([n, l]) => [l.key, n]), ...SETTINGS.map((k) => [k, 'settings']), [LISTENS_KEY, 'listens']]));
 
   const listItems = (name) => { const v = read(LISTS[name].key, []); return Array.isArray(v) ? v : []; };
   const settingValues = () => Object.fromEntries(SETTINGS.map((k) => [k, localStorage.getItem(k)]));
@@ -633,7 +634,7 @@
 
   // re-renders keep a half-typed code
   function paint(el, html) {
-    const typing = document.activeElement && document.activeElement.classList.contains('sync-code-input') && el.contains(document.activeElement) ? document.activeElement.value : null;
+    const typing = document.activeElement && document.activeElement.classList.contains('sync-code-input') && el.contains(document.activeElement) ? /** @type {HTMLInputElement} */ (document.activeElement).value : null;
     el.innerHTML = html;
     if (typing !== null) { const i = el.querySelector('.sync-code-input'); if (i) { i.value = typing; i.focus(); } }
   }
@@ -661,10 +662,11 @@
     }
     paint(box, `<div class="sync-invite"><span class="sync-invite-icon">${ICON}</span><div class="sync-invite-body">${body}</div></div>`);
   }
+  const mounted = new WeakSet();
   function mountInvite() {
     const box = document.getElementById('section-sync-invite');
-    if (!box || box._sync) return;
-    box._sync = true;
+    if (!box || mounted.has(box)) return;
+    mounted.add(box);
     box.addEventListener('click', onClick);
     box.addEventListener('submit', onSubmit);
     renderInvite();
@@ -683,7 +685,7 @@
     else if (act === 'want-code') {
       const where = b.closest('#section-sync-invite') ? '#section-sync-invite' : '.sync-section';
       wantCode = true; joining = null; render();
-      const f = document.querySelector(`${where} .sync-code-input`);
+      const f = /** @type {HTMLElement | null} */ (document.querySelector(`${where} .sync-code-input`));
       if (f) f.focus();
     }
     else if (act === 'stop-link') { wantCode = false; stopLinking(); }
@@ -709,7 +711,7 @@
     if (window.showSettingsCategory) { const nav = document.getElementById('nav-settings'); if (nav) nav.click(); window.showSettingsCategory('sync'); }
     joinWithCode(m[1]);
   }
-  window.addEventListener('uriel:deeplink', (e) => handleLink(e.detail));
+  window.addEventListener('uriel:deeplink', (/** @type {CustomEvent} */ e) => handleLink(e.detail));
   // another language, or its words just came in: the sentences with names in them are built here
   window.addEventListener('uriel:i18n', () => { if (section || document.getElementById('section-sync-invite')) render(); });
 

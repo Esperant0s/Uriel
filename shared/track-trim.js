@@ -1,3 +1,4 @@
+// @ts-check
 // "Trim best part" (Riff 43, in the Download dialog): keep only part of a song. The kept part is saved per song and
 // playback skips the rest (on phones too: it is only seeking, no ffmpeg). On computers the same start and end also
 // fill the download's trim fields. The waveform drawn behind the handles comes from the song's own audio when it

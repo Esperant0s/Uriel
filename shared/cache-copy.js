@@ -1,3 +1,4 @@
+// @ts-check
 'use strict';
 
 // Caching a song that already plays (#17). The app used to run `yt-dlp -x` for it, a second full
@@ -8,7 +9,8 @@
 
 const { spawn: startProcess } = require('child_process');
 const { track } = require('./child-procs');
-const spawn = (...args) => track(startProcess(...args));
+/** @type {(...args: any[]) => any} */
+const spawn = (...args) => track(startProcess.apply(null, args));
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
@@ -20,6 +22,7 @@ function cacheCopyArgs(url, outPath, mode) {
   return ['-y', '-v', 'error', '-nostdin', ...input, '-vn', '-map', '0:a:0', ...codec, '-f', 'opus', outPath];
 }
 
+/** @param {string} bin @param {string[]} args @param {{ spawnFn?: (...args: any[]) => any, onChild?: (proc: any) => void, timeoutMs?: number }} [o] */
 function runFfmpeg(bin, args, { spawnFn = spawn, onChild, timeoutMs = 10 * 60 * 1000 } = {}) {
   return new Promise((resolve) => {
     let proc;
