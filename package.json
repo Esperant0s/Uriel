@@ -1,6 +1,6 @@
 {
   "name": "uriel",
-  "version": "1.5.7",
+  "version": "1.5.8",
   "main": "desktop/main.js",
   "bin": {
     "uriel": "./desktop/cli.js"

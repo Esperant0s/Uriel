@@ -1,4 +1,4 @@
-## Uriel 1.5.7
+## Uriel 1.5.8
 
 Uriel is the new name of the Esperant0s fork of [Muriel](https://github.com/cloverscripts/riff-muriel) by cloverscripts, itself based on [Riff](https://github.com/rootscripts/riff) by rootscripts (MIT). It is its own app now and installs next to Muriel.
 
@@ -8,6 +8,11 @@ Uriel is the new name of the Esperant0s fork of [Muriel](https://github.com/clov
 - **Windows:** installer below, or the portable exe on [windows-latest](https://github.com/Esperant0s/Uriel/releases/tag/windows-latest). Windows SmartScreen may warn because the files are unsigned: More info → Run anyway.
 - **macOS:** `.dmg` / `.zip` below, for Apple Silicon and Intel. The app is unsigned: if macOS blocks it, open System Settings → Privacy & Security → Open Anyway.
 - **Linux:** `.AppImage` below (needs FUSE 2: `fuse2` / `libfuse2`)
+
+**Fixed in 1.5.8**
+- **Phones:** the error log you can share from Settings no longer gets two false errors every time Uriel starts.
+- **Downloads:** a downloaded song's length is saved as a number, not as text.
+- **Under the hood:** the app's biggest file is split into parts, and importing from Spotify and Apple Music has tests of its own. Nothing looks or works differently.
 
 **New in 1.5.7**
 - **Visualizer on Android:** Settings → Interface → Visualizer. Bars that move with the music behind the mini player, and in full-screen lyrics. Off unless you switch it on; it only runs while Uriel is on screen and a song plays.
