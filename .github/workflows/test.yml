@@ -1,0 +1,43 @@
+name: Tests
+
+# Runs the tests and starts the desktop app on every push. The other workflows only build: nothing ran the tests,
+# and a build that failed on start was found by whoever opened it.
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['**.md', 'LICENSE', 'site/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      # the app needs a screen to open its window on
+      - name: Start the desktop app
+        run: xvfb-run -a npm run smoke
