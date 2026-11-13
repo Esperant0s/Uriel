@@ -340,6 +340,9 @@ class EffectsProcessor : BaseAudioProcessor() {
     private var normGain = 1f
     private var normSmooth = 0f
 
+    // the visualizer's tap on what goes out; null (and free) while the visualizer is off
+    @Volatile var spectrum: Spectrum? = null
+
     // ---- AudioProcessor ----
 
     override fun onConfigure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat {
@@ -351,10 +354,12 @@ class EffectsProcessor : BaseAudioProcessor() {
     override fun onFlush() {
         // a new song or a seek: nothing of the old sound rings on
         applied = null
+        spectrum?.flush()
     }
 
     override fun onReset() {
         applied = null
+        spectrum?.flush()
         echo = null
         reverb = null
     }
@@ -416,6 +421,7 @@ class EffectsProcessor : BaseAudioProcessor() {
             normAvgDb = -120.0; normGain = 1f; normGainTarget = 1f
             out.put(inputBuffer)
             out.flip()
+            spectrum?.feed(out, inputAudioFormat.channelCount, inputAudioFormat.sampleRate)
             return
         }
         if (applied !== s) setUp(s)
@@ -496,5 +502,6 @@ class EffectsProcessor : BaseAudioProcessor() {
         // half a frame left over would be a broken stream: ExoPlayer only hands over whole ones
         inputBuffer.position(inputBuffer.limit())
         out.flip()
+        spectrum?.feed(out, channels, rate)
     }
 }

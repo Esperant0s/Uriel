@@ -17,7 +17,7 @@ function setup({ attach = {}, engine = null } = {}) {
     addListener: (name, cb) => { listeners[name] = cb; return Promise.resolve({ remove() {} }); },
     attach: () => Promise.resolve(attach),
   };
-  for (const m of ['load', 'play', 'pause', 'seek', 'setSpeed', 'setVolume', 'setEffects', 'setMixing', 'clear', 'setModes', 'tailLoad', 'tailSet', 'tailStop']) {
+  for (const m of ['load', 'play', 'pause', 'seek', 'setSpeed', 'setVolume', 'setEffects', 'setMixing', 'setVisualizer', 'clear', 'setModes', 'tailLoad', 'tailSet', 'tailStop']) {
     player[m] = (arg) => { calls.push(arg === undefined ? m : [m, arg]); return Promise.resolve(); };
   }
   const fakeCore = { Capacitor: { getPlatform: () => 'android' }, registerPlugin: () => player };
@@ -30,6 +30,7 @@ function setup({ attach = {}, engine = null } = {}) {
   Object.assign(web, { src: '', currentSrc: '', paused: true, ended: false, playbackRate: 1, preservesPitch: true, volume: 1, muted: false,
     play() { web.paused = false; return Promise.resolve(); }, pause() { web.paused = true; }, load() {}, removeAttribute() { web.src = ''; } });
   global.window = new EventTarget();
+  global.document = Object.assign(new EventTarget(), { hidden: false });
   global.localStorage = { getItem: () => null, setItem() {} };
   global.DOMException = global.DOMException || class extends Error {};
   window.audioEngine = engine;

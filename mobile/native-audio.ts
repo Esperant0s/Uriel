@@ -67,6 +67,10 @@ class NativeAudio extends EventTarget {
   private _sentVolume = -1;
   private _sentEffects = '';
   private _sentMix: boolean | null = null;
+  private _sentViz: boolean | null = null;
+  // the visualizer's 64 bars (0..255) for the sound playing now, while it's on (Settings, Android only); app.js
+  // draws them in place of the Web Audio analyser's, which hears nothing of the native player
+  vizData: Uint8Array | null = null;
 
   constructor(web: HTMLAudioElement, player: UrielPlayerPlugin) {
     super();
@@ -78,6 +82,13 @@ class NativeAudio extends EventTarget {
     }
     player.addListener('state', (s) => this._onState(s || {}));
     player.addListener('error', (e) => this._onError(e || {}));
+    player.addListener('viz', (e) => {
+      const bars = (e && e.bars) || [];
+      if (!this.vizData || this.vizData.length !== bars.length) this.vizData = new Uint8Array(bars.length);
+      this.vizData.set(bars);
+    });
+    // nothing draws the bars while the app is out of sight
+    document.addEventListener('visibilitychange', () => this._watchSettings());
     this.attached = Promise.resolve().then(() => player.attach()).catch((): NativeSnapshot => ({}));
     // sound settings change from many places: looked at once a second, and before each song
     background(setInterval(() => this._watchSettings(), 1000));
@@ -433,6 +444,12 @@ class NativeAudio extends EventTarget {
     if (force || mix !== this._sentMix) {
       this._sentMix = mix;
       this.player.setMixing({ mix }).catch(() => {});
+    }
+    const viz = localStorage.getItem('uriel_phone_viz') === '1' && !document.hidden;
+    if (force || viz !== this._sentViz) {
+      this._sentViz = viz;
+      if (!viz) this.vizData = null;
+      this.player.setVisualizer({ on: viz }).catch(() => {});
     }
     const effects = JSON.stringify(soundSettings());
     if (force || effects !== this._sentEffects) {

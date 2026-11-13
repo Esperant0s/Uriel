@@ -595,6 +595,9 @@ html.is-ios .audio-panel[data-audio-panel="eq"] { display: none !important; }
    still works: it only skips through the song while it plays); there is no pointer to hover the karaoke top edge */
 html.is-mobile :is(#setting-hide-titlebar-row, #setting-bar-viz-pos, #setting-bar-viz-opacity, #setting-viz-connected, #download-trim-section, .tvk-top-hover-zone, .playbar-bg-visualizer) { display: none !important; }
 html.is-mobile .tvk-row:has(#btn-tvk-viz-connected) { display: none !important; }
+/* Settings → Visualizer (Android, off unless switched on): a wave behind the mini player, and full-screen lyrics' */
+html.is-mobile body.phone-viz:not(.np-open):not(.perf) #playbar-bg-visualizer { display: block !important; }
+html.is-mobile body:not(.phone-viz) .tvk-visualizer { display: none !important; }
 html.is-mobile .tvk-liquid-layer { animation: none !important; }
 html.is-mobile .nav-home-app-icon { width: 28px; height: 28px; border-radius: 8px; }
 html.is-mobile .tvk-progress-row { width: min(86vw, 360px); }

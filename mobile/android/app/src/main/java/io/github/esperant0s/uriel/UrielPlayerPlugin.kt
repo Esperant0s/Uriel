@@ -7,6 +7,7 @@ import androidx.core.content.ContextCompat
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -138,6 +139,13 @@ class UrielPlayerPlugin : Plugin(), PlayerService.Page {
         call.resolve()
     }
 
+    // on while the page shows a visualizer; the bars come back as "viz" events ({ bars: 64 numbers 0..255 })
+    @PluginMethod
+    fun setVisualizer(call: PluginCall) = withPlayer(call) { s ->
+        s.setVisualizer(call.getBoolean("on", false) == true)
+        call.resolve()
+    }
+
     @PluginMethod
     fun setMixing(call: PluginCall) = withPlayer(call) { s ->
         s.setMixing(call.getBoolean("mix", false) == true)
@@ -197,6 +205,12 @@ class UrielPlayerPlugin : Plugin(), PlayerService.Page {
 
     override fun onError(code: Int, message: String) {
         notifyListeners("error", JSObject().put("code", code).put("message", message))
+    }
+
+    override fun onViz(bars: ByteArray) {
+        val list = JSArray()
+        for (b in bars) list.put(b.toInt() and 0xff)
+        notifyListeners("viz", JSObject().put("bars", list))
     }
 
     override fun handleOnDestroy() {

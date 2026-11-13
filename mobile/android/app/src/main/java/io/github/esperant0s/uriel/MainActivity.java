@@ -34,6 +34,12 @@ public class MainActivity extends BridgeActivity {
         if (a != null) a.ui.post(a.keepPage);
     }
 
+    // whether Uriel is on screen, which the page can't tell while it is kept awake (PlayerService's visualizer): main thread
+    static boolean onScreen() {
+        MainActivity a = current;
+        return a != null && !a.stopped;
+    }
+
     private static boolean musicActive() {
         PlayerService player = PlayerService.Companion.getInstance();
         return MediaControlsPlugin.playing || (player != null && player.active());

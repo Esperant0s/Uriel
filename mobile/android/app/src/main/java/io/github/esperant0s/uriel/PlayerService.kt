@@ -58,6 +58,8 @@ class PlayerService : MediaSessionService() {
         fun onAction(action: String)
         fun onState(state: JSONObject)
         fun onError(code: Int, message: String)
+        // the visualizer's 64 bars for the sound playing now (see setVisualizer)
+        fun onViz(bars: ByteArray)
     }
 
     companion object {
@@ -311,6 +313,7 @@ class PlayerService : MediaSessionService() {
     override fun onDestroy() {
         main.removeCallbacks(tick)
         main.removeCallbacks(callCheck)
+        main.removeCallbacks(vizTick)
         tails.values.forEach { it.release() }
         tails.clear()
         instance = null
@@ -353,6 +356,7 @@ class PlayerService : MediaSessionService() {
     fun detachPage(p: Page) {
         if (page !== p) return
         page = null
+        setVisualizer(false)
         session?.player = SessionPlayer(exo, false)
         val current = exo.currentMediaItem ?: return
         val (items, _) = resumeItems(this)
@@ -406,6 +410,50 @@ class PlayerService : MediaSessionService() {
             else if (!inCall && pausedForCall) { pausedForCall = false; exo.play() }
             main.postDelayed(this, 1000)
         }
+    }
+
+    // ---- the visualizer (off unless switched on in the page's settings) ----
+
+    private var vizFlushes = -1
+    private var vizPos0 = 0L
+    private var vizItem = -1
+    private var vizLead = -1L
+    private val vizTick = object : Runnable {
+        override fun run() {
+            val sp = effects.spectrum ?: return
+            val p = page
+            if (exo.isPlaying && sp.rate > 0) {
+                val rate = sp.rate
+                if (sp.flushes != vizFlushes) {
+                    // a seek or a new song: the samples count from here, at this place in the song
+                    vizFlushes = sp.flushes
+                    vizPos0 = exo.currentPosition
+                    vizItem = exo.currentMediaItemIndex
+                } else if (sp.flushes > 0 && exo.currentMediaItemIndex == vizItem) {
+                    // how far the processed sound runs ahead of what is heard (the player's buffer), averaged;
+                    // it carries over to the next song, which can play on without a flush (its position starts at 0
+                    // while the count goes on, so it's measured on the song the count began with). Switched on
+                    // mid-song, the count didn't start at a known place, so it waits for the next seek or song.
+                    // only once the song moves again: right after a seek it counts as playing while it refills
+                    val played = (exo.currentPosition - vizPos0) * rate / 1000
+                    val lead = sp.sinceFlush - played
+                    if (played > 0 && lead >= 0) vizLead = if (vizLead < 0) lead else (vizLead * 9 + lead) / 10
+                }
+                // sent only while Uriel is on screen: the page is kept awake behind the lock screen, but draws nothing
+                if (p != null && MainActivity.onScreen()) {
+                    val wanted = sp.sinceFlush - (if (vizLead >= 0) vizLead else rate * 3L / 10)
+                    sp.barsAt(wanted)?.let { p.onViz(it) }
+                }
+            }
+            main.postDelayed(this, 50)
+        }
+    }
+
+    fun setVisualizer(on: Boolean) {
+        main.removeCallbacks(vizTick)
+        if (!on) { effects.spectrum = null; return }
+        if (effects.spectrum == null) { effects.spectrum = Spectrum(); vizFlushes = -1; vizLead = -1 }
+        main.post(vizTick)
     }
 
     fun setMixing(mix: Boolean) {

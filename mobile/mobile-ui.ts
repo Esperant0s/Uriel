@@ -352,6 +352,36 @@ const tapped = (e: Event): Element | null => (e.target instanceof Element ? e.ta
     addPlaybackRow(row);
   }
 
+  // Android: the visualizer, off unless switched on here. The native player sends its bars (PlayerService.setVisualizer):
+  // a wave behind the mini player, and the one in full-screen lyrics
+  if (document.documentElement.classList.contains('is-android')) {
+    const VIZ = 'uriel_phone_viz';
+    const on = localStorage.getItem(VIZ) === '1';
+    document.body.classList.toggle('phone-viz', on);
+    const row = document.createElement('div');
+    row.className = 'setting-item';
+    row.innerHTML = `
+      <div class="setting-item-top" style="align-items: center;">
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <span class="setting-name" data-i18n>Visualizer</span>
+          <span style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);" data-i18n>Bars that move with the music behind the mini player and in full-screen lyrics. Uses a little more battery.</span>
+        </div>
+        <button class="effect-switch-btn${on ? ' active' : ''}" type="button" aria-label="Visualizer" data-i18n-attr="aria-label"><span class="thumb"></span></button>
+      </div>`;
+    const sw = row.querySelector('button')!;
+    sw.addEventListener('click', () => {
+      const next = !sw.classList.contains('active');
+      sw.classList.toggle('active', next);
+      localStorage.setItem(VIZ, next ? '1' : '0');
+      document.body.classList.toggle('phone-viz', next);
+      window.dispatchEvent(new Event('uriel:phone-viz'));
+    });
+    // beside the computer's own visualizer setting, which phones don't show
+    const desktopRow = document.getElementById('btn-bar-wave')?.closest('.setting-item');
+    if (desktopRow && desktopRow.parentElement) desktopRow.after(row);
+    else addPlaybackRow(row);
+  }
+
   // Android: let Uriel off battery optimization so the phone doesn't stop it in the background (media-controls.ts)
   if (window.UrielBackground && trRow) {
     const bg = window.UrielBackground;

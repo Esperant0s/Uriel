@@ -2857,7 +2857,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
     const barBgCanvas = document.getElementById('playbar-bg-visualizer');
-    if (barBgCanvas && el.playbar && !isPhoneApp) {
+    // phones draw it behind the mini player only with Settings → Visualizer on (Android, mobile-ui.ts)
+    if (barBgCanvas && el.playbar && (!isPhoneApp || document.body.classList.contains('phone-viz'))) {
       // the canvas covers the whole player bar (see .playbar-bg-visualizer)
       barBgW = Math.max(200, el.playbar.clientWidth);
       BAR_BG_H = Math.max(40, el.playbar.clientHeight || 88);
@@ -2869,6 +2870,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   window.addEventListener('resize', resizeCanvases);
   setTimeout(resizeCanvases, 100);
+  window.addEventListener('uriel:phone-viz', () => { resizeCanvases(); if (state.isPlaying) startVisualizers(); });
 
   let smoothAmplitude = 0;
   let smoothPhase = 0;
@@ -2918,7 +2920,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // phones: with the player sheet closed nothing this loop draws is on screen (the mini player
       // follows timeupdate), so stop until the sheet or TV lyrics open again
-      if (isPhoneApp && !state.isRightPanelOpen && !state.isTvKaraokeOpen) {
+      if (isPhoneApp && !state.isRightPanelOpen && !state.isTvKaraokeOpen && !document.body.classList.contains('phone-viz')) {
         animationFrameId = null;
         return;
       }
@@ -2934,14 +2936,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       const isBehindVizVisible = !!(barBgCanvas && !state.isTvKaraokeOpen && barBgCanvas.offsetParent !== null);
 
       if (!document.body.classList.contains('perf') && (isVisualizerVisible || isTvkVisualizerVisible || isBehindVizVisible || needBassPulse)) {
-        if (!freqData && audioEngine && audioEngine.getAnalyserNode) {
+        // Android's native player sends its own bars (mobile/native-audio.ts); the analyser hears nothing of it
+        const nativeBars = isPhoneApp && el.nativeAudio && el.nativeAudio.vizData;
+        if (nativeBars) {
+          if (!freqData || freqData.length !== nativeBars.length) freqData = new Uint8Array(nativeBars.length);
+          freqData.set(nativeBars);
+        } else if (!freqData && audioEngine && audioEngine.getAnalyserNode) {
           const an = audioEngine.getAnalyserNode();
           if (an && an.frequencyBinCount) {
             freqData = new Uint8Array(an.frequencyBinCount);
           }
         }
-        if (freqData && audioEngine && audioEngine.getFrequencyData) {
-          audioEngine.getFrequencyData(freqData);
+        if (freqData && (nativeBars || (audioEngine && audioEngine.getFrequencyData))) {
+          if (!nativeBars) audioEngine.getFrequencyData(freqData);
 
           let bassEnergy = (freqData[0] + freqData[1] + freqData[2] + freqData[3]) / (4 * 255);
 

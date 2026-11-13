@@ -136,11 +136,12 @@ declare global {
     setModes(o: { shuffle: boolean; repeat: string }): Promise<void>;
     setEffects(o: SoundSettings): Promise<void>;
     setMixing(o: { mix: boolean }): Promise<void>;
+    setVisualizer(o: { on: boolean }): Promise<void>;
     clear(): Promise<void>;
     tailLoad(o: { id: string; path: string; url: string; startAt: number }): Promise<void>;
     tailSet(o: { id: string; play?: boolean; position?: number; volume?: number; speed?: number; preservePitch?: boolean }): Promise<void>;
     tailStop(o: { id: string }): Promise<void>;
-    addListener: AddListener<{ state: NativePlayerState; error: { code?: number; message?: string }; action: MediaActionEvent; tail: NativeTailState }>;
+    addListener: AddListener<{ state: NativePlayerState; error: { code?: number; message?: string }; action: MediaActionEvent; tail: NativeTailState; viz: { bars?: number[] } }>;
   }
 
   interface IslandStatus { supported?: boolean; vendor?: string; defaultOn?: boolean; notifications?: boolean; promoted?: boolean }
