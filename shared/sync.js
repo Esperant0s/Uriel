@@ -345,6 +345,9 @@
   const cleanCode = (c) => String(c || '').toUpperCase().replace(/[^0-9A-Z]/g, '').replace(/[O]/g, '0').slice(0, 8);
   const showCode = (c) => `${c.slice(0, 4)}-${c.slice(4)}`;
   let linking = null; // { code, peer, until, timer }
+  // the devices found each other through the link service but couldn't open a direct connection: there is no
+  // relay, so that needs both on the same network, and some networks (mobile data, guest Wi-Fi) still block it (#39)
+  const NO_DIRECT = "Found your other device but couldn't connect to it. Put both on the same Wi-Fi (not mobile data or a guest network) and try again.";
 
   function ensureGroup() {
     if (group) return;
@@ -369,8 +372,14 @@
       render();
     });
     lp.on('connection', (conn) => {
+      // shown right away, so this device doesn't sit there silent while the other one tries
+      linking.knock = true;
+      linking.error = '';
+      render();
+      const failed = setTimeout(() => { if (linking && linking.peer === lp) { linking.knock = false; linking.error = NO_DIRECT; render(); } }, 20000);
       conn.on('data', (msg) => {
         if (!msg || msg.t !== 'join' || !msg.id || msg.id === device.id) return;
+        clearTimeout(failed);
         members = { ...members, [msg.id]: { name: String(msg.name || 'Device').slice(0, 40), kind: msg.kind === 'phone' ? 'phone' : 'computer', t: Date.now() } };
         write(K.members, members);
         conn.send({ t: 'welcome', group, members, from: { id: device.id, name: device.name } });
@@ -399,10 +408,12 @@
     render();
     const tp = new window.Peer(`uriel-j-${hex(12)}`, serverOpts());
     const done = (error) => { clearTimeout(timer); try { tp.destroy(); } catch (e) {} joining = error ? { code, error } : null; render(); };
-    const timer = setTimeout(() => done("No device answered. Check the code, and that Uriel shows it on the other device."), 20000);
+    // a wrong code fails at once (peer-unavailable), so still waiting here means the device was found
+    const timer = setTimeout(() => done(NO_DIRECT), 20000);
     tp.on('error', (err) => done(err && err.type === 'peer-unavailable' ? 'No device is showing that code right now.' : "Couldn't reach the link service. Check your internet connection."));
     tp.on('open', () => {
       const conn = tp.connect(`uriel-link-${code.toLowerCase()}`, { reliable: true });
+      conn.on('iceStateChanged', (st) => { if (st === 'failed') done(NO_DIRECT); });
       conn.on('open', () => conn.send({ t: 'join', id: device.id, name: device.name, kind, v: 1 }));
       conn.on('data', (msg) => {
         if (!msg || msg.t !== 'welcome' || !msg.group || !msg.group.secret) return;
@@ -572,7 +583,7 @@
       <div class="sync-qr">${qrSvg(`${LINK_PAGE}#${linking.code}`)}</div>
       <div class="sync-pair-text"><span>${I18n.Th("On your other device open {0}, or scan this with your phone's camera.", `<b>${esc(`${I18n.T('Settings')} → ${I18n.T('Sync')} → ${I18n.T('I have a code')}`)}</b>`)}</span>
       <div class="sync-code">${showCode(linking.code)}</div>
-      ${linking.error ? `<span class="sync-note sync-error" data-i18n>${esc(linking.error)}</span>` : `<span class="sync-note" data-countdown data-i18n>Works for ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}</span>`}
+      ${linking.error ? `<span class="sync-note sync-error" data-i18n>${esc(linking.error)}</span>` : linking.knock ? '<span class="sync-note" data-i18n>Another device is linking…</span>' : `<span class="sync-note" data-countdown data-i18n>Works for ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}</span>`}
       <div class="sync-row"><button class="btn-outline-pill" data-act="stop-link" data-i18n>Done</button></div></div></div>`;
   }
   function joinForm() {
