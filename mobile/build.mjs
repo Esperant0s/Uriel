@@ -46,6 +46,8 @@ for (const f of ['storage-migrate.js', 'app.js', 'styles.css', 'audio-engine.js'
 // iOS or Android is read at runtime; CI fills in the commit and run number
 writeFileSync(join(out, 'build-info.js'), buildInfoScript(''));
 cpSync(join(shared, 'assets'), join(out, 'assets'), { recursive: true });
+// the parts app.js is split into (shared/app/)
+cpSync(join(shared, 'app'), join(out, 'app'), { recursive: true });
 cpSync(join(root, 'mobile', 'mobile.css'), join(out, 'mobile.css'));
 // mobile-ui.ts is a plain script beside app.js, not part of the bundle: its types are taken off, and it is wrapped
 // so its own helpers stay out of the page's globals

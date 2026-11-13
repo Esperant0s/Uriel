@@ -14,6 +14,6 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["shared/*.js", "desktop/*.js", "shared/globals.d.ts"],
+  "include": ["shared/*.js", "shared/app/*.js", "desktop/*.js", "shared/globals.d.ts"],
   "exclude": ["shared/vendor", "node_modules"]
 }

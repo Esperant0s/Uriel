@@ -14,6 +14,9 @@ declare global {
     // the phone app
     Capacitor?: { getPlatform(): string; isNativePlatform?(): boolean; Plugins?: any };
     UrielAppUpdater?: any;
+    UrielAppIcon?: any;
+    // the parts app.js is split into (shared/app/), each a function app.js calls once as it starts
+    UrielApp?: any;
 
     // shared/*.js, each under its own name
     UrielSync?: any;
