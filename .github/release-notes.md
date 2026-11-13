@@ -1,4 +1,4 @@
-## Uriel 1.5.5
+## Uriel 1.5.6
 
 Uriel is the new name of the Esperant0s fork of [Muriel](https://github.com/cloverscripts/riff-muriel) by cloverscripts, itself based on [Riff](https://github.com/rootscripts/riff) by rootscripts (MIT). It is its own app now and installs next to Muriel.
 
@@ -8,6 +8,26 @@ Uriel is the new name of the Esperant0s fork of [Muriel](https://github.com/clov
 - **Windows:** installer below, or the portable exe on [windows-latest](https://github.com/Esperant0s/Uriel/releases/tag/windows-latest). Windows SmartScreen may warn because the files are unsigned: More info → Run anyway.
 - **macOS:** `.dmg` / `.zip` below, for Apple Silicon and Intel. The app is unsigned: if macOS blocks it, open System Settings → Privacy & Security → Open Anyway.
 - **Linux:** `.AppImage` below (needs FUSE 2: `fuse2` / `libfuse2`)
+
+**New in 1.5.6**
+- **Mural is now Uriel:** same app with a new name. It updates in place and keeps everything.
+- **Android plays through a native player:** the notification, lock screen, earbuds and Bluetooth buttons all work like in Spotify, even with Uriel closed: a tap on your earbuds plays the last song from where it stopped. EQ, effects, Enhance, Normalize volume and crossfade work in it too.
+- **Play alongside other apps** (Android): Settings → Tracks → Playback. With it on, a game or video no longer pauses your music; calls still do.
+- **Restore from downloads:** lost your playlists? Settings → Storage → Restore from downloads puts your offline songs back into a new or existing playlist.
+- **Songs on your device play from the file:** a playlist song that's also in your Music or Downloads folder (or the phone's library) plays from there instead of streaming.
+- **Songs pick up where they stopped** when the connection drops mid-song, instead of skipping or failing.
+
+**Fixed in 1.5.6**
+- **Music no longer stops after a song or two in the background** on phones.
+- **Lyrics:** no more lyrics of another artist's song with the same name, and lyrics no longer run ahead of a music video that has an intro.
+- **Covers:** music videos shot in widescreen lose their black bars, and covers no longer blink out while you scroll a long list.
+- **Plugins** (computers): files with any name ending in .js show up now, like "plugin (1).js" or names with accents; a file Notepad saved as .js.txt gets a hint to rename it.
+- **Sync:** when two devices find each other but can't connect, both say so and what to try, instead of "No device answered".
+- **Phones:** downloads work and keep going in the background with a progress notification, swipes no longer light up buttons, and the queue no longer scrolls sideways.
+- **Pauses when headphones or a speaker disconnect**, instead of playing out loud.
+- **iPhone:** the lock screen's play button works again after another app's sound has played.
+- **Computers:** fast mouse-wheel scrolling on Home goes the whole way, Ctrl and = zooms in, and the player bar's controls look like Spotify's.
+- **Safer:** Electron updated past its security advisories.
 
 **New in 1.5.5**
 - **More song and playlist controls:** a song's menu can share it or copy its link, and every playlist has a ⋯ menu with Play next, Add to queue, Start radio, Edit details, Duplicate, Share, Export and Delete.
