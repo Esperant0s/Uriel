@@ -17,6 +17,9 @@ declare global {
     UrielAppIcon?: any;
     // the parts app.js is split into (shared/app/), each a function app.js calls once as it starts
     UrielApp?: any;
+    // shared/app/boot.js
+    __riffFetchPatched?: boolean;
+    __riffLogError?: (level: string, message: string, stack?: string | null) => void;
 
     // shared/*.js, each under its own name
     UrielSync?: any;

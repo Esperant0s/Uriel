@@ -84,7 +84,8 @@ test('Spotify login reports callback errors and protects account routes', async 
 });
 
 test('renderer fetch sends the server token to Spotify account routes', async () => {
-  const source = appSource();
+  // the first block of shared/app/boot.js: app.js's fetch, with the server's key on its own requests
+  const source = fs.readFileSync(path.join(__dirname, '..', 'shared/app/boot.js'), 'utf8');
   const renderer = { electronAPI: { serverToken: getServerToken() }, fetch: fetch.bind(globalThis) };
   vm.runInNewContext(source.slice(0, source.indexOf('})();') + 5), { window: renderer, Headers, URL });
   const port = await startServer(0);
