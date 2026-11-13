@@ -11,6 +11,7 @@ const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
 const { createTaskQueue } = require('../shared/ytdlp-queue');
+const appSource = require('../tools/app-source');
 
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const tick = () => new Promise((r) => setImmediate(r));
@@ -124,7 +125,7 @@ test('fresh=1 skips the remembered stream URL', async () => {
 });
 
 test('the app looks a failing song up once more, afresh, before telling the listener', () => {
-  const app = fs.readFileSync(path.join(__dirname, '..', 'shared/app.js'), 'utf8');
+  const app = appSource();
   assert.match(app, /function retryFresh\(token, track\)/);
   assert.match(app, /fresh \? '&fresh=1' : ''/);
   // every place that shows "try again or skip" (lookup, audio element error, HLS error, nothing loading) tries it first

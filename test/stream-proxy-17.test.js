@@ -8,6 +8,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const ss = require('../shared/stream-source');
+const appSource = require('../tools/app-source');
 
 test('lookup prints the URL and the headers in one yt-dlp run', () => {
   assert.deepEqual(ss.LOOKUP_PRINT_ARGS, ['--print', 'urls', '--print', '%(http_headers)j']);
@@ -44,7 +45,7 @@ test('desktop proxies googlevideo, phones and other sources keep the direct URL'
 });
 
 test('app.js uses the same proxy rule and falls back to the proxy before a fresh lookup', () => {
-  const app = fs.readFileSync(path.join(__dirname, '..', 'shared/app.js'), 'utf8');
+  const app = appSource();
   assert.match(app, /el\.nativeAudio\.src = src;/);
   const handler = app.slice(app.indexOf("addEventListener('error', () => {", app.indexOf('function retryFresh(')));
   assert.ok(handler.indexOf('tryProxyFallback(') >= 0 && handler.indexOf('tryProxyFallback(') < handler.indexOf('retryFresh('));

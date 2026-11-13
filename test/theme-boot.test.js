@@ -5,6 +5,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const appSource = require('../tools/app-source');
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
 test('runs at the top of the page, after the profile storage, before anything is drawn (computers and phones)', () => {
@@ -17,7 +18,7 @@ test('runs at the top of the page, after the profile storage, before anything is
 });
 
 test('app.js saves what the theme painted, after each change and when the page goes', () => {
-  const app = read('shared/app.js');
+  const app = appSource();
   assert.match(app, /localStorage\.setItem\('uriel_theme_boot'/);
   assert.match(app, /saveThemeBootSoon\(\);\n  }/, 'at the end of applyTheme');
   assert.match(app, /addEventListener\('pagehide', saveThemeBoot\)/);

@@ -9,6 +9,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const ss = require('../shared/stream-source');
 const { parseForLyrics, pickBest, syncedFits } = require('../shared/lyrics-match');
+const appSource = require('../tools/app-source');
 
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
@@ -49,11 +50,11 @@ test('#26: an interrupted audio context is resumed like a suspended one', () => 
   assert.equal(resumed, 1);
   const mod = read('mobile/audio-interruption.ts');
   assert.ok(mod.indexOf('c.resumeAudio()') > mod.indexOf("if (type !== 'ended') return;"));
-  assert.match(read('shared/app.js'), /resumeAudio: \(\) => audioEngine && audioEngine\.resumeAudioContext/);
+  assert.match(appSource(), /resumeAudio: \(\) => audioEngine && audioEngine\.resumeAudioContext/);
 });
 
 test('#31: letterboxed 4:3 YouTube frames are swapped for the bar-free 16:9 ones', () => {
-  const app = read('shared/app.js');
+  const app = appSource();
   const src = app.match(/const YT_BOXED = (\/.+\/);/);
   assert.ok(src, 'YT_BOXED is defined');
   const YT_BOXED = eval(src[1]);
@@ -86,7 +87,7 @@ test('#33: timed lyrics for a cut of another length come back untimed', () => {
 });
 
 test('#36: the crossfade tail keeps the speed and pitch through loading the song', () => {
-  const app = read('shared/app.js');
+  const app = appSource();
   const prep = app.slice(app.indexOf('function prepareCrossfade('), app.indexOf('function startCrossfade('));
   assert.match(prep, /t\.defaultPlaybackRate = rate;/);
   assert.match(prep, /addEventListener\('loadedmetadata', \(\) => \{ matchRate\(\);/);
@@ -95,7 +96,7 @@ test('#36: the crossfade tail keeps the speed and pitch through loading the song
 });
 
 test('#40: long lists measure their row height instead of assuming 64px', () => {
-  const app = read('shared/app.js');
+  const app = appSource();
   assert.doesNotMatch(app, /const itemHeight = 64;/);
   assert.match(app, /let itemHeight = container\._rowHeight \|\| 64;/);
   assert.match(app, /const step = rows\[1\]\.offsetTop - rows\[0\]\.offsetTop;/);

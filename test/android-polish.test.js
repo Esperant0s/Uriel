@@ -6,16 +6,17 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const appSource = require('../tools/app-source');
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
 test('a song that is loading shows one circle (the play button), not a second one over the player bar', () => {
   assert.equal(read('shared/index.html').includes('track-loading-overlay'), false);
-  assert.equal(read('shared/app.js').includes('trackLoadingOverlay'), false);
+  assert.equal(appSource().includes('trackLoadingOverlay'), false);
   assert.equal(read('shared/styles.css').includes('.track-loading-overlay'), false);
 });
 
 test('pictures without a fallback of their own try other sizes, then hide instead of showing a broken icon', () => {
-  const app = read('shared/app.js');
+  const app = appSource();
   const at = app.indexOf("document.addEventListener('error', (e) => {");
   assert.ok(at > 0);
   const handler = app.slice(at, at + 400);

@@ -3,9 +3,10 @@ const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
+const appSource = require('../tools/app-source');
 
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
-const app = read('shared/app.js');
+const app = appSource();
 
 test('#41: wheel ticks add up: a smooth scrollBy per tick lost most of a fast flick', () => {
   const start = app.indexOf('function wheelRowSideways(');

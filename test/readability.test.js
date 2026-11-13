@@ -6,10 +6,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const appSource = require('../tools/app-source');
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
 test('Interface opacity starts at 85% when it was never set', () => {
-  const app = read('shared/app.js');
+  const app = appSource();
   assert.match(app, /const DEFAULT_UI_ALPHA = '85';/);
   assert.equal(/getItem\('uriel_ui_alpha'\) \|\| '20'/.test(app), false, 'no 20% fallback left');
   assert.match(read('shared/index.html'), /id="slider-ui-alpha"[^>]*value="85"/);

@@ -10,6 +10,7 @@ const vm = require('node:vm');
 const { PassThrough } = require('node:stream');
 
 const { startServer, stopServer, getServerToken } = require('../shared/server');
+const appSource = require('../tools/app-source');
 
 function request(port, path, headers = {}) {
   return new Promise((resolve, reject) => {
@@ -83,7 +84,7 @@ test('Spotify login reports callback errors and protects account routes', async 
 });
 
 test('renderer fetch sends the server token to Spotify account routes', async () => {
-  const source = fs.readFileSync(path.join(__dirname, '../shared/app.js'), 'utf8');
+  const source = appSource();
   const renderer = { electronAPI: { serverToken: getServerToken() }, fetch: fetch.bind(globalThis) };
   vm.runInNewContext(source.slice(0, source.indexOf('})();') + 5), { window: renderer, Headers, URL });
   const port = await startServer(0);
@@ -176,7 +177,7 @@ test('Spotify library reports skipped playlists and rejects malformed pages', as
 });
 
 test('renderer requires consent before importing a partial Spotify library', async () => {
-  const source = fs.readFileSync(path.join(__dirname, '../shared/app.js'), 'utf8');
+  const source = appSource();
   const start = source.indexOf('  async function handleSpotifyLoginImport()');
   const end = source.indexOf('  async function handleSpotifyImportAction()', start);
   assert.ok(start > 0 && end > start);

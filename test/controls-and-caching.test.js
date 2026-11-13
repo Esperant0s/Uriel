@@ -6,8 +6,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const appSource = require('../tools/app-source');
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
-const app = read('shared/app.js');
+const app = appSource();
 
 test("a song's menu can share it and copy its link; a playlist has a ⋯ menu", () => {
   assert.match(app, /label: 'Share…', run: \(\) => sharePlaylist\(\{ name: \[track\.title, track\.artist\]/);

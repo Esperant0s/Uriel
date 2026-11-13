@@ -8,8 +8,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const appSource = require('../tools/app-source');
 
-const app = fs.readFileSync(path.join(__dirname, '..', 'shared/app.js'), 'utf8');
+const app = appSource();
 const main = fs.readFileSync(path.join(__dirname, '..', 'desktop/main.js'), 'utf8');
 
 function fnSource(name) {

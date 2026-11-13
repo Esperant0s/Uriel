@@ -4,9 +4,10 @@ const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
+const appSource = require('../tools/app-source');
 
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
-const app = read('shared/app.js');
+const app = appSource();
 const css = read('shared/styles.css');
 const fnBody = (src, name) => {
   const start = src.indexOf(`function ${name}(`);

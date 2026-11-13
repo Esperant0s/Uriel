@@ -6,6 +6,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const appSource = require('../tools/app-source');
 const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
 
 test('the four artwork shapes are ready as soon as m3shapes.js runs, without touching the page', () => {
@@ -25,7 +26,7 @@ test('the four artwork shapes are ready as soon as m3shapes.js runs, without tou
 });
 
 test('the splash waits for the app and for smooth frames, with a cap; it only animates transform and opacity', () => {
-  const app = read('shared/app.js');
+  const app = appSource();
   const splash = app.slice(app.indexOf('(function urielSplash()'), app.indexOf("document.addEventListener('DOMContentLoaded'"));
   assert.match(splash, /addEventListener\('uriel:ready'/);
   assert.match(splash, /MAX_MS/);

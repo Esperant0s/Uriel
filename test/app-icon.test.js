@@ -12,12 +12,13 @@ const path = require('node:path');
 const root = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 const { NAMES } = require('../mobile/app-icon');
+const appSource = require('../tools/app-source');
 const names = Object.values(NAMES).sort();
 
 test('every icon style the picker offers has a phone icon name', () => {
   const styles = fs.readdirSync(path.join(root, 'shared', 'assets', 'app-icons')).map((f) => f.replace(/\.svg$/, '')).concat('uriel').sort();
   assert.deepEqual(Object.keys(NAMES).sort(), styles);
-  const app = read('shared/app.js');
+  const app = appSource();
   for (const id of Object.keys(NAMES)) assert.ok(app.includes(`id: '${id}'`), `${id} is in HOME_ICONS`);
 });
 
