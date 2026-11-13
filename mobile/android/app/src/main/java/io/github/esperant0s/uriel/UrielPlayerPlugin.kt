@@ -138,6 +138,12 @@ class UrielPlayerPlugin : Plugin(), PlayerService.Page {
         call.resolve()
     }
 
+    @PluginMethod
+    fun setMixing(call: PluginCall) = withPlayer(call) { s ->
+        s.setMixing(call.getBoolean("mix", false) == true)
+        call.resolve()
+    }
+
     // ---- the crossfade's second player (mobile/native-audio.ts NativeTail); events: "tail" ----
 
     @PluginMethod

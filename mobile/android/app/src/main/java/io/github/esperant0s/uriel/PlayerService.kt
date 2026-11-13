@@ -1,6 +1,7 @@
 package io.github.esperant0s.uriel
 
 import android.content.Context
+import android.media.AudioManager
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -66,6 +67,8 @@ class PlayerService : MediaSessionService() {
         private const val CMD_SHUFFLE = "io.github.esperant0s.uriel.SHUFFLE"
         private const val CMD_REPEAT = "io.github.esperant0s.uriel.REPEAT"
         private const val KEY_EFFECTS = "effects"
+        private const val KEY_MIX = "mix"
+        private val MUSIC = AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build()
         // while playing the page hears where the song is this often; it counts the time in between itself
         private const val TICK_MS = 1000L
         // a song this short or less is a broken download (the same check as server.js findCachedFile)
@@ -263,10 +266,7 @@ class PlayerService : MediaSessionService() {
         }
         exo = ExoPlayer.Builder(this, renderers)
             .setMediaSourceFactory(DefaultMediaSourceFactory(this, extractors))
-            .setAudioAttributes(
-                AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(),
-                /* handleAudioFocus = */ true,
-            )
+            .setAudioAttributes(MUSIC, /* handleAudioFocus = */ true)
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
@@ -296,6 +296,7 @@ class PlayerService : MediaSessionService() {
             .build()
         instance = this
         updateButtons()
+        setMixing(getSharedPreferences(ColdPlayer.PREFS, Context.MODE_PRIVATE).getBoolean(KEY_MIX, false))
     }
 
     // Songs saved from YouTube are often its DASH pieces one after another, each with its own index: read as one,
@@ -309,6 +310,7 @@ class PlayerService : MediaSessionService() {
 
     override fun onDestroy() {
         main.removeCallbacks(tick)
+        main.removeCallbacks(callCheck)
         tails.values.forEach { it.release() }
         tails.clear()
         instance = null
@@ -390,6 +392,30 @@ class PlayerService : MediaSessionService() {
     fun setEffects(settings: JSONObject) {
         effects.setSettings(EffectsProcessor.Settings(settings))
         getSharedPreferences(ColdPlayer.PREFS, Context.MODE_PRIVATE).edit().putString(KEY_EFFECTS, settings.toString()).apply()
+    }
+
+    // "Play alongside other apps" (#45): without audio focus a game or a video no longer pauses the music. Calls
+    // still should, so the phone's audio mode is checked while this is on.
+    private var mixing = false
+    private var pausedForCall = false
+    private val callCheck = object : Runnable {
+        override fun run() {
+            val mode = getSystemService(AudioManager::class.java).mode
+            val inCall = mode == AudioManager.MODE_RINGTONE || mode == AudioManager.MODE_IN_CALL || mode == AudioManager.MODE_IN_COMMUNICATION
+            if (inCall && exo.playWhenReady) { pausedForCall = true; exo.pause() }
+            else if (!inCall && pausedForCall) { pausedForCall = false; exo.play() }
+            main.postDelayed(this, 1000)
+        }
+    }
+
+    fun setMixing(mix: Boolean) {
+        getSharedPreferences(ColdPlayer.PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_MIX, mix).apply()
+        if (mix == mixing) return
+        mixing = mix
+        exo.setAudioAttributes(MUSIC, !mix)
+        main.removeCallbacks(callCheck)
+        pausedForCall = false
+        if (mix) main.post(callCheck)
     }
 
     // ---- crossfade tails ----

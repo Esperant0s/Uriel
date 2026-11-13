@@ -66,6 +66,7 @@ class NativeAudio extends EventTarget {
   private _sentSpeed = '';
   private _sentVolume = -1;
   private _sentEffects = '';
+  private _sentMix: boolean | null = null;
 
   constructor(web: HTMLAudioElement, player: UrielPlayerPlugin) {
     super();
@@ -426,6 +427,12 @@ class NativeAudio extends EventTarget {
     if (force || Math.abs(v - this._sentVolume) > 0.001) {
       this._sentVolume = v;
       this.player.setVolume({ volume: v }).catch(() => {});
+    }
+    // "Play alongside other apps" in Settings (mobile-ui.ts)
+    const mix = localStorage.getItem('uriel_mix_audio') === '1';
+    if (force || mix !== this._sentMix) {
+      this._sentMix = mix;
+      this.player.setMixing({ mix }).catch(() => {});
     }
     const effects = JSON.stringify(soundSettings());
     if (force || effects !== this._sentEffects) {

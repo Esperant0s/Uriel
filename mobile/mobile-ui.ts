@@ -330,6 +330,28 @@ const tapped = (e: Event): Element | null => (e.target instanceof Element ? e.ta
     addPlaybackRow(row);
   }
 
+  // Android: keep playing when a game or a video starts (#45). Calls still pause it (PlayerService.setMixing)
+  if (document.documentElement.classList.contains('is-android') && trRow) {
+    const MIX = 'uriel_mix_audio';
+    const row = document.createElement('div');
+    row.className = 'setting-item';
+    row.innerHTML = `
+      <div class="setting-item-top" style="align-items: center;">
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <span class="setting-name" data-i18n>Play alongside other apps</span>
+          <span style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);" data-i18n>Keep the music going when a game or a video starts. Calls still pause it.</span>
+        </div>
+        <button class="effect-switch-btn${localStorage.getItem(MIX) === '1' ? ' active' : ''}" type="button" aria-label="Play alongside other apps" data-i18n-attr="aria-label"><span class="thumb"></span></button>
+      </div>`;
+    const sw = row.querySelector('button')!;
+    sw.addEventListener('click', () => {
+      const on = !sw.classList.contains('active');
+      sw.classList.toggle('active', on);
+      localStorage.setItem(MIX, on ? '1' : '0');
+    });
+    addPlaybackRow(row);
+  }
+
   // Android: let Uriel off battery optimization so the phone doesn't stop it in the background (media-controls.ts)
   if (window.UrielBackground && trRow) {
     const bg = window.UrielBackground;

@@ -17,7 +17,7 @@ function setup({ attach = {}, engine = null } = {}) {
     addListener: (name, cb) => { listeners[name] = cb; return Promise.resolve({ remove() {} }); },
     attach: () => Promise.resolve(attach),
   };
-  for (const m of ['load', 'play', 'pause', 'seek', 'setSpeed', 'setVolume', 'setEffects', 'clear', 'setModes', 'tailLoad', 'tailSet', 'tailStop']) {
+  for (const m of ['load', 'play', 'pause', 'seek', 'setSpeed', 'setVolume', 'setEffects', 'setMixing', 'clear', 'setModes', 'tailLoad', 'tailSet', 'tailStop']) {
     player[m] = (arg) => { calls.push(arg === undefined ? m : [m, arg]); return Promise.resolve(); };
   }
   const fakeCore = { Capacitor: { getPlatform: () => 'android' }, registerPlugin: () => player };

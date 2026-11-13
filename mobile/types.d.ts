@@ -135,6 +135,7 @@ declare global {
     setVolume(o: { volume: number }): Promise<void>;
     setModes(o: { shuffle: boolean; repeat: string }): Promise<void>;
     setEffects(o: SoundSettings): Promise<void>;
+    setMixing(o: { mix: boolean }): Promise<void>;
     clear(): Promise<void>;
     tailLoad(o: { id: string; path: string; url: string; startAt: number }): Promise<void>;
     tailSet(o: { id: string; play?: boolean; position?: number; volume?: number; speed?: number; preservePitch?: boolean }): Promise<void>;
