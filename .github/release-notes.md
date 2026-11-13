@@ -1,4 +1,4 @@
-## Uriel 1.5.6
+## Uriel 1.5.7
 
 Uriel is the new name of the Esperant0s fork of [Muriel](https://github.com/cloverscripts/riff-muriel) by cloverscripts, itself based on [Riff](https://github.com/rootscripts/riff) by rootscripts (MIT). It is its own app now and installs next to Muriel.
 
@@ -8,6 +8,9 @@ Uriel is the new name of the Esperant0s fork of [Muriel](https://github.com/clov
 - **Windows:** installer below, or the portable exe on [windows-latest](https://github.com/Esperant0s/Uriel/releases/tag/windows-latest). Windows SmartScreen may warn because the files are unsigned: More info → Run anyway.
 - **macOS:** `.dmg` / `.zip` below, for Apple Silicon and Intel. The app is unsigned: if macOS blocks it, open System Settings → Privacy & Security → Open Anyway.
 - **Linux:** `.AppImage` below (needs FUSE 2: `fuse2` / `libfuse2`)
+
+**New in 1.5.7**
+- **Visualizer on Android:** Settings → Interface → Visualizer. Bars that move with the music behind the mini player, and in full-screen lyrics. Off unless you switch it on; it only runs while Uriel is on screen and a song plays.
 
 **New in 1.5.6**
 - **Mural is now Uriel:** same app with a new name. It updates in place and keeps everything.
