@@ -68,6 +68,7 @@
       "!mobile/**",
       "!tools/**",
       "!docs/**",
+      "!relay/**",
       "!capacitor.config.json",
       "!.claude/**",
       "!shared/vendor/**",
