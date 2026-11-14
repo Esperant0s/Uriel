@@ -4401,7 +4401,9 @@ async function fetchFullSpotifyPlaylist(playlistId, accessToken) {
   if (offset < total) throw new Error('Incomplete Pathfinder playlist');
   const tracks = items.map(it => {
     const t = it?.itemV2?.data || it?.item?.data || {};
-    const artists = (t.albumOfTrack?.artists?.items || []).map(a => a.profile?.name).filter(Boolean);
+    // the song's own artists: on a soundtrack or compilation the album's artist is "Various Artists"
+    const own = (t.artists?.items || []).map(a => a.profile?.name).filter(Boolean);
+    const artists = own.length ? own : (t.albumOfTrack?.artists?.items || []).map(a => a.profile?.name).filter(Boolean);
     const durationMs = t.trackDuration?.totalMilliseconds || t.duration?.totalMilliseconds || t.duration_ms;
     const duration = typeof durationMs === 'number' ? Math.round(durationMs / 1000) : 0;
     return { title: (t.name || '').trim(), artist: artists.join(', '), duration };

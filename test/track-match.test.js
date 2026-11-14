@@ -65,3 +65,15 @@ test('Arabic names meet their Latin spellings, and the spellings meet each other
 test("a tribute channel isn't the artist", () => {
   assert.ok(!pickBestMatch({ title: 'Yellow', artist: 'Coldplay' }, [r('Coldplay Tribute', 'Yellow')]));
 });
+
+test('"Various Artists" and studio sound teams name no one: the title has to do', () => {
+  assert.ok(pickBestMatch({ title: 'Majula', artist: 'FROMSOFTWARE SOUND TEAM' }, [r('Some Fan', 'Majula')]));
+  assert.ok(pickBestMatch({ title: 'Dragula', artist: 'Various Artists' }, [r('Rob Zombie', 'Dragula')]));
+  assert.deepEqual(matchQueries({ title: 'Dragula', artist: 'Various Artists' }), ['Dragula']);
+});
+
+test('a fan upload with the same title and length is taken, one with another length is not', () => {
+  assert.ok(pickBestMatch({ title: 'Theme of the Celestials', artist: 'T’s MUSIC', duration: 167 }, [r('Ammy', '[Okami] - Theme of the Celestials (HD)', 168)]));
+  assert.ok(!pickBestMatch({ title: 'Theme of the Celestials', artist: 'T’s MUSIC', duration: 167 }, [r('Ammy', 'Theme of the Celestials', 190)]));
+  assert.ok(!pickBestMatch({ title: 'Yellow', artist: 'Coldplay', duration: 269 }, [r('Tame Impala', 'Yellow', 250)]));
+});

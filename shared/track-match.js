@@ -60,6 +60,10 @@ function sameSkeleton(a, b) {
   return x === skeleton(b) && x.length >= (isArabic(a) !== isArabic(b) ? 3 : 5);
 }
 
+// credits that name no performer: the uploads of these songs are by whoever posted them
+const NO_ARTIST = /^(various artists|unknown artist|.+ sound team)$/;
+const realArtists = (artist) => splitArtists(artist).filter((a) => !NO_ARTIST.test(a));
+
 function stripFeat(t) {
   return String(t || '').replace(/[([]\s*(feat|ft|with)\.?\s[^)\]]*[)\]]/gi, ' ').replace(/\s(feat|ft)\.?\s.*$/i, ' ');
 }
@@ -134,7 +138,7 @@ function artistScore(wanted, result) {
 
 // sp: { title, artist, duration (s) }; results: search results { title, artist, duration }
 function scoreCandidate(sp, r) {
-  const wanted = splitArtists(sp.artist);
+  const wanted = realArtists(sp.artist);
   const wantTitle = cleanTitle(sp.title, wanted);
   const gotTitle = cleanTitle(r.title, wanted.concat(splitArtists(r.artist)));
   let tSim = titleSimilarity(wantTitle, gotTitle);
@@ -157,7 +161,9 @@ function scoreCandidate(sp, r) {
   if (missing.length) score -= 0.5;
   const durationClose = dDiff !== null && dDiff <= 5;
   const accept = !extra.length && tSim >= 0.5
-    && (aSim >= 0.6 || (!wanted.length && tSim >= 0.8) || (aSim > 0 && durationClose && tSim >= 0.9));
+    && (aSim >= 0.6 || (!wanted.length && tSim >= 0.8) || (aSim > 0 && durationClose && tSim >= 0.9)
+      // game and film music is mostly uploaded by fans: the same title and the same length to the second or two
+      || (tSim >= 0.85 && dDiff !== null && dDiff <= 2));
   return { score, accept, tSim, aSim, dDiff };
 }
 
@@ -179,7 +185,7 @@ function matchQueries(sp) {
   const out = [];
   const add = (q) => { q = String(q || '').replace(/\s+/g, ' ').trim(); if (q && !out.includes(q)) out.push(q); };
   const main = String(sp.artist || '').split(/\s*(?:,|&|\bfeat\.?|\bft\.?)\s*/i)[0];
-  add(`${main} ${title}`);
+  add(/^various artists$/i.test(main.trim()) ? title : `${main} ${title}`);
   if (artists.length > 1) add(`${title} ${String(sp.artist || '')}`);
   return out;
 }
