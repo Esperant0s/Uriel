@@ -1,4 +1,4 @@
-## Uriel 1.5.9
+## Uriel 1.5.10
 
 Uriel is the new name of the Esperant0s fork of [Muriel](https://github.com/cloverscripts/riff-muriel) by cloverscripts, itself based on [Riff](https://github.com/rootscripts/riff) by rootscripts (MIT). It is its own app now and installs next to Muriel.
 
@@ -8,6 +8,16 @@ Uriel is the new name of the Esperant0s fork of [Muriel](https://github.com/clov
 - **Windows:** installer below, or the portable exe on [windows-latest](https://github.com/Esperant0s/Uriel/releases/tag/windows-latest). Windows SmartScreen may warn because the files are unsigned: More info → Run anyway.
 - **macOS:** `.dmg` / `.zip` below, for Apple Silicon and Intel. The app is unsigned: if macOS blocks it, open System Settings → Privacy & Security → Open Anyway.
 - **Linux:** `.AppImage` below (needs FUSE 2: `fuse2` / `libfuse2`)
+
+**New in 1.5.10**
+- **Player styles:** Settings → Theme → Player style. Verdant (black panels, green, compact lists) and Crimson (flat black, red, the progress line across the top of the player bar) restyle the whole app on computers and phones. Uriel is the usual look.
+- **Drag by the grip on phones:** playlists, a playlist's songs, favourites and the queue have a grip at the end of each row. Drag from it to move the row; swiping anywhere else still scrolls.
+- **yt-dlp and ffmpeg are a choice again:** the desktop app no longer comes with them. If one is missing, Uriel says what it's for and offers to download it. "Not now" is remembered, and you're only asked again when you play or download something that needs it.
+
+**Fixed in 1.5.10**
+- **Spotify imports:** songs from soundtracks and compilations get their real artists instead of "Various Artists", so far more of them are found. A playlist of 708 songs now imports 707.
+- **Reordering:** a row dragged upwards lands where you drop it, not one place higher. On phones, dragging downwards works. Holding a playlist at the edge of a long list scrolls the list.
+- **Menus:** the More menu on a playlist page opens above its button when there's no room below and scrolls when it's taller than the window. On phones, menus open as a sheet along the bottom of the screen.
 
 **New in 1.5.9**
 - **Automatic backups:** once a day Uriel saves a copy of your profile on the device and keeps the newest 7. If your library ever comes up empty, it offers to bring back the newest one. Settings → Storage → Automatic backups lists them.
