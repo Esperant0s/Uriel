@@ -523,6 +523,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // other languages: what this device translated before, then whatever is still missing (English: nothing)
   I18N.connect(`http://127.0.0.1:${state.serverPort}`);
 
+  let toolsKnown = null; // the last /api/tools-status answer (updateToolsUI)
+  let toolsAskedAt = 0;
   checkToolsStatus(true);
 
   function sendStateToServer(currentWordText = '', wordIndex = -1, lineIndex = -1) {
@@ -3883,6 +3885,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function playTrack(track, queueList = null, startIndex = -1, context = null) {
     if (!track || !el.nativeAudio) return;
+    // a song that is cached or saved still plays without yt-dlp, so this only reminds
+    if (track.platform !== 'local') toolsReady(['yt-dlp']);
     resetLevelWatcher();
     vizPrev = null;
     if (state.currentTrack && state.currentTrack.id !== track.id && !navigatingBack) pushPlayHistory(state.currentTrack);
@@ -14964,10 +14968,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (downloadBatch) {
         // another download is running: this one waits its turn
         if (downloadAbort && downloadAbortFor !== downloadBatch) { queueDownload(downloadBatch); return; }
+        if (!(await toolsReady(['yt-dlp', 'ffmpeg']))) return;
         runBatchDownload(downloadBatch);
         return;
       }
       if (!trackToDownload) return;
+      if (!(await toolsReady(['yt-dlp', 'ffmpeg']))) return;
       const t = trackToDownload;
 
       const trimStartEl = document.getElementById('trim-start');
@@ -17137,6 +17143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   function updateToolsUI(data) {
+    toolsKnown = data;
     const statusText = document.getElementById('tools-status-text');
     const btnInstall = document.getElementById('btn-install-tools');
     if (!data) return;
@@ -17336,21 +17343,38 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (data.progress && data.progress.status === 'downloading') {
         pollToolsStatus();
-      } else if (promptUser && (!data.ytDlp || !data.ffmpeg)) {
-        if (!sessionStorage.getItem('uriel_tools_prompt_dismissed')) {
-          const modal = document.getElementById('tools-install-modal');
-          // name only what is missing: a tool already on this computer (in PATH, a package manager's folder or
-          // Uriel's old folder) is shown as Ready and isn't downloaded again
-          const desc = document.getElementById('tools-modal-desc');
-          if (desc) {
-            if (!data.ytDlp && !data.ffmpeg) I18N.text(desc, 'Uriel needs yt-dlp and ffmpeg to play and save tracks (~400 MB).');
-            else if (!data.ytDlp) I18N.text(desc, 'Uriel needs yt-dlp to play and save tracks. ffmpeg is already installed.');
-            else I18N.text(desc, 'Uriel needs ffmpeg to save tracks. yt-dlp is already installed.');
-          }
-          if (modal) openModal(modal);
-        }
+      } else if (promptUser && (!data.ytDlp || !data.ffmpeg) && !localStorage.getItem('uriel_tools_reminder_off')) {
+        showToolsReminder(data);
       }
     } catch (e) {}
+  }
+
+  // name only what is missing, and what it is for: a tool already on this computer (in PATH, a package manager's
+  // folder or Uriel's old folder) is shown as Ready and isn't downloaded again
+  function showToolsReminder(data) {
+    const modal = document.getElementById('tools-install-modal');
+    const desc = document.getElementById('tools-modal-desc');
+    if (desc) {
+      if (!data.ytDlp && !data.ffmpeg) I18N.text(desc, 'yt-dlp lets Uriel find and play songs from YouTube, and ffmpeg lets it save them as MP3, FLAC and the other formats. Download both (~400 MB)?');
+      else if (!data.ytDlp) I18N.text(desc, 'yt-dlp lets Uriel find and play songs from YouTube. Download it? ffmpeg is already installed.');
+      else I18N.text(desc, 'ffmpeg lets Uriel save songs as MP3, FLAC and the other formats. Download it? yt-dlp is already installed.');
+    }
+    toolsAskedAt = Date.now();
+    if (modal) openModal(modal);
+  }
+
+  // A feature that needs a missing tool asks again, even after "Not now". False when one is missing.
+  async function toolsReady(need) {
+    if (isPhoneApp || !toolsKnown) return true;
+    const lacks = (d) => need.some((n) => (n === 'yt-dlp' ? !d.ytDlp : !d.ffmpeg));
+    if (!lacks(toolsKnown)) return true;
+    // installed some other way since the last look?
+    try { updateToolsUI(await (await fetch(`http://127.0.0.1:${state.serverPort}/api/tools-status`)).json()); } catch (e) {}
+    if (!lacks(toolsKnown)) return true;
+    if (toolsKnown.progress && toolsKnown.progress.status === 'downloading') return false;
+    // once in a while, not on every song of a queue that keeps failing
+    if (Date.now() - toolsAskedAt > 30000) showToolsReminder(toolsKnown);
+    return false;
   }
 
   const btnInstallTools = document.getElementById('btn-install-tools');
@@ -17378,16 +17402,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  if (btnDismissToolsModal && toolsModal) {
-    btnDismissToolsModal.addEventListener('click', () => {
-      sessionStorage.setItem('uriel_tools_prompt_dismissed', '1');
-      closeModal(toolsModal);
-    });
-  }
-
-  if (btnCloseToolsModal && toolsModal) {
-    btnCloseToolsModal.addEventListener('click', () => {
-      sessionStorage.setItem('uriel_tools_prompt_dismissed', '1');
+  // "Not now" is remembered: no more reminders when Uriel starts, only when something needs the tool (toolsReady)
+  for (const b of [btnDismissToolsModal, btnCloseToolsModal]) {
+    if (b && toolsModal) b.addEventListener('click', () => {
+      localStorage.setItem('uriel_tools_reminder_off', '1');
       closeModal(toolsModal);
     });
   }

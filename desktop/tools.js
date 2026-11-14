@@ -7,10 +7,6 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const { IS_WIN, BIN_DIR, LEGACY_BIN_DIRS, resolveBinary, clearBinaryCache } = require('./platform');
 const logger = require('./logger');
-const assets = require('./tools-assets');
-const ytDlpAsset = () => assets.ytDlpAsset(process.platform, process.arch);
-const ffmpegAsset = () => assets.ffmpegAsset(process.platform, process.arch);
-const { expectedHash } = assets;
 
 const state = { status: 'idle', tool: '', percent: 0, error: '' };
 const STAMP = path.join(BIN_DIR, '.ytdlp-update-stamp');
@@ -21,6 +17,20 @@ const STAMP = path.join(BIN_DIR, '.ytdlp-update-stamp');
 // in bin/yt-dlp_macos/ with bin/yt-dlp a symlink to it, so resolveBinary() and every caller stay the same.
 const MAC_YTDLP_DIR = path.join(BIN_DIR, 'yt-dlp_macos');
 const MAC_YTDLP_EXE = path.join(MAC_YTDLP_DIR, 'yt-dlp_macos');
+
+function ytDlpAsset() {
+  const a = process.arch;
+  if (IS_WIN) return a === 'arm64' ? 'yt-dlp_arm64.exe' : a === 'ia32' ? 'yt-dlp_x86.exe' : 'yt-dlp.exe';
+  if (process.platform === 'darwin') return 'yt-dlp_macos.zip';
+  return a === 'arm64' ? 'yt-dlp_linux_aarch64' : 'yt-dlp_linux';
+}
+
+function ffmpegAsset() {
+  const a = process.arch === 'arm64' ? 'arm64' : '64';
+  if (IS_WIN) return { name: `ffmpeg-master-latest-win${a}-gpl.zip` };
+  if (process.platform === 'linux') return { name: `ffmpeg-master-latest-linux${a}-gpl.tar.xz` };
+  return null;
+}
 
 // Without a timeout a stalled download kept the status at 'downloading' forever, and ensureTools()
 // refuses to start again while it says that. 60s without a single byte counts as failed.
@@ -69,6 +79,14 @@ async function downloadFile(url, dest) {
     res.pipe(out);
   });
   return hash.digest('hex');
+}
+
+function expectedHash(sums, fileName) {
+  for (const line of sums.split(/\r?\n/)) {
+    const m = line.trim().match(/^([a-f0-9]{64})\s+\*?(?:\.\/)?(.+)$/i);
+    if (m && m[2].trim() === fileName) return m[1].toLowerCase();
+  }
+  return null;
 }
 
 function run(cmd, args, timeoutMs = 600000) {
@@ -125,8 +143,6 @@ async function installMacYtDlpDir(archive, target) {
   const work = fs.mkdtempSync(path.join(BIN_DIR, '.yt-dlp-unpack-'));
   try {
     await run('/usr/bin/ditto', ['-x', '-k', archive, work]);
-    // a copy from inside the downloaded app carries its quarantine flag, which would stop it from running
-    try { await run('/usr/bin/xattr', ['-dr', 'com.apple.quarantine', work], 30000); } catch (_) {}
     const exe = path.join(work, 'yt-dlp_macos');
     if (!fs.existsSync(exe)) throw new Error('yt-dlp_macos not found inside the archive');
     fs.chmodSync(exe, 0o755);
@@ -140,43 +156,6 @@ async function installMacYtDlpDir(archive, target) {
     fs.rmSync(work, { recursive: true, force: true });
     fs.rmSync(archive, { force: true });
   }
-}
-
-// The yt-dlp that came with the app (the release workflow adds it as resources/bin: tools/fetch-tools.mjs).
-// It is copied into BIN_DIR before it is used: a copy inside the app can't update itself (the AppImage is
-// read-only, and the next app update would replace it), and YouTube's changes need a newer yt-dlp every few weeks.
-function bundledYtDlp() {
-  if (!process.resourcesPath) return null;
-  const file = path.join(process.resourcesPath, 'bin', process.platform === 'darwin' ? 'yt-dlp_macos.zip' : IS_WIN ? 'yt-dlp.exe' : 'yt-dlp');
-  return fs.existsSync(file) ? file : null;
-}
-
-let bundledJob = null;
-// true once the bundled copy is in BIN_DIR; false when there is none, or one is there already
-function installBundledYtDlp() {
-  if (!bundledJob) {
-    bundledJob = (async () => {
-      const src = bundledYtDlp();
-      const target = path.join(BIN_DIR, IS_WIN ? 'yt-dlp.exe' : 'yt-dlp');
-      if (!src || fs.existsSync(target)) return false;
-      fs.mkdirSync(BIN_DIR, { recursive: true });
-      const tmp = `${target}.bundled`;
-      fs.copyFileSync(src, tmp);
-      if (process.platform === 'darwin') await installMacYtDlpDir(tmp, target);
-      else {
-        if (!IS_WIN) fs.chmodSync(tmp, 0o755);
-        fs.renameSync(tmp, target);
-      }
-      // it is as old as this release: checked for an update straight away (updateYtDlpIfManaged)
-      fs.rmSync(STAMP, { force: true });
-      clearBinaryCache();
-      return true;
-    })().catch((e) => {
-      try { logger.error('Installing the bundled yt-dlp failed', e); } catch (_) {}
-      return false;
-    }).finally(() => { bundledJob = null; });
-  }
-  return bundledJob;
 }
 
 // Earlier versions installed the slow single-file build on macOS: it is swapped for the folder build once.
@@ -239,8 +218,7 @@ async function installFfmpeg() {
 
 function toolsStatus() {
   return {
-    // one that came with the app counts: it is being put in place (installBundledYtDlp)
-    ytDlp: !!resolveBinary('yt-dlp') || !!bundledYtDlp(),
+    ytDlp: !!resolveBinary('yt-dlp'),
     ffmpeg: !!resolveBinary('ffmpeg'),
     progress: Object.assign({}, state)
   };
@@ -252,7 +230,6 @@ async function ensureTools() {
   state.status = 'downloading';
   state.error = '';
   try {
-    if (!resolveBinary('yt-dlp') && await installBundledYtDlp()) clearBinaryCache();
     if (!resolveBinary('yt-dlp') || hasSlowMacYtDlp()) { state.tool = 'yt-dlp'; state.percent = 0; await installYtDlp(); clearBinaryCache(); }
     if (!resolveBinary('ffmpeg')) { state.tool = 'ffmpeg'; state.percent = 0; await installFfmpeg(); clearBinaryCache(); }
     state.status = 'done';
@@ -265,7 +242,6 @@ async function ensureTools() {
 }
 
 async function updateYtDlpIfManaged() {
-  await installBundledYtDlp();
   const bin = resolveBinary('yt-dlp');
   // only the copies Uriel (or Uriel before it) downloaded: one from a package manager is that manager's to update
   if (!bin || ![BIN_DIR, ...LEGACY_BIN_DIRS].includes(path.dirname(bin))) return false;
