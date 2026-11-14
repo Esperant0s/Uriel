@@ -2207,7 +2207,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('pointerdown', (e) => {
       if (e.pointerType !== 'touch') return;
       const row = e.target.closest('.track-row');
-      if (!row || e.target.closest('button, input, select, a')) return;
+      if (!row || e.target.closest('button, input, select, a, .drag-grip')) return;
       end();
       hold = { row, id: e.pointerId, x: e.clientX, y: e.clientY, moved: false, fired: false, native: false };
       hold.timer = setTimeout(() => {
@@ -8232,6 +8232,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>
         `;
 
+        if (canReorder(context)) row.appendChild(dragGrip());
+
         if (multiSel.active && multiSel.context === context) {
           const chk = document.createElement('span');
           chk.className = 'track-row-check';
@@ -8531,7 +8533,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // a menu of { label, run, danger } at x, y (a song's, a playlist's); the same look and closing rules for all
-  function showActionMenu(x, y, items) {
+  function showActionMenu(x, y, items, aboveY = y) {
     closeTrackContextMenu();
     const menu = document.createElement('div');
     menu.className = 'track-context-menu';
@@ -8550,11 +8552,28 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       menu.appendChild(b);
     });
-    document.body.appendChild(menu);
-    const rect = menu.getBoundingClientRect();
-    menu.style.left = `${Math.max(8, Math.min(x, window.innerWidth - rect.width - 8))}px`;
-    menu.style.top = `${Math.max(8, Math.min(y, window.innerHeight - rect.height - 8))}px`;
+    placeMenu(menu, x, y, aboveY);
     trackMenuEl = menu;
+  }
+
+  // Below the point when it fits, above it (aboveY) when not, and scrolling inside when neither: it used to be
+  // pushed up over its button, or run off the bottom on a short window. Kept clear of the player bar. Phones get
+  // a sheet along the bottom of the screen instead (mobile.css).
+  function placeMenu(menu, x, y, aboveY) {
+    document.body.appendChild(menu);
+    if (isPhoneApp) { menu.classList.add('as-sheet'); return; }
+    const bar = document.querySelector('.playbar');
+    const barTop = bar && bar.offsetParent ? bar.getBoundingClientRect().top : window.innerHeight;
+    const bottom = Math.min(window.innerHeight, barTop) - 8;
+    if (menu.getBoundingClientRect().height > bottom - 8) {
+      menu.style.maxHeight = `${Math.max(160, bottom - 8)}px`;
+      menu.style.overflowY = 'auto';
+    }
+    const rect = menu.getBoundingClientRect();
+    let top = y;
+    if (top + rect.height > bottom) top = aboveY - rect.height >= 8 ? aboveY - rect.height : bottom - rect.height;
+    menu.style.left = `${Math.max(8, Math.min(x, window.innerWidth - rect.width - 8))}px`;
+    menu.style.top = `${Math.max(8, top)}px`;
   }
 
   document.addEventListener('click', closeTrackContextMenu);
@@ -9779,12 +9798,32 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       item.appendChild(thumbEl);
       item.appendChild(infoEl);
+      if (canReorder('playlists')) item.appendChild(dragGrip());
 
       item.addEventListener('click', () => {
         openPlaylistDetail(pl.id);
       });
       el.playlistsList.appendChild(item);
     });
+  }
+
+  // Phones move rows by a grip at their end. A held row worked only upwards: moving down, Android took the
+  // gesture for a scroll and cancelled the drag (or scrolled the list under it). The grip has touch-action: none,
+  // so a finger on it is never a scroll; the rest of the row still scrolls the list and opens the menu on a hold.
+  function canReorder(list) {
+    if (!isPhoneApp) return false;
+    if (list === 'queue') return true;
+    if (list === 'playlists') return getLibrarySort('playlists') === 'custom';
+    if (list === 'favorites') return !(el.favoritesSearchInput && el.favoritesSearchInput.value.trim()) && getTrackSortMode('favorites') === 'manual';
+    if (list === 'playlist') return !(el.playlistSearchInput && el.playlistSearchInput.value.trim()) && getTrackSortMode('playlist') === 'manual';
+    return false;
+  }
+  function dragGrip() {
+    const g = document.createElement('span');
+    g.className = 'drag-grip';
+    g.setAttribute('aria-hidden', 'true');
+    g.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>';
+    return g;
   }
 
   function initListReordering({ container, itemSelector, setOrder, canDragItem, isFilterActive }) {
@@ -9807,6 +9846,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let isTouch = false;
     // which drag a drop's delayed cleanup belongs to: a new drag can start inside its 160 ms
     let dragGen = 0;
+    let lastClientY = 0;
+    let startScroll = 0;
 
     const scrollParent = container.closest('.main-content, .rail-drawer') || container;
 
@@ -9838,6 +9879,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       targetIndex = startIndex;
       draggedHeight = draggedItem.offsetHeight;
       draggedStartTop = draggedItem.offsetTop;
+      startScroll = scrollParent ? scrollParent.scrollTop : 0;
 
       itemMetrics = items.map((el, i) => ({
         el,
@@ -9860,16 +9902,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (e.target.closest('button, input, select, textarea, .btn-icon-pill, .track-fav, .track-download-btn, .btn-rename-p, .btn-delete-p')) return;
 
+      isTouch = e.pointerType === 'touch';
+      if (isTouch && !e.target.closest('.drag-grip')) return;
       draggedItem = item;
       startX = e.clientX;
       startY = e.clientY;
+      lastClientY = e.clientY;
       activePointerId = e.pointerId;
       isDragging = false;
-      isTouch = e.pointerType === 'touch';
 
-      pressTimer = setTimeout(() => {
-        startDrag();
-      }, isTouch ? TOUCH_HOLD_MS : 250);
+      if (isTouch) startDrag();
+      else pressTimer = setTimeout(startDrag, 250);
 
       window.addEventListener('pointermove', onPointerMove);
       window.addEventListener('pointerup', onPointerUp);
@@ -9884,40 +9927,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
         if (dist > 7) {
           clearTimeout(pressTimer);
-          // a finger that moves before the hold is scrolling the list, not dragging a row
-          if (isTouch) { onPointerUp(e); return; }
           startDrag();
         } else {
           return;
         }
       }
 
-      const dy = e.clientY - startY;
-
+      lastClientY = e.clientY;
       if (scrollParent) {
         const scRect = scrollParent.getBoundingClientRect();
         clearInterval(autoScrollTimer);
-        if (e.clientY < scRect.top + 40) {
-          autoScrollTimer = setInterval(() => { scrollParent.scrollTop -= 8; }, 16);
-        } else if (e.clientY > scRect.bottom - 40) {
-          autoScrollTimer = setInterval(() => { scrollParent.scrollTop += 8; }, 16);
-        }
+        // the list scrolls under a row held at its edge, and the row keeps up with it
+        const by = e.clientY < scRect.top + 40 ? -8 : e.clientY > scRect.bottom - 40 ? 8 : 0;
+        if (by) autoScrollTimer = setInterval(() => { scrollParent.scrollTop += by; placeDragged(); }, 16);
       }
+      placeDragged();
+    };
 
+    const placeDragged = () => {
+      if (!draggedItem || !isDragging) return;
+      const dy = lastClientY - startY + (scrollParent ? scrollParent.scrollTop - startScroll : 0);
       draggedItem.style.transform = `translate3d(0, ${dy}px, 0) scale(1.02)`;
 
       if (itemMetrics.length <= 1) return;
 
+      // its new place: after every other row whose middle it has passed. Taking the last row passed was right going
+      // down but one place too high going up
       const currentCenter = draggedStartTop + (draggedHeight / 2) + dy;
       let newTarget = 0;
-      for (let i = 0; i < itemMetrics.length; i++) {
-        const m = itemMetrics[i];
-        const mid = m.top + (m.height / 2);
-        if (currentCenter > mid) {
-          newTarget = i;
-        }
+      for (const m of itemMetrics) {
+        if (m.el !== draggedItem && currentCenter > m.top + m.height / 2) newTarget++;
       }
-      newTarget = Math.max(0, Math.min(newTarget, itemMetrics.length - 1));
 
       if (newTarget !== targetIndex) {
         targetIndex = newTarget;
@@ -10298,7 +10338,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       { label: 'Share…', run: () => sharePlaylist(pl) },
       { label: 'Export as file', run: click('btn-export-playlist') },
       { label: 'Delete playlist', danger: true, run: click('btn-delete-playlist') },
-    ]);
+    ], r.top - 6);
   });
 
   // ---- which of a playlist's songs are already on this device ----
