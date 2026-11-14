@@ -6,6 +6,8 @@ desktop/bin/ffmpeg
 desktop/bin/ffmpeg.exe
 desktop/bin/ffprobe
 desktop/bin/ffprobe.exe
+# yt-dlp for a release build (tools/fetch-ytdlp.mjs)
+bundled-bin/
 *.log
 .DS_Store
 .env

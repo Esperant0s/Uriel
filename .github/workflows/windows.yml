@@ -36,6 +36,7 @@ jobs:
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: |
+          node tools/fetch-ytdlp.mjs
           node tools/build-info.mjs shared/build-info.js windows
           npx electron-builder --win portable --x64 --publish never -c.artifactName='Uriel.${ext}'
           ls -la dist
