@@ -14450,6 +14450,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let trackToDownload = null;
   let downloadBatch = null;
+  let downloadAbort = null;
+  // what the running download is for: the batch object or the track. The dialog is shared, so a playlist download
+  // left running (Escape only hides the dialog) must not be cancelled from a single song's dialog, or the reverse
+  let downloadAbortFor = null;
   let selectedFormat = localStorage.getItem('uriel_download_format') || 'mp3';
   let selectedQuality = '0';
 
@@ -14480,9 +14484,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   function updateDownloadBtnLabel() {
     if (!el.downloadBtnText) return;
+    const waits = !!downloadAbort && downloadAbortFor !== (downloadBatch || trackToDownload);
     if (downloadBatch) {
-      const count = downloadBatch.tracks.length;
-      el.downloadBtnText.textContent = downloadBatch.retry ? Tf('Retry failed ({0})', count) : `Download ${count} track${count === 1 ? '' : 's'}`;
+      const b = downloadBatch;
+      const count = b.missing != null ? b.missing : b.tracks.length;
+      if (el.btnConfirmDownload && !(downloadAbort && downloadAbortFor === b)) el.btnConfirmDownload.disabled = !!b.checking || count === 0;
+      el.downloadBtnText.textContent = b.checking ? T('Checking…')
+        : count === 0 ? T('All downloaded')
+          : waits ? Tf('Add {0} to the download queue', count)
+            : b.retry ? Tf('Retry failed ({0})', count) : `Download ${count} track${count === 1 ? '' : 's'}`;
+    } else if (waits) {
+      el.downloadBtnText.textContent = T('Add to the download queue');
     } else {
       // phones save the song as it comes: no format to promise
       el.downloadBtnText.textContent = !isPhoneApp ? `Download ${selectedFormat.toUpperCase()}` : singleFailed ? T('Try again') : singleSaved ? T('Download again') : T('Download');
@@ -14521,7 +14533,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     el.downloadModal.classList.remove('batch-mode');
     singleFailed = false;
     singleSaved = false;
-    if (!downloadAbort) { setDownloadProgress(null); setDownloadRunning(false); }
+    if (!downloadAbort || downloadAbortFor !== track) showIdleDownload();
     if (isPhoneApp && track.platform !== 'local') {
       downloadedInFolder([track]).then(([have]) => {
         if (!have || trackToDownload !== track || downloadAbort) return;
@@ -14589,29 +14601,50 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     trackToDownload = null;
-    downloadBatch = { name: playlist.name || 'Playlist', tracks, resolve: playlist.resolve, onProgress: playlist.onProgress, onDone: playlist.onDone };
-    if (!downloadAbort) { setDownloadProgress(null); setDownloadRunning(false); }
+    const name = playlist.name || 'Playlist';
+    // the same playlist downloading already: its dialog comes back with the progress
+    const running = downloadAbort && downloadAbortFor && downloadAbortFor.tracks && downloadAbortFor.name === name ? downloadAbortFor : null;
+    downloadBatch = running || { name, tracks, resolve: playlist.resolve, onProgress: playlist.onProgress, onDone: playlist.onDone, checking: true };
+    if (!running) showIdleDownload();
     const batchShown = downloadBatch;
     el.downloadModal.classList.add('batch-mode');
     showDownloadPane('download');
     const modalTitle = document.getElementById('download-modal-title');
     if (modalTitle) modalTitle.textContent = title;
     if (el.downloadPreviewTitle) el.downloadPreviewTitle.textContent = playlist.name || 'Playlist';
-    if (el.downloadPreviewArtist) I18N.text(el.downloadPreviewArtist, tracks.length === 1 ? '1 track' : '{0} tracks', tracks.length);
     if (el.downloadPreviewThumb) el.downloadPreviewThumb.style.display = 'none';
     if (el.downloadPreviewFallback) el.downloadPreviewFallback.style.display = 'none';
     updateDownloadBtnLabel();
     updateLosslessQualityState();
     updateDownloadCaptionPath();
     openModal(el.downloadModal);
-    // say up front how many are already in the Downloads folder (they're skipped)
+    if (running) return;
+    // how many are already in the Downloads folder (they're skipped): the dialog says "Checking" until it knows,
+    // instead of the playlist's whole count first
+    if (el.downloadPreviewArtist) I18N.text(el.downloadPreviewArtist, 'Checking what is already downloaded…');
     downloadedInFolder(tracks).then((present) => {
-      if (downloadBatch !== batchShown || !el.downloadPreviewArtist) return;
+      if (downloadBatch !== batchShown) return;
       const have = present.filter(Boolean).length;
-      if (!have) return;
-      if (have >= tracks.length) I18N.text(el.downloadPreviewArtist, 'All {0} songs are already downloaded', tracks.length);
-      else I18N.text(el.downloadPreviewArtist, '{0} of {1} already downloaded · {2} to go', have, tracks.length, tracks.length - have);
-    }, () => {});
+      batchShown.missing = tracks.length - have;
+      if (el.downloadPreviewArtist) {
+        if (!have) I18N.text(el.downloadPreviewArtist, tracks.length === 1 ? '1 track' : '{0} tracks', tracks.length);
+        else if (have >= tracks.length) I18N.text(el.downloadPreviewArtist, 'All {0} songs are already downloaded', tracks.length);
+        else I18N.text(el.downloadPreviewArtist, '{0} of {1} already downloaded · {2} to go', have, tracks.length, tracks.length - have);
+      }
+    }, () => {
+      if (downloadBatch === batchShown && el.downloadPreviewArtist) I18N.text(el.downloadPreviewArtist, tracks.length === 1 ? '1 track' : '{0} tracks', tracks.length);
+    }).finally(() => {
+      if (downloadBatch !== batchShown) return;
+      batchShown.checking = false;
+      updateDownloadBtnLabel();
+    });
+  }
+
+  // the dialog ready for a new download: no progress, its button showing (a running one goes on without it)
+  function showIdleDownload() {
+    setDownloadProgress(null);
+    setDownloadRunning(false);
+    if (el.btnConfirmDownload) { el.btnConfirmDownload.style.display = ''; el.btnConfirmDownload.disabled = false; }
   }
 
   function setDownloadFormat(fmt) {
@@ -14640,13 +14673,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  let downloadAbort = null;
-  // what the running download is for: the batch object or the track. The dialog is shared, so a playlist download
-  // left running (Escape only hides the dialog) must not be cancelled from a single song's dialog, or the reverse
-  let downloadAbortFor = null;
 
   function cancelCurrentDownload() {
     if (downloadAbort && downloadAbortFor === (downloadBatch || trackToDownload)) {
+      // Cancel stops what waits behind it too
+      downloadQueue.length = 0;
       try { downloadAbort.abort(); } catch (_) {}
       downloadAbort = null;
       const curSpinner = el.downloadSpinner || document.getElementById('download-spinner');
@@ -14666,11 +14697,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     return false;
   }
 
+  // X only closes the dialog: a running download goes on and says when it's done (Muriel #48). Cancel stops it.
   if (el.btnCloseDownloadModal) {
     el.btnCloseDownloadModal.addEventListener('click', () => {
-      if (!cancelCurrentDownload()) {
-        if (el.downloadModal) closeModal(el.downloadModal);
-      }
+      if (el.downloadModal) closeModal(el.downloadModal);
     });
   }
 
@@ -14810,87 +14840,113 @@ document.addEventListener('DOMContentLoaded', async () => {
     return out;
   }
 
+  // Downloads asked for while another one runs wait here and start one after another (Muriel #48). A song waits as
+  // a one-song batch.
+  const downloadQueue = [];
+  function queueDownload(batch) {
+    downloadQueue.push({ name: batch.name, tracks: batch.tracks, resolve: batch.resolve, onProgress: batch.onProgress, onDone: batch.onDone });
+    if (el.downloadModal) closeModal(el.downloadModal);
+    showToast(Tm('Added to the download queue ({0} waiting)', downloadQueue.length), 'info');
+  }
+  function startNextDownload() {
+    if (downloadAbort || !downloadQueue.length) return;
+    const next = downloadQueue.shift();
+    showToast(Tm('Downloading {0}', next.name || T('Playlist')), 'info');
+    runBatchDownload(next);
+  }
+
+  // One playlist, album or selection: the songs not in the Downloads folder yet, two at a time. Started by the dialog,
+  // or from the queue when the one before it ends (startNextDownload).
+  async function runBatchDownload(batch) {
+    // the dialog may show another download by the time this one reports back
+    const shown = () => downloadBatch === batch;
+    if (shown() && el.btnConfirmDownload) el.btnConfirmDownload.disabled = true;
+    try {
+      let lastDir = null;
+      // Cancel/X used to only hide the dialog while every song kept downloading
+      const batchAbort = new AbortController();
+      downloadAbort = batchAbort;
+      downloadAbortFor = batch;
+      const total = batch.tracks.length;
+      // songs already in the Downloads folder aren't downloaded again (#29)
+      const present = await downloadedInFolder(batch.tracks).catch(() => null);
+      const tracks = present ? batch.tracks.filter((_, i) => !present[i]) : batch.tracks;
+      const skipped = total - tracks.length;
+      const setProgress = (p) => {
+        const label = Tf('Downloading {0}/{1}', Math.min(tracks.length, p.done + p.failed + 1), tracks.length) + (p.failed ? ` · ${Tf('{0} failed', p.failed)}` : '');
+        if (el.downloadBtnText && shown()) el.downloadBtnText.textContent = label;
+        if (shown()) setDownloadProgress({ text: label, fraction: tracks.length ? (p.done + p.failed) / tracks.length : 0 });
+        announceDownloads(true, { title: batch.name || '', done: p.done + p.failed, total: tracks.length });
+        if (typeof batch.onProgress === 'function') batch.onProgress(p.done + p.failed, tracks.length);
+      };
+      setDownloadRunning(true);
+      setProgress({ done: 0, failed: 0 });
+      const downloadOne = async (t, { fresh }) => {
+        // an album's songs are found on YouTube first (the file keeps the album's title and artist)
+        let src = t;
+        if (typeof batch.resolve === 'function') {
+          const found = await batch.resolve(t).catch(() => null);
+          if (found && found.url) src = { ...t, url: found.url, id: found.id || t.id };
+        }
+        const downloadUrl = `http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(src.url || '')}&id=${encodeURIComponent(src.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${selectedFormat}&quality=${selectedQuality}&platform=${encodeURIComponent(src.platform || t.platform || 'youtube')}&duration=${encodeURIComponent(t.duration || 0)}${fresh ? '&fresh=1' : ''}`;
+        const res = await fetch(downloadUrl, { signal: batchAbort.signal });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch (e) { throw Object.assign(new Error(text || 'server error'), { status: res.status }); }
+        if (!data.success) throw Object.assign(new Error(data.error || 'Failed to download'), { status: res.status });
+        if (data.directory) lastDir = data.directory;
+        offlineChanged(t, true);
+      };
+      const result = tracks.length ? await window.UrielDownloadBatch.runDownloadBatch(tracks, downloadOne, {
+        concurrency: 2, signal: batchAbort.signal, onProgress: setProgress,
+      }) : { done: [], failed: [], aborted: batchAbort.signal.aborted };
+      for (const f of result.failed) console.error('Download failed:', f.item.title || f.item.url || '', f.error && f.error.message);
+      const done = result.done.length;
+      const failedTracks = result.failed.map((f) => f.item);
+      if (shown()) { el.btnConfirmDownload.disabled = false; setDownloadRunning(false); setDownloadProgress(null); }
+      announceDownloads(false);
+      if (downloadAbort === batchAbort) downloadAbort = null;
+      if (typeof batch.onDone === 'function') batch.onDone(done + skipped, total);
+      // the playlist page's "12 of 40 downloaded" and its Download button follow
+      if (state.currentView === 'playlist-detail') refreshPlaylistDownloads(state.playlists.find((p) => p.id === state.currentPlaylistId));
+      // on phones the server answers with the app's internal path (/data/Downloads); name the real folder
+      if (isPhoneApp && lastDir) {
+        try { lastDir = (await window.electronAPI.getDownloadDir()).dir || lastDir; } catch (e) {}
+      }
+      if (batchAbort.signal.aborted) {
+        // cancelCurrentDownload already closed the dialog; another one may be open by now
+        if (done) showToast(lastDir ? Tm('Stopped. {0} of {1} songs were downloaded to {2}', done, tracks.length, lastDir) : Tm('Stopped. {0} of {1} songs were downloaded', done, tracks.length), 'info');
+        return;
+      }
+      const summary = [Tf('{0} downloaded', done)];
+      if (skipped) summary.push(Tf('{0} already downloaded', skipped));
+      if (failedTracks.length) summary.push(Tf('{0} failed', failedTracks.length));
+      if (!shown()) {
+        showToast(summary.join(' · '), failedTracks.length ? 'error' : 'success');
+        return;
+      }
+      if (failedTracks.length) {
+        // the dialog stays open with the summary; its button now retries just the failed songs
+        downloadBatch = { ...batch, tracks: failedTracks, retry: true, missing: undefined, checking: false };
+        if (el.downloadPreviewArtist) el.downloadPreviewArtist.textContent = summary.join(' · ');
+        updateDownloadBtnLabel();
+        showToast(Tm('Downloaded {0}/{1} ({2} failed)', done + skipped, total, failedTracks.length), 'error');
+        return;
+      }
+      downloadBatch = null;
+      if (el.downloadModal) closeModal(el.downloadModal);
+      showToast(lastDir ? Tm('Downloaded {0} tracks to {1}', done, lastDir) + (skipped ? ` (${summary.slice(1).join(', ')})` : '') : summary.join(' · '), 'success');
+    } finally {
+      startNextDownload();
+    }
+  }
+
   if (el.btnConfirmDownload) {
     el.btnConfirmDownload.addEventListener('click', async () => {
       if (downloadBatch) {
-        const batch = downloadBatch;
-        el.btnConfirmDownload.disabled = true;
-        let lastDir = null;
-        // Cancel/X used to only hide the dialog while every song kept downloading
-        const batchAbort = new AbortController();
-        downloadAbort = batchAbort;
-        downloadAbortFor = batch;
-        // the dialog may show another download by the time this one reports back
-        const shown = () => downloadBatch === batch;
-        const total = batch.tracks.length;
-        // songs already in the Downloads folder aren't downloaded again (#29)
-        const present = await downloadedInFolder(batch.tracks).catch(() => null);
-        const tracks = present ? batch.tracks.filter((_, i) => !present[i]) : batch.tracks;
-        const skipped = total - tracks.length;
-        const setProgress = (p) => {
-          const label = Tf('Downloading {0}/{1}', Math.min(tracks.length, p.done + p.failed + 1), tracks.length) + (p.failed ? ` · ${Tf('{0} failed', p.failed)}` : '');
-          if (el.downloadBtnText && shown()) el.downloadBtnText.textContent = label;
-          if (shown()) setDownloadProgress({ text: label, fraction: tracks.length ? (p.done + p.failed) / tracks.length : 0 });
-          announceDownloads(true, { title: batch.name || '', done: p.done + p.failed, total: tracks.length });
-          if (typeof batch.onProgress === 'function') batch.onProgress(p.done + p.failed, tracks.length);
-        };
-        setDownloadRunning(true);
-        setProgress({ done: 0, failed: 0 });
-        const downloadOne = async (t, { fresh }) => {
-          // an album's songs are found on YouTube first (the file keeps the album's title and artist)
-          let src = t;
-          if (typeof batch.resolve === 'function') {
-            const found = await batch.resolve(t).catch(() => null);
-            if (found && found.url) src = { ...t, url: found.url, id: found.id || t.id };
-          }
-          const downloadUrl = `http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(src.url || '')}&id=${encodeURIComponent(src.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${selectedFormat}&quality=${selectedQuality}&platform=${encodeURIComponent(src.platform || t.platform || 'youtube')}&duration=${encodeURIComponent(t.duration || 0)}${fresh ? '&fresh=1' : ''}`;
-          const res = await fetch(downloadUrl, { signal: batchAbort.signal });
-          const text = await res.text();
-          let data;
-          try { data = JSON.parse(text); } catch (e) { throw Object.assign(new Error(text || 'server error'), { status: res.status }); }
-          if (!data.success) throw Object.assign(new Error(data.error || 'Failed to download'), { status: res.status });
-          if (data.directory) lastDir = data.directory;
-          offlineChanged(t, true);
-        };
-        const result = tracks.length ? await window.UrielDownloadBatch.runDownloadBatch(tracks, downloadOne, {
-          concurrency: 2, signal: batchAbort.signal, onProgress: setProgress,
-        }) : { done: [], failed: [], aborted: batchAbort.signal.aborted };
-        for (const f of result.failed) console.error('Download failed:', f.item.title || f.item.url || '', f.error && f.error.message);
-        const done = result.done.length;
-        const failedTracks = result.failed.map((f) => f.item);
-        if (shown()) { el.btnConfirmDownload.disabled = false; setDownloadRunning(false); setDownloadProgress(null); }
-        announceDownloads(false);
-        if (downloadAbort === batchAbort) downloadAbort = null;
-        if (typeof batch.onDone === 'function') batch.onDone(done + skipped, total);
-        // the playlist page's "12 of 40 downloaded" and its Download button follow
-        if (state.currentView === 'playlist-detail') refreshPlaylistDownloads(state.playlists.find((p) => p.id === state.currentPlaylistId));
-        // on phones the server answers with the app's internal path (/data/Downloads); name the real folder
-        if (isPhoneApp && lastDir) {
-          try { lastDir = (await window.electronAPI.getDownloadDir()).dir || lastDir; } catch (e) {}
-        }
-        if (batchAbort.signal.aborted) {
-          // cancelCurrentDownload already closed the dialog; another one may be open by now
-          if (done) showToast(lastDir ? Tm('Stopped. {0} of {1} songs were downloaded to {2}', done, tracks.length, lastDir) : Tm('Stopped. {0} of {1} songs were downloaded', done, tracks.length), 'info');
-          return;
-        }
-        const summary = [Tf('{0} downloaded', done)];
-        if (skipped) summary.push(Tf('{0} already downloaded', skipped));
-        if (failedTracks.length) summary.push(Tf('{0} failed', failedTracks.length));
-        if (!shown()) {
-          showToast(summary.join(' · '), failedTracks.length ? 'error' : 'success');
-          return;
-        }
-        if (failedTracks.length) {
-          // the dialog stays open with the summary; its button now retries just the failed songs
-          downloadBatch = { ...batch, tracks: failedTracks, retry: true };
-          if (el.downloadPreviewArtist) el.downloadPreviewArtist.textContent = summary.join(' · ');
-          updateDownloadBtnLabel();
-          showToast(Tm('Downloaded {0}/{1} ({2} failed)', done + skipped, total, failedTracks.length), 'error');
-          return;
-        }
-        downloadBatch = null;
-        if (el.downloadModal) closeModal(el.downloadModal);
-        showToast(lastDir ? Tm('Downloaded {0} tracks to {1}', done, lastDir) + (skipped ? ` (${summary.slice(1).join(', ')})` : '') : summary.join(' · '), 'success');
+        // another download is running: this one waits its turn
+        if (downloadAbort && downloadAbortFor !== downloadBatch) { queueDownload(downloadBatch); return; }
+        runBatchDownload(downloadBatch);
         return;
       }
       if (!trackToDownload) return;
@@ -14904,6 +14960,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       const parsedStart = parseTimeInputToSeconds(rawStart);
       const startSec = (parsedStart !== null && parsedStart >= 0) ? parsedStart : 0;
       const endSec = rawEnd ? parseTimeInputToSeconds(rawEnd) : null;
+
+      // another download is running: this song waits its turn (a trimmed one can't: the queue saves whole songs)
+      if (downloadAbort && downloadAbortFor !== t) {
+        const fullSong = startSec === 0 && (endSec === null || !t.duration || endSec >= Number(t.duration) - 1);
+        if (!fullSong && !isPhoneApp) { showToast(Tm('A trimmed song can only be downloaded when the others are done'), 'info'); return; }
+        queueDownload({ name: t.title || T('Track'), tracks: [t] });
+        return;
+      }
 
       if (endSec !== null && endSec <= startSec) {
         showToast(Tm('Trim end must be after start'), 'error');
@@ -15087,6 +15151,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           setDownloadRunning(false);
           updateDownloadBtnLabel();
         }
+        startNextDownload();
       }
     });
   }

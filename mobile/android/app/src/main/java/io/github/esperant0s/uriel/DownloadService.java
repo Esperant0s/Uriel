@@ -29,13 +29,32 @@ public class DownloadService extends Service {
 
     private PowerManager.WakeLock wakeLock;
 
+    // Starts sent but not yet in onStartCommand. Stopping the service then crashed the app: Android insists a
+    // started-in-foreground service calls startForeground() first. The page reports every song, so "done" often came
+    // right after the last report and the batch ended with Uriel closing. The stop waits for those starts instead.
+    private static final Object lock = new Object();
+    private static int pending = 0;
+    private static boolean hideWanted = false;
+
     static void show(Context ctx, String title, int done, int total, int percent) {
         Intent i = new Intent(ctx, DownloadService.class)
                 .putExtra("title", title).putExtra("done", done).putExtra("total", total).putExtra("percent", percent);
-        ContextCompat.startForegroundService(ctx, i);
+        synchronized (lock) {
+            hideWanted = false;
+            pending++;
+        }
+        try {
+            ContextCompat.startForegroundService(ctx, i);
+        } catch (RuntimeException e) {
+            synchronized (lock) { pending--; }
+            throw e;
+        }
     }
 
     static void hide(Context ctx) {
+        synchronized (lock) {
+            if (pending > 0) { hideWanted = true; return; }
+        }
         ctx.stopService(new Intent(ctx, DownloadService.class));
     }
 
@@ -48,11 +67,23 @@ public class DownloadService extends Service {
             return START_NOT_STICKY;
         }
         Notification n = build(intent);
+        boolean stopNow;
         try {
             int type = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q ? ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC : 0;
             ServiceCompat.startForeground(this, NOTIFICATION_ID, n, type);
         } catch (Exception e) {
             // not allowed right now: the download just depends on the app staying open
+            synchronized (lock) { if (pending > 0) pending--; }
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+        synchronized (lock) {
+            if (pending > 0) pending--;
+            stopNow = hideWanted && pending == 0;
+            if (stopNow) hideWanted = false;
+        }
+        // the downloads ended while this start was on its way
+        if (stopNow) {
             stopSelf();
             return START_NOT_STICKY;
         }
