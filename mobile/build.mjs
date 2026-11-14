@@ -49,6 +49,7 @@ cpSync(join(shared, 'assets'), join(out, 'assets'), { recursive: true });
 // the parts app.js is split into (shared/app/)
 cpSync(join(shared, 'app'), join(out, 'app'), { recursive: true });
 cpSync(join(root, 'mobile', 'mobile.css'), join(out, 'mobile.css'));
+cpSync(join(shared, 'skins.css'), join(out, 'skins.css'));
 // mobile-ui.ts is a plain script beside app.js, not part of the bundle: its types are taken off, and it is wrapped
 // so its own helpers stay out of the page's globals
 await build({ entryPoints: [join(root, 'mobile', 'mobile-ui.ts')], outfile: join(out, 'mobile-ui.js'), bundle: false, format: 'iife', target: ['safari16'], legalComments: 'none', logLevel: 'warning' });

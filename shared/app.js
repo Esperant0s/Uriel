@@ -2748,6 +2748,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let scrubPrevKnobX = null;
   let scrubKnobAnim = 0;
   let scrubLastTime = 0;
+  let playedSetAt = 0;
   let lastDisplayedSec = -1;
 
   let lastFrameTime = 0;
@@ -2984,6 +2985,12 @@ document.addEventListener('DOMContentLoaded', async () => {
           : (state.currentTrack && Number.isFinite(state.currentTrack.duration) ? state.currentTrack.duration : 0);
         let cur = (el.nativeAudio && Number.isFinite(el.nativeAudio.currentTime)) ? el.nativeAudio.currentTime : 0;
 
+        // the player styles (skins.css) draw a plain line from this instead of the canvas, at most 30 times a second
+        if (document.documentElement.dataset.skin && timestamp - playedSetAt > 33) {
+          playedSetAt = timestamp;
+          const at = isDraggingScrubber && state.scrubberDragTargetTime !== undefined ? state.scrubberDragTargetTime : cur;
+          if (el.playbar) el.playbar.style.setProperty('--played', dur > 0 ? String(Math.min(1, at / dur)) : '0');
+        }
         if (isDraggingScrubber && state.scrubberDragTargetTime !== undefined) {
           cur = state.scrubberDragTargetTime;
           const t = formatDuration(cur);

@@ -5,6 +5,8 @@
 // Runs at the top of <body>, after profiles-core.js, so it reads the open profile's copy.
 (function () {
   const KEY = 'uriel_theme_boot';
+  // the player style (app/look.js) changes the layout, so it has to be there from the first frame too
+  try { const skin = localStorage.getItem('uriel_skin'); if (skin) document.documentElement.dataset.skin = skin; } catch (e) {}
   let saved;
   try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { saved = null; }
   if (!saved || typeof saved !== 'object') return;

@@ -203,5 +203,40 @@ window.UrielApp.look = function ({ isPhoneApp, getAdv, setAdv, updateThemeFromSt
     syncAppIcon(localStorage.getItem('uriel_app_icon') || 'classic', false);
   })();
 
+  // ---- player style: the whole layout restyled (skins.css). theme-boot.js puts it on before the first frame ----
+  (function setupSkins() {
+    const grid = document.getElementById('skin-grid');
+    if (!grid) return;
+    const SKINS = [
+      { id: '', name: 'Uriel', tag: 'Rounded panels, your colors' },
+      { id: 'verdant', name: 'Verdant', tag: 'Black panels, green, compact lists' },
+      { id: 'crimson', name: 'Crimson', tag: 'Flat black, red, the bar across the player' },
+    ];
+    const apply = (id) => {
+      if (id) document.documentElement.dataset.skin = id;
+      else delete document.documentElement.dataset.skin;
+      grid.querySelectorAll('.skin-card').forEach((/** @type {HTMLElement} */ c) => {
+        const on = c.dataset.skin === id;
+        c.classList.toggle('active', on);
+        c.setAttribute('aria-pressed', String(on));
+      });
+    };
+    for (const s of SKINS) {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'skin-card';
+      card.dataset.skin = s.id;
+      card.innerHTML = '<span class="skin-card-preview" aria-hidden="true"><i></i><i></i><i></i></span><span class="skin-card-name"></span><span class="skin-card-tag" data-i18n></span>';
+      card.querySelector('.skin-card-name').textContent = s.name;
+      card.querySelector('.skin-card-tag').textContent = s.tag;
+      card.addEventListener('click', () => {
+        try { localStorage.setItem('uriel_skin', s.id); } catch (e) {}
+        apply(s.id);
+      });
+      grid.appendChild(card);
+    }
+    apply(localStorage.getItem('uriel_skin') || '');
+  })();
+
   return { applyIconPack };
 };
