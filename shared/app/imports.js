@@ -24,7 +24,14 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
 
     if (typeof onProgress === 'function') onProgress(0, total);
 
-    async function searchCandidates(q, plat = state.platform || 'youtube') {
+    async function searchCandidates(q, plat = state.platform || 'youtube', again = true) {
+      // a search that fails in the middle of a big import is usually the source being busy: wait and ask once more
+      if (again) {
+        try { return await searchCandidates(q, plat, false); } catch (e) {
+          await new Promise((r) => setTimeout(r, 2000));
+          return searchCandidates(q, plat, false);
+        }
+      }
       const sRes = await fetch(`http://127.0.0.1:${state.serverPort}/api/search?q=${encodeURIComponent(q)}&platform=${plat}&limit=8`);
       const sData = await sRes.json();
       if (sData && sData.success && Array.isArray(sData.tracks)) {

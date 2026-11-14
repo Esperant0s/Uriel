@@ -48,3 +48,20 @@ test('queries carry the artist', () => {
 test('Cyrillic source meets a transliterated upload', () => {
   assert.ok(pickBestMatch({ title: 'Группа крови', artist: 'Кино' }, [r('Kino', 'Gruppa krovi')]));
 });
+
+test("Spotify's \" - From …\", \" - Remastered\" and \" - Radio Edit\" endings aren't part of the title", () => {
+  assert.ok(pickBestMatch({ title: 'Lose Yourself - From "8 Mile" Soundtrack', artist: 'Eminem' }, [r('Eminem', 'Lose Yourself')]));
+  assert.ok(pickBestMatch({ title: 'Hello - Radio Edit', artist: 'Adele' }, [r('AdeleVEVO', 'Adele - Hello')]));
+  assert.deepEqual(matchQueries({ title: 'Here Comes the Sun - Remastered 2009', artist: 'The Beatles' }), ['The Beatles Here Comes the Sun']);
+  assert.ok(pickBestMatch({ title: 'From Me to You', artist: 'The Beatles' }, [r('The Beatles', 'From Me To You')]), 'a title starting with From');
+});
+
+test('Arabic names meet their Latin spellings, and the spellings meet each other', () => {
+  assert.ok(pickBestMatch({ title: 'Enta Omri', artist: 'Umm Kulthum' }, [r('Om Kolthoum', 'انت عمري')]));
+  assert.ok(pickBestMatch({ title: 'سكة السلامة', artist: 'كاظم الساهر' }, [r('Kazem Al Saher', 'سكة السلامة')]));
+  assert.ok(!pickBestMatch({ title: 'Enta Omri', artist: 'Umm Kulthum' }, [r('Lole y Manuel', 'Anta Oumri')]));
+});
+
+test("a tribute channel isn't the artist", () => {
+  assert.ok(!pickBestMatch({ title: 'Yellow', artist: 'Coldplay' }, [r('Coldplay Tribute', 'Yellow')]));
+});
