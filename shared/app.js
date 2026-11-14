@@ -17893,6 +17893,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) saveQueueState();
   });
+  // and every so often while it plays: a phone ends the app without either of those, and the song started over
+  setInterval(() => { if (state.isPlaying) saveQueueState(); }, 15000);
 
   function openAudioTab(name) {
     const tab = document.querySelector(`.audio-tab[data-audio-tab="${name}"]`);

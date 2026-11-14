@@ -557,6 +557,26 @@ final class ColdPlayer {
         } catch (JSONException ignored) {}
     }
 
+    // The native player (PlayerService) playing on without the page: where it got to, saved as persist() saves it,
+    // so the next start (the app, or earbuds) carries on from this song and not the one that session began with.
+    static void rememberNative(Context ctx, JSONObject current, JSONArray upcoming, long pos) {
+        try {
+            JSONObject h = new JSONObject();
+            h.put("qi", current.optInt("qi", -1));
+            h.put("title", current.optString("title", ""));
+            h.put("artist", current.optString("artist", ""));
+            h.put("position", pos / 1000.0);
+            h.put("playing", false);
+            h.put("ended", false);
+            prefs(ctx).edit()
+                    .putString(KEY_CURRENT, current.toString())
+                    .putString(KEY_UPCOMING, upcoming.toString())
+                    .putFloat(KEY_POSITION, pos / 1000f)
+                    .putString(KEY_HANDOVER, h.toString())
+                    .apply();
+        } catch (JSONException ignored) {}
+    }
+
     private JSONObject handover(Entry e, long pos, boolean playing) throws JSONException {
         JSONObject h = new JSONObject();
         h.put("qi", e.qi);

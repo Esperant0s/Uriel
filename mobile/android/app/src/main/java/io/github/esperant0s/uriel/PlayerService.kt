@@ -539,7 +539,8 @@ class PlayerService : MediaSessionService() {
     // where the player is, for the page: { item, state (1 idle, 2 loading, 3 ready, 4 ended), playWhenReady,
     // playing, position, duration (-1: not known yet), rate, at (when position was read) }
     private fun report() {
-        val p = page ?: return
+        val p = page
+        if (p == null) { rememberAlone(); return }
         val o = JSONObject()
         o.put("item", exo.currentMediaItem?.mediaId ?: "")
         o.put("state", exo.playbackState)
@@ -551,5 +552,22 @@ class PlayerService : MediaSessionService() {
         o.put("at", System.currentTimeMillis())
         o.put("seq", pageSeq)
         p.onState(o)
+    }
+
+    // Playing on without the page (earbuds started it, or the app was closed): where it got to is saved for the next
+    // start (ColdPlayer.rememberNative). Without this the page, and earbuds, went back to the song the session began
+    // with. On each new song and pause, and every 10 seconds while it plays.
+    private var rememberedId = ""
+    private var rememberedAt = 0L
+    private fun rememberAlone() {
+        val item = exo.currentMediaItem ?: return
+        val now = System.currentTimeMillis()
+        if (item.mediaId == rememberedId && exo.isPlaying && now - rememberedAt < 10_000) return
+        val cur = runCatching { JSONObject(item.mediaId) }.getOrNull() ?: return
+        rememberedId = item.mediaId
+        rememberedAt = now
+        val up = JSONArray()
+        for (i in exo.currentMediaItemIndex + 1 until exo.mediaItemCount) runCatching { up.put(JSONObject(exo.getMediaItemAt(i).mediaId)) }
+        ColdPlayer.rememberNative(this, cur, up, exo.currentPosition)
     }
 }
