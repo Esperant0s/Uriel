@@ -2,10 +2,34 @@
 // data folders, hardware acceleration) become no-ops; file pickers use the iOS document picker.
 import crypto = require('./shims/crypto');
 import store = require('./shims/store');
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 const ANDROID = Capacitor.getPlatform() === 'android';
 import { Share } from '@capacitor/share';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+
+// Android: a whole folder (and the ones in it), copied into the library by DeviceMusicPlugin.java
+interface FolderSong { id: string; file: string; ext: string; name: string; size: number }
+interface FolderPlugin {
+  pickFolder(): Promise<{ songs?: FolderSong[] }>;
+  addListener(event: 'folderScanned', fn: (e: { count: number }) => void): Promise<{ remove(): void }>;
+}
+const folderPlugin = ANDROID ? registerPlugin<FolderPlugin>('UrielDeviceMusic') : null;
+
+async function importFolder(fs: Deps['fs']) {
+  if (!folderPlugin) return [];
+  const toast = (msg: string, type?: string) => window.UrielCore && window.UrielCore.toast(msg, type);
+  const sub = await folderPlugin.addListener('folderScanned', ({ count }) => {
+    if (!count) toast('No songs in that folder', 'info');
+    else toast(`Adding ${count} song${count === 1 ? '' : 's'}…`, 'info');
+  });
+  try {
+    const { songs } = await folderPlugin.pickFolder();
+    for (const s of songs || []) fs._register(`/data/library/${s.file}`, s.size);
+    return (songs || []).map(({ id, file, ext, name }) => ({ id, file, ext, name }));
+  } finally {
+    sub.remove();
+  }
+}
 
 function pickFiles(accept: string, multiple: boolean): Promise<File[]> {
   return new Promise((resolve) => {
@@ -73,7 +97,8 @@ function electronAPI({ ready, port, fs, fileUrlFor }: Deps) {
     },
 
     // Same contract as main.js: copy into the library folder as local_<sha1>.<ext>.
-    async importAudioFiles() {
+    async importAudioFiles(opts?: { folder?: boolean }) {
+      if (opts && opts.folder) { await ready; return importFolder(fs); }
       const files = await pickFiles('audio/*,.mp3,.m4a,.flac,.wav,.aac,.ogg,.opus', true);
       await ready;
       // lossless files take a while to copy; say so, or the app looks stuck

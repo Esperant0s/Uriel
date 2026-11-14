@@ -10965,9 +10965,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (el.navSettings) el.navSettings.addEventListener('click', () => switchView('settings'));
 
   if (el.btnAddLocalFiles) el.btnAddLocalFiles.addEventListener('click', () => importLocalFiles());
-  // a whole folder (and its subfolders) at once: computers only, phones pick files
+  // a whole folder (and its subfolders) at once: computers and Android, iPhones pick files
   const btnAddLocalFolder = document.getElementById('btn-add-local-folder');
-  if (btnAddLocalFolder && !isPhoneApp && window.electronAPI && window.electronAPI.importAudioFiles) {
+  const canAddFolder = !isPhoneApp || (window.Capacitor && window.Capacitor.getPlatform() === 'android');
+  if (btnAddLocalFolder && canAddFolder && window.electronAPI && window.electronAPI.importAudioFiles) {
     btnAddLocalFolder.hidden = false;
     btnAddLocalFolder.addEventListener('click', () => importLocalFiles({ folder: true }));
   }
