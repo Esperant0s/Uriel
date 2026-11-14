@@ -1,5 +1,7 @@
 package io.github.esperant0s.uriel;
 
+import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
@@ -7,6 +9,7 @@ import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.view.View;
 import android.view.Window;
 
@@ -16,6 +19,7 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
+import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
@@ -75,5 +79,19 @@ public class SystemBarsPlugin extends Plugin {
             controller.setAppearanceLightNavigationBars(light);
             call.resolve();
         });
+    }
+
+    // the phone's own colors, for the System app theme: dark or light, and Material You's accent (Android 12 and newer)
+    @PluginMethod
+    public void colors(PluginCall call) {
+        Context ctx = getContext();
+        boolean dark = (ctx.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+        JSObject ret = new JSObject();
+        ret.put("dark", dark);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            int c = ctx.getColor(dark ? android.R.color.system_accent1_200 : android.R.color.system_accent1_600);
+            ret.put("accent", String.format("#%06x", c & 0xffffff));
+        }
+        call.resolve(ret);
     }
 }

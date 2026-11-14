@@ -1,5 +1,5 @@
 // @ts-check
-const { app, BrowserWindow, dialog, ipcMain, screen, shell, Tray, Menu, nativeImage, globalShortcut, powerMonitor, clipboard } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, screen, shell, Tray, Menu, nativeImage, globalShortcut, powerMonitor, clipboard, nativeTheme, systemPreferences } = require('electron');
 require('../shared/legacy-env');
 // Mural's (or Muriel's) data comes over on Uriel's first start, before platform.js or Chromium open any of these folders
 if (!process.env.URIEL_DATA_DIR) { try { require('./migrate-legacy').migrate(app.getPath('appData')); } catch (e) {} }
@@ -8,6 +8,26 @@ const path = require('path');
 const os = require('os');
 const { pathToFileURL, fileURLToPath } = require('url');
 const { spawn, execFile } = require('child_process');
+
+// GNOME's accent colors (Settings > Appearance), by the names gsettings gives
+const GNOME_ACCENTS = { blue: '#3584e4', teal: '#2190a4', green: '#3a944a', yellow: '#c88800', orange: '#ed5b00', red: '#e62d42', pink: '#d56199', purple: '#9141ac', slate: '#6f8396' };
+function gnomeAccent() {
+  return new Promise((resolve) => {
+    execFile('gsettings', ['get', 'org.gnome.desktop.interface', 'accent-color'], { timeout: 2000 }, (err, out) => {
+      resolve(err ? null : GNOME_ACCENTS[String(out).trim().replace(/'/g, '')] || null);
+    });
+  });
+}
+// Windows and macOS say what their accent color is; on Linux, GNOME does when asked. Elsewhere: null
+async function systemColors() {
+  let accent = null;
+  try {
+    if (process.platform === 'linux') accent = await gnomeAccent();
+    else accent = '#' + String(systemPreferences.getAccentColor() || '').slice(0, 6);
+  } catch (e) {}
+  if (accent && !/^#[0-9a-f]{6}$/i.test(accent)) accent = null;
+  return { dark: nativeTheme.shouldUseDarkColors, accent };
+}
 const crypto = require('crypto');
 const { LIBRARY_DIR, DATA_DIR, resolveBinary, tutorialDone, markTutorialDone, readStartupConfig, writeStartupConfig } = require('./platform');
 const { getLauncherInfo, installLauncher } = require('./launcher');
@@ -405,6 +425,8 @@ function runGUI() {
     ipcMain.on('open-logs-folder', () => { shell.openPath(LOG_DIR); });
     // the system clipboard directly: the page's navigator.clipboard refuses once the click's moment has passed
     ipcMain.handle('copy-text', (e, text) => { clipboard.writeText(String(text || '')); return true; });
+    // the computer's own colors, for the System app theme: dark or light, and its accent color
+    ipcMain.handle('get-system-colors', () => systemColors());
 
       ipcMain.handle('get-server-port', () => serverPort);
       ipcMain.handle('get-gpu-compositing', () => { try { return String(app.getGPUFeatureStatus().gpu_compositing || ''); } catch (e) { return ''; } });

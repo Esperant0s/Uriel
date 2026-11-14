@@ -148,6 +148,12 @@ function electronAPI({ ready, port, fs, fileUrlFor }: Deps) {
     restartApp: () => location.reload(),
     getAppVersion: async () => { const b = window.URIEL_BUILD || {}; return b.version ? `${b.version}${b.run ? ` (build ${b.run})` : ''}` : '1.1.2'; },
     getHwAccel: async () => true,
+    // the System app theme: Material You's accent on Android 12+, the system blue on iPhones
+    async getSystemColors() {
+      const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+      if (!ANDROID) return { dark, accent: '#007aff' };
+      try { return await registerPlugin<{ colors(): Promise<{ dark: boolean; accent?: string }> }>('UrielSystemBars').colors(); } catch (e) { return { dark, accent: null }; }
+    },
     setHwAccel: noop,
     trimMemory: noop,
     setTrayOnClose: noop,

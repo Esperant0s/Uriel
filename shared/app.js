@@ -808,6 +808,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // The preset themes of Majd's website (Esperant0s.github.io, js/themes.js and style.css): the same seven base
   // colors, and Uriel's surfaces, text and accents are worked out from them. All of them are dark themes.
   const SITE_THEMES = [
+    // the colors the Verdant and Crimson App Looks were made with (app/look.js)
+    { id: 'verdant', name: 'Verdant', tag: 'Green on black', bg: '#000000', bg2: '#242424', bg3: '#3E3E3E', text: '#FFFFFF', accent: '#2BD46A', accent2: '#1F9E50', pop: '#2BD46A' },
+    { id: 'crimson', name: 'Crimson', tag: 'Red on black', bg: '#030303', bg2: '#212121', bg3: '#383838', text: '#FFFFFF', accent: '#F0383F', accent2: '#B3242A', pop: '#FF6B70' },
     { id: 'halloween', name: 'Halloween Glow', tag: 'Fall · default', bg: '#0A0A0A', bg2: '#1A121A', bg3: '#3D1A3D', text: '#F7EBDD', accent: '#FFB627', accent2: '#FF6700', pop: '#9B1D20' },
     { id: 'synthwave', name: 'Synthwave Night', tag: 'Neon', bg: '#240046', bg2: '#3C096C', bg3: '#7209B7', text: '#FCE7F3', accent: '#FFD60A', accent2: '#F72585', pop: '#B57BE8' },
     { id: 'luxury-gold', name: 'Luxury Gold', tag: 'Gold', bg: '#0B0B10', bg2: '#1A1A2E', bg3: '#16213E', text: '#F5E6C4', accent: '#C9A227', accent2: '#F5E6C4', pop: '#C9A227' },
@@ -820,10 +823,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     { id: 'midnight-rose', name: 'Midnight Rose', tag: 'Pink · moody', bg: '#190A17', bg2: '#3A132D', bg3: '#7A2348', text: '#FFE4E8', accent: '#FF9AA2', accent2: '#C44569', pop: '#E07A95' },
     { id: 'midnight-amber', name: 'Midnight Amber', tag: 'Amber · warm', bg: '#0C0A09', bg2: '#1C1917', bg3: '#451A03', text: '#FFF1E2', accent: '#FED7AA', accent2: '#EA580C', pop: '#FB923C' },
     { id: 'cyberpunk', name: 'Cyberpunk Glow', tag: 'Neon · cyberpunk', bg: '#0D0221', bg2: '#190B34', bg3: '#3A0F6E', text: '#EAFBFF', accent: '#04FFE6', accent2: '#FB04EB', pop: '#A64DFF' },
-    { id: 'noir-cinema', name: 'Noir Cinema', tag: 'Monochrome', bg: '#000000', bg2: '#1A1A1A', bg3: '#4D4D4D', text: '#F0E6D2', accent: '#F0E6D2', accent2: '#999999', pop: '#F0E6D2' },
-    // the colors the Verdant and Crimson App Looks were made with (app/look.js)
-    { id: 'verdant', name: 'Verdant', tag: 'Green on black', bg: '#000000', bg2: '#242424', bg3: '#3E3E3E', text: '#FFFFFF', accent: '#2BD46A', accent2: '#1F9E50', pop: '#2BD46A' },
-    { id: 'crimson', name: 'Crimson', tag: 'Red on black', bg: '#030303', bg2: '#212121', bg3: '#383838', text: '#FFFFFF', accent: '#F0383F', accent2: '#B3242A', pop: '#FF6B70' }
+    { id: 'noir-cinema', name: 'Noir Cinema', tag: 'Monochrome', bg: '#000000', bg2: '#1A1A1A', bg3: '#4D4D4D', text: '#F0E6D2', accent: '#F0E6D2', accent2: '#999999', pop: '#F0E6D2' }
   ];
   // the chosen website theme, while it applies: not in auto (cover colors) or light mode
   function activeSiteTheme() {
@@ -11981,6 +11981,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const grid = document.getElementById('site-theme-grid');
     if (!grid || grid.childElementCount) return;
     const frag = document.createDocumentFragment();
+    // first, the computer's or phone's own colors (setSiteTheme('system')): its strip is painted once they're known
+    const sys = document.createElement('button');
+    sys.type = 'button';
+    sys.className = 'site-theme-card';
+    sys.dataset.siteTheme = 'system';
+    sys.setAttribute('aria-pressed', 'false');
+    sys.innerHTML = '<span class="site-theme-strip" aria-hidden="true"></span><span class="site-theme-name" data-i18n>System</span><span class="site-theme-tag" data-i18n>Your device\'s colors, dark or light</span>';
+    sys.addEventListener('click', () => useSystemTheme());
+    frag.appendChild(sys);
+    paintSystemStrip(sys);
     SITE_THEMES.forEach((t) => {
       const card = document.createElement('button');
       card.type = 'button';
@@ -12004,13 +12014,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   function syncSiteThemeCards() {
     const site = activeSiteTheme();
     document.querySelectorAll('.site-theme-card').forEach((c) => {
-      const on = !!site && c.dataset.siteTheme === site.id;
+      const on = c.dataset.siteTheme === 'system' ? state.siteTheme === 'system' : !!site && c.dataset.siteTheme === site.id;
       c.classList.toggle('active', on);
       c.setAttribute('aria-pressed', String(on));
     });
   }
   // id '' goes back to the accent-only palette; `apply` false when the caller repaints the theme itself
   function setSiteTheme(id, apply = true) {
+    if (id === 'system') {
+      state.siteTheme = 'system';
+      try { localStorage.setItem('uriel_site_theme', 'system'); } catch (e) {}
+      if (apply) applySystemColors();
+      return;
+    }
     const t = SITE_THEMES.find((x) => x.id === id);
     state.siteTheme = t ? t.id : '';
     try { localStorage.setItem('uriel_site_theme', state.siteTheme); } catch (e) {}
@@ -12024,15 +12040,59 @@ document.addEventListener('DOMContentLoaded', async () => {
     smoothThemeSwap(updateThemeFromState);
   }
   window.setSiteTheme = setSiteTheme;
+
+  // The System app theme: the accent the computer or phone uses (Windows, macOS, GNOME, Material You on Android 12+,
+  // the system blue on iPhones) and its dark or light mode, read again whenever Uriel comes back to the front
+  async function systemColors() {
+    const api = window.electronAPI;
+    let c = null;
+    try { c = api && api.getSystemColors ? await api.getSystemColors() : null; } catch (e) {}
+    return {
+      dark: c && typeof c.dark === 'boolean' ? c.dark : matchMedia('(prefers-color-scheme: dark)').matches,
+      // nothing to go by (an older Android, a Linux desktop without accents): GNOME's blue
+      accent: (c && c.accent) || '#3584e4',
+    };
+  }
+  async function paintSystemStrip(card) {
+    const { dark, accent } = await systemColors();
+    const strip = card.querySelector('.site-theme-strip');
+    strip.replaceChildren(...[dark ? '#121212' : '#f5f5f5', dark ? '#2a2a2a' : '#e0e0e0', accent, accent, dark ? '#ffffff' : '#000000'].map((c) => {
+      const sw = document.createElement('span');
+      sw.style.background = c;
+      return sw;
+    }));
+  }
+  async function applySystemColors() {
+    const { dark, accent } = await systemColors();
+    const mode = dark ? 'dark' : 'light';
+    if (state.siteTheme !== 'system' || (state.themeAccent === accent && state.themeMode === mode)) { syncSiteThemeCards(); return; }
+    state.themeAccent = accent;
+    state.themeMode = mode;
+    localStorage.setItem('uriel_theme_accent', accent);
+    localStorage.setItem('uriel_theme_mode', mode);
+    smoothThemeSwap(updateThemeFromState);
+  }
+  // picking System shows the device's accent as it is: at intensity 0 every accent comes out grey
+  function useSystemTheme() {
+    if (state.siteTheme !== 'system' && state.themeIntensity < 60) {
+      state.themeIntensity = 100;
+      localStorage.setItem('uriel_theme_intensity', '100');
+    }
+    setSiteTheme('system');
+  }
   renderSiteThemeCards();
+  if (state.siteTheme === 'system') applySystemColors();
+  window.addEventListener('focus', () => { if (state.siteTheme === 'system') applySystemColors(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && state.siteTheme === 'system') applySystemColors(); });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (state.siteTheme === 'system') applySystemColors(); });
 
   if (el.themeModeBtns) {
     el.themeModeBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         state.themeMode = btn.dataset.themeMode;
         localStorage.setItem('uriel_theme_mode', state.themeMode);
-        // the App themes are all dark: light or auto (cover colors) leaves them
-        if (state.themeMode !== 'dark') setSiteTheme('', false);
+        // the App themes are all dark: light or auto (cover colors) leaves them; System picks its own mode
+        if (state.themeMode !== 'dark' || state.siteTheme === 'system') setSiteTheme('', false);
         updateThemeFromState();
       });
     });
