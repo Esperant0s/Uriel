@@ -9,6 +9,7 @@ const { IS_WIN, BIN_DIR, LEGACY_BIN_DIRS, resolveBinary, clearBinaryCache } = re
 const logger = require('./logger');
 const assets = require('./tools-assets');
 const ytDlpAsset = () => assets.ytDlpAsset(process.platform, process.arch);
+const ffmpegAsset = () => assets.ffmpegAsset(process.platform, process.arch);
 const { expectedHash } = assets;
 
 const state = { status: 'idle', tool: '', percent: 0, error: '' };
@@ -20,13 +21,6 @@ const STAMP = path.join(BIN_DIR, '.ytdlp-update-stamp');
 // in bin/yt-dlp_macos/ with bin/yt-dlp a symlink to it, so resolveBinary() and every caller stay the same.
 const MAC_YTDLP_DIR = path.join(BIN_DIR, 'yt-dlp_macos');
 const MAC_YTDLP_EXE = path.join(MAC_YTDLP_DIR, 'yt-dlp_macos');
-
-function ffmpegAsset() {
-  const a = process.arch === 'arm64' ? 'arm64' : '64';
-  if (IS_WIN) return { name: `ffmpeg-master-latest-win${a}-gpl.zip` };
-  if (process.platform === 'linux') return { name: `ffmpeg-master-latest-linux${a}-gpl.tar.xz` };
-  return null;
-}
 
 // Without a timeout a stalled download kept the status at 'downloading' forever, and ensureTools()
 // refuses to start again while it says that. 60s without a single byte counts as failed.
@@ -148,7 +142,7 @@ async function installMacYtDlpDir(archive, target) {
   }
 }
 
-// The yt-dlp that came with the app (the release workflow adds it as resources/bin: tools/fetch-ytdlp.mjs).
+// The yt-dlp that came with the app (the release workflow adds it as resources/bin: tools/fetch-tools.mjs).
 // It is copied into BIN_DIR before it is used: a copy inside the app can't update itself (the AppImage is
 // read-only, and the next app update would replace it), and YouTube's changes need a newer yt-dlp every few weeks.
 function bundledYtDlp() {

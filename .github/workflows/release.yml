@@ -59,9 +59,9 @@ jobs:
         shell: bash
         run: npm version "${TAG#v}" --no-git-tag-version --allow-same-version
       - run: npm ci
-      # the app comes with yt-dlp, so songs play on a fresh install (desktop/tools.js puts it in place)
-      - name: Bundle yt-dlp
-        run: node tools/fetch-ytdlp.mjs
+      # the app comes with yt-dlp and ffmpeg, so songs play and save on a fresh install (desktop/tools.js)
+      - name: Bundle yt-dlp and ffmpeg
+        run: node tools/fetch-tools.mjs
       - name: Stamp the build for update checks
         shell: bash
         run: node tools/build-info.mjs shared/build-info.js ${{ matrix.channel }}
