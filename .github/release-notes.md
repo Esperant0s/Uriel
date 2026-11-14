@@ -1,4 +1,4 @@
-## Uriel 1.5.8
+## Uriel 1.5.9
 
 Uriel is the new name of the Esperant0s fork of [Muriel](https://github.com/cloverscripts/riff-muriel) by cloverscripts, itself based on [Riff](https://github.com/rootscripts/riff) by rootscripts (MIT). It is its own app now and installs next to Muriel.
 
@@ -8,6 +8,19 @@ Uriel is the new name of the Esperant0s fork of [Muriel](https://github.com/clov
 - **Windows:** installer below, or the portable exe on [windows-latest](https://github.com/Esperant0s/Uriel/releases/tag/windows-latest). Windows SmartScreen may warn because the files are unsigned: More info → Run anyway.
 - **macOS:** `.dmg` / `.zip` below, for Apple Silicon and Intel. The app is unsigned: if macOS blocks it, open System Settings → Privacy & Security → Open Anyway.
 - **Linux:** `.AppImage` below (needs FUSE 2: `fuse2` / `libfuse2`)
+
+**New in 1.5.9**
+- **Automatic backups:** once a day Uriel saves a copy of your profile on the device and keeps the newest 7. If your library ever comes up empty, it offers to bring back the newest one. Settings → Storage → Automatic backups lists them.
+- **Download queue:** while a download is running, other songs and playlists can be added to a queue, and they start one after another.
+- **Reorder the queue:** drag songs in the queue to change what plays next. The song playing keeps playing.
+- **Add folder on Android:** pick a folder and Uriel adds every song in it, and in the folders inside it.
+- **yt-dlp and ffmpeg come with the desktop app:** songs play and download on a fresh install without setting anything up. On macOS only yt-dlp comes with it.
+
+**Fixed in 1.5.9**
+- **Spotify imports:** far fewer songs come back as not found. Titles like "Song - From "Film" Soundtrack" or "Song - 2011 Remaster" now match, Arabic and Latin spellings of the same name find each other, and a search that fails mid-import is tried again.
+- **Phones:** opening Uriel after skipping songs from your earbuds or lock screen starts the song you were on, not the first one of that session.
+- **Downloads:** "Download additional songs" shows how many are left from the start instead of the whole playlist first, and the X closes the window without stopping the download.
+- **Android:** fixed a crash at the end of a short batch of downloads.
 
 **Fixed in 1.5.8**
 - **Phones:** the error log you can share from Settings no longer gets two false errors every time Uriel starts.
