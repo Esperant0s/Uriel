@@ -820,7 +820,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     { id: 'midnight-rose', name: 'Midnight Rose', tag: 'Pink · moody', bg: '#190A17', bg2: '#3A132D', bg3: '#7A2348', text: '#FFE4E8', accent: '#FF9AA2', accent2: '#C44569', pop: '#E07A95' },
     { id: 'midnight-amber', name: 'Midnight Amber', tag: 'Amber · warm', bg: '#0C0A09', bg2: '#1C1917', bg3: '#451A03', text: '#FFF1E2', accent: '#FED7AA', accent2: '#EA580C', pop: '#FB923C' },
     { id: 'cyberpunk', name: 'Cyberpunk Glow', tag: 'Neon · cyberpunk', bg: '#0D0221', bg2: '#190B34', bg3: '#3A0F6E', text: '#EAFBFF', accent: '#04FFE6', accent2: '#FB04EB', pop: '#A64DFF' },
-    { id: 'noir-cinema', name: 'Noir Cinema', tag: 'Monochrome', bg: '#000000', bg2: '#1A1A1A', bg3: '#4D4D4D', text: '#F0E6D2', accent: '#F0E6D2', accent2: '#999999', pop: '#F0E6D2' }
+    { id: 'noir-cinema', name: 'Noir Cinema', tag: 'Monochrome', bg: '#000000', bg2: '#1A1A1A', bg3: '#4D4D4D', text: '#F0E6D2', accent: '#F0E6D2', accent2: '#999999', pop: '#F0E6D2' },
+    // the colors the Verdant and Crimson App Looks were made with (app/look.js)
+    { id: 'verdant', name: 'Verdant', tag: 'Green on black', bg: '#000000', bg2: '#242424', bg3: '#3E3E3E', text: '#FFFFFF', accent: '#2BD46A', accent2: '#1F9E50', pop: '#2BD46A' },
+    { id: 'crimson', name: 'Crimson', tag: 'Red on black', bg: '#030303', bg2: '#212121', bg3: '#383838', text: '#FFFFFF', accent: '#F0383F', accent2: '#B3242A', pop: '#FF6B70' }
   ];
   // the chosen website theme, while it applies: not in auto (cover colors) or light mode
   function activeSiteTheme() {
@@ -11973,7 +11976,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   init10BandEqUI();
 
-  // Settings → Theme → Website themes: one card per SITE_THEMES entry, with its colors as a strip
+  // Settings → Theme → App theme: one card per SITE_THEMES entry, with its colors as a strip
   function renderSiteThemeCards() {
     const grid = document.getElementById('site-theme-grid');
     if (!grid || grid.childElementCount) return;
@@ -12028,7 +12031,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       btn.addEventListener('click', () => {
         state.themeMode = btn.dataset.themeMode;
         localStorage.setItem('uriel_theme_mode', state.themeMode);
-        // the website themes are all dark: light or auto (cover colors) leaves them
+        // the App themes are all dark: light or auto (cover colors) leaves them
         if (state.themeMode !== 'dark') setSiteTheme('', false);
         updateThemeFromState();
       });

@@ -203,14 +203,23 @@ window.UrielApp.look = function ({ isPhoneApp, getAdv, setAdv, updateThemeFromSt
     syncAppIcon(localStorage.getItem('uriel_app_icon') || 'classic', false);
   })();
 
-  // ---- player style: the whole layout restyled (skins.css). theme-boot.js puts it on before the first frame ----
+  // ---- App Look: the layout, panels and buttons of the whole app (skins.css); the colors stay the App theme's.
+  // theme-boot.js puts it on before the first frame ----
   (function setupSkins() {
     const grid = document.getElementById('skin-grid');
     if (!grid) return;
+    // the looks with a wide side column show each button's name after its icon (skins.css; hidden otherwise)
+    document.querySelectorAll('#sidebar :is(.nav-item, .rail-icon-btn, #btn-new-playlist)').forEach((b) => {
+      const label = document.createElement('span');
+      label.className = 'nav-label';
+      label.dataset.i18n = '';
+      label.textContent = b.id === 'btn-new-playlist' ? 'New playlist' : b.getAttribute('title') || '';
+      b.appendChild(label);
+    });
     const SKINS = [
-      { id: '', name: 'Uriel', tag: 'Rounded panels, your colors' },
-      { id: 'verdant', name: 'Verdant', tag: 'Black panels, green, compact lists' },
-      { id: 'crimson', name: 'Crimson', tag: 'Flat black, red, the bar across the player' },
+      { id: '', name: 'Uriel', tag: 'Rounded panels and a floating player' },
+      { id: 'verdant', name: 'Verdant', tag: 'A library column, side-by-side panels, compact lists' },
+      { id: 'crimson', name: 'Crimson', tag: 'A side menu, two-column pages, the line across the player' },
     ];
     const apply = (id) => {
       if (id) document.documentElement.dataset.skin = id;

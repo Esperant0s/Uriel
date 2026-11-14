@@ -1,17 +1,19 @@
-/* Player styles (Settings > Appearance > Player style, app/look.js): the whole layout restyled, on top of styles.css
-   and mobile.css. html[data-skin] is set by theme-boot.js before the first frame. Each style brings its own colors:
-   the variables below win over the ones app.js writes on <html> because they are !important.
-   --played (0..1) is set on the player bar by app.js: the styles draw a plain progress line from it, while the
-   scrubber underneath still takes the clicks and drags. */
+/* App Look (Settings > Theme > App Look, app/look.js): the layout, panels and buttons of the whole app, on top of
+   styles.css and mobile.css. The colors stay the App theme's: everything here is drawn from its tokens (Verdant
+   and Crimson are also App themes, for the colors these looks were made with). html[data-skin] is set by
+   theme-boot.js before the first frame. --played (0..1) is set on the player bar by app.js: the looks draw a plain
+   progress line from it, while the scrubber underneath still takes the clicks and drags. */
 
 /* ---------- both ---------- */
 html[data-skin] {
   --ui-alpha: 100% !important;
-  --text-alpha: 100% !important;
-  --md-sys-color-on-primary: #000 !important;
-  --md-sys-color-on-surface: #fff !important;
-  --md-sys-color-on-surface-solid: #fff !important;
-  --btn-primary-fg: #000 !important;
+  --skin-text: var(--md-sys-color-on-surface-solid, var(--md-sys-color-on-surface));
+  --skin-muted: var(--md-sys-color-on-surface-variant-solid, var(--md-sys-color-on-surface-variant));
+  --skin-accent: var(--md-sys-color-primary);
+  --skin-on-accent: var(--md-sys-color-on-primary);
+  --skin-hover: color-mix(in srgb, var(--skin-text) 10%, transparent);
+  --skin-line-soft: color-mix(in srgb, var(--skin-text) 10%, transparent);
+  --skin-line-bg: color-mix(in srgb, var(--skin-text) 25%, transparent);
 }
 html[data-skin] body { background: var(--skin-bg) !important; }
 html[data-skin] :is(.m3-organic-bg, #bg-mesh-a, #bg-mesh-b, #cover-bg, #custom-bg, #playbar-bg-visualizer, .m3c-canvas, .hero-fx) { display: none !important; }
@@ -29,89 +31,141 @@ html[data-skin] .scrubber-track-container::after { width: calc(var(--played, 0) 
 
 /* the volume: a thin line with a round knob that shows on hover */
 html[data-skin] .playbar :is(.sl-active, .sl-inactive) { top: 12px; height: 4px; border-radius: 2px; }
-html[data-skin] .playbar .sl-active { width: calc(100% * var(--v)); background: var(--skin-vol-fill, #fff); }
+html[data-skin] .playbar .sl-active { width: calc(100% * var(--v)); background: var(--skin-vol-fill, var(--skin-text)); }
 html[data-skin] .playbar .sl-inactive { width: calc(100% * (1 - var(--v))); background: var(--skin-line-bg); }
-html[data-skin] .playbar .sl input[type="range"]::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: 8px; border-radius: 50%; background: #fff; opacity: 0; }
+html[data-skin] .playbar .sl input[type="range"]::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: 8px; border-radius: 50%; background: var(--skin-text); opacity: 0; }
 html[data-skin] .playbar .sl:hover input[type="range"]::-webkit-slider-thumb { opacity: 1; }
-html[data-skin="verdant"]:not(.is-mobile) .playbar .sl:hover { --skin-vol-fill: var(--skin-accent); }
 
-/* covers keep their own corners, not the shapes of the default style */
+/* covers keep their own corners, not the shapes of the default look */
 html[data-skin] .track-artwork, html[data-skin] .artwork-wrapper { border-radius: var(--skin-cover-r) !important; clip-path: none !important; }
 /* the shaped cover (m3c) draws the picture on its canvas and hides the image: here the image is the cover */
 html[data-skin] #playbar-artwork { visibility: visible !important; }
 html[data-skin] .playbar .m3c-wrap { width: 100% !important; height: 100% !important; }
 
+/* the side rail turns into a wide column (desktop): its icons get their names, and the playlists drawer stays
+   open under them as the library. The presets button still swaps the presets in while it's open. */
+html[data-skin]:not(.is-mobile) .sidebar { width: var(--skin-side-w) !important; align-items: stretch !important; padding: 12px 8px !important; gap: 8px !important; }
+html[data-skin]:not(.is-mobile) .sidebar-nav { width: 100% !important; align-items: stretch !important; gap: 2px !important; }
+html[data-skin]:not(.is-mobile) .nav-active-indicator,
+html[data-skin]:not(.is-mobile) #btn-toggle-playlists-drawer,
+html[data-skin]:not(.is-mobile) #btn-close-rail-drawer { display: none !important; }
+html[data-skin]:not(.is-mobile) .sidebar :is(.nav-item, .rail-icon-btn) {
+  width: 100% !important; height: 40px !important; display: flex !important; flex-direction: row !important;
+  align-items: center; justify-content: flex-start !important; gap: 4px; padding: 0 8px !important; margin: 0 !important;
+  border-radius: var(--skin-nav-r) !important; background: transparent !important; color: var(--skin-muted) !important;
+  font: 700 14px var(--font-family);
+}
+.nav-label { display: none; }
+html[data-skin]:not(.is-mobile) .sidebar .nav-label { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html[data-skin]:not(.is-mobile) .sidebar .nav-indicator { width: 32px !important; height: 32px !important; flex: 0 0 32px; background: transparent !important; color: inherit !important; }
+html[data-skin]:not(.is-mobile) .sidebar :is(.nav-item, .rail-icon-btn):hover,
+html[data-skin]:not(.is-mobile) .sidebar :is(.nav-item.active, .rail-icon-btn.active) { color: var(--skin-text) !important; }
+html[data-skin]:not(.is-mobile) .sidebar .nav-item.has-app-icon .nav-indicator > img { width: 22px; height: 22px; border-radius: 4px; }
+html[data-skin]:not(.is-mobile) .sidebar .rail-icon-btn > svg { flex: 0 0 auto; margin: 0 6px; }
+html[data-skin]:not(.is-mobile) .sidebar .nav-badge { display: none !important; }
+html[data-skin]:not(.is-mobile) .sidebar :is(.rail-divider, .sidebar-nav .rail-divider) { width: auto !important; margin: 4px 8px !important; height: 1px; background: var(--skin-line-soft) !important; }
+html[data-skin]:not(.is-mobile) .rail-action-group { width: 100% !important; flex-direction: column !important; align-items: stretch !important; gap: 2px !important; }
+html[data-skin]:not(.is-mobile) .rail-drawer,
+html[data-skin]:not(.is-mobile) .rail-drawer.hidden {
+  display: flex !important; position: static !important; flex: 1 1 auto; min-height: 0;
+  width: auto !important; max-width: none !important; padding: 8px 0 0 !important;
+  background: transparent !important; backdrop-filter: none !important; border-radius: 0 !important;
+  opacity: 1 !important; transform: none !important; visibility: visible !important; pointer-events: auto !important;
+}
+html[data-skin]:not(.is-mobile) .sidebar.has-drawer-open { border-radius: var(--skin-side-r) !important; }
+html[data-skin]:not(.is-mobile) #drawer-section-playlists { display: flex !important; flex: 1 1 auto; min-height: 0; }
+html[data-skin]:not(.is-mobile) #drawer-section-presets { display: none !important; }
+html[data-skin]:not(.is-mobile) .rail-drawer.open.drawer-presets-mode #drawer-section-presets { display: flex !important; }
+html[data-skin]:not(.is-mobile) .rail-drawer.open.drawer-presets-mode #drawer-section-playlists { display: none !important; }
+html[data-skin]:not(.is-mobile) .rail-drawer-header { padding: 0 8px; }
+html[data-skin]:not(.is-mobile) .rail-drawer-title { font-size: 16px; font-weight: 700; color: var(--skin-text); }
+html[data-skin]:not(.is-mobile) .playlist-item { padding: 8px; gap: 12px; border-radius: var(--skin-nav-r); }
+html[data-skin]:not(.is-mobile) .playlist-item:hover { background: var(--skin-hover); }
+html[data-skin]:not(.is-mobile) .playlist-item.active { background: color-mix(in srgb, var(--skin-text) 16%, transparent); }
+html[data-skin]:not(.is-mobile) .playlist-item-name { font-size: 15px; font-weight: 500; color: var(--skin-text); }
+html[data-skin]:not(.is-mobile) .playlist-item-count { font-size: 13px; color: var(--skin-muted); }
+
+/* the playlist and album pages: a big header, then the list */
+html[data-skin] #playlist-detail-title { white-space: normal; }
+html[data-skin] .playlist-detail-header { border-radius: 0 !important; background: transparent !important; }
+html[data-skin] .playlist-type-badge { background: none !important; padding: 0 !important; color: var(--skin-text); font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+html[data-skin] .playlist-actions #btn-play-playlist {
+  width: 56px !important; height: 56px !important; min-width: 56px !important; padding: 0; border: none; border-radius: 50% !important;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+/* the cover's size, in place of styles.css's fixed 160px (--skin-cover-big per look) */
+html[data-skin] .playlist-detail-header :is(#playlist-detail-cover, .playlist-cover-art, .cover-single-img, img) {
+  width: var(--skin-cover-big) !important; height: var(--skin-cover-big) !important;
+  min-width: var(--skin-cover-big) !important; min-height: var(--skin-cover-big) !important;
+  max-width: var(--skin-cover-big) !important; max-height: var(--skin-cover-big) !important;
+  border-radius: var(--skin-cover-big-r, 4px) !important;
+}
+html[data-skin] .playlist-detail-header :is(.cover-single-img, img) { width: 100% !important; height: 100% !important; min-width: 0 !important; min-height: 0 !important; }
+html[data-skin] #btn-play-playlist svg { width: 24px; height: 24px; }
+/* the action buttons are icons, not labelled pills (their names are in their tooltips) */
+html[data-skin] .playlist-actions :is(.btn-outline-pill, .btn-icon-pill):not(#btn-select-playlist) {
+  width: 40px; height: 40px; min-width: 40px; padding: 0 !important; justify-content: center;
+  font-size: 0 !important; gap: 0 !important; border: none !important; background: transparent !important; color: var(--skin-muted) !important;
+}
+html[data-skin] .playlist-actions :is(.btn-outline-pill, .btn-icon-pill) svg { width: 24px; height: 24px; }
+html[data-skin] .playlist-actions :is(.btn-outline-pill, .btn-icon-pill):hover { color: var(--skin-text) !important; transform: scale(1.04); }
+html[data-skin] .playlist-actions .sort-dropdown { margin-left: auto; order: 99; }
+/* Select has no icon: it stays a word, next to the sort */
+html[data-skin] .playlist-actions #btn-select-playlist { order: 98; margin-left: auto; border: none !important; background: transparent !important; color: var(--skin-muted) !important; padding: 0 8px !important; }
+html[data-skin] .playlist-actions #btn-select-playlist:hover { color: var(--skin-text) !important; }
+html[data-skin] .playlist-actions #btn-select-playlist + * { margin-left: 0; }
+html[data-skin] .playlist-actions .sort-dropdown .m3-dropdown-trigger { background: transparent !important; border: none !important; color: var(--skin-muted); }
+html[data-skin] .playlist-actions .sort-dropdown .m3-dropdown-trigger:hover { color: var(--skin-text); }
+html[data-skin] .view-search-box { background: transparent !important; border: none !important; max-width: 280px; }
+html[data-skin] .view-search-box:focus-within { background: var(--skin-hover) !important; }
+
+/* song rows: their buttons show while the pointer is on the row, like the rest of the row's extras */
+html[data-skin]:not(.is-mobile) .track-row .track-row-actions { opacity: 0; transition: opacity 0.12s; }
+html[data-skin]:not(.is-mobile) .track-row:is(:hover, :focus-within) .track-row-actions { opacity: 1; }
+html[data-skin] .track-row::after { display: none; }
+html[data-skin] .track-row.playing .track-row-title { color: var(--skin-accent); }
+html[data-skin] .track-row-actions .btn-icon-pill { background: transparent !important; color: var(--skin-muted); }
+html[data-skin] .track-row-actions .btn-icon-pill:hover { color: var(--skin-text); }
+
 /* =====================================================================================================
-   Verdant: black window, rounded dark panels, a flat black player bar, green accent, compact lists
+   Verdant: rounded panels side by side on a darker window (a library column on the left, the page, the
+   now-playing panel), a flat player bar under them, compact lists and round icon buttons
    ===================================================================================================== */
 html[data-skin="verdant"] {
-  --skin-bg: #000;
-  --skin-panel: #121212;
-  --skin-raised: #1f1f1f;
-  --skin-hover: #2a2a2a;
-  --skin-muted: #b3b3b3;
-  --skin-accent: #2bd46a;
+  --skin-bg: var(--md-sys-color-surface-container-lowest-solid, #000);
+  --skin-panel: var(--md-sys-color-surface-container-low-solid, #121212);
+  --skin-raised: var(--md-sys-color-surface-container-solid, #1f1f1f);
   --skin-cover-r: 4px;
-  --skin-line-bg: #4d4d4d;
-  --skin-line-fill: #fff;
+  --skin-nav-r: 6px;
+  --skin-side-w: 300px;
+  --skin-side-r: 8px;
+  --skin-line-fill: var(--skin-text);
   --font-family: 'Figtree', 'Google Sans Text', system-ui, sans-serif !important;
-  --md-sys-color-primary: #2bd46a !important;
-  --md-sys-color-primary-container: rgba(43, 212, 106, 0.16) !important;
-  --md-sys-color-on-primary-container: #2bd46a !important;
-  --md-sys-color-secondary: #2bd46a !important;
-  --md-sys-color-secondary-container: #2a2a2a !important;
-  --md-sys-color-secondary-container-solid: #2a2a2a !important;
-  --md-sys-color-on-secondary-container: #fff !important;
-  --md-sys-color-tertiary: #2bd46a !important;
-  --md-sys-color-background: #000 !important;
-  --md-sys-color-background-solid: #000 !important;
-  --md-sys-color-surface: #121212 !important;
-  --md-sys-color-surface-solid: #121212 !important;
-  --md-sys-color-surface-dim: #000 !important;
-  --md-sys-color-surface-container-lowest: #000 !important;
-  --md-sys-color-surface-container-lowest-solid: #000 !important;
-  --md-sys-color-surface-container-low: #121212 !important;
-  --md-sys-color-surface-container-low-solid: #121212 !important;
-  --md-sys-color-surface-container: #1f1f1f !important;
-  --md-sys-color-surface-container-solid: #1f1f1f !important;
-  --md-sys-color-surface-container-high: #282828 !important;
-  --md-sys-color-surface-container-high-solid: #282828 !important;
-  --md-sys-color-surface-container-highest: #333 !important;
-  --md-sys-color-surface-container-highest-solid: #333 !important;
-  --md-sys-color-on-surface-variant: #b3b3b3 !important;
-  --md-sys-color-on-surface-variant-solid: #b3b3b3 !important;
-  --md-sys-color-outline: #727272 !important;
-  --md-sys-color-outline-variant: #333 !important;
-  --md-sys-color-outline-variant-solid: #333 !important;
-  --btn-primary-bg: #2bd46a !important;
-  --btn-primary-hover: #3be27a !important;
   --md-shape-corner-m: 6px !important;
   --md-shape-corner-l: 8px !important;
 }
 html[data-skin="verdant"] body { letter-spacing: -0.005em; }
 
-/* the window: panels on black, 8px apart, ending above the player bar */
+/* the window: panels 8px apart, ending above the player bar */
 html[data-skin="verdant"] .top-nav { height: 64px; padding: 0 8px; }
 html[data-skin="verdant"] .search-box { background: var(--skin-raised); height: 48px; border: 1px solid transparent; }
-html[data-skin="verdant"] .search-box:hover { background: var(--skin-hover); border-color: #333; }
-html[data-skin="verdant"] .search-box:focus-within { border-color: #fff; }
+html[data-skin="verdant"] .search-box:hover { background: color-mix(in srgb, var(--skin-text) 8%, var(--skin-raised)); border-color: var(--skin-line-soft); }
+html[data-skin="verdant"] .search-box:focus-within { border-color: var(--skin-text); }
 /* --playbar-space is the room styles.css leaves under the panels for the player bar */
 html[data-skin="verdant"]:not(.is-mobile) .app-layout { gap: 8px; padding: 0 8px; --playbar-space: 88px; }
 html[data-skin="verdant"] :is(.sidebar, .main-content, .right-panel) { background: var(--skin-panel) !important; border-radius: 8px !important; }
+/* the page takes a soft tint at the top that fades out going down: a playlist's own color on its page */
 html[data-skin="verdant"] .main-content {
+  --skin-tint: var(--skin-muted);
   padding: 20px 24px 32px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--playlist-accent-color, #535353) 22%, #121212) 0, #121212 320px) !important;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--skin-tint) 20%, var(--skin-panel)) 0, var(--skin-panel) 340px) !important;
 }
-html[data-skin="verdant"] .sidebar { width: 72px; }
-html[data-skin="verdant"] .nav-item, html[data-skin="verdant"] .nav-indicator { color: var(--skin-muted) !important; }
-html[data-skin="verdant"] .nav-item.active .nav-indicator { color: #fff !important; }
-html[data-skin="verdant"] .nav-item:hover .nav-indicator { color: #fff !important; background: transparent !important; }
-html[data-skin="verdant"] .nav-active-indicator { background: var(--skin-hover) !important; border-radius: 6px !important; }
+html[data-skin="verdant"] .main-content:has(#view-playlist-detail.active) { --skin-tint: var(--playlist-accent-color, var(--skin-muted)); }
 
-/* the player bar: flat, black, full width; play button a white circle; a thin line under the controls */
+/* the player bar: flat, full width; the play button a round light button; a thin line under the controls */
 html[data-skin="verdant"]:not(.is-mobile) .playbar {
   left: 0; right: 0; bottom: 0; height: 80px; padding: 0 16px;
-  border-radius: 0 !important; background: #000 !important;
+  border-radius: 0 !important; background: var(--skin-bg) !important;
   grid-template-columns: minmax(0, 30%) minmax(0, 40%) minmax(0, 30%); gap: 8px;
 }
 html[data-skin="verdant"]:not(.is-mobile) .playbar-left { padding-left: 0; gap: 12px; }
@@ -120,18 +174,17 @@ html[data-skin="verdant"]:not(.is-mobile) .playbar .track-artwork { width: 56px 
 html[data-skin="verdant"]:not(.is-mobile) .playbar .track-title { font-size: 14px; font-weight: 500; }
 html[data-skin="verdant"]:not(.is-mobile) .playbar .track-artist { font-size: 12px; color: var(--skin-muted); }
 html[data-skin="verdant"]:not(.is-mobile) .playbar .btn-icon-pill { width: 32px; height: 32px; background: transparent !important; color: var(--skin-muted); }
-html[data-skin="verdant"]:not(.is-mobile) .playbar .btn-icon-pill:hover { color: #fff; }
+html[data-skin="verdant"]:not(.is-mobile) .playbar .btn-icon-pill:hover { color: var(--skin-text); }
 html[data-skin="verdant"]:not(.is-mobile) .playbar-center { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; }
 html[data-skin="verdant"]:not(.is-mobile) .playback-controls { gap: 12px !important; }
 html[data-skin="verdant"]:not(.is-mobile) .control-btn { width: 32px; height: 32px; background: transparent !important; color: var(--skin-muted); }
-html[data-skin="verdant"]:not(.is-mobile) .control-btn:hover { color: #fff; transform: scale(1.04); }
+html[data-skin="verdant"]:not(.is-mobile) .control-btn:hover { color: var(--skin-text); transform: scale(1.04); }
 html[data-skin="verdant"]:not(.is-mobile) .control-btn.active { color: var(--skin-accent); position: relative; }
-html[data-skin="verdant"]:not(.is-mobile) .control-btn.active::after { content: ''; position: absolute; bottom: 0; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: currentColor; }
 html[data-skin="verdant"]:not(.is-mobile) .play-pause-wrapper { width: 32px; height: 32px; }
 /* (styles.css sizes the desktop play button with html:not(.is-mobile) body:not(.mini) …: these have to outrank it) */
 html[data-skin="verdant"]:not(.is-mobile) body:not(.mini) .playbar .playback-controls :is(.btn-play-pause, .btn-play-pause.playing) {
   width: 32px !important; height: 32px !important; min-height: 32px !important; max-height: 32px !important;
-  border-radius: 50% !important; background: #fff !important; color: #000 !important;
+  border-radius: 50% !important; background: var(--skin-text) !important; color: var(--skin-bg) !important;
 }
 html[data-skin="verdant"]:not(.is-mobile) body:not(.mini) .playbar .playback-controls .play-pause-wrapper { width: 32px; height: 32px; min-height: 32px; max-height: 32px; }
 html[data-skin="verdant"]:not(.is-mobile) .btn-play-pause:hover { transform: scale(1.06); }
@@ -139,101 +192,88 @@ html[data-skin="verdant"]:not(.is-mobile) .btn-play-pause svg { width: 16px; hei
 html[data-skin="verdant"]:not(.is-mobile) .scrubber-bar-wrapper { width: 100%; height: 24px; gap: 8px; }
 html[data-skin="verdant"]:not(.is-mobile) .scrubber-track-container { height: 16px !important; }
 html[data-skin="verdant"]:not(.is-mobile) .scrubber-track-container:hover { --skin-line-fill: var(--skin-accent); }
+html[data-skin="verdant"]:not(.is-mobile) .playbar .sl:hover { --skin-vol-fill: var(--skin-accent); }
 html[data-skin="verdant"]:not(.is-mobile) .time-label { font-size: 11px; color: var(--skin-muted); min-width: 40px; }
 html[data-skin="verdant"]:not(.is-mobile) .playbar-right { gap: 4px; padding-right: 0; }
 
-/* home: quick tiles, cards that lift with a green play button */
+/* the library column: square covers with "Playlist" under the name */
+html[data-skin="verdant"]:not(.is-mobile) .playlist-item-thumb { width: 48px !important; height: 48px !important; border-radius: 4px !important; }
+html[data-skin="verdant"]:not(.is-mobile) .playlist-item-count::before { content: 'Playlist · '; }
+
+/* home: quick tiles, cards that light up with a round play button rising in */
 html[data-skin="verdant"] :is(.sp-section h2, .section-title) { font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
-html[data-skin="verdant"] .sp-tile { background: rgba(255, 255, 255, 0.07); border-radius: 4px; overflow: hidden; }
-html[data-skin="verdant"] .sp-tile:hover { background: rgba(255, 255, 255, 0.12); }
+html[data-skin="verdant"] .sp-tile { background: color-mix(in srgb, var(--skin-text) 7%, transparent); border-radius: 4px; overflow: hidden; }
+html[data-skin="verdant"] .sp-tile:hover { background: color-mix(in srgb, var(--skin-text) 12%, transparent); }
 html[data-skin="verdant"] .sp-tile-art { border-radius: 4px 0 0 4px; }
 html[data-skin="verdant"] .sp-tile-title { font-weight: 700; }
 html[data-skin="verdant"] .sp-row { gap: 4px; grid-auto-columns: 184px; }
 html[data-skin="verdant"] :is(.sp-card, .home-pl-card) { padding: 12px; border-radius: 6px; transition: background-color 0.2s; }
-html[data-skin="verdant"] :is(.sp-card, .home-pl-card):hover { background: #1a1a1a; }
+html[data-skin="verdant"] :is(.sp-card, .home-pl-card):hover { background: color-mix(in srgb, var(--skin-text) 6%, transparent); }
 html[data-skin="verdant"] :is(.sp-card-cover, .home-pl-cover) { border-radius: 6px !important; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
 html[data-skin="verdant"] .sp-card:hover .sp-card-cover { transform: none; }
 html[data-skin="verdant"] .sp-card-cover::after {
   content: ''; position: absolute; right: 8px; bottom: 8px; width: 48px; height: 48px; border-radius: 50%;
-  background: var(--skin-accent) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M8 5.5v13l11-6.5z'/%3E%3C/svg%3E") center / 22px no-repeat;
-  box-shadow: 0 8px 8px rgba(0, 0, 0, 0.3); opacity: 0; transform: translateY(8px); transition: opacity 0.2s, transform 0.2s;
+  background: var(--skin-accent);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill-rule='evenodd' d='M24 0a24 24 0 1 1 0 48 24 24 0 0 1 0-48zm-5 15v18l14-9z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill-rule='evenodd' d='M24 0a24 24 0 1 1 0 48 24 24 0 0 1 0-48zm-5 15v18l14-9z'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity: 0; transform: translateY(8px); transition: opacity 0.2s, transform 0.2s;
 }
 html[data-skin="verdant"] .sp-card:hover .sp-card-cover::after { opacity: 1; transform: none; }
 html[data-skin="verdant"] .sp-card-title { font-size: 16px; font-weight: 500; margin-top: 8px; }
 html[data-skin="verdant"] .sp-card-sub { font-size: 14px; color: var(--skin-muted); }
 
+/* the playlist page: a tall header with a large cover and a very large title, a big round play button */
+html[data-skin="verdant"] .playlist-detail-header { padding: 24px 0 24px !important; gap: 24px !important; }
+html[data-skin="verdant"] { --skin-cover-big: 232px; }
+html[data-skin="verdant"] .playlist-detail-header #playlist-detail-cover { box-shadow: 0 4px 60px rgba(0, 0, 0, 0.5); }
+html[data-skin="verdant"] #playlist-detail-title { font-size: clamp(2.6rem, 5.4vw, 6rem); font-weight: 900; letter-spacing: -0.04em; line-height: 1; margin: 6px 0 12px; }
+html[data-skin="verdant"] #playlist-detail-count { color: var(--skin-text); font-size: 14px; }
+html[data-skin="verdant"] .playlist-actions { gap: 16px !important; margin-top: 24px; width: 100%; }
+html[data-skin="verdant"] #btn-play-playlist { background: var(--skin-accent) !important; color: var(--skin-on-accent) !important; }
+html[data-skin="verdant"] #btn-play-playlist:hover { transform: scale(1.04); filter: brightness(1.08); }
+
 /* lists: compact rows that light up grey */
 html[data-skin="verdant"] .track-row { padding: 6px 16px; gap: 14px; border-radius: 4px; }
-html[data-skin="verdant"] .track-row:hover { background: rgba(255, 255, 255, 0.1) !important; }
-html[data-skin="verdant"] .track-row::after { display: none; }
+html[data-skin="verdant"] .track-row:hover { background: var(--skin-hover) !important; }
 html[data-skin="verdant"] .track-row-thumb { width: 40px; height: 40px; border-radius: 4px; }
 html[data-skin="verdant"] .track-row-title { font-size: 16px; font-weight: 400; }
 html[data-skin="verdant"] .track-row-artist { font-size: 14px; color: var(--skin-muted); }
 html[data-skin="verdant"] .track-row-index, html[data-skin="verdant"] .track-row-duration { color: var(--skin-muted); font-size: 14px; }
 
+/* the now-playing panel: a card with the cover large and the title under it */
+html[data-skin="verdant"] .right-panel { padding: 16px !important; }
+html[data-skin="verdant"] .drawer-tabs { background: transparent !important; }
+html[data-skin="verdant"] .drawer-tabs > * { background: transparent !important; color: var(--skin-muted); font-weight: 700; }
+html[data-skin="verdant"] .drawer-tabs > .active { color: var(--skin-text); }
+
 /* buttons, chips, menus, dialogs */
-html[data-skin="verdant"] .btn-pill-primary { background: var(--skin-accent) !important; color: #000 !important; font-weight: 700; border-radius: 999px; }
-html[data-skin="verdant"] .btn-pill-primary:hover { background: #3be27a !important; transform: scale(1.03); }
-html[data-skin="verdant"] .btn-outline-pill { background: transparent !important; border: 1px solid #727272 !important; color: #fff; border-radius: 999px; font-weight: 700; }
-html[data-skin="verdant"] .btn-outline-pill:hover { border-color: #fff !important; transform: scale(1.03); }
-html[data-skin="verdant"] .chip-btn { background: rgba(255, 255, 255, 0.07) !important; color: #fff; border: none !important; border-radius: 999px; }
-html[data-skin="verdant"] .chip-btn:hover { background: rgba(255, 255, 255, 0.12) !important; }
-html[data-skin="verdant"] .chip-btn.active { background: #fff !important; color: #000 !important; }
-html[data-skin="verdant"] :is(.dialog-card, .modal-card, .settings-card) { background: #282828 !important; border-radius: 8px !important; box-shadow: 0 16px 24px rgba(0, 0, 0, 0.3), 0 6px 8px rgba(0, 0, 0, 0.2); }
-html[data-skin="verdant"] .track-context-menu { background: #282828 !important; border-radius: 4px; padding: 4px; }
-html[data-skin="verdant"] .track-context-item { border-radius: 2px; padding: 12px 12px 12px 12px; font-size: 14px; }
-html[data-skin="verdant"] .track-context-item:hover { background: #3e3e3e; }
-html[data-skin="verdant"] .playlist-item { border-radius: 6px; }
-html[data-skin="verdant"] .playlist-item:hover { background: #1a1a1a; }
+html[data-skin="verdant"] .btn-pill-primary { background: var(--skin-accent) !important; color: var(--skin-on-accent) !important; font-weight: 700; border-radius: 999px; }
+html[data-skin="verdant"] .btn-pill-primary:hover { filter: brightness(1.08); transform: scale(1.03); }
+html[data-skin="verdant"] .btn-outline-pill { background: transparent !important; border: 1px solid var(--md-sys-color-outline) !important; color: var(--skin-text); border-radius: 999px; font-weight: 700; }
+html[data-skin="verdant"] .btn-outline-pill:hover { border-color: var(--skin-text) !important; transform: scale(1.03); }
+html[data-skin="verdant"] .chip-btn { background: color-mix(in srgb, var(--skin-text) 7%, transparent) !important; color: var(--skin-text); border: none !important; border-radius: 999px; }
+html[data-skin="verdant"] .chip-btn:hover { background: color-mix(in srgb, var(--skin-text) 12%, transparent) !important; }
+html[data-skin="verdant"] .chip-btn.active { background: var(--skin-text) !important; color: var(--skin-bg) !important; }
+html[data-skin="verdant"] :is(.dialog-card, .modal-card, .settings-card) { background: var(--md-sys-color-surface-container-high-solid, #282828) !important; border-radius: 8px !important; box-shadow: 0 16px 24px rgba(0, 0, 0, 0.3), 0 6px 8px rgba(0, 0, 0, 0.2); }
+html[data-skin="verdant"] .track-context-menu { background: var(--md-sys-color-surface-container-high-solid, #282828) !important; border-radius: 4px; padding: 4px; }
+html[data-skin="verdant"] .track-context-item { border-radius: 2px; padding: 12px; font-size: 14px; }
+html[data-skin="verdant"] .track-context-item:hover { background: var(--skin-hover); }
 
 /* =====================================================================================================
-   Crimson: flat near-black, no panels, a full-width player bar with the progress line across its top edge,
-   the play controls on the left and the song in the middle; red accent, white pill buttons
+   Crimson: one flat surface with hairlines; a labelled side menu with the playlists as plain text, the search
+   bar at the start of the top bar, two-column playlist pages, and a full-width player bar with the progress line
+   across its top edge, the play controls on the left and the song in the middle
    ===================================================================================================== */
 html[data-skin="crimson"] {
-  --skin-bg: #030303;
-  --skin-bar: #212121;
-  --skin-line-soft: rgba(255, 255, 255, 0.1);
-  --skin-hover: rgba(255, 255, 255, 0.1);
-  --skin-muted: #aaa;
-  --skin-accent: #f0383f;
+  --skin-bg: var(--md-sys-color-background-solid, #030303);
+  --skin-bar: var(--md-sys-color-surface-container-solid, #212121);
   --skin-cover-r: 2px;
-  --skin-line-bg: rgba(255, 255, 255, 0.2);
-  --skin-line-fill: #f0383f;
+  --skin-nav-r: 8px;
+  --skin-side-w: 240px;
+  --skin-side-r: 0;
+  --skin-line-fill: var(--skin-accent);
   --skin-line: 2px;
   --font-family: 'Roboto', 'Google Sans Text', system-ui, sans-serif !important;
-  --md-sys-color-primary: #f0383f !important;
-  --md-sys-color-on-primary: #fff !important;
-  --md-sys-color-primary-container: rgba(240, 56, 63, 0.16) !important;
-  --md-sys-color-on-primary-container: #ff8a8f !important;
-  --md-sys-color-secondary: #f0383f !important;
-  --md-sys-color-secondary-container: rgba(255, 255, 255, 0.1) !important;
-  --md-sys-color-secondary-container-solid: #1d1d1d !important;
-  --md-sys-color-on-secondary-container: #fff !important;
-  --md-sys-color-tertiary: #f0383f !important;
-  --md-sys-color-background: #030303 !important;
-  --md-sys-color-background-solid: #030303 !important;
-  --md-sys-color-surface: #030303 !important;
-  --md-sys-color-surface-solid: #030303 !important;
-  --md-sys-color-surface-dim: #030303 !important;
-  --md-sys-color-surface-container-lowest: #030303 !important;
-  --md-sys-color-surface-container-lowest-solid: #030303 !important;
-  --md-sys-color-surface-container-low: #0f0f0f !important;
-  --md-sys-color-surface-container-low-solid: #0f0f0f !important;
-  --md-sys-color-surface-container: #181818 !important;
-  --md-sys-color-surface-container-solid: #181818 !important;
-  --md-sys-color-surface-container-high: #212121 !important;
-  --md-sys-color-surface-container-high-solid: #212121 !important;
-  --md-sys-color-surface-container-highest: #2c2c2c !important;
-  --md-sys-color-surface-container-highest-solid: #2c2c2c !important;
-  --md-sys-color-on-surface-variant: #aaa !important;
-  --md-sys-color-on-surface-variant-solid: #aaa !important;
-  --md-sys-color-outline: #717171 !important;
-  --md-sys-color-outline-variant: rgba(255, 255, 255, 0.1) !important;
-  --md-sys-color-outline-variant-solid: #272727 !important;
-  --btn-primary-bg: #fff !important;
-  --btn-primary-fg: #030303 !important;
-  --btn-primary-hover: #e6e6e6 !important;
   --md-shape-corner-m: 8px !important;
   --md-shape-corner-l: 8px !important;
 }
@@ -241,16 +281,31 @@ html[data-skin="crimson"] {
 /* the window: one flat surface with hairlines between its parts */
 html[data-skin="crimson"] .titlebar { background: var(--skin-bg); }
 html[data-skin="crimson"] .top-nav { height: 64px; padding: 0 16px; border-bottom: 1px solid var(--skin-line-soft); background: var(--skin-bg); }
-html[data-skin="crimson"] .search-box { background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; height: 40px; }
-html[data-skin="crimson"] .search-box:focus-within { background: #212121; border-color: rgba(255, 255, 255, 0.2); }
+/* the search bar starts where the page does, whatever position Settings gives it in the default look */
+html[data-skin="crimson"]:not(.is-mobile) .top-nav .search-box-wrapper { left: calc(var(--skin-side-w) + 48px) !important; right: auto !important; transform: translateY(-50%) !important; width: min(480px, calc(100% - var(--skin-side-w) - var(--engine-w, 435px) - 96px)) !important; }
+html[data-skin="crimson"] .search-box { background: color-mix(in srgb, var(--skin-text) 15%, transparent); border: 1px solid var(--skin-line-soft); border-radius: 8px; height: 40px; }
+html[data-skin="crimson"] .search-box:focus-within { background: var(--skin-bar); border-color: color-mix(in srgb, var(--skin-text) 20%, transparent); }
 html[data-skin="crimson"]:not(.is-mobile) .app-layout { gap: 0; padding: 0; --playbar-space: 72px; }
 html[data-skin="crimson"] :is(.sidebar, .main-content, .right-panel) { background: var(--skin-bg) !important; border-radius: 0 !important; }
-html[data-skin="crimson"] .sidebar { width: 76px; border-right: 1px solid var(--skin-line-soft); }
+html[data-skin="crimson"]:not(.is-mobile) .sidebar { border-right: 1px solid var(--skin-line-soft); }
 html[data-skin="crimson"] .right-panel { border-left: 1px solid var(--skin-line-soft); }
 html[data-skin="crimson"] .main-content { padding: 24px 48px 40px; }
-html[data-skin="crimson"] .nav-item .nav-indicator { color: #fff !important; border-radius: 8px !important; }
-html[data-skin="crimson"] .nav-item:hover .nav-indicator { background: var(--skin-hover) !important; }
-html[data-skin="crimson"] .nav-active-indicator { background: var(--skin-hover) !important; border-radius: 8px !important; }
+
+/* the side menu: rows that fill on hover, a pill for New playlist, then the playlists as text */
+html[data-skin="crimson"]:not(.is-mobile) .sidebar :is(.nav-item, .rail-icon-btn) { height: 48px !important; padding: 0 12px !important; gap: 12px; color: var(--skin-text) !important; font-weight: 500; font-size: 15px; }
+html[data-skin="crimson"]:not(.is-mobile) .sidebar :is(.nav-item, .rail-icon-btn):hover { background: var(--skin-hover) !important; }
+html[data-skin="crimson"]:not(.is-mobile) .sidebar :is(.nav-item.active, .rail-icon-btn.active) { background: var(--skin-hover) !important; }
+html[data-skin="crimson"]:not(.is-mobile) .rail-drawer-header { padding: 0 4px; }
+html[data-skin="crimson"]:not(.is-mobile) #btn-new-playlist { width: 100%; height: 36px; gap: 8px; border-radius: 18px !important; background: color-mix(in srgb, var(--skin-text) 10%, transparent) !important; color: var(--skin-text) !important; font-weight: 500; }
+html[data-skin="crimson"]:not(.is-mobile) #btn-new-playlist .nav-label { display: block; }
+html[data-skin="crimson"]:not(.is-mobile) .sidebar .rail-icon-btn svg { color: inherit; }
+html[data-skin="crimson"] .playlist-actions #btn-select-playlist { margin-left: 0; order: 0; }
+html[data-skin="crimson"]:not(.is-mobile) .rail-drawer-header { flex-direction: column-reverse; align-items: stretch !important; gap: 12px; }
+html[data-skin="crimson"]:not(.is-mobile) .rail-drawer-header-actions { width: 100%; }
+html[data-skin="crimson"]:not(.is-mobile) .rail-drawer-title { font-size: 0 !important; height: 0; }
+html[data-skin="crimson"]:not(.is-mobile) .playlist-item-thumb { display: none !important; }
+html[data-skin="crimson"]:not(.is-mobile) .playlist-item { padding: 8px 12px; }
+html[data-skin="crimson"]:not(.is-mobile) .playlist-item-name { font-size: 14px; }
 
 /* the player bar: controls left, the song in the middle, the rest right, and the progress line on its top edge */
 html[data-skin="crimson"]:not(.is-mobile) .playbar {
@@ -266,18 +321,16 @@ html[data-skin="crimson"]:not(.is-mobile) .playbar .track-artwork { width: 40px 
 html[data-skin="crimson"]:not(.is-mobile) .playbar .track-title { font-size: 14px; font-weight: 500; }
 html[data-skin="crimson"]:not(.is-mobile) .playbar .track-artist { font-size: 14px; color: var(--skin-muted); }
 html[data-skin="crimson"]:not(.is-mobile) .playbar .btn-icon-pill { background: transparent !important; color: var(--skin-muted); }
-html[data-skin="crimson"]:not(.is-mobile) .playbar .btn-icon-pill:hover { color: #fff; }
-html[data-skin="crimson"]:not(.is-mobile) .playback-controls { gap: 8px !important; }
-html[data-skin="crimson"]:not(.is-mobile) .control-btn { background: transparent !important; color: #fff; width: 40px; height: 40px; }
+html[data-skin="crimson"]:not(.is-mobile) .playbar .btn-icon-pill:hover { color: var(--skin-text); }
+html[data-skin="crimson"]:not(.is-mobile) .control-btn { background: transparent !important; color: var(--skin-text); width: 40px; height: 40px; }
 html[data-skin="crimson"]:not(.is-mobile) .control-btn:hover { background: var(--skin-hover) !important; }
-html[data-skin="crimson"]:not(.is-mobile) .control-btn.active { color: var(--skin-accent); }
 html[data-skin="crimson"]:not(.is-mobile) body:not(.mini) .playbar .playback-controls :is(.btn-play-pause, .btn-play-pause.playing) {
   width: 40px !important; height: 40px !important; min-height: 40px !important; max-height: 40px !important;
-  border-radius: 50% !important; background: transparent !important; color: #fff !important;
+  border-radius: 50% !important; background: transparent !important; color: var(--skin-text) !important;
 }
 html[data-skin="crimson"]:not(.is-mobile) body:not(.mini) .playbar .playback-controls .btn-play-pause svg { width: 30px; height: 30px; }
 html[data-skin="crimson"]:not(.is-mobile) body:not(.mini) .playbar .playback-controls .btn-play-pause:hover { background: var(--skin-hover) !important; transform: none; }
-html[data-skin="crimson"]:not(.is-mobile) body:not(.mini) .playbar .playback-controls :is(#btn-shuffle, #btn-repeat, #btn-prev, #btn-next) { width: 40px !important; height: 40px !important; color: #fff !important; }
+html[data-skin="crimson"]:not(.is-mobile) body:not(.mini) .playbar .playback-controls :is(#btn-shuffle, #btn-repeat, #btn-prev, #btn-next) { width: 40px !important; height: 40px !important; color: var(--skin-text) !important; }
 html[data-skin="crimson"]:not(.is-mobile) body:not(.mini) .playbar .playback-controls :is(#btn-shuffle, #btn-repeat).active { color: var(--skin-accent) !important; }
 html[data-skin="crimson"]:not(.is-mobile) body:not(.mini) .playbar .playback-controls :is(#btn-prev, #btn-next) svg { width: 24px; height: 24px; }
 /* the scrubber moves to the bar's top edge; the times sit after the controls, as "0:42 / 3:15" */
@@ -311,29 +364,52 @@ html[data-skin="crimson"] .sp-card:hover .sp-card-cover::after { opacity: 1; }
 html[data-skin="crimson"] .sp-card-title { font-size: 15px; font-weight: 500; margin-top: 12px; }
 html[data-skin="crimson"] .sp-card-sub { font-size: 14px; color: var(--skin-muted); }
 
+/* the playlist page in two columns: cover, title and buttons on the left, centred; the songs on the right */
+html[data-skin="crimson"]:not(.is-mobile) #view-playlist-detail.active {
+  display: grid !important; grid-template-columns: minmax(260px, 32%) minmax(0, 1fr); column-gap: 48px;
+  grid-template-rows: auto auto 1fr; align-items: start;
+}
+html[data-skin="crimson"]:not(.is-mobile) #btn-back-playlists { grid-column: 1; grid-row: 1; justify-self: start; }
+html[data-skin="crimson"]:not(.is-mobile) #view-playlist-detail .playlist-detail-header {
+  grid-column: 1; grid-row: 2 / span 2; position: sticky; top: 0;
+  flex-direction: column !important; align-items: center !important; text-align: center; padding: 8px 0 !important;
+}
+html[data-skin="crimson"]:not(.is-mobile) #view-playlist-detail .playlist-meta { display: flex; flex-direction: column; align-items: center; }
+html[data-skin="crimson"] { --skin-cover-big: 264px; --skin-cover-big-r: 8px; }
+html[data-skin="crimson"]:not(.is-mobile) #view-playlist-detail #playlist-detail-search,
+html[data-skin="crimson"]:not(.is-mobile) #view-playlist-detail #playlist-search-box { grid-column: 2; grid-row: 1; justify-self: end; }
+html[data-skin="crimson"]:not(.is-mobile) #view-playlist-detail #playlist-tracks-list { grid-column: 2; grid-row: 2 / span 2; }
+html[data-skin="crimson"] #playlist-detail-title { font-size: 28px; font-weight: 700; margin: 8px 0; }
+html[data-skin="crimson"] .playlist-actions { justify-content: center; gap: 12px !important; margin-top: 16px; flex-wrap: wrap; }
+html[data-skin="crimson"] .playlist-actions .sort-dropdown { margin-left: 0; }
+html[data-skin="crimson"] .playlist-actions :is(.btn-outline-pill, .btn-icon-pill) { border: 1px solid var(--skin-line-soft) !important; border-radius: 50% !important; background: color-mix(in srgb, var(--skin-text) 10%, transparent) !important; color: var(--skin-text) !important; }
+html[data-skin="crimson"] #btn-play-playlist { background: var(--skin-text) !important; color: var(--skin-bg) !important; }
+
 /* lists: flat rows with hairlines between them */
 html[data-skin="crimson"] .track-row { padding: 8px 12px; border-radius: 0; border-bottom: 1px solid var(--skin-line-soft) !important; }
 html[data-skin="crimson"] .track-row:hover { background: var(--skin-hover) !important; }
-html[data-skin="crimson"] .track-row::after { display: none; }
 html[data-skin="crimson"] .track-row-thumb { width: 40px; height: 40px; border-radius: 2px; }
 html[data-skin="crimson"] .track-row-title { font-size: 14px; font-weight: 500; }
 html[data-skin="crimson"] .track-row-artist { font-size: 14px; color: var(--skin-muted); }
 html[data-skin="crimson"] .track-row-index, html[data-skin="crimson"] .track-row-duration { color: var(--skin-muted); font-size: 14px; }
 
+/* the now-playing panel: tabs as underlined words */
+html[data-skin="crimson"] .drawer-tabs { background: transparent !important; border-bottom: 1px solid var(--skin-line-soft); border-radius: 0 !important; }
+html[data-skin="crimson"] .drawer-tabs > * { background: transparent !important; border-radius: 0 !important; color: var(--skin-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; font-size: 13px; }
+html[data-skin="crimson"] .drawer-tabs > .active { color: var(--skin-text); box-shadow: inset 0 -2px 0 var(--skin-text); }
+
 /* buttons, chips, menus, dialogs */
-html[data-skin="crimson"] .btn-pill-primary { background: #fff !important; color: #030303 !important; font-weight: 500; border-radius: 18px; }
-html[data-skin="crimson"] .btn-pill-primary:hover { background: #e6e6e6 !important; }
-html[data-skin="crimson"] .btn-outline-pill { background: transparent !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; color: #fff; border-radius: 18px; font-weight: 500; }
+html[data-skin="crimson"] .btn-pill-primary { background: var(--skin-text) !important; color: var(--skin-bg) !important; font-weight: 500; border-radius: 18px; }
+html[data-skin="crimson"] .btn-pill-primary:hover { filter: brightness(0.9); }
+html[data-skin="crimson"] .btn-outline-pill { background: transparent !important; border: 1px solid color-mix(in srgb, var(--skin-text) 20%, transparent) !important; color: var(--skin-text); border-radius: 18px; font-weight: 500; }
 html[data-skin="crimson"] .btn-outline-pill:hover { background: var(--skin-hover) !important; }
-html[data-skin="crimson"] .chip-btn { background: rgba(255, 255, 255, 0.1) !important; color: #fff; border: 1px solid transparent !important; border-radius: 8px; }
-html[data-skin="crimson"] .chip-btn:hover { background: rgba(255, 255, 255, 0.2) !important; }
-html[data-skin="crimson"] .chip-btn.active { background: #fff !important; color: #030303 !important; }
-html[data-skin="crimson"] :is(.dialog-card, .modal-card, .settings-card) { background: #212121 !important; border-radius: 8px !important; }
-html[data-skin="crimson"] .track-context-menu { background: #282828 !important; border-radius: 8px; padding: 8px 0; }
+html[data-skin="crimson"] .chip-btn { background: color-mix(in srgb, var(--skin-text) 10%, transparent) !important; color: var(--skin-text); border: 1px solid transparent !important; border-radius: 8px; }
+html[data-skin="crimson"] .chip-btn:hover { background: color-mix(in srgb, var(--skin-text) 20%, transparent) !important; }
+html[data-skin="crimson"] .chip-btn.active { background: var(--skin-text) !important; color: var(--skin-bg) !important; }
+html[data-skin="crimson"] :is(.dialog-card, .modal-card, .settings-card) { background: var(--skin-bar) !important; border-radius: 8px !important; }
+html[data-skin="crimson"] .track-context-menu { background: var(--md-sys-color-surface-container-high-solid, #282828) !important; border-radius: 8px; padding: 8px 0; }
 html[data-skin="crimson"] .track-context-item { border-radius: 0; padding: 10px 20px; font-size: 14px; }
-html[data-skin="crimson"] .track-context-item:hover { background: rgba(255, 255, 255, 0.1); }
-html[data-skin="crimson"] .playlist-item { border-radius: 8px; }
-html[data-skin="crimson"] .playlist-item:hover { background: var(--skin-hover); }
+html[data-skin="crimson"] .track-context-item:hover { background: var(--skin-hover); }
 
 /* =====================================================================================================
    Phones (mobile.css lays out the tab bar, mini player and the now-playing sheet; these restyle them)
@@ -343,20 +419,23 @@ html.is-mobile[data-skin] .main-content { border-radius: 0 !important; }
 html.is-mobile[data-skin] .sidebar :is(.nav-item, .rail-icon-btn) { height: 52px !important; flex-direction: column !important; gap: 2px; border-radius: 0 !important; background: transparent !important; }
 html.is-mobile[data-skin] .sidebar :is(.nav-item, .rail-icon-btn)::before { content: attr(title); order: 2; font-size: 10px; line-height: 12px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 html.is-mobile[data-skin] .sidebar .nav-indicator { width: 28px !important; height: 28px !important; background: transparent !important; }
-html.is-mobile[data-skin] .sidebar .nav-item.active .nav-indicator { background: transparent !important; color: #fff !important; }
+html.is-mobile[data-skin] .sidebar .nav-item.active .nav-indicator { background: transparent !important; color: var(--skin-text) !important; }
 html.is-mobile[data-skin] .sidebar :is(.nav-item, .rail-icon-btn) { color: var(--skin-muted) !important; }
-html.is-mobile[data-skin] .sidebar .nav-item.active { color: #fff !important; }
-html.is-mobile[data-skin] .playbar .btn-play-pause { background: transparent !important; color: #fff !important; }
+html.is-mobile[data-skin] .sidebar .nav-item.active { color: var(--skin-text) !important; }
+html.is-mobile[data-skin] .playbar .btn-play-pause { background: transparent !important; color: var(--skin-text) !important; }
 html.is-mobile[data-skin] .playbar .btn-play-pause svg { width: 28px; height: 28px; }
+/* the playlist page: one column, the header centred */
+html.is-mobile[data-skin] .playlist-detail-header { flex-direction: column !important; align-items: flex-start !important; padding: 8px 0 !important; }
+html.is-mobile[data-skin] .playlist-actions { flex-wrap: wrap; gap: 8px !important; }
 
-/* Verdant: dark grey all over with a tint at the top, a small rounded mini player, the tab bar fading up from black */
-html.is-mobile[data-skin="verdant"] { --skin-bg: #121212; --mini-h: 56px; }
-html.is-mobile[data-skin="verdant"] .main-content { background: linear-gradient(180deg, color-mix(in srgb, var(--playlist-accent-color, #535353) 22%, #121212) 0, #121212 360px) !important; }
-html.is-mobile[data-skin="verdant"] .sidebar { background: linear-gradient(to top, #000 55%, rgba(0, 0, 0, 0.85)) !important; border-top: none !important; }
+/* Verdant: one dark panel with a tint at the top, a small rounded mini player, the tab bar fading up from the window color */
+html.is-mobile[data-skin="verdant"] { --skin-bg: var(--md-sys-color-surface-container-low-solid, #121212); --mini-h: 56px; }
+html.is-mobile[data-skin="verdant"] .main-content { background: linear-gradient(180deg, color-mix(in srgb, var(--playlist-accent-color, var(--skin-muted)) 22%, var(--skin-bg)) 0, var(--skin-bg) 360px) !important; }
+html.is-mobile[data-skin="verdant"] .sidebar { background: linear-gradient(to top, var(--md-sys-color-surface-container-lowest-solid, #000) 55%, color-mix(in srgb, var(--md-sys-color-surface-container-lowest-solid, #000) 85%, transparent)) !important; border-top: none !important; }
 html.is-mobile[data-skin="verdant"] body:not(.np-open) .playbar {
   left: 8px !important; right: 8px !important; padding: 0 4px 0 8px !important;
   bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 6px) !important;
-  border-radius: 6px !important; background: #2e2e2e !important;
+  border-radius: 6px !important; background: var(--md-sys-color-surface-container-highest-solid, #2e2e2e) !important;
 }
 html.is-mobile[data-skin="verdant"] body:not(.np-open) .playbar .artwork-wrapper,
 html.is-mobile[data-skin="verdant"] body:not(.np-open) .playbar .track-artwork { width: 40px !important; height: 40px !important; }
@@ -364,20 +443,23 @@ html.is-mobile[data-skin="verdant"] .playbar .track-title { font-size: 14px; fon
 html.is-mobile[data-skin="verdant"] .playbar .track-artist { font-size: 13px; color: var(--skin-muted); }
 html.is-mobile[data-skin="verdant"] .playbar::after {
   left: 8px; right: 8px; bottom: 0; height: 2px;
-  background: linear-gradient(90deg, #fff calc(var(--mini-progress, 0) * 100%), rgba(255, 255, 255, 0.25) 0);
+  background: linear-gradient(90deg, var(--skin-text) calc(var(--mini-progress, 0) * 100%), var(--skin-line-bg) 0);
 }
-html.is-mobile[data-skin="verdant"] #right-panel { background: linear-gradient(180deg, color-mix(in srgb, var(--playlist-accent-color, #535353) 45%, #121212), #121212 70%) !important; }
-html.is-mobile[data-skin="verdant"] body.np-open .playbar .btn-play-pause { width: 64px !important; height: 64px !important; background: #fff !important; color: #000 !important; border-radius: 50% !important; }
+html.is-mobile[data-skin="verdant"] #right-panel { background: linear-gradient(180deg, color-mix(in srgb, var(--playlist-accent-color, var(--skin-muted)) 45%, var(--skin-bg)), var(--skin-bg) 70%) !important; }
+html.is-mobile[data-skin="verdant"] body.np-open .playbar .btn-play-pause { width: 64px !important; height: 64px !important; background: var(--skin-text) !important; color: var(--skin-bg) !important; border-radius: 50% !important; }
+html.is-mobile[data-skin="verdant"] #playlist-detail-title { font-size: 2rem; }
+html.is-mobile[data-skin] { --skin-cover-big: 60vw; }
+html.is-mobile[data-skin="verdant"] .playlist-detail-header #playlist-detail-cover { align-self: center; }
 
-/* Crimson: flat black, a full-width mini player with the red line on its top edge */
+/* Crimson: flat, a full-width mini player with the progress line on its top edge */
 html.is-mobile[data-skin="crimson"] { --mini-h: 60px; }
-html.is-mobile[data-skin="crimson"] .sidebar { background: #0f0f0f !important; border-top: 1px solid var(--skin-line-soft) !important; }
-html.is-mobile[data-skin="crimson"] .sidebar :is(.nav-item, .rail-icon-btn) { color: #fff !important; opacity: 0.7; }
+html.is-mobile[data-skin="crimson"] .sidebar { background: var(--skin-bar) !important; border-top: 1px solid var(--skin-line-soft) !important; }
+html.is-mobile[data-skin="crimson"] .sidebar :is(.nav-item, .rail-icon-btn) { color: var(--skin-text) !important; opacity: 0.7; }
 html.is-mobile[data-skin="crimson"] .sidebar .nav-item.active { opacity: 1; }
 html.is-mobile[data-skin="crimson"] body:not(.np-open) .playbar {
   left: 0 !important; right: 0 !important; padding: 2px 8px 0 12px !important;
   bottom: calc(var(--tabbar-h) + var(--safe-bottom)) !important;
-  border-radius: 0 !important; background: #212121 !important;
+  border-radius: 0 !important; background: var(--skin-bar) !important;
 }
 html.is-mobile[data-skin="crimson"] body:not(.np-open) .playbar .artwork-wrapper,
 html.is-mobile[data-skin="crimson"] body:not(.np-open) .playbar .track-artwork { width: 40px !important; height: 40px !important; }
@@ -385,12 +467,13 @@ html.is-mobile[data-skin="crimson"] .playbar .track-title { font-size: 14px; fon
 html.is-mobile[data-skin="crimson"] .playbar .track-artist { font-size: 13px; color: var(--skin-muted); }
 html.is-mobile[data-skin="crimson"] .playbar::after {
   left: 0; right: 0; top: 0; bottom: auto; height: 2px; border-radius: 0;
-  background: linear-gradient(90deg, var(--skin-accent) calc(var(--mini-progress, 0) * 100%), rgba(255, 255, 255, 0.15) 0);
+  background: linear-gradient(90deg, var(--skin-accent) calc(var(--mini-progress, 0) * 100%), var(--skin-line-soft) 0);
 }
-html.is-mobile[data-skin="crimson"] #right-panel { background: #030303 !important; }
-html.is-mobile[data-skin="crimson"] body.np-open .playbar .btn-play-pause { width: 64px !important; height: 64px !important; background: #fff !important; color: #030303 !important; border-radius: 50% !important; }
+html.is-mobile[data-skin="crimson"] #right-panel { background: var(--skin-bg) !important; }
+html.is-mobile[data-skin="crimson"] body.np-open .playbar .btn-play-pause { width: 64px !important; height: 64px !important; background: var(--skin-text) !important; color: var(--skin-bg) !important; border-radius: 50% !important; }
+html.is-mobile[data-skin="crimson"] .playlist-detail-header { align-items: center !important; text-align: center; }
 
-/* the cards in Settings that pick a style: a tiny drawing of each */
+/* the cards in Settings that pick a look: a small drawing of each layout, in the current colors */
 .skin-card {
   position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0;
   padding: 10px 12px; border: none; border-radius: var(--md-shape-corner-m, 16px);
@@ -398,14 +481,18 @@ html.is-mobile[data-skin="crimson"] body.np-open .playbar .btn-play-pause { widt
 }
 .skin-card:hover { background: var(--md-sys-color-surface-container-highest); }
 .skin-card.active { outline: 2px solid var(--md-sys-color-primary); outline-offset: -2px; }
-.skin-card-preview { display: grid; grid-template-columns: 16px 1fr; grid-template-rows: 1fr 8px; gap: 3px; width: 100%; height: 54px; padding: 4px; margin-bottom: 6px; border-radius: 8px; background: #2a2a2a; box-sizing: border-box; }
-.skin-card-preview i { display: block; border-radius: 4px; background: #555; }
+.skin-card-preview {
+  --pv-bg: var(--md-sys-color-surface-container-lowest-solid, #000); --pv-panel: color-mix(in srgb, var(--md-sys-color-on-surface-solid, #fff) 16%, var(--pv-bg));
+  display: grid; grid-template-columns: 16px 1fr; grid-template-rows: 1fr 8px; gap: 3px; width: 100%; height: 54px; padding: 4px;
+  margin-bottom: 6px; border-radius: 8px; background: var(--pv-bg); box-sizing: border-box;
+}
+.skin-card-preview i { display: block; border-radius: 4px; background: var(--pv-panel); }
 .skin-card-preview i:nth-child(3) { grid-column: 1 / -1; }
-.skin-card[data-skin="verdant"] .skin-card-preview { background: #000; }
-.skin-card[data-skin="verdant"] .skin-card-preview i { background: #1f1f1f; }
-.skin-card[data-skin="verdant"] .skin-card-preview i:nth-child(3) { background: linear-gradient(90deg, #000 40%, #2bd46a 40% 60%, #000 60%); border-radius: 0; }
-.skin-card[data-skin="crimson"] .skin-card-preview { background: #030303; gap: 0; padding: 0; overflow: hidden; }
-.skin-card[data-skin="crimson"] .skin-card-preview i { background: #030303; border-radius: 0; border-right: 1px solid #222; }
-.skin-card[data-skin="crimson"] .skin-card-preview i:nth-child(3) { background: #212121; border-top: 2px solid #f0383f; }
+.skin-card[data-skin="verdant"] .skin-card-preview { grid-template-columns: 30% 1fr; }
+.skin-card[data-skin="verdant"] .skin-card-preview i { border-radius: 2px; }
+.skin-card[data-skin="verdant"] .skin-card-preview i:nth-child(3) { background: linear-gradient(90deg, transparent 42%, var(--md-sys-color-on-surface-solid, #fff) 42% 58%, transparent 58%) center / 100% 2px no-repeat; }
+.skin-card[data-skin="crimson"] .skin-card-preview { grid-template-columns: 26% 1fr; gap: 0; padding: 0; overflow: hidden; }
+.skin-card[data-skin="crimson"] .skin-card-preview i { background: transparent; border-radius: 0; border-right: 1px solid var(--pv-panel); }
+.skin-card[data-skin="crimson"] .skin-card-preview i:nth-child(3) { background: var(--pv-panel); border-top: 2px solid var(--md-sys-color-primary); }
 .skin-card-name { font-weight: 600; }
 .skin-card-tag { font-size: 12px; color: var(--md-sys-color-on-surface-variant); }
