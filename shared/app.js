@@ -10096,6 +10096,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // the queue too (Riff #248): the song playing keeps playing, wherever it is moved to
+  initListReordering({
+    container: el.queueTracksList,
+    itemSelector: '.track-row',
+    setOrder: (fromIdx, toIdx) => {
+      const [moved] = state.queue.splice(fromIdx, 1);
+      state.queue.splice(toIdx, 0, moved);
+      const cur = state.queueIndex;
+      if (fromIdx === cur) state.queueIndex = toIdx;
+      else if (fromIdx < cur && toIdx >= cur) state.queueIndex--;
+      else if (fromIdx > cur && toIdx <= cur) state.queueIndex++;
+      // the rows carry their old positions: draw them again
+      el.queueTracksList._renderedQueue = null;
+      updateQueueBadge();
+    }
+  });
+
   function createPlaylist(name, initialTracks = [], cover = '', { open = true } = {}) {
     if (!name || !name.trim()) return null;
     const newPl = {
