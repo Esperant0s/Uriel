@@ -9849,7 +9849,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     let lastClientY = 0;
     let startScroll = 0;
 
-    const scrollParent = container.closest('.main-content, .rail-drawer') || container;
+    // what really scrolls under the rows, found when a drag starts: the playlists list scrolls itself, inside a
+    // drawer that doesn't, so holding a playlist at the list's edge used to scroll nothing
+    let scrollParent = null;
+    const scrollerOf = () => {
+      for (let n = container; n && n !== document.body; n = n.parentElement) {
+        const o = getComputedStyle(n).overflowY;
+        if ((o === 'auto' || o === 'scroll') && n.scrollHeight > n.clientHeight) return n;
+      }
+      return container.closest('.main-content, .rail-drawer') || container;
+    };
 
     window.addEventListener('click', (e) => {
       if (suppressClick) {
@@ -9879,7 +9888,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       targetIndex = startIndex;
       draggedHeight = draggedItem.offsetHeight;
       draggedStartTop = draggedItem.offsetTop;
-      startScroll = scrollParent ? scrollParent.scrollTop : 0;
+      scrollParent = scrollerOf();
+      startScroll = scrollParent.scrollTop;
 
       itemMetrics = items.map((el, i) => ({
         el,
@@ -9995,6 +10005,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (e && activePointerId !== null && e.pointerId !== activePointerId) return;
       // the browser took the gesture over (it began a scroll): put the row back where it was
       if (e && e.type === 'pointercancel') targetIndex = startIndex;
+      // where the finger left the screen: phones may not send a last move before it does
+      else if (e && e.type === 'pointerup' && isDragging && draggedItem) { lastClientY = e.clientY; placeDragged(); }
       clearTimeout(pressTimer);
       clearInterval(autoScrollTimer);
       window.removeEventListener('pointermove', onPointerMove);
