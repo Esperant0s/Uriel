@@ -1,4 +1,4 @@
-## Uriel 1.5.10
+## Uriel 1.5.11
 
 Uriel is the new name of the Esperant0s fork of [Muriel](https://github.com/cloverscripts/riff-muriel) by cloverscripts, itself based on [Riff](https://github.com/rootscripts/riff) by rootscripts (MIT). It is its own app now and installs next to Muriel.
 
@@ -8,6 +8,12 @@ Uriel is the new name of the Esperant0s fork of [Muriel](https://github.com/clov
 - **Windows:** installer below, or the portable exe on [windows-latest](https://github.com/Esperant0s/Uriel/releases/tag/windows-latest). Windows SmartScreen may warn because the files are unsigned: More info → Run anyway.
 - **macOS:** `.dmg` / `.zip` below, for Apple Silicon and Intel. The app is unsigned: if macOS blocks it, open System Settings → Privacy & Security → Open Anyway.
 - **Linux:** `.AppImage` below (needs FUSE 2: `fuse2` / `libfuse2`)
+
+**New in 1.5.11**
+- **App Look:** the setting that was called Player style is now App Look, and it changes the layout rather than the colors. Verdant gives you a library column with your playlists, big playlist headers with a round play button, and a now-playing panel with the lyrics on a colored card. Crimson gives you a side menu, a player bar with the song in the middle, playlist pages in two columns, and covers that show a play button when you point at them.
+- **App theme:** the setting that was called Website themes is now App theme, and it sets the colors for any App Look. Verdant (green on black) and Crimson (red on black) are the colors those looks were made with.
+- **System theme:** the first App theme takes your device's own colors: light or dark from the system, and its accent color on Windows, macOS, GNOME and Android 12 or newer. On iPhone it uses the system blue.
+- **Playing song:** in Verdant and Crimson the song that's playing shows small moving bars in place of its number or over its cover.
 
 **New in 1.5.10**
 - **Player styles:** Settings → Theme → Player style. Verdant (black panels, green, compact lists) and Crimson (flat black, red, the progress line across the top of the player bar) restyle the whole app on computers and phones. Uriel is the usual look.
