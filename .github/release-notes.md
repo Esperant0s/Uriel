@@ -1,4 +1,4 @@
-## Uriel 1.5.12
+## Uriel 1.5.13
 
 Uriel is the new name of the Esperant0s fork of [Muriel](https://github.com/cloverscripts/riff-muriel) by cloverscripts, itself based on [Riff](https://github.com/rootscripts/riff) by rootscripts (MIT). It is its own app now and installs next to Muriel.
 
@@ -8,6 +8,18 @@ Uriel is the new name of the Esperant0s fork of [Muriel](https://github.com/clov
 - **Windows:** installer below, or the portable exe on [windows-latest](https://github.com/Esperant0s/Uriel/releases/tag/windows-latest). Windows SmartScreen may warn because the files are unsigned: More info → Run anyway.
 - **macOS:** `.dmg` / `.zip` below, for Apple Silicon and Intel. The app is unsigned: if macOS blocks it, open System Settings → Privacy & Security → Open Anyway.
 - **Linux:** `.AppImage` below (needs FUSE 2: `fuse2` / `libfuse2`)
+
+**New in 1.5.13**
+- **Names under the icons:** the tab bar on phones and the left rail on computers show each button's name, so Playlists and the rest are easy to find.
+- **Ask before removing:** the bin icon in My files now asks first, and says whether the file stays on your device or Uriel's copy is deleted.
+- **Keyboard focus:** moving around with Tab shows a ring in your accent color on the button you're on.
+
+**Fixed in 1.5.13**
+- **Light mode:** a playlist's name and details are readable again on its header.
+- **Queue:** song titles use the panel's full width instead of being cut to a few letters.
+- **My files:** songs without a cover show a music note instead of an empty gap, and titles like "Artist - Song" show just the song.
+- **Easier to read and use:** stronger contrast on song lengths, subtitles and badges, bigger source buttons on phones, a Songs heading in search results, and names for every control for screen readers.
+- **Wording:** Uriel says "songs" everywhere now instead of mixing in "tracks".
 
 **Changed in 1.5.12**
 - **App Look is gone:** the Verdant and Crimson layouts and their color themes are removed, and Uriel always uses its own layout again. If you had the Verdant or Crimson App theme picked, Uriel goes back to your accent color; the System theme and the other App themes stay.
