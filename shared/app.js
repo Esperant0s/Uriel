@@ -112,10 +112,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // shown often but not on the page until then (a song's menu, everyday messages): asked for along with the page
   if (I18N.known) I18N.known(['Play next', 'Add to queue', 'Add to playlist…', 'Add to favorites', 'Remove from favorites', 'Go to artist',
     'Download…', 'Remove from playlist', 'Playing next', 'Added to queue', 'Already in the queue', 'Added to "{0}"', 'Already in "{0}"',
-    'Added {0} tracks to "{1}"', 'Playlist deleted', 'Link copied{0}', 'Removed from library', 'Could not play this song. Try again or skip.',
-    'Offline: connect to the internet to search new tracks', 'No matching tracks. Try a different search', 'Search for "{0}"', 'Actions',
+    'Added {0} songs to "{1}"', 'Playlist deleted', 'Link copied{0}', 'Removed from library', 'Could not play this song. Try again or skip.',
+    'Offline: connect to the internet to search new songs', 'No matching songs. Try a different search', 'Search for "{0}"', 'Actions',
     'Playlists', 'Favorites', 'In playlists', 'Queue', 'History', 'Library', 'Online', 'Discover', 'View', 'Audio', 'Your stats',
-    'Repeat: playlist', 'Repeat: this song', 'Start radio', 'Radio · {0}', 'Radio · {0} and {1} more', 'Sleep timer: {0} min', 'Sleep timer: end of track']);
+    'Repeat: playlist', 'Repeat: this song', 'Start radio', 'Radio · {0}', 'Radio · {0} and {1} more', 'Sleep timer: {0} min', 'Sleep timer: end of song']);
 
   const toastQueue = [];
   const MAX_QUEUED_TOASTS = 10;
@@ -606,7 +606,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const isRemoteUrl = (value) => typeof value === 'string' && /^https?:\/\//i.test(value) && !value.includes('127.0.0.1');
     const link = typeof track.url === 'string' && /^https:\/\//i.test(track.url) ? track.url : '';
     api.discordPresenceUpdate({
-      title: track.title || 'Unknown Track',
+      title: track.title || 'Unknown Song',
       artist: track.artist || 'Unknown Artist',
       duration,
       position,
@@ -623,7 +623,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const rawTitle = (typeof state.currentTrack.title === 'string' ? state.currentTrack.title.trim() : '');
       const rawArtist = (typeof state.currentTrack.artist === 'string' ? state.currentTrack.artist.trim() : '');
       const rawAlbum = (typeof state.currentTrack.album === 'string' ? state.currentTrack.album.trim() : '');
-      const title = rawTitle || 'Unknown track';
+      const title = rawTitle || 'Unknown song';
       const artist = rawArtist || 'Unknown artist';
       const thumb = (typeof getTrackThumbUrl === 'function' ? getTrackThumbUrl(state.currentTrack) : '') || state.currentTrack.thumbnail || '';
       const artwork = getMediaArtwork(thumb);
@@ -2243,7 +2243,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (el.btnConfirmRenameTrack) {
     el.btnConfirmRenameTrack.addEventListener('click', () => {
-      const newTitle = el.inputRenameTitle ? el.inputRenameTitle.value.trim() || 'Untitled track' : 'Untitled track';
+      const newTitle = el.inputRenameTitle ? el.inputRenameTitle.value.trim() || 'Untitled song' : 'Untitled song';
       const newArtist = el.inputRenameArtist ? el.inputRenameArtist.value.trim() || 'Unknown artist' : 'Unknown artist';
 
       // the artist's channel stays with the artist it came with, not with a name typed over it
@@ -2277,7 +2277,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       updateMediaSession();
 
       if (el.renameTrackModal) closeModal(el.renameTrackModal);
-      showToast(Tm('Track info updated'), 'info');
+      showToast(Tm('Song info updated'), 'info');
     });
   }
 
@@ -2404,7 +2404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- Per-track speed / pitch / volume and speed & pitch presets (issue #11; logic in track-audio.js) ----
   // state.audioSettings stays the global sound; a song's own tempo values (keyed by its canonical id) go over it
   var trackAudioStore = null;
-  var trackAudioOnlyDraft = false; // "For this track only" switched on, nothing changed yet
+  var trackAudioOnlyDraft = false; // "For this song only" switched on, nothing changed yet
   var trackAudioLastKey = '';
   function trackAudioLib() { return window.UrielTrackAudio || null; }
   function allTrackAudio() {
@@ -4037,7 +4037,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       if (err.name === 'AbortError') return;
       if (currentToken === state.loadToken) {
-        logPlaybackIssue('Track playback notice', err);
+        logPlaybackIssue('Song playback notice', err);
         if (retryFresh(currentToken, track)) return;
         stopAfterFailure();
         if (!skipUnplayable(currentToken, track)) showPlayFailure(err.message || Tm('Could not load audio stream'));
@@ -4061,7 +4061,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (!data || !data.success || !data.streamUrl) {
       // offline only saved copies are looked up (above), so this answers at once instead of trying every source
-      if (!navigator.onLine) throw new Error(Tm('Offline: this track is not available in local cache'));
+      if (!navigator.onLine) throw new Error(Tm('Offline: this song is not available in local cache'));
       throw new Error((data && data.error) || 'Failed to extract audio stream');
     }
 
@@ -4175,7 +4175,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     attachStream(track, track.url, track.id, token, signal, true).then((ok) => { if (ok) applyAudioSettings(); }, (err) => {
       if (err && err.name === 'AbortError') return;
       if (token !== state.loadToken) return;
-      logPlaybackIssue('Track playback notice (fresh retry)', err);
+      logPlaybackIssue('Song playback notice (fresh retry)', err);
       stopAfterFailure();
       if (!skipUnplayable(token, track)) showPlayFailure((err && err.message) || Tm('Could not load audio stream'));
     });
@@ -4246,7 +4246,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, (err) => {
       if (midSongLookup === token) midSongLookup = -1;
       if ((err && err.name === 'AbortError') || token !== state.loadToken) return;
-      logPlaybackIssue('Track playback notice (mid-song look-up)', err);
+      logPlaybackIssue('Song playback notice (mid-song look-up)', err);
       recoverMidSong(token, track);
     });
   }
@@ -5308,7 +5308,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const isNew = trackKey !== lastTvMetaTrackKey;
     lastTvMetaTrackKey = trackKey;
 
-    const titleText = (curTrack && curTrack.title) || 'No track';
+    const titleText = (curTrack && curTrack.title) || 'No song';
     const artistText = (curTrack && curTrack.artist) || '';
 
     if (el.tvKaraokeTitle) {
@@ -6135,7 +6135,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function openCustomLyricsEditor() {
     if (!state.currentTrack) {
-      showToast(Tm('Play a track first to add lyrics'), 'info');
+      showToast(Tm('Play a song first to add lyrics'), 'info');
       return;
     }
     if (el.customLyricsTrackTitle) el.customLyricsTrackTitle.textContent = (state.currentTrack.title || 'untitled');
@@ -6208,7 +6208,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function openSyncMode() {
     if (!state.currentTrack) {
-      showToast(Tm('Play a track first to sync lyrics'), 'info');
+      showToast(Tm('Play a song first to sync lyrics'), 'info');
       return;
     }
 
@@ -7386,7 +7386,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const runId = ++currentAlbumPlayRunId;
 
     const toastTimer = setTimeout(() => {
-      showToast(Tm('Finding tracks…'), 'info');
+      showToast(Tm('Finding songs…'), 'info');
     }, 800);
 
     if (isEpisodeAlbum(tracks)) {
@@ -7444,7 +7444,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (state.currentView === 'queue') renderQueueView();
 
       if (skippedCount > 0) {
-        showToast(Tm('{0} tracks not found', skippedCount), 'warning');
+        showToast(Tm('{0} songs not found', skippedCount), 'warning');
       }
     } finally {
       if (hasBusy) endBusy('import');
@@ -7676,7 +7676,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setAlbumArtist(album.artist || '');
 
     const countEl = document.getElementById('album-detail-count');
-    const baseCount = album.trackCount ? `${album.trackCount} track${album.trackCount === 1 ? '' : 's'}` : '';
+    const baseCount = album.trackCount ? `${album.trackCount} song${album.trackCount === 1 ? '' : 's'}` : '';
     const initialMeta = [kind, album.year, baseCount].filter(Boolean).join(' · ');
     if (countEl) countEl.textContent = initialMeta || kind;
 
@@ -7729,7 +7729,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (currentAlbumRunId !== runId) return;
 
         if (!data || !data.success || !Array.isArray(data.tracks) || data.tracks.length === 0) {
-          throw new Error(data && data.error ? data.error : 'Failed to load album tracks');
+          throw new Error(data && data.error ? data.error : 'Failed to load album songs');
         }
         tracks = data.tracks;
         albumArtist = (data.album && data.album.artist) || albumArtist;
@@ -7747,7 +7747,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (albumArtist && !isMix) setAlbumArtist(albumArtist);
 
       if (countEl) {
-        const cnt = tracks.length === 1 ? T('1 track') : Tf('{0} tracks', tracks.length);
+        const cnt = tracks.length === 1 ? T('1 song') : Tf('{0} songs', tracks.length);
         countEl.textContent = [T(kind), albumYear, cnt].filter(Boolean).join(' · ');
       }
 
@@ -7993,7 +7993,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       if (!navigator.onLine) {
-        if (el.searchTracksList) el.searchTracksList.innerHTML = `<div class="empty-hint" data-i18n>Offline: connect to the internet to search new tracks</div>`;
+        if (el.searchTracksList) el.searchTracksList.innerHTML = `<div class="empty-hint" data-i18n>Offline: connect to the internet to search new songs</div>`;
         return;
       }
       const searchUrl = `http://127.0.0.1:${state.serverPort}/api/search?q=${encodeURIComponent(state.searchQuery)}&platform=${state.platform}&limit=20`;
@@ -8021,7 +8021,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (state.searchToken !== searchToken) return;
       console.error('Search error:', err);
       const isOff = !navigator.onLine;
-      if (el.searchTracksList) el.searchTracksList.innerHTML = `<div class="empty-hint">${isOff ? 'Offline: connect to the internet to search new tracks' : 'Error fetching results: ' + escapeHtml(err.message)}</div>`;
+      if (el.searchTracksList) el.searchTracksList.innerHTML = `<div class="empty-hint">${isOff ? 'Offline: connect to the internet to search new songs' : 'Error fetching results: ' + escapeHtml(err.message)}</div>`;
     }
   }
 
@@ -8198,35 +8198,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       // the "plays without internet" mark (offlineBadge): shown now for local songs, after a check for the others
       const offline = offlineState(track);
       const offlineTag = `<span class="offline-badge" title="Available offline" data-i18n-attr="title" data-offline-key="${escapeHtml(offlineKey(track))}"${track.platform === 'local' ? ' data-local' : ''}${offline ? '' : ' hidden'}>${OFFLINE_ICON}</span>`;
-      const artistSpan = showArtist ? `<span class="track-row-artist" title="view artist profile" data-i18n-attr="title">${escapeHtml(track.artist || 'unknown artist')}</span>` : '';
+      const artistSpan = showArtist ? `<span class="track-row-artist" title="View artist" data-i18n-attr="title">${escapeHtml(track.artist || 'unknown artist')}</span>` : '';
 
       row.innerHTML = `
       <span class="track-row-index">${(isAlbum && track.no) ? track.no : (idx + 1)}</span>
       ${!isAlbum ? `<img class="track-row-thumb${shownThumbs.has(rowListThumb) ? ' is-loaded' : ''}" src="${escapeHtml(rowListThumb)}" data-full="${escapeHtml(rowThumb || '')}" data-saved="${escapeHtml(track.thumbnail || '')}" data-art="${escapeHtml(JSON.stringify(trackArtCandidates(track)))}" alt="" onerror="${THUMB_FALLBACK}">` : ''}
       <div class="track-row-info">
-      <span class="track-row-title">${escapeHtml(track.title || 'untitled')}</span>
+      <span class="track-row-title">${escapeHtml(rowTitle(track))}</span>
       <span class="track-row-artist-wrap">${offlineTag}${explicitTag}${artistSpan}</span>
       </div>
       <span class="track-row-duration">${formatDuration(track.duration)}</span>
       <div class="track-row-actions">
-      <button class="btn-icon-pill btn-row-fav" title="favorite" data-i18n-attr="title">
+      <button class="btn-icon-pill btn-row-fav" title="Favorite" data-i18n-attr="title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>
       </button>
       <button class="btn-icon-pill btn-row-art" title="Customize cover & banner" data-i18n-attr="title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
       </button>
-      <button class="btn-icon-pill btn-row-add-playlist" title="add to playlist" data-i18n-attr="title">
+      <button class="btn-icon-pill btn-row-add-playlist" title="Add to playlist" data-i18n-attr="title">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
       </button>
       ${track.platform === 'local' ? `
       <button class="btn-icon-pill btn-row-remove-local delete-btn" title="${track.source && track.source !== 'imported' ? 'Remove from My files (the file stays on this device)' : 'Remove from library'}">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
       </button>` : `
-      <button class="btn-icon-pill btn-row-more" title="download & options">
+      <button class="btn-icon-pill btn-row-more" title="Download and more">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="2"></circle><circle cx="19" cy="12" r="2"></circle><circle cx="5" cy="12" r="2"></circle></svg>
       </button>`}
       ${context === 'playlist' ? `
-        <button class="btn-icon-pill btn-row-remove-playlist delete-btn" title="remove from playlist">
+        <button class="btn-icon-pill btn-row-remove-playlist delete-btn" title="Remove from playlist">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>` : ''}
         </div>
@@ -8342,6 +8342,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (btnRemLocal) {
           btnRemLocal.addEventListener('click', async (e) => {
             e.stopPropagation();
+            const keepsFile = track.source && track.source !== 'imported';
+            const ask = keepsFile
+              ? Tf('Remove "{0}" from My files? The file stays on this device.', track.title || '')
+              : Tf('Remove "{0}" from My files? Uriel\'s copy of the file is deleted.', track.title || '');
+            if (!window.confirm(ask)) return;
             try {
               const removed = await fetch(`http://127.0.0.1:${state.serverPort}/api/library-remove`, {
                 method: 'POST',
@@ -8365,8 +8370,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else if (el.localSubtitle) {
                   const query = el.localSearchInput ? el.localSearchInput.value.trim().toLowerCase() : '';
                   el.localSubtitle.textContent = query
-                    ? `${tracks.length} of ${state.localTracks.length} tracks`
-                    : `${state.localTracks.length} tracks in library`;
+                    ? `${tracks.length} of ${state.localTracks.length} songs`
+                    : `${state.localTracks.length} songs in library`;
                 }
               }
               showToast(Tm('Removed from library'));
@@ -8597,13 +8602,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       container.style.paddingTop = '0px';
       container.style.paddingBottom = '0px';
       const emptyMessages = {
-        search: 'No matching tracks. Try a different search',
-        favorites: 'No favourites yet. Use the heart on a track to save it',
+        search: 'No matching songs. Try a different search',
+        favorites: 'No favourites yet. Use the heart on a song to save it',
         playlist: 'This playlist is empty',
         local: 'Your library is empty. Add some music to get started',
-        queue: 'Queue is empty. Play a track to start.'
+        queue: 'Queue is empty. Play a song to start.'
       };
-      container.innerHTML = `<div class="empty-hint" data-i18n>${emptyMessages[context] || 'No tracks to show'}</div>`;
+      container.innerHTML = `<div class="empty-hint" data-i18n>${emptyMessages[context] || 'No songs to show'}</div>`;
       return;
     }
 
@@ -9187,7 +9192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     filtered = sortTracksFor('favorites', filtered);
     if (el.favoritesSort) { el.favoritesSort.value = getTrackSortMode('favorites'); syncSortDropdown('favorites'); }
-    if (el.favoritesSubtitle) el.favoritesSubtitle.textContent = query ? `${filtered.length} of ${state.favorites.length} tracks` : `${state.favorites.length} tracks saved`;
+    if (el.favoritesSubtitle) el.favoritesSubtitle.textContent = query ? `${filtered.length} of ${state.favorites.length} songs` : `${state.favorites.length} songs saved`;
     if (el.favoritesTracksList) renderTracks(el.favoritesTracksList, filtered, 'favorites');
   }
 
@@ -9355,8 +9360,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (el.localSubtitle) {
       el.localSubtitle.textContent = query
-        ? `${filtered.length} of ${state.localTracks.length} tracks`
-        : `${state.localTracks.length} tracks in library`;
+        ? `${filtered.length} of ${state.localTracks.length} songs`
+        : `${state.localTracks.length} songs in library`;
     }
     if (el.localTracksList) {
       if (!state.localTracks || state.localTracks.length === 0) {
@@ -9436,7 +9441,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await Promise.all(isPhoneApp ? [worker()] : [worker(), worker()]);
 
       await renderLocalView(true);
-      showToast(Tm('Added {0} tracks', items.length));
+      showToast(Tm('Added {0} songs', items.length));
     } catch (e) {
       console.warn('Import audio files error:', e);
     }
@@ -9616,6 +9621,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // onerror of a cover <img>: next candidate (data-full, then data-art, then other sizes), hidden when none is left
+  // files named "Artist - Title" keep the artist in the title as well: the row shows it once, under the title
+  function rowTitle(track) {
+    let t = track.title || 'untitled';
+    const a = (track.artist || '').trim().toLowerCase();
+    if (!a) return t;
+    // "Artist - Title", "Artist, Other - Title" or "Artist & Other - Title", sometimes twice over
+    for (let i = t.indexOf(' - '); i > 0; i = t.indexOf(' - ')) {
+      const head = t.slice(0, i).toLowerCase();
+      if (head !== a && !head.startsWith(a + ',') && !head.startsWith(a + ' &')) break;
+      t = t.slice(i + 3);
+    }
+    return t;
+  }
+  // a song row with no cover left shows a music note on the row's grey square instead of an empty gap
+  const NO_COVER = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="none" stroke="#8a8a8a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" transform="translate(6 6) scale(.5)"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></g></svg>');
   function nextTrackArt(img) {
     if (!img) return false;
     const tried = img.__artTried || (img.__artTried = new Set());
@@ -9626,14 +9646,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (img.dataset.full) list.unshift(img.dataset.full);
     list = list.concat(artVariants(cur));
     const next = list.find((u) => u && !tried.has(u));
-    if (!next) { img.style.visibility = 'hidden'; return false; }
+    if (!next) {
+      if (img.classList.contains('track-row-thumb') && cur !== NO_COVER) img.src = NO_COVER;
+      else img.style.visibility = 'hidden';
+      return false;
+    }
     tried.add(next);
     const row = img.closest && img.closest('[data-canonical-id]');
     if (row && !img.__artRemember) {
       img.__artRemember = true;
       img.addEventListener('load', () => {
         const ok = img.getAttribute('src');
-        if (img.naturalWidth > 0 && ok && ok !== img.dataset.saved) rememberTrackArt(row.dataset.canonicalId, ok);
+        if (img.naturalWidth > 0 && ok && ok !== img.dataset.saved && ok !== NO_COVER) rememberTrackArt(row.dataset.canonicalId, ok);
       });
     }
     img.style.visibility = '';
@@ -10134,7 +10158,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       state.favorites.splice(toIdx, 0, moved);
       localStorage.setItem('devsize_favorites', JSON.stringify(state.favorites));
       if (el.favoritesSubtitle) {
-        el.favoritesSubtitle.textContent = `${state.favorites.length} tracks saved`;
+        el.favoritesSubtitle.textContent = `${state.favorites.length} songs saved`;
       }
     }
   });
@@ -10207,7 +10231,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderPlaylistDuplicateButton(pl);
     const totalSec = (pl.tracks || []).reduce((acc, t) => acc + (t.duration || 0), 0);
     const durStr = totalSec > 0 ? ` • ${formatDuration(totalSec)}` : '';
-    if (el.playlistDetailCount) el.playlistDetailCount.textContent = (query ? `${filtered.length} of ${pl.tracks.length} tracks` : `${pl.tracks.length} tracks`) + durStr;
+    if (el.playlistDetailCount) el.playlistDetailCount.textContent = (query ? `${filtered.length} of ${pl.tracks.length} songs` : `${pl.tracks.length} songs`) + durStr;
     const detailCover = document.getElementById('playlist-detail-cover');
     if (detailCover) renderPlaylistCover(detailCover, pl, 160);
     const coverSrc = (pl && pl.cover) ? pl.cover : ((pl.tracks && pl.tracks[0]) ? getTrackThumbUrl(pl.tracks[0]) : '');
@@ -10496,7 +10520,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       localStorage.setItem('devsize_favorites', JSON.stringify(state.favorites));
       updateFavoritesBadge();
       updateFavoriteIcon();
-      showToast(!added ? Tm('Already in favorites') : added === 1 ? Tm('Added 1 track to favorites') : Tm('Added {0} tracks to favorites', added), added ? 'success' : 'info');
+      showToast(!added ? Tm('Already in favorites') : added === 1 ? Tm('Added 1 song to favorites') : Tm('Added {0} songs to favorites', added), added ? 'success' : 'info');
     });
     on('multi-select-radio', () => {
       const picked = Array.from(multiSel.tracks.values());
@@ -10511,7 +10535,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     on('multi-select-remove', () => {
       const n = multiSel.tracks.size;
-      if (!n || !window.confirm(n === 1 ? T('Remove 1 track?') : Tf('Remove {0} tracks?', n))) return;
+      if (!n || !window.confirm(n === 1 ? T('Remove 1 song?') : Tf('Remove {0} songs?', n))) return;
       if (multiSel.context === 'favorites') {
         state.favorites = state.favorites.filter(f => !multiSel.tracks.has(getTrackCanonicalId(f)));
         localStorage.setItem('devsize_favorites', JSON.stringify(state.favorites));
@@ -10647,7 +10671,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const countEl = document.createElement('span');
         countEl.className = 'playlist-pick-count';
-        countEl.textContent = `${trackCount} track${trackCount === 1 ? '' : 's'}`;
+        countEl.textContent = `${trackCount} song${trackCount === 1 ? '' : 's'}`;
         countEl.dataset.i18n = '';
 
         infoEl.appendChild(nameEl);
@@ -10679,7 +10703,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               localStorage.setItem('devsize_playlists', JSON.stringify(state.playlists));
               renderPlaylistsList();
             }
-            showToast(!fresh.length ? Tm('Already in "{0}"', pl.name) : fresh.length === 1 ? Tm('Added 1 track to "{0}"', pl.name) : Tm('Added {0} tracks to "{1}"', fresh.length, pl.name), fresh.length ? 'success' : 'info');
+            showToast(!fresh.length ? Tm('Already in "{0}"', pl.name) : fresh.length === 1 ? Tm('Added 1 song to "{0}"', pl.name) : Tm('Added {0} songs to "{1}"', fresh.length, pl.name), fresh.length ? 'success' : 'info');
           } else if (track) {
             if (!pl.tracks.some(t => t.id === track.id)) {
               pl.tracks.push(stampAddedAt(track));
@@ -11135,7 +11159,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const open = state.isRightPanelOpen;
     if (open && !animationFrameId) { hasDrawnPausedFrame = false; startVisualizers(); }
     if (el.rightPanel) el.rightPanel.classList.toggle('hidden', !open);
-    drawerTabs.forEach(t => t.classList.toggle('active', t.dataset.drawerTab === state.drawerTab));
+    drawerTabs.forEach(t => {
+      const on = t.dataset.drawerTab === state.drawerTab;
+      t.classList.toggle('active', on);
+      t.setAttribute('aria-pressed', String(on));
+    });
     const now = document.getElementById('drawer-now');
     const queue = document.getElementById('drawer-queue');
     if (now) now.classList.toggle('hidden', state.drawerTab !== 'now');
@@ -11594,7 +11622,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // made from the add dialog: put the song(s) in and stay where the user was
         const seen = new Set();
         const pl = createPlaylist(name, pending.filter(t => t && t.id && !seen.has(t.id) && seen.add(t.id)), '', { open: false });
-        if (pl) showToast(pl.tracks.length === 1 ? Tm('Added to "{0}"', pl.name) : Tm('Added {0} tracks to "{1}"', pl.tracks.length, pl.name), 'success');
+        if (pl) showToast(pl.tracks.length === 1 ? Tm('Added to "{0}"', pl.name) : Tm('Added {0} songs to "{1}"', pl.tracks.length, pl.name), 'success');
       } else {
         createPlaylist(name);
       }
@@ -12071,6 +12099,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     setSiteTheme('system');
   }
   renderSiteThemeCards();
+
+  // Settings: the switches and sliders are named by the setting they sit in, and a switch says whether it's on
+  document.querySelectorAll('.setting-item').forEach((item, i) => {
+    const name = item.querySelector('.setting-name');
+    if (!name) return;
+    if (!name.id) name.id = `setting-name-${i}`;
+    item.querySelectorAll('.effect-switch-btn, input[type="range"]').forEach((c) => {
+      if (!c.hasAttribute('aria-label') && !c.hasAttribute('aria-labelledby')) c.setAttribute('aria-labelledby', name.id);
+    });
+  });
+  const syncSwitch = (b) => b.setAttribute('aria-checked', String(b.classList.contains('active')));
+  const switchWatch = new MutationObserver((changes) => changes.forEach((m) => syncSwitch(/** @type {HTMLElement} */ (m.target))));
+  document.querySelectorAll('.effect-switch-btn').forEach((b) => {
+    b.setAttribute('role', 'switch');
+    syncSwitch(/** @type {HTMLElement} */ (b));
+    switchWatch.observe(b, { attributes: true, attributeFilter: ['class'] });
+  });
   if (state.siteTheme === 'system') applySystemColors();
   window.addEventListener('focus', () => { if (state.siteTheme === 'system') applySystemColors(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden && state.siteTheme === 'system') applySystemColors(); });
@@ -14626,7 +14671,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       el.downloadBtnText.textContent = b.checking ? T('Checking…')
         : count === 0 ? T('All downloaded')
           : waits ? Tf('Add {0} to the download queue', count)
-            : b.retry ? Tf('Retry failed ({0})', count) : `Download ${count} track${count === 1 ? '' : 's'}`;
+            : b.retry ? Tf('Retry failed ({0})', count) : `Download ${count} song${count === 1 ? '' : 's'}`;
     } else if (waits) {
       el.downloadBtnText.textContent = T('Add to the download queue');
     } else {
@@ -14677,7 +14722,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }, () => {});
     }
     const modalTitle = document.getElementById('download-modal-title');
-    if (modalTitle) modalTitle.textContent = 'Download track';
+    if (modalTitle) modalTitle.textContent = 'Download song';
     if (el.downloadPreviewTitle) el.downloadPreviewTitle.textContent = track.title || 'untitled';
     if (el.downloadPreviewArtist) el.downloadPreviewArtist.textContent = track.artist || 'unknown artist';
 
@@ -14761,12 +14806,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       const have = present.filter(Boolean).length;
       batchShown.missing = tracks.length - have;
       if (el.downloadPreviewArtist) {
-        if (!have) I18N.text(el.downloadPreviewArtist, tracks.length === 1 ? '1 track' : '{0} tracks', tracks.length);
+        if (!have) I18N.text(el.downloadPreviewArtist, tracks.length === 1 ? '1 song' : '{0} songs', tracks.length);
         else if (have >= tracks.length) I18N.text(el.downloadPreviewArtist, 'All {0} songs are already downloaded', tracks.length);
         else I18N.text(el.downloadPreviewArtist, '{0} of {1} already downloaded · {2} to go', have, tracks.length, tracks.length - have);
       }
     }, () => {
-      if (downloadBatch === batchShown && el.downloadPreviewArtist) I18N.text(el.downloadPreviewArtist, tracks.length === 1 ? '1 track' : '{0} tracks', tracks.length);
+      if (downloadBatch === batchShown && el.downloadPreviewArtist) I18N.text(el.downloadPreviewArtist, tracks.length === 1 ? '1 song' : '{0} songs', tracks.length);
     }).finally(() => {
       if (downloadBatch !== batchShown) return;
       batchShown.checking = false;
@@ -14862,7 +14907,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (state.currentTrack) {
         openDownloadModal(state.currentTrack);
       } else {
-        showToast(Tm('No track currently playing'), 'info');
+        showToast(Tm('No song currently playing'), 'info');
       }
     });
   }
@@ -15069,7 +15114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       downloadBatch = null;
       if (el.downloadModal) closeModal(el.downloadModal);
-      showToast(lastDir ? Tm('Downloaded {0} tracks to {1}', done, lastDir) + (skipped ? ` (${summary.slice(1).join(', ')})` : '') : summary.join(' · '), 'success');
+      showToast(lastDir ? Tm('Downloaded {0} songs to {1}', done, lastDir) + (skipped ? ` (${summary.slice(1).join(', ')})` : '') : summary.join(' · '), 'success');
     } finally {
       startNextDownload();
     }
@@ -15126,7 +15171,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
       }
 
-      if (!isPhoneApp) showToast(Tm('Downloading: {0}', `${t.title || T('Track')} (.${selectedFormat})`), 'info');
+      if (!isPhoneApp) showToast(Tm('Downloading: {0}', `${t.title || T('Song')} (.${selectedFormat})`), 'info');
       // its own controller: Cancel clears the shared one, and a download started after this one replaces it
       const singleAbort = new AbortController();
       downloadAbort = singleAbort;
@@ -15198,7 +15243,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const streamRes = await fetch(streamInfoUrl, { signal: singleAbort.signal });
           const streamData = await streamRes.json();
           if (!streamData || !streamData.success || (!streamData.streamUrl && !streamData.proxyUrl)) {
-            throw new Error((streamData && streamData.error) || 'Failed to locate track audio stream');
+            throw new Error((streamData && streamData.error) || 'Failed to locate song audio stream');
           }
           audioSourceUrl = streamData.isLocal ? streamData.streamUrl : (streamData.proxyUrl || streamData.streamUrl);
         }
@@ -15830,7 +15875,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!myWaveCurrentTracks || myWaveCurrentTracks.length === 0) {
         const profile = await computeTasteProfile();
         if (profile.trackCount < 5) {
-          showToast(Tm('Save at least 5 tracks to tune My Wave'));
+          showToast(Tm('Save at least 5 songs to tune My Wave'));
           return;
         }
         await loadHomePage();
@@ -16076,7 +16121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!source || source.length === 0) {
       if (focusedMeta) focusedMeta.innerHTML = '';
       if (mode === 'recent') {
-        vibeGrid.innerHTML = `<div class="vibe-empty-hint" data-i18n>Play some tracks to see them here</div>`;
+        vibeGrid.innerHTML = `<div class="vibe-empty-hint" data-i18n>Play some songs to see them here</div>`;
       } else {
         vibeGrid.innerHTML = getWaveSpinnerHtml();
       }
@@ -16974,9 +17019,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const res = await fetch(`http://127.0.0.1:${state.serverPort}/api/offline-library`);
       const data = await res.json();
       if (data && data.success) {
-        elSize.textContent = `${data.count} track${data.count === 1 ? '' : 's'} (${formatBytes(data.totalBytes)})`;
+        elSize.textContent = `${data.count} song${data.count === 1 ? '' : 's'} (${formatBytes(data.totalBytes)})`;
       } else {
-        elSize.textContent = '0 tracks (0 B)';
+        elSize.textContent = '0 songs (0 B)';
       }
     } catch (e) {
       elSize.textContent = 'Unavailable';
@@ -17122,11 +17167,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const r = await fetch(`http://127.0.0.1:${state.serverPort}/api/offline-delete?id=${encodeURIComponent(trackToDownload.id)}`, { method: 'POST' });
         if (!r.ok) throw new Error(`offline-delete answered ${r.status}`);
         offlineChanged(trackToDownload, false);
-        showToast(Tm('Track removed from offline cache'));
+        showToast(Tm('Song removed from offline cache'));
         updateOfflineStorageUI();
         if (el.downloadModal) closeModal(el.downloadModal);
       } catch (e) {
-        showToast(Tm('Failed to delete offline track'));
+        showToast(Tm('Failed to delete offline song'));
       }
     });
   }
@@ -17969,7 +18014,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     el.sleepTimerStatus.classList.add('active');
     if (state.sleepTimer.mode === 'end') {
-      el.sleepTimerStatus.textContent = 'End of track';
+      el.sleepTimerStatus.textContent = 'End of song';
       syncSleepTimerButtons('end');
       return;
     }
@@ -18016,7 +18061,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (value === 'end') {
       state.sleepTimer = { mode: 'end' };
       updateSleepTimerUI();
-      showToast(Tm('Sleep timer: end of track'));
+      showToast(Tm('Sleep timer: end of song'));
       return;
     }
     const minutes = Number(value);
@@ -18141,7 +18186,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         .filter(p => p && typeof p.name === 'string' && (!q || normalizeSearch(p.name).includes(q)))
         .slice(0, q ? 5 : 3);
       for (const pl of playlists) {
-        rows.push({ group: 'Playlists', label: pl.name, hint: Tf('{0} tracks', (pl.tracks || []).length), run: () => openPlaylistDetail(pl.id) });
+        rows.push({ group: 'Playlists', label: pl.name, hint: Tf('{0} songs', (pl.tracks || []).length), run: () => openPlaylistDetail(pl.id) });
       }
     }
     const seen = new Set();

@@ -134,7 +134,7 @@ window.UrielApp.radio = function ({ Lib, state, getBlocks, isBlocked, Tm, showTo
     const btn = document.getElementById('btn-playbar-radio');
     if (btn) {
       btn.addEventListener('click', () => {
-        if (!state.currentTrack) { showToast(Tm('No track currently playing'), 'info'); return; }
+        if (!state.currentTrack) { showToast(Tm('No song currently playing'), 'info'); return; }
         startSongRadio([state.currentTrack]);
       });
     }

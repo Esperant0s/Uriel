@@ -690,6 +690,7 @@ body.is-window-resizing .platform-switch-container {
   border-radius: var(--md-shape-corner-full);
   transition: transform var(--transition-m3), opacity var(--transition-m3);
 }
+body.theme-light .nav-badge { background: color-mix(in srgb, var(--md-sys-color-primary) 70%, #000); color: #fff; }
 
 .rail-divider {
   width: 32px;
@@ -722,6 +723,29 @@ body.is-window-resizing .platform-switch-container {
   background: var(--md-sys-color-surface-container-high);
   color: var(--md-sys-color-on-surface);
 }
+
+/* the rail's buttons show their names under them, so Playlists and the rest can be told apart without hovering */
+html:not(.is-mobile) body:not(.mini) .sidebar :is(.nav-item, .rail-icon-btn) { margin-bottom: 14px; }
+html:not(.is-mobile) body:not(.mini) .sidebar :is(.nav-item, .rail-icon-btn)::before {
+  content: attr(title);
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 76px;
+  text-align: center;
+  font-size: calc(10.5px * var(--font-scale, 1));
+  line-height: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--md-sys-color-on-surface-variant);
+  pointer-events: none;
+}
+html:not(.is-mobile) body:not(.mini) .sidebar .nav-item.active::before { color: var(--md-sys-color-on-surface); font-weight: 700; }
+/* My files cuts off what's outside it for its collapse animation, which would hide its name */
+body:not(.mini) #nav-local:not(.nav-collapsed) { overflow: visible; }
 
 .rail-drawer {
   position: absolute;
@@ -921,6 +945,8 @@ body.is-window-resizing .platform-switch-container {
   margin-bottom: 16px;
   letter-spacing: 0.01em;
 }
+/* the Settings page's own name, sized like the other pages' titles */
+.settings-view > .section-title { font-size: calc(28px * var(--font-scale, 1)); font-weight: 700; line-height: 1.2; }
 .section-header-inline {
   display: flex;
   align-items: baseline;
@@ -1367,7 +1393,7 @@ body.perf .my-wave-ambient-light {
 }
 .view-subtitle {
   font-size: calc(12px * var(--font-scale, 1));
-  color: var(--md-sys-color-outline);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 :is(#view-favorites, #view-local, #view-history, #view-queue) .view-header h2,
@@ -1539,6 +1565,8 @@ body.perf .my-wave-ambient-light {
   color: var(--md-sys-color-primary);
   font-weight: 700;
 }
+/* in light mode the accent is often a mid tone: darker as text on light rows */
+body.theme-light .track-row.playing .track-row-title { color: color-mix(in srgb, var(--md-sys-color-primary) 70%, #000); }
 .track-row-artist {
   display: inline-block;
   width: fit-content;
@@ -1566,7 +1594,7 @@ body.perf .my-wave-ambient-light {
 }
 .track-row-duration {
   font-size: calc(12px * var(--font-scale, 1));
-  color: var(--md-sys-color-outline);
+  color: var(--md-sys-color-on-surface-variant);
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
@@ -1578,8 +1606,20 @@ body.perf .my-wave-ambient-light {
   pointer-events: auto;
   transition: opacity var(--transition-fast);
 }
-.track-row:hover .track-row-actions {
+.track-row:hover .track-row-actions,
+.track-row:focus-within .track-row-actions {
   opacity: 1;
+}
+/* the queue panel is narrow: the row buttons show over the time on hover instead of always taking room from the title */
+html:not(.is-mobile) #queue-tracks-list .track-row { position: relative; }
+html:not(.is-mobile) #queue-tracks-list .track-row-actions {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--md-sys-color-surface-container-high);
 }
 
 /* ---- the artist page: a full-width banner with the name, Play and Follow; About beside it; Songs / Albums tabs ---- */
@@ -4595,6 +4635,17 @@ button:active svg, button:active img, button:active i, .btn-icon-pill:active svg
   mask-image: linear-gradient(to bottom, #000 0%, #000 45%, transparent 100%);
   transition: background 300ms ease, opacity 500ms ease;
 }
+/* light mode: the blurred cover becomes a pale wash, so the dark title and rows stay readable on it */
+body.theme-light #playlist-hero-fx,
+body.theme-light #album-hero-fx { filter: blur(70px) saturate(1.4); }
+body.theme-light #playlist-hero-fx::after,
+body.theme-light #album-hero-fx::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--md-sys-color-surface);
+  opacity: 0.68;
+}
 
 .playlist-header-banner {
   position: absolute;
@@ -4950,7 +5001,14 @@ button::after, .chip-btn::after, .mix-card::after, .track-row::after, .rail-icon
   z-index: 1;
 }
 
-*:focus, *:focus-visible { outline: none !important; }
+*:focus { outline: none; }
+/* a ring only when the keyboard moved the focus; text fields already show it their own way */
+:is(button, a, [role="button"], [role="tab"], [role="option"], [role="switch"], [tabindex], select, summary, input[type="range"], input[type="checkbox"], input[type="radio"]):focus-visible {
+  outline: 2px solid var(--md-sys-color-primary) !important;
+  outline-offset: 2px;
+}
+/* rows and cards sit in scrolling lists that would cut a ring drawn outside them */
+:is(.track-row, .search-album-card, .sp-card):focus-visible { outline-offset: -2px; }
 
 .cache-backdrop {
   backdrop-filter: blur(12px) saturate(180%);
@@ -9067,6 +9125,8 @@ body.perf .dl-mode-tab, body.perf .cc-float-time { transition: none !important; 
 #search-results-container[data-filter="songs"] #search-albums-container,
 #search-results-container[data-filter="artists"] #search-albums-container,
 #search-results-container[data-filter="artists"] #search-tracks-list,
+#search-results-container[data-filter="artists"] #search-songs-header,
+#search-results-container[data-filter="albums"] #search-songs-header,
 #search-results-container[data-filter="albums"] #search-artist-card-container,
 #search-results-container[data-filter="albums"] #search-tracks-list { display: none !important; }
 

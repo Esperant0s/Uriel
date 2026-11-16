@@ -404,6 +404,19 @@ html.is-mobile #right-panel .lyric-line.active .lyric-word.active-word { color: 
 html.is-mobile .track-row .btn-icon-pill { width: 40px !important; height: 40px !important; background: transparent !important; }
 html.is-mobile .playbar .btn-icon-pill, html.is-mobile .playbar .control-btn { min-width: 40px !important; min-height: 40px !important; }
 html.is-mobile .chip-btn { min-height: 36px !important; }
+/* the source switch is cut off above and below, so its buttons need the full height themselves */
+html.is-mobile .platform-btn { min-width: 44px; min-height: 36px; justify-content: center; }
+
+/* the tabs show their names under the icons */
+html.is-mobile { --tabbar-h: 64px; }
+html.is-mobile .sidebar :is(.nav-item, .rail-icon-btn) { height: 58px !important; flex-direction: column !important; justify-content: center; gap: 2px; }
+html.is-mobile .sidebar :is(.nav-item, .rail-icon-btn)::before { content: attr(title); order: 2; font-size: 11px; line-height: 14px; font-weight: 500; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; color: var(--md-sys-color-on-surface-variant); }
+html.is-mobile .sidebar .nav-item.active::before { color: var(--md-sys-color-on-surface); font-weight: 700; }
+/* My files is capped at 48px for its collapse animation, which squeezed its name */
+html.is-mobile .sidebar #nav-local:not(.nav-collapsed) { max-height: none; }
+html.is-mobile .sidebar :is(.nav-item, .rail-icon-btn)::before { flex-shrink: 0; }
+/* the Playlists icon is shorter than the tabs' icon pill: the same height keeps the names on one line */
+html.is-mobile .sidebar .rail-icon-btn svg { margin: 3px 0; }
 html.is-mobile .lyrics-action-btn { width: 40px !important; height: 40px !important; }
 
 /* lyrics showing: compact header (small cover + title/artist in one row), lyrics fill the screen */

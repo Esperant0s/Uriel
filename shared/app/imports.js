@@ -461,7 +461,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (spotifyModal) closeModal(spotifyModal);
   }
 
-  const importErrorText = (err, fallback = 'Failed to import tracks') => (err && err.message === 'search_unresponsive'
+  const importErrorText = (err, fallback = 'Failed to import songs') => (err && err.message === 'search_unresponsive'
     ? 'Search is not responding, so the import stopped. Try again later; nothing gets added twice. If it keeps happening, open Settings -> About -> Copy diagnostics and send it with your report.'
     : (err && err.message) || fallback);
 
@@ -486,7 +486,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
 
     if (totalItemsCount === 0) {
       if (spotifyStatus) {
-        spotifyStatus.textContent = 'No tracks found to import';
+        spotifyStatus.textContent = 'No songs found to import';
         spotifyStatus.style.color = 'var(--md-sys-color-error, #ba1a1a)';
         spotifyStatus.classList.remove('hidden');
       }
@@ -509,7 +509,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     wavy.set(0);
 
     if (totalItemsCount > 2000 && spotifyStatus) {
-      spotifyStatus.textContent = `This will take a while (${totalItemsCount} tracks)`;
+      spotifyStatus.textContent = `This will take a while (${totalItemsCount} songs)`;
       spotifyStatus.style.color = 'var(--md-sys-color-primary, #6750A4)';
       spotifyStatus.classList.remove('hidden');
     }
@@ -554,8 +554,8 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       const notFound = totalItemsCount - totalFoundCount;
       if (spotifyProgressWrap) spotifyProgressWrap.classList.add('hidden');
       const finishMsg = (notFound > 0
-        ? `Imported ${totalFoundCount} tracks (${notFound} skipped)`
-        : `Imported ${totalFoundCount} tracks`) + (skippedPlaylists.length ? `; ${skippedPlaylists.length} Spotify playlists unavailable` : '');
+        ? `Imported ${totalFoundCount} songs (${notFound} skipped)`
+        : `Imported ${totalFoundCount} songs`) + (skippedPlaylists.length ? `; ${skippedPlaylists.length} Spotify playlists unavailable` : '');
       if (spotifyStatus) {
         spotifyStatus.textContent = finishMsg;
         spotifyStatus.style.color = 'var(--md-sys-color-primary, #6750A4)';
@@ -606,7 +606,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     const playlistsToImport = doPlaylists ? (parsedSpotifyExport.playlists || []) : [];
     if (!likesToImport.length && !playlistsToImport.length) {
       if (spotifyStatus) {
-        spotifyStatus.textContent = 'No tracks found in the selected files';
+        spotifyStatus.textContent = 'No songs found in the selected files';
         spotifyStatus.style.color = 'var(--md-sys-color-error, #ba1a1a)';
         spotifyStatus.classList.remove('hidden');
       }
@@ -653,8 +653,8 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       if (!(data.likes?.length || data.playlists?.some(pl => pl.tracks?.length))) {
         if (spotifyStatus) {
           spotifyStatus.textContent = data.partial
-            ? `No available tracks to import. ${(data.skippedPlaylists || []).map(pl => `${pl.name}: ${pl.error}`).join('; ')}`
-            : 'No tracks found in your Spotify library';
+            ? `No available songs to import. ${(data.skippedPlaylists || []).map(pl => `${pl.name}: ${pl.error}`).join('; ')}`
+            : 'No songs found in your Spotify library';
           spotifyStatus.style.color = 'var(--md-sys-color-error, #ba1a1a)';
           spotifyStatus.classList.remove('hidden');
         }
@@ -665,7 +665,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       if (data.partial) {
         const skipped = data.skippedPlaylists || [];
         const details = skipped.map(pl => `• ${pl.name}: ${pl.error}`).join('\n');
-        if (!window.confirm(`${skipped.length} Spotify playlist(s) could not be read:\n${details}\n\nImport the available tracks only?`)) {
+        if (!window.confirm(`${skipped.length} Spotify playlist(s) could not be read:\n${details}\n\nImport the available songs only?`)) {
           if (spotifyStatus) {
             spotifyStatus.textContent = 'Partial import cancelled';
             spotifyStatus.classList.remove('hidden');
@@ -783,9 +783,9 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       }
 
       if (spotifyProgressWrap) spotifyProgressWrap.classList.add('hidden');
-      let finishMsg = `Imported ${foundTracks.length} tracks.`;
+      let finishMsg = `Imported ${foundTracks.length} songs.`;
       if (notFound > 0) {
-        finishMsg = `Imported ${foundTracks.length} tracks. ${notFound} not found.`;
+        finishMsg = `Imported ${foundTracks.length} songs. ${notFound} not found.`;
         const fs = foundTracks.failStats || {};
         if (fs.errors > notFound / 2 && fs.commonError) {
           finishMsg += ` Search errors: ${fs.commonError}`;
@@ -936,11 +936,11 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
           appleFileSummary.classList.remove('hidden');
           if (hasPlaylists) {
             const totalTracks = parsedAppleExport.playlists.reduce((acc, p) => acc + (p.tracks ? p.tracks.length : 0), 0);
-            appleFileSummary.textContent = `Found ${parsedAppleExport.playlists.length} playlists (${totalTracks} tracks)`;
+            appleFileSummary.textContent = `Found ${parsedAppleExport.playlists.length} playlists (${totalTracks} songs)`;
           } else if (hasLikes) {
-            appleFileSummary.textContent = `Found ${parsedAppleExport.likes.length} liked tracks`;
+            appleFileSummary.textContent = `Found ${parsedAppleExport.likes.length} liked songs`;
           } else {
-            appleFileSummary.textContent = 'No tracks found in selected files';
+            appleFileSummary.textContent = 'No songs found in selected files';
           }
         }
       }
@@ -1054,7 +1054,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       const totalItemsCount = likesToImport.length + playlistsToImport.reduce((acc, p) => acc + (p.tracks ? p.tracks.length : 0), 0);
       if (totalItemsCount === 0) {
         if (appleStatus) {
-          appleStatus.textContent = 'No tracks selected or found to import';
+          appleStatus.textContent = 'No songs selected or found to import';
           appleStatus.style.color = 'var(--md-sys-color-error, #ba1a1a)';
           appleStatus.classList.remove('hidden');
         }
@@ -1112,8 +1112,8 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
         const notFound = totalItemsCount - totalFoundCount;
         if (appleProgressWrap) appleProgressWrap.classList.add('hidden');
         const finishMsg = notFound > 0
-          ? `Imported ${totalFoundCount} tracks (${notFound} skipped)`
-          : `Imported ${totalFoundCount} tracks`;
+          ? `Imported ${totalFoundCount} songs (${notFound} skipped)`
+          : `Imported ${totalFoundCount} songs`;
         if (appleStatus) {
           appleStatus.textContent = finishMsg;
           appleStatus.style.color = 'var(--md-sys-color-primary, #6750A4)';
@@ -1210,10 +1210,10 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
 
       if (appleProgressWrap) appleProgressWrap.classList.add('hidden');
       let finishMsg = notFound > 0
-        ? `Imported ${foundTracks.length} tracks (${notFound} skipped)`
-        : `Imported ${foundTracks.length} tracks`;
+        ? `Imported ${foundTracks.length} songs (${notFound} skipped)`
+        : `Imported ${foundTracks.length} songs`;
       if (data.hasMore) {
-        finishMsg += `. Imported the first ${tracks.length} tracks. Use Export files to import everything.`;
+        finishMsg += `. Imported the first ${tracks.length} songs. Use Export files to import everything.`;
       }
       if (appleStatus) {
         appleStatus.textContent = finishMsg;
@@ -1467,7 +1467,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       } else if (platform === 'ytmusic') {
         linkImportUrl.placeholder = T('Paste a YouTube Music link');
       } else if (platform === 'soundcloud') {
-        linkImportUrl.placeholder = T('Paste a SoundCloud playlist or track link');
+        linkImportUrl.placeholder = T('Paste a SoundCloud playlist or song link');
       } else if (platform === 'yandex') {
         linkImportUrl.placeholder = T('Paste a Yandex Music playlist, album or song link');
       } else {
@@ -1532,7 +1532,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     const target = /** @type {any} */ (document.getElementById('link-import-target'));
     const added = addImportedTracks(target ? target.value : 'new', data.name || 'Yandex Music playlist', found, data.cover || '');
     const missing = data.tracks.length - found.length;
-    linkImportDone(missing > 0 ? `Imported ${added} tracks. ${missing} not found on YouTube.` : `Imported ${added} tracks.`);
+    linkImportDone(missing > 0 ? `Imported ${added} songs. ${missing} not found on YouTube.` : `Imported ${added} songs.`);
   }
 
   async function handleGoogleLoginImport() {
@@ -1584,7 +1584,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       }
       const parts = [];
       if (doLikes) parts.push(`${newFavorites} new favorite${newFavorites === 1 ? '' : 's'}`);
-      if (doPlaylists) parts.push(`${playlists.length} playlist${playlists.length === 1 ? '' : 's'} (${added} tracks)`);
+      if (doPlaylists) parts.push(`${playlists.length} playlist${playlists.length === 1 ? '' : 's'} (${added} songs)`);
       linkImportDone(`Imported ${parts.join(' and ')}.`);
     } catch (err) {
       if (linkImportProgressWrap) linkImportProgressWrap.classList.add('hidden');
@@ -1628,7 +1628,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       const target = /** @type {any} */ (document.getElementById('link-import-target'));
       const targetId = target ? target.value : 'new';
       const added = addImportedTracks(targetId, data.name, data.tracks, data.cover || '');
-      showToast(`Imported ${added} tracks`, 'success');
+      showToast(`Imported ${added} songs`, 'success');
       closeLinkImportModal();
     } catch (err) {
       if (linkImportProgressWrap) linkImportProgressWrap.classList.add('hidden');
