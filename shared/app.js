@@ -808,9 +808,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // The preset themes of Majd's website (Esperant0s.github.io, js/themes.js and style.css): the same seven base
   // colors, and Uriel's surfaces, text and accents are worked out from them. All of them are dark themes.
   const SITE_THEMES = [
-    // the colors the Verdant and Crimson App Looks were made with (app/look.js)
-    { id: 'verdant', name: 'Verdant', tag: 'Green on black', bg: '#000000', bg2: '#242424', bg3: '#3E3E3E', text: '#FFFFFF', accent: '#2BD46A', accent2: '#1F9E50', pop: '#2BD46A' },
-    { id: 'crimson', name: 'Crimson', tag: 'Red on black', bg: '#030303', bg2: '#212121', bg3: '#383838', text: '#FFFFFF', accent: '#F0383F', accent2: '#B3242A', pop: '#FF6B70' },
     { id: 'halloween', name: 'Halloween Glow', tag: 'Fall · default', bg: '#0A0A0A', bg2: '#1A121A', bg3: '#3D1A3D', text: '#F7EBDD', accent: '#FFB627', accent2: '#FF6700', pop: '#9B1D20' },
     { id: 'synthwave', name: 'Synthwave Night', tag: 'Neon', bg: '#240046', bg2: '#3C096C', bg3: '#7209B7', text: '#FCE7F3', accent: '#FFD60A', accent2: '#F72585', pop: '#B57BE8' },
     { id: 'luxury-gold', name: 'Luxury Gold', tag: 'Gold', bg: '#0B0B10', bg2: '#1A1A2E', bg3: '#16213E', text: '#F5E6C4', accent: '#C9A227', accent2: '#F5E6C4', pop: '#C9A227' },
@@ -2751,7 +2748,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   let scrubPrevKnobX = null;
   let scrubKnobAnim = 0;
   let scrubLastTime = 0;
-  let playedSetAt = 0;
   let lastDisplayedSec = -1;
 
   let lastFrameTime = 0;
@@ -2988,12 +2984,6 @@ document.addEventListener('DOMContentLoaded', async () => {
           : (state.currentTrack && Number.isFinite(state.currentTrack.duration) ? state.currentTrack.duration : 0);
         let cur = (el.nativeAudio && Number.isFinite(el.nativeAudio.currentTime)) ? el.nativeAudio.currentTime : 0;
 
-        // the player styles (skins.css) draw a plain line from this instead of the canvas, at most 30 times a second
-        if (document.documentElement.dataset.skin && timestamp - playedSetAt > 33) {
-          playedSetAt = timestamp;
-          const at = isDraggingScrubber && state.scrubberDragTargetTime !== undefined ? state.scrubberDragTargetTime : cur;
-          if (el.playbar) el.playbar.style.setProperty('--played', dur > 0 ? String(Math.min(1, at / dur)) : '0');
-        }
         if (isDraggingScrubber && state.scrubberDragTargetTime !== undefined) {
           cur = state.scrubberDragTargetTime;
           const t = formatDuration(cur);
