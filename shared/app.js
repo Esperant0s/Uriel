@@ -410,6 +410,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     queue: [],
     queueIndex: -1,
     queueHistory: [],
+    // the queue's order before shuffle mixed it, so turning shuffle off puts it back
+    unshuffledQueue: null,
     currentTrack: null,
     currentTrackContext: null,
     currentTrackIndexInContext: -1,
@@ -3830,7 +3832,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   let navigatingBack = false;
 
-  const shuffleBag = { queue: null, played: new Set(), next: [] }; // see pickShuffleIndex
   // every song that has played since Uriel opened (any queue, shuffle or not), by id and by artist + title, so the
   // same song from another list or source counts too: shuffle leaves them for last
   const sessionPlayed = new Set();
@@ -3840,6 +3841,47 @@ document.addEventListener('DOMContentLoaded', async () => {
     const id = getTrackCanonicalId(t);
     if (id) sessionPlayed.add(id);
     if (t.title) sessionPlayed.add(getTrackNormalizedKey(t.artist, t.title));
+  }
+
+  // Shuffle mixes the queue itself: the playing song goes first and the rest follow in a random order, so the
+  // queue shows what plays next and Next just takes the following song. It used to pick a random song at each
+  // Next, so the queue only ever showed the playlist's own order. Songs heard earlier this session go last.
+  // The array is changed in place: a My Wave or radio top-up still loading for it keeps its place.
+  function shuffleQueue() {
+    const q = state.queue;
+    if (state.queueIndex < 0 || q.length < 2) return;
+    if (!state.unshuffledQueue) state.unshuffledQueue = q.slice();
+    const mix = (list) => {
+      for (let i = list.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [list[i], list[j]] = [list[j], list[i]];
+      }
+      return list;
+    };
+    const rest = q.filter((t, i) => i !== state.queueIndex);
+    const order = [q[state.queueIndex], ...mix(rest.filter(t => !playedThisSession(t))), ...mix(rest.filter(playedThisSession))];
+    order.forEach((t, i) => { q[i] = t; });
+    state.queueIndex = 0;
+    state.queueHistory = [0];
+  }
+
+  // back to the order from before shuffle; songs added since keep their place after it
+  function unshuffleQueue() {
+    const before = state.unshuffledQueue;
+    state.unshuffledQueue = null;
+    const q = state.queue;
+    if (!before || !q.length) return;
+    // counted, not just looked up: the same song can be in the queue twice
+    const left = new Map();
+    q.forEach(t => left.set(t, (left.get(t) || 0) + 1));
+    const order = [];
+    for (const t of [...before, ...q]) {
+      if (left.get(t) > 0) { order.push(t); left.set(t, left.get(t) - 1); }
+    }
+    const current = q[state.queueIndex];
+    order.forEach((t, i) => { q[i] = t; });
+    state.queueIndex = Math.max(0, q.indexOf(current));
+    state.queueHistory = [state.queueIndex];
   }
 
   // A song that can't be played used to stop a whole playlist. When playing through a list (or after Next)
@@ -3960,8 +4002,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.currentTrackIndexInContext = startIndex;
 
     if (queueList) {
+      // a tap on a song in the queue itself keeps the queue's order
+      const newList = queueList !== state.queue;
       state.queue = [...queueList];
-      shuffleBag.next = [];
       if (startIndex >= 0 && startIndex < state.queue.length && isSameTrack(state.queue[startIndex], track)) {
         state.queueIndex = startIndex;
       } else {
@@ -3972,6 +4015,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         state.queueIndex = 0;
       }
       state.queueHistory = [state.queueIndex];
+      if (newList) {
+        state.unshuffledQueue = null;
+        // My Wave is topped up as it plays; mixing only the first few songs of it means nothing
+        if (state.isShuffle && context !== 'wave') shuffleQueue();
+      }
     } else {
       const existingIndex = state.queue.findIndex(t => isSameTrack(t, track));
       if (existingIndex === -1) {
@@ -6566,67 +6614,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     return true;
   }
 
-  // Shuffle used to roll any index, the current song included (a third of Nexts in a 3-song queue replayed
-  // it), and never looked at "Play next". Now it plays the Play-next songs first, then songs not heard yet
-  // this session, then songs not heard yet in this queue, and starts a new round once everything has played.
-  // The songs it may pick next, best first: not played this session, then not played in this round of the queue
-  function shufflePool(q, played) {
-    const fresh = (t, i) => i !== state.queueIndex && !played.has(t) && !isBlocked(t);
-    const pool = [];
-    q.forEach((t, i) => { if (fresh(t, i) && !playedThisSession(t)) pool.push(i); });
-    if (!pool.length) q.forEach((t, i) => { if (fresh(t, i)) pool.push(i); });
-    return pool;
-  }
-  function pickShuffleIndex() {
-    const q = state.queue;
-    if (shuffleBag.queue !== q) { shuffleBag.queue = q; shuffleBag.played = new Set(); }
-    if (q[state.queueIndex]) shuffleBag.played.add(q[state.queueIndex]);
-    while (shuffleBag.next.length) {
-      const i = q.indexOf(shuffleBag.next.shift());
-      if (i >= 0 && i !== state.queueIndex) return i;
-    }
-    // the song chosen (and downloaded) in advance by planShuffleNext
-    const planned = shuffleBag.planned;
-    shuffleBag.planned = null;
-    const pi = planned ? q.indexOf(planned) : -1;
-    if (pi >= 0 && pi !== state.queueIndex && !shuffleBag.played.has(planned) && !isBlocked(planned)
-      && (!playedThisSession(planned) || !q.some((t, i) => i !== state.queueIndex && !shuffleBag.played.has(t) && !isBlocked(t) && !playedThisSession(t)))) return pi;
-    if (q.length < 2) return 0;
-    let pool = shufflePool(q, shuffleBag.played);
-    if (!pool.length) {
-      shuffleBag.played = new Set([q[state.queueIndex]]);
-      q.forEach((t, i) => { if (i !== state.queueIndex && !isBlocked(t)) pool.push(i); });
-    }
-    // everything else is blocked: the queue still moves on
-    if (!pool.length) q.forEach((t, i) => { if (i !== state.queueIndex) pool.push(i); });
-    return pool[Math.floor(Math.random() * pool.length)];
-  }
-
-  // Shuffle picks the next song while this one plays, so it can be downloaded in time: songs are fetched
-  // ahead, and a gap between songs could let iOS suspend Uriel with the screen locked.
-  function planShuffleNext() {
-    const q = state.queue;
-    if (q.length < 2) return null;
-    const pending = shuffleBag.next.find(t => q.indexOf(t) >= 0 && t !== q[state.queueIndex]);
-    if (pending) return pending;
-    if (shuffleBag.planned && q.indexOf(shuffleBag.planned) >= 0 && shuffleBag.planned !== q[state.queueIndex]) return shuffleBag.planned;
-    const played = shuffleBag.queue === q ? shuffleBag.played : new Set();
-    let pool = shufflePool(q, played).map((i) => q[i]);
-    if (!pool.length) pool = q.filter((t, i) => i !== state.queueIndex && !isBlocked(t));
-    if (!pool.length) pool = q.filter((t, i) => i !== state.queueIndex);
-    shuffleBag.planned = pool[Math.floor(Math.random() * pool.length)] || null;
-    return shuffleBag.planned;
-  }
-
-  // With repeat off, the queue plays once: true while the last song of it plays (with shuffle on, the last
-  // one not heard yet). Repeat 'all' starts over instead, and My Wave keeps adding songs.
+  // With repeat off, the queue plays once: true while the last song of it plays. Repeat 'all' starts over
+  // instead, and My Wave keeps adding songs.
   function queueFinished() {
     const q = state.queue;
     if (state.repeatMode !== 'off' || state.myWaveActive || !q.length) return false;
-    if (!state.isShuffle) return state.queueIndex >= q.length - 1;
-    if (shuffleBag.next.some(t => q.indexOf(t) >= 0 && t !== q[state.queueIndex])) return false;
-    const played = shuffleBag.queue === q ? shuffleBag.played : new Set();
-    return q.every((t, i) => i === state.queueIndex || played.has(t));
+    return state.queueIndex >= q.length - 1;
   }
 
   function recordPlayedIndex(idx) {
@@ -6652,14 +6645,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    if (state.isShuffle) {
-      const nextIdx = pickShuffleIndex();
-      state.queueIndex = nextIdx;
-      recordPlayedIndex(nextIdx);
-      playTrack(state.queue[nextIdx]);
-      return;
-    }
-
     let nextIdx = state.queueIndex + 1;
     while (nextIdx < state.queue.length && isBlocked(state.queue[nextIdx])) nextIdx++;
     if (nextIdx >= state.queue.length) {
@@ -6677,7 +6662,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       nextIdx = 0;
       while (nextIdx < state.queueIndex && isBlocked(state.queue[nextIdx])) nextIdx++;
     }
-    if (shuffleBag.next.length) shuffleBag.next = shuffleBag.next.filter(t => t !== state.queue[nextIdx]);
     state.queueIndex = nextIdx;
     recordPlayedIndex(nextIdx);
     playTrack(state.queue[nextIdx]);
@@ -6776,7 +6760,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // only looks up the one song that plays next, and only near the end of this one. Phones download
     // whole songs to play them, so they start on that halfway through.
     function prefetchNextQueueTrack() {
-      const nextTrack = state.isShuffle ? planShuffleNext() : (state.queue && state.queue.slice(state.queueIndex + 1).find((t) => !isBlocked(t)));
+      const nextTrack = state.queue && state.queue.slice(state.queueIndex + 1).find((t) => !isBlocked(t));
       if (!nextTrack || nextTrack.platform === 'local' || !(nextTrack.url || nextTrack.id)) return;
       const q = `url=${encodeURIComponent(nextTrack.url || '')}&id=${encodeURIComponent(nextTrack.id || '')}&platform=${nextTrack.platform || state.platform}&title=${encodeURIComponent(nextTrack.title || '')}&artist=${encodeURIComponent(nextTrack.artist || '')}&duration=${encodeURIComponent(nextTrack.duration || 0)}&thumbnail=${encodeURIComponent(nextTrack.thumbnail || '')}`;
       fetch(`http://127.0.0.1:${state.serverPort}/api/${isPhoneApp ? 'stream-info' : 'prefetch'}?${q}&next=1`).catch(() => {});
@@ -6793,7 +6777,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       updatePlayPauseButton(true, false);
       // phones warm up the next two songs (staggered) so skipping or a slow network never leaves a gap;
       // the computer looks up only the next one, near the end of this one (prefetchNextQueueTrack, #16)
-      const upcoming = !isPhoneApp ? [] : state.isShuffle ? [planShuffleNext()] : [1, 2].map(ahead => state.queue && state.queue[state.queueIndex + ahead]);
+      const upcoming = !isPhoneApp ? [] : [1, 2].map(ahead => state.queue && state.queue[state.queueIndex + ahead]);
       upcoming.forEach((nextTrack, k) => {
         if (nextTrack && nextTrack.url && nextTrack.platform !== 'local') {
           setTimeout(() => {
@@ -7440,6 +7424,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           state.queue.push(cand);
         }
       }
+      // the album's songs come in after the first one starts: mix them in now
+      if (state.isShuffle) { state.unshuffledQueue = null; shuffleQueue(); }
       updateQueueBadge();
       if (state.currentView === 'queue') renderQueueView();
 
@@ -8159,6 +8145,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const canonicalId = getTrackCanonicalId(track);
       row.dataset.canonicalId = canonicalId;
       row.dataset.trackIndex = String(idx);
+      if (context === 'queue' && idx < state.queueIndex) row.classList.add('queue-played');
       row.dataset.trackId = track.id || '';
       row.dataset.trackTitle = track.title || '';
       row.dataset.trackArtist = track.artist || '';
@@ -8483,13 +8470,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       { label: 'Play', run: () => row.click() },
       { label: 'Play next', run: () => {
         if (!state.queue.length || state.queueIndex < 0) { playTrack(track); return; }
-        // in place: the queue stays the same array, so shuffle's "already heard" list and a My Wave top-up
-        // still loading for it both keep going
+        // in place: the queue stays the same array, so a My Wave top-up still loading for it keeps going
         for (let i = state.queue.length - 1; i > state.queueIndex; i--) {
           if (isSameTrack(state.queue[i], track)) state.queue.splice(i, 1);
         }
         state.queue.splice(state.queueIndex + 1, 0, track);
-        shuffleBag.next.push(track);
         updateQueueBadge();
         showToast(Tm('Playing next'), 'success');
       } },
@@ -8590,12 +8575,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderTracks(container, tracks, context = 'search') {
     if (!container) return;
     
-    // lists inside the drawer scroll the drawer pane, everything else scrolls the main column
-    const scrollParent = container.closest('.drawer-pane') || document.querySelector('.main-content');
+    // the queue scrolls its own box in the drawer, everything else scrolls the main column
+    const scrollParent = container.closest('.drawer-queue-scroll') || document.querySelector('.main-content');
     if (container._vScrollHandler && scrollParent) {
       scrollParent.removeEventListener('scroll', container._vScrollHandler);
     }
-    
+
+    // the list keeps its height while it is drawn again: emptied for a moment, the page got shorter and the browser
+    // pulled a list scrolled far down back up, so a redraw (Add to queue, shuffle) jumped to other songs
+    container.style.minHeight = `${container.offsetHeight}px`;
     container.innerHTML = '';
     
     if (!tracks || tracks.length === 0) {
@@ -8609,6 +8597,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         queue: 'Queue is empty. Play a song to start.'
       };
       container.innerHTML = `<div class="empty-hint" data-i18n>${emptyMessages[context] || 'No songs to show'}</div>`;
+      container.style.minHeight = '';
       return;
     }
 
@@ -8701,6 +8690,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     container._lastStartIndex = -1;
     container._lastEndIndex = -1;
     renderChunk();
+    container.style.minHeight = '';
   }
 
   function highlightPlayingRow() {
@@ -9299,6 +9289,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const list = el.queueTracksList;
         // a plain skip keeps the same queue (the row highlight follows on its own); only redraw when it changed
         if (list && (list._renderedQueue !== state.queue || list._renderedLen !== state.queue.length)) renderQueueView();
+        else if (list) list.querySelectorAll(':scope > .track-row').forEach(r => r.classList.toggle('queue-played', Number(r.dataset.trackIndex) < state.queueIndex));
       });
     }
   }
@@ -10338,10 +10329,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!tracks.length) { showToast(Tm('This playlist is empty'), 'info'); return; }
     // nothing playing yet: the playlist simply starts
     if (!state.queue.length || state.queueIndex < 0) { playTrack(tracks[0], tracks.slice(), 0, 'playlist'); return; }
-    if (next) {
-      state.queue.splice(state.queueIndex + 1, 0, ...tracks);
-      shuffleBag.next.push(...tracks);
-    } else state.queue.push(...tracks);
+    if (next) state.queue.splice(state.queueIndex + 1, 0, ...tracks);
+    else state.queue.push(...tracks);
     updateQueueBadge();
     window.dispatchEvent(new Event('uriel:queue'));
     showToast(next ? Tm('{0} songs play next', tracks.length) : Tm('{0} songs added to the queue', tracks.length), 'success');
@@ -11174,9 +11163,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   function openPanelDrawer(tab) {
     state.drawerTab = tab || state.drawerTab;
     state.isRightPanelOpen = true;
-    if (state.drawerTab === 'queue') renderQueueView();
     syncDrawerUI();
+    // drawn once the pane shows: while hidden it has no height, and the list drew only its first rows
+    if (state.drawerTab === 'queue') { renderQueueView(); showPlayingInQueue(); }
     setTimeout(resizeCanvases, 150);
+  }
+  // the queue opens on the song playing (the one before it just above), not on songs that played long ago
+  function showPlayingInQueue() {
+    const pane = document.getElementById('drawer-queue-scroll');
+    const list = el.queueTracksList;
+    if (!pane || !list || state.queueIndex < 0) return;
+    const listTop = list.getBoundingClientRect().top - pane.getBoundingClientRect().top + pane.scrollTop;
+    pane.scrollTop = listTop + Math.max(0, state.queueIndex - 1) * (list._rowHeight || 64);
   }
   function closePanelDrawer() {
     state.isRightPanelOpen = false;
@@ -11441,6 +11439,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   function setShuffle(on) {
     state.isShuffle = !!on;
     localStorage.setItem('uriel_shuffle', state.isShuffle ? '1' : '0');
+    if (state.isShuffle) shuffleQueue();
+    else unshuffleQueue();
+    // same array, new order: the queue list has to be drawn again
+    if (el.queueTracksList) el.queueTracksList._renderedQueue = null;
+    updateQueueBadge();
+    // drawn now rather than on the next frame, so the list is in its new order before it scrolls to the song
+    if (state.isRightPanelOpen && state.drawerTab === 'queue') { renderQueueView(); showPlayingInQueue(); }
     if (el.btnShuffle) el.btnShuffle.classList.toggle('active', state.isShuffle);
     if (el.btnTvkShuffle) {
       el.btnTvkShuffle.classList.toggle('active', state.isShuffle);
@@ -11550,6 +11555,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       state.queue = [];
       state.queueIndex = -1;
       state.queueHistory = [];
+      state.unshuffledQueue = null;
       updateQueueBadge();
       renderQueueView();
     });
@@ -18432,7 +18438,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const radioPart = {};
   function songRadioEnabled(...args) { return radioPart.songRadioEnabled(...args); }
   function startSongRadio(...args) { return radioPart.startSongRadio(...args); }
-  window.UrielApp.radio({ Lib, state, getBlocks, isBlocked, Tm, showToast, isSameTrack, shuffleBag, updateQueueBadge, playTrack, el, I18N, sharePlaylist }, radioPart);
+  window.UrielApp.radio({ Lib, state, getBlocks, isBlocked, Tm, showToast, isSameTrack, updateQueueBadge, playTrack, el, I18N, sharePlaylist }, radioPart);
 
   // ---- the fullscreen karaoke, lyrics under the mini player, the lyrics source and word timings (app/lyrics.js) ----
   const lyricsPart = {};

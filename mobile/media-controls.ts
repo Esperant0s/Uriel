@@ -32,7 +32,7 @@ function mediaControls(): void {
   });
 
   // What earbuds can play while the page isn't running (ColdPlayer.java): this song, and the songs after it in the
-  // queue that are saved on the phone (wrapping round with repeat or shuffle on, as the queue does).
+  // queue that are saved on the phone (wrapping round with repeat on, as the queue does).
   function forEarbuds(c: UrielCoreApi, t: Track, a: AppAudio): { resume: NativeSongInfo; upcoming: NativeSongInfo[] } {
     const st = c.state;
     const q = Array.isArray(st.queue) ? st.queue : [];
@@ -46,7 +46,7 @@ function mediaControls(): void {
     const upcoming: NativeSongInfo[] = [];
     // a song played outside the queue: nothing comes after it
     if (qi < 0) return { resume, upcoming };
-    const wrap = st.repeatMode === 'all' || st.isShuffle;
+    const wrap = st.repeatMode === 'all';
     for (let k = 1; k < q.length && k <= 300 && upcoming.length < 30; k++) {
       let i = qi + k;
       if (i >= q.length) { if (!wrap) break; i -= q.length; }

@@ -2,7 +2,7 @@
 // Song radio (#28): songs like one song or a few picked together, a queue that grows as it plays; and sharing the
 // song that's playing. Part of app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
-window.UrielApp.radio = function ({ Lib, state, getBlocks, isBlocked, Tm, showToast, isSameTrack, shuffleBag, updateQueueBadge, playTrack, el, I18N, sharePlaylist }, out) {
+window.UrielApp.radio = function ({ Lib, state, getBlocks, isBlocked, Tm, showToast, isSameTrack, updateQueueBadge, playTrack, el, I18N, sharePlaylist }, out) {
   Object.assign(out, {
     songRadioEnabled, startSongRadio,
   });
@@ -73,7 +73,7 @@ window.UrielApp.radio = function ({ Lib, state, getBlocks, isBlocked, Tm, showTo
         state.queue = [seed, ...tracks];
         state.queueIndex = 0;
         state.queueHistory = [0];
-        shuffleBag.next = []; shuffleBag.queue = state.queue;
+        state.unshuffledQueue = null;
         updateQueueBadge();
       } else {
         playTrack(seed, [seed, ...tracks], 0);

@@ -508,10 +508,10 @@ class PlayerService : MediaSessionService() {
         updateButtons()
     }
 
-    // without the page, the player follows them itself
+    // without the page, the player follows repeat itself. Not shuffle: the page sends the songs already in the
+    // order shuffle put the queue in
     private fun applyModes() {
         if (page != null) return
-        exo.shuffleModeEnabled = shuffle
         exo.repeatMode = when (repeat) {
             "one" -> Player.REPEAT_MODE_ONE
             "all" -> Player.REPEAT_MODE_ALL

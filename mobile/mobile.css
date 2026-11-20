@@ -578,10 +578,6 @@ html.is-mobile .multi-select-bar .multi-select-count { flex: 1 0 100%; text-alig
 /* a song row is one tap target on phones. The artist name inside it caught taps meant for the song (the browser
    snaps a finger tap onto the nearest tappable element) and opened the artist; "Go to artist" is in the menu. */
 html.is-mobile .track-row .track-row-artist { pointer-events: none; cursor: default; text-decoration: none; }
-/* rows past the 25th used content-visibility:auto with a 64px stand-in size for 60px rows, so on iPhone a long
-   list (an artist's 35 songs) changed height under the finger while scrolling. The lists already render only
-   the rows on screen, so phones lay every row out normally. */
-html.is-mobile .track-row:nth-child(n+25) { content-visibility: visible; contain-intrinsic-size: none; }
 
 /* phones draw no backdrop blur, so floating toasts and the song menu need a solid background or the list
    underneath shows through their text (also when the UI transparency slider is turned down) */

@@ -8424,12 +8424,6 @@ html.theme-vt::view-transition-new(root) {
 .restore-offline-row .restore-offline-text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .restore-offline-row .restore-offline-text span + span { font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline); }
 
-/* long libraries: skip layout/paint for off-screen rows */
-.track-row:nth-child(n+25) {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 64px;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .art-ghost { display: none; }
   .art-in, .banner-leaving { animation: none; }
@@ -8486,16 +8480,20 @@ body.perf .art-in { animation: none; }
 .drawer-pane { display: flex; flex-direction: column; gap: 16px; min-height: 0; flex: 1; }
 .drawer-pane.hidden { display: none !important; }
 #drawer-now { overflow: hidden; }
-/* the list's rows reach 8px past each side (margin below); that room is the pane's own padding now. Set alone,
-   overflow-y: auto made overflow-x auto too, and those 8px became a sideways scrollbar under the queue */
-#drawer-queue { overflow-y: auto; overflow-x: hidden; display: block; padding-inline: 8px; margin-inline: -8px; }
-#drawer-queue .drawer-queue-head { padding-bottom: 8px; }
+/* the heading and Clear stay put and only the songs under them scroll (the whole pane used to scroll, and they
+   went off the top). The list's rows reach 8px past each side (margin below); that room is the scroller's own
+   padding. Set alone, overflow-y: auto made overflow-x auto too, and those 8px became a sideways scrollbar */
+#drawer-queue { gap: 8px; }
+.drawer-queue-scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-inline: 8px; margin-inline: -8px; }
 .drawer-queue-head { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 .drawer-queue-title { font-weight: 700; font-size: calc(14px * var(--font-scale, 1)); }
 #drawer-queue .tracks-list { margin: 0 -8px; }
 #drawer-queue .track-row { padding: 8px 10px; gap: 12px; }
 #drawer-queue .track-row-index { display: none; }
 #drawer-queue .track-row-thumb { width: 40px; height: 40px; }
+/* songs before the one playing have already had their turn */
+#drawer-queue .track-row.queue-played { opacity: 0.5; }
+#drawer-queue .track-row.queue-played:hover, #drawer-queue .track-row.queue-played:focus-visible { opacity: 1; }
 
 /* Player bar: give the track title room */
 .playbar { grid-template-columns: minmax(280px, 1fr) minmax(320px, 600px) minmax(280px, 1fr) !important; }

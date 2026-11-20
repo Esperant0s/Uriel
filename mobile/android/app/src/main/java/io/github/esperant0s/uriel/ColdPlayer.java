@@ -36,7 +36,6 @@ import org.json.JSONObject;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -62,7 +61,6 @@ final class ColdPlayer {
     private static final String KEY_CURRENT = "current";
     private static final String KEY_UPCOMING = "upcoming";
     private static final String KEY_POSITION = "position";
-    private static final String KEY_SHUFFLE = "shuffle";
     private static final String KEY_REPEAT = "repeat";
     // where the music got to here, for the page (takeOver): { qi, title, artist, position, playing, ended }
     private static final String KEY_HANDOVER = "handover";
@@ -103,10 +101,8 @@ final class ColdPlayer {
 
     private final Context ctx;
     private final List<Entry> entries;
-    private final boolean shuffle;
     private final String repeat;
     private final List<Integer> history = new ArrayList<>();
-    private final Random random = new Random();
     private int index;
     private MediaPlayer player;
     private boolean prepared;
@@ -146,12 +142,11 @@ final class ColdPlayer {
         }
     };
 
-    private ColdPlayer(Context ctx, List<Entry> entries, int index, long startAtMs, boolean shuffle, String repeat) {
+    private ColdPlayer(Context ctx, List<Entry> entries, int index, long startAtMs, String repeat) {
         this.ctx = ctx;
         this.entries = entries;
         this.index = index;
         this.startAtMs = startAtMs;
-        this.shuffle = shuffle;
         this.repeat = repeat;
     }
 
@@ -164,7 +159,7 @@ final class ColdPlayer {
     // current: the song on the page (title, artist, album, artwork, duration, qi, path or cache, thumb); upcoming:
     // the songs after it that are saved on the phone, in queue order. A song the page can't place on the phone right
     // now (the one brought back from last time, before it loads) keeps the file it had.
-    static void remember(Context ctx, JSONObject current, JSONArray upcoming, double position, boolean shuffle, String repeat) {
+    static void remember(Context ctx, JSONObject current, JSONArray upcoming, double position, String repeat) {
         SharedPreferences p = prefs(ctx);
         try {
             if (current.optString("path", "").isEmpty() && current.optString("cache", "").isEmpty()) {
@@ -179,7 +174,6 @@ final class ColdPlayer {
                 .putString(KEY_CURRENT, current.toString())
                 .putString(KEY_UPCOMING, upcoming.toString())
                 .putFloat(KEY_POSITION, (float) Math.max(0, position))
-                .putBoolean(KEY_SHUFFLE, shuffle)
                 .putString(KEY_REPEAT, repeat)
                 .apply();
     }
@@ -228,7 +222,7 @@ final class ColdPlayer {
             position = 0;
         }
         String repeat = p.getString(KEY_REPEAT, "off");
-        ColdPlayer player = new ColdPlayer(ctx, entries, startIndex, position, p.getBoolean(KEY_SHUFFLE, false), repeat);
+        ColdPlayer player = new ColdPlayer(ctx, entries, startIndex, position, repeat);
         if (startIndex != 0) player.history.add(0);
         // on a call: the tap is taken, and nothing plays over it
         AudioManager am = ctx.getSystemService(AudioManager.class);
@@ -424,12 +418,8 @@ final class ColdPlayer {
             if (player != null && prepared && takeFocus()) { try { player.start(); } catch (IllegalStateException ignored) {} }
             return;
         }
-        int nextIndex = -1;
-        if (shuffle) {
-            List<Integer> left = new ArrayList<>();
-            for (int i = 0; i < entries.size(); i++) if (i != index && !history.contains(i)) left.add(i);
-            if (!left.isEmpty()) nextIndex = left.get(random.nextInt(left.size()));
-        } else if (index + 1 < entries.size()) nextIndex = index + 1;
+        // the songs come in the queue's order, already mixed when shuffle is on
+        int nextIndex = index + 1 < entries.size() ? index + 1 : -1;
         if (nextIndex < 0) {
             finish();
             return;

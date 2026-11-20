@@ -1,40 +1,67 @@
 'use strict';
 
-// Shuffle leaves songs already played this session (in any queue) for last: runs app.js's own shufflePool
+// Shuffle mixes the queue itself (so the queue shows what plays next), leaves songs already played this session
+// for last, and turning it off puts the old order back: runs app.js's own shuffleQueue and unshuffleQueue
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
 const appSource = require('../tools/app-source');
 
 const app = appSource();
-const src = app.slice(app.indexOf('  function shufflePool(q, played) {'), app.indexOf('  function pickShuffleIndex() {'));
-// shufflePool(q, played) with the rest of the app replaced by what each case says
-function poolWith({ queueIndex = 0, heard = [], blocked = [] }) {
-  const make = new Function('state', 'isBlocked', 'playedThisSession', `${src}; return shufflePool;`);
-  return make({ queueIndex }, (t) => blocked.includes(t.id), (t) => heard.includes(t.id));
+const src = app.slice(app.indexOf('  function shuffleQueue() {'), app.indexOf('  // A song that can\'t be played used to stop'));
+function withState(state, heard = []) {
+  const make = new Function('state', 'playedThisSession', `${src}; return { shuffleQueue, unshuffleQueue };`);
+  return make(state, (t) => heard.includes(t.id));
 }
-const q = ['a', 'b', 'c', 'd', 'e'].map((id) => ({ id }));
-const ids = (pool) => pool.map((i) => q[i].id).sort();
+const songs = () => ['a', 'b', 'c', 'd', 'e', 'f'].map((id) => ({ id }));
+const ids = (list) => list.map((t) => t.id);
 
-test('songs heard earlier this session are left out while others remain', () => {
-  const pool = poolWith({ queueIndex: 0, heard: ['b', 'c'] });
-  assert.deepEqual(ids(pool(q, new Set())), ['d', 'e']);
+test('the playing song goes first and every other song follows once, in the same array', () => {
+  const q = songs();
+  const state = { queue: q, queueIndex: 3, queueHistory: [], unshuffledQueue: null };
+  withState(state).shuffleQueue();
+  assert.equal(state.queue, q);
+  assert.equal(state.queueIndex, 0);
+  assert.equal(q[0].id, 'd');
+  assert.deepEqual(ids(q).sort(), ['a', 'b', 'c', 'd', 'e', 'f']);
 });
 
-test('once every other song has been heard this session, they can come back (but not the playing one)', () => {
-  const pool = poolWith({ queueIndex: 0, heard: ['a', 'b', 'c', 'd', 'e'] });
-  assert.deepEqual(ids(pool(q, new Set())), ['b', 'c', 'd', 'e']);
+test('songs heard earlier this session come after the others', () => {
+  const state = { queue: songs(), queueIndex: 0, queueHistory: [], unshuffledQueue: null };
+  withState(state, ['b', 'c']).shuffleQueue();
+  assert.deepEqual(ids(state.queue.slice(4)).sort(), ['b', 'c']);
 });
 
-test("this round's played songs and blocked songs stay out either way", () => {
-  const pool = poolWith({ queueIndex: 0, heard: ['d'], blocked: ['e'] });
-  assert.deepEqual(ids(pool(q, new Set([q[1]]))), ['c']);
-  const all = poolWith({ queueIndex: 0, heard: ['c', 'd'], blocked: ['e'] });
-  assert.deepEqual(ids(all(q, new Set([q[1]]))), ['c', 'd'], 'only heard ones left: they play rather than nothing');
+test('turning shuffle off puts the order back on the song playing, with added songs after', () => {
+  const q = songs();
+  const state = { queue: q, queueIndex: 2, queueHistory: [], unshuffledQueue: null };
+  const { shuffleQueue, unshuffleQueue } = withState(state);
+  shuffleQueue();
+  state.queueIndex = 3;
+  const playing = q[3];
+  q.push({ id: 'g' });
+  const [removed] = q.splice(5, 1);
+  unshuffleQueue();
+  assert.deepEqual(ids(q), ['a', 'b', 'c', 'd', 'e', 'f', 'g'].filter((id) => id !== removed.id));
+  assert.equal(q[state.queueIndex], playing);
+  assert.equal(state.unshuffledQueue, null);
+});
+
+test('a song in the queue twice stays twice', () => {
+  const q = songs();
+  const state = { queue: q, queueIndex: 0, queueHistory: [], unshuffledQueue: null };
+  const { shuffleQueue, unshuffleQueue } = withState(state);
+  shuffleQueue();
+  q.push(q[2]);
+  unshuffleQueue();
+  assert.equal(q.length, 7);
+  assert.deepEqual(ids(q.slice(0, 6)), ['a', 'b', 'c', 'd', 'e', 'f']);
 });
 
 test('a song counts as played the moment it starts, whatever queue it was in', () => {
   assert.match(app, /addEventListener\('playing', \(\) => \{\n      notePlayedThisSession\(state\.currentTrack\);/);
   assert.match(app, /sessionPlayed\.has\(getTrackCanonicalId\(t\)\) \|\| sessionPlayed\.has\(getTrackNormalizedKey\(t\.artist, t\.title\)\)/);
+});
+
+test('Next follows the queue order with shuffle on, it no longer picks at random', () => {
+  assert.doesNotMatch(app, /pickShuffleIndex|planShuffleNext|shuffleBag/);
 });

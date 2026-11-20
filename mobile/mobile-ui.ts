@@ -53,11 +53,14 @@ const tapped = (e: Event): Element | null => (e.target instanceof Element ? e.ta
   let startY: number | null = null;
   panel.addEventListener('touchstart', (e) => {
     const t = e.touches[0];
-    const lyrics = document.getElementById('lyrics-container');
-    // a finger on a seek bar or slider is seeking, not closing the sheet (#21)
+    // a finger on a seek bar or slider is seeking, not closing the sheet (#21), and one on a queue row's grip is
+    // moving that row
     const on = tapped(e);
-    if (on && on.closest('input[type="range"], .scrubber-track-container, [role="slider"]')) { startY = null; return; }
-    startY = (lyrics && on && lyrics.contains(on) && lyrics.scrollTop > 0) ? null : t.clientY;
+    if (on && on.closest('input[type="range"], .scrubber-track-container, [role="slider"], .drag-grip')) { startY = null; return; }
+    // the lyrics and the queue scroll: pulling down there scrolls back up, and only closes the sheet from the top
+    // (the queue used to slide away with the finger as soon as you scrolled it back up)
+    const scroller = on && on.closest('#lyrics-container, #drawer-queue-scroll');
+    startY = scroller && scroller.scrollTop > 0 ? null : t.clientY;
   }, { passive: true });
   // one transform write per frame, and no CSS transition while the finger drags (it lagged behind)
   let dragY = 0, dragRaf = 0;

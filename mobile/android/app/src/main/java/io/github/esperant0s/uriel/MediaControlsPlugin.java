@@ -309,8 +309,7 @@ public class MediaControlsPlugin extends Plugin {
             JSObject cur = call.getObject("resume");
             if (cur == null) return;
             org.json.JSONArray upcoming = call.getArray("upcoming", new com.getcapacitor.JSArray());
-            ColdPlayer.remember(getContext(), cur, upcoming, call.getDouble("resumePosition", 0.0),
-                    Boolean.TRUE.equals(call.getBoolean("shuffle", false)), call.getString("repeat", "off"));
+            ColdPlayer.remember(getContext(), cur, upcoming, call.getDouble("resumePosition", 0.0), call.getString("repeat", "off"));
         } catch (Exception ignored) {}
     }
 
