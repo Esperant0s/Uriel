@@ -14604,8 +14604,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const W = 240, H = 12, WL = 16; let d = `M0 ${H/2}`;
     for (let x = 0; x < W; x += WL) d += ` q ${WL/4} ${-H/2} ${WL/2} 0 t ${WL/2} 0`;
     container.innerHTML = `<svg class="wavy" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><path class="wavy-track" pathLength="100" d="${d}"/><path class="wavy-fill" pathLength="100" d="${d}"/></svg>`;
-    const fill = container.querySelector('.wavy-fill'); fill.style.strokeDasharray = '100'; fill.style.strokeDashoffset = '100';
-    return { set(p) { fill.style.strokeDashoffset = String(100 - Math.max(0, Math.min(100, p))); } };
+    // the fill is cut to the progress, not drawn as a dash: with a stroke that doesn't stretch, Chrome measures dashes
+    // in screen pixels, so a dash "the path's length" long was shorter than the bar. 0% showed a piece filled at the
+    // right end that emptied as it went, and 100% filled only half
+    const fill = container.querySelector('.wavy-fill');
+    const set = (p) => { fill.style.clipPath = `inset(0 ${100 - Math.max(0, Math.min(100, p))}% 0 0)`; };
+    set(0);
+    return { set };
   }
   window.createWavyProgress = createWavyProgress;
 
@@ -17372,7 +17377,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (activeTool === 'yt-dlp') {
       if (wrapYt) {
         wrapYt.style.display = 'block';
-        wrapYt.style.setProperty('--tools-progress', activePercent.toString());
         if (!toolsWavyYt && typeof createWavyProgress === 'function') toolsWavyYt = createWavyProgress(wrapYt);
         if (toolsWavyYt) toolsWavyYt.set(activePercent);
       }
@@ -17381,7 +17385,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (wrapYt) wrapYt.style.display = 'none';
       if (wrapFf) {
         wrapFf.style.display = 'block';
-        wrapFf.style.setProperty('--tools-progress', activePercent.toString());
         if (!toolsWavyFf && typeof createWavyProgress === 'function') toolsWavyFf = createWavyProgress(wrapFf);
         if (toolsWavyFf) toolsWavyFf.set(activePercent);
       }

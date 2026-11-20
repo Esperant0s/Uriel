@@ -5847,7 +5847,7 @@ button:not(.btn-play-pause).pressed svg, button:not(.btn-play-pause).pressed img
 .wavy{width:100%;height:12px;overflow:visible}
 .wavy path{fill:none;stroke-width:3;stroke-linecap:round;vector-effect:non-scaling-stroke}
 .wavy-track{stroke:color-mix(in srgb, var(--md-sys-color-on-surface) 30%, transparent)}
-.wavy-fill{stroke:var(--md-sys-color-primary);transition:stroke-dashoffset .25s}
+.wavy-fill{stroke:var(--md-sys-color-primary);transition:clip-path .25s}
 
 body.intensity-zero .lyric-line.active { background: transparent !important; color: var(--md-sys-color-on-surface) !important; }
 body.intensity-zero .lyric-word { opacity: .45; }
@@ -6431,9 +6431,6 @@ body.intensity-zero .lyric-word.active-word { opacity: 1; color: var(--md-sys-co
   width: 100%;
   height: 14px;
   display: block;
-}
-.tools-wavy-wrap .wavy-fill {
-  stroke-dashoffset: calc(100 - var(--tools-progress, 0)) !important;
 }
 .tools-status-icon {
   display: flex;
