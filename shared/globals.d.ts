@@ -4,6 +4,10 @@
 export {};
 
 declare global {
+  // the download progress server.js reports for a song being saved (shared/app.js listens)
+  interface WindowEventMap {
+    'uriel:dl-progress': CustomEvent<{ id: string; done: number; total: number }>;
+  }
   interface Window {
     // app.js
     UrielCore: any;
@@ -133,6 +137,13 @@ declare global {
     description?: string;
     [field: string]: any;
   }
+  // Tm('...', ...): words translated when shown, so a toast or label follows the language
+  interface UrielI18nMessage {
+    i18n: string;
+    args: unknown[];
+    toString(): string;
+  }
+  type UrielText = string | UrielI18nMessage;
   // an album, single, EP or Daily Mix card from a search, an artist page or home
   interface UrielAlbum {
     id: string;
@@ -146,6 +157,142 @@ declare global {
     tracks?: UrielTrack[];
     source?: string;
     [field: string]: any;
+  }
+  interface UrielArtist {
+    id?: string;
+    name: string;
+    subtitle?: string;
+    avatar?: string;
+    banner?: string;
+    fans?: number;
+    fansText?: string;
+    [field: string]: any;
+  }
+  // a row of the song menu and the other small menus (showActionMenu)
+  interface UrielMenuItem {
+    label: string;
+    run: () => void;
+    danger?: boolean;
+    [field: string]: unknown;
+  }
+  // /api/for-you: the For you rows on Home
+  interface UrielHomeSection {
+    type?: string;
+    title: string;
+    items?: UrielArtist[];
+    tracks?: UrielTrack[];
+  }
+  interface UrielForYou {
+    success?: boolean;
+    genres?: string[];
+    sections?: UrielHomeSection[];
+  }
+  // a playlist, album or selection being downloaded, or waiting for its turn
+  interface UrielDownloadJob {
+    name: string;
+    tracks: UrielTrack[];
+    resolve?: ((t: UrielTrack) => Promise<UrielTrack | null>) | null;
+    onProgress?: (done: number, total: number) => void;
+    onDone?: (done: number, total: number) => void;
+    checking?: boolean;
+    retry?: boolean;
+    [field: string]: unknown;
+  }
+  interface UrielDownloadProgress {
+    text?: string;
+    fraction?: number | null;
+    error?: boolean;
+    note?: boolean;
+  }
+  // what the first-run window (desktop/welcome) picked
+  interface UrielWelcomeResult {
+    theme?: { preset?: string; h?: string; b?: number };
+    toggles?: Record<string, boolean>;
+    background?: string;
+    spotify?: { url?: string };
+  }
+  // a song in the offline audio cache (/api/offline-list)
+  interface UrielOfflineEntry {
+    id?: string;
+    cleanId?: string;
+    title?: string;
+    artist?: string;
+    duration?: number;
+    thumbnail?: string;
+    localThumbnail?: string;
+    lastPlayed?: number;
+  }
+  // a lyric line; words come with their times when the source has them
+  interface UrielLyricLine {
+    time: number;
+    text: string;
+    words?: unknown[];
+    _timed?: UrielTimedWord[] | null;
+    _timedFor?: unknown[];
+  }
+  interface UrielTimedWord {
+    text: string;
+    start: number;
+    end: number;
+  }
+  // what each part of app.js (shared/app/) hands back to it
+  interface UrielPluginsPart {
+    emitPluginEvent(event: string, data?: unknown): void;
+    reloadPluginsList(): Promise<void>;
+    clearCssEditor(): void;
+    stopAllPlugins(): void;
+    renderPluginCards(): void;
+    loadPlugins(): Promise<void>;
+  }
+  interface UrielImportsPart {
+    refreshYtSignin(): Promise<void>;
+    matchSpotifyTracks(list: UrielTrack[], onProgress: (done: number, total: number) => void): Promise<UrielTrack[] & { failStats?: unknown }>;
+  }
+  interface UrielRadioPart {
+    songRadioEnabled(): boolean;
+    startSongRadio(seeds: UrielTrack[]): Promise<void>;
+  }
+  interface UrielLyricsPart {
+    miniLyricsShown(): boolean;
+    updateMiniLyricsHighlight(currentTime: number): void;
+    renderMiniLyrics(): void;
+    lyricsSourcePref(): string;
+    fetchAndUpgradeWords(title: string, artist: string, token: number): Promise<void>;
+    lyricWordSpans(line: UrielLyricLine): string;
+    lineTimedWords(line: UrielLyricLine): UrielTimedWord[] | null;
+    timedWordIndex(timed: UrielTimedWord[], t: number): number;
+    setTvkAmbient(on: boolean): void;
+    syncTvkAmbientPlayback(): void;
+    syncTvkProgress(cur: number, dur: number): void;
+  }
+  interface UrielHomePart {
+    isSpotifyHome(): boolean;
+    renderFollowedArtists(): void;
+    renderMadeForYou(): void;
+    readDailyMixes(): { day: string; mixes: UrielAlbum[] } | null;
+    artistPlays(name: string): number;
+    followedArtistCard(a: UrielArtist): HTMLElement;
+    fetchFollowedMeta(list: UrielArtist[]): Promise<void>;
+    renderSpotifyHome(): void;
+    applyHomeLayout(): void;
+  }
+  // the bits of hls.js the player uses (it comes from the CDN, untyped)
+  interface UrielHls {
+    on(event: string, fn: (evt: string, info: { fatal?: boolean; type?: string; details?: string }) => void): void;
+    loadSource(url: string): void;
+    attachMedia(media: HTMLMediaElement): void;
+    recoverMediaError(): void;
+    destroy(): void;
+    _urielRecovered?: boolean;
+  }
+  // /api/stream's answer: where to play a song from
+  interface UrielStreamInfo {
+    success?: boolean;
+    streamUrl: string;
+    proxyUrl?: string;
+    isHls?: boolean;
+    isLocal?: boolean;
+    [field: string]: unknown;
   }
   interface UrielPreset {
     id: string;

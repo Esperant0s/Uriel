@@ -4,10 +4,12 @@
 // app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps */
-window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHtml, T, openModal, closeModal, getTrackCanonicalId, stampAddedAt, createWavyProgress, updateFavoritesBadge, updateFavoriteIcon, renderFavoritesView, createPlaylist, showToast, renderPlaylistsList, I18N, Tm, isSameTrack, openPlaylistDetail, isFavoriteSong, importSharedPlaylist, setPlatform, el }, /** @type {any} */ out) {
-  Object.assign(out, {
+window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHtml, T, openModal, closeModal, getTrackCanonicalId, stampAddedAt, createWavyProgress, updateFavoritesBadge, updateFavoriteIcon, renderFavoritesView, createPlaylist, showToast, renderPlaylistsList, I18N, Tm, isSameTrack, openPlaylistDetail, isFavoriteSong, importSharedPlaylist, setPlatform, el }, /** @type {UrielImportsPart} */ out) {
+  /** @type {UrielImportsPart} */
+  const api = {
     refreshYtSignin, matchSpotifyTracks,
-  });
+  };
+  Object.assign(out, api);
 
   const Core = window.UrielImportCore;
   const { normalizeForMatch, parseAppleExportCSV, parseAppleExportJSON } = Core;

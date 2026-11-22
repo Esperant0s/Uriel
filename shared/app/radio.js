@@ -2,11 +2,13 @@
 // Song radio (#28): songs like one song or a few picked together, a queue that grows as it plays; and sharing the
 // song that's playing. Part of app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
-/** @param {UrielAppDeps} deps @param {any} out */
+/** @param {UrielAppDeps} deps @param {UrielRadioPart} out */
 window.UrielApp.radio = function ({ Lib, state, getBlocks, isBlocked, Tm, showToast, isSameTrack, updateQueueBadge, playTrack, el, I18N, sharePlaylist }, out) {
-  Object.assign(out, {
+  /** @type {UrielRadioPart} */
+  const api = {
     songRadioEnabled, startSongRadio,
-  });
+  };
+  Object.assign(out, api);
 
   // ---- song radio (#28): a mix of songs like one song, or a few picked together; the queue grows as it plays ----
   // Settings > Tracks > Song radio shows or hides its buttons (on unless turned off).

@@ -4,10 +4,12 @@
 // timings for word-by-word karaoke. Part of app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps */
-window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPositionState, rgbToHsl, hexToRgb, hslToHex, getTrackThumbUrl, isPhoneApp, resetTvIdleTimer, getAdv, getLineStartTime, getLineEndTime, escapeHtml, fetchAndApplyTranslation, renderLyricsView, updateSyncedLyricsHighlight, loadSyncedLyrics, wireSettingDropdown, getTvIdleTimer }, /** @type {any} */ out) {
-  Object.assign(out, {
+window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPositionState, rgbToHsl, hexToRgb, hslToHex, getTrackThumbUrl, isPhoneApp, resetTvIdleTimer, getAdv, getLineStartTime, getLineEndTime, escapeHtml, fetchAndApplyTranslation, renderLyricsView, updateSyncedLyricsHighlight, loadSyncedLyrics, wireSettingDropdown, getTvIdleTimer }, /** @type {UrielLyricsPart} */ out) {
+  /** @type {UrielLyricsPart} */
+  const api = {
     miniLyricsShown, updateMiniLyricsHighlight, renderMiniLyrics, lyricsSourcePref, fetchAndUpgradeWords, lyricWordSpans, lineTimedWords, timedWordIndex, setTvkAmbient, syncTvkAmbientPlayback, syncTvkProgress,
-  });
+  };
+  Object.assign(out, api);
 
   // ---- fullscreen karaoke: seek bar, moving cover colors behind the lyrics, settings from the top edge ----
   var tvkSeekDragging = false;

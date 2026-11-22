@@ -3,10 +3,12 @@
 // (Monaco). Part of app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps */
-window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomStyles }, /** @type {any} */ out) {
-  Object.assign(out, {
+window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomStyles }, /** @type {UrielPluginsPart} */ out) {
+  /** @type {UrielPluginsPart} */
+  const api = {
     emitPluginEvent, reloadPluginsList, clearCssEditor, stopAllPlugins, renderPluginCards, loadPlugins,
-  });
+  };
+  Object.assign(out, api);
 
   const loadedPlugins = new Map();
   /** @type {{ file: string, event: string, cb: (data: any) => void }[]} */

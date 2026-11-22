@@ -4,11 +4,13 @@
 // app.js uses goes into `out` first, so it can be called while this is still setting up.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps */
-window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, safeJson, showToast, compactCount, getFollowedArtists, getTrackThumbUrl, bindHorizontalWheel, updateRowFade, switchView, getTrackCanonicalId, listThumb, openPlaylistDetail, renderPlaylistCover, computeTasteProfile, normalizeArtistName, getWaveAvoid, isBlocked, openAlbum, warmHomeSongs, openArtistProfile, setFollowedArtists, updateArtistsCount, renderArtistsTab, syncHomeAmbientVisibility, homeReady, getWaveTracks }, /** @type {any} */ out) {
-  Object.assign(out, {
+window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, safeJson, showToast, compactCount, getFollowedArtists, getTrackThumbUrl, bindHorizontalWheel, updateRowFade, switchView, getTrackCanonicalId, listThumb, openPlaylistDetail, renderPlaylistCover, computeTasteProfile, normalizeArtistName, getWaveAvoid, isBlocked, openAlbum, warmHomeSongs, openArtistProfile, setFollowedArtists, updateArtistsCount, renderArtistsTab, syncHomeAmbientVisibility, homeReady, getWaveTracks }, /** @type {UrielHomePart} */ out) {
+  /** @type {UrielHomePart} */
+  const api = {
     isSpotifyHome, renderFollowedArtists, renderMadeForYou, artistPlays, followedArtistCard, fetchFollowedMeta, renderSpotifyHome, applyHomeLayout,
     readDailyMixes: () => readDailyMixes(),
-  });
+  };
+  Object.assign(out, api);
 
   // ---- Home layout: Uriel (the carousel; the default) or Spotify-style rows (Settings > Advanced > Home layout) ----
   // The Spotify layout trades the carousel for quick picks (Liked songs, what you played last), "Made for you"
