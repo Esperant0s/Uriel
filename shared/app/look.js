@@ -2,6 +2,7 @@
 // Settings that change Uriel's look: hiding the titlebar, intensity on the background, icon packs and the icon on
 // the Home button. Part of app.js, which calls this once as it starts, with what it needs.
 window.UrielApp = window.UrielApp || {};
+/** @param {UrielAppDeps} deps */
 window.UrielApp.look = function ({ isPhoneApp, getAdv, setAdv, updateThemeFromState, showToast, escapeHtml, Tm, wireSettingDropdown }) {
   // ---- hide the titlebar (desktop): it slides down when the pointer touches the top edge ----
   (function setupHideTitlebar() {
@@ -11,8 +12,9 @@ window.UrielApp.look = function ({ isPhoneApp, getAdv, setAdv, updateThemeFromSt
     const zone = document.createElement('div');
     zone.id = 'titlebar-reveal-zone';
     document.body.appendChild(zone);
-    let hideTimer = null;
-    const peek = (on) => {
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let hideTimer;
+    const peek = (/** @type {boolean} */ on) => {
       clearTimeout(hideTimer);
       if (on) document.body.classList.add('titlebar-peek');
       else hideTimer = setTimeout(() => document.body.classList.remove('titlebar-peek'), 350);
@@ -21,7 +23,7 @@ window.UrielApp.look = function ({ isPhoneApp, getAdv, setAdv, updateThemeFromSt
     zone.addEventListener('mouseleave', () => peek(false));
     titlebar.addEventListener('mouseenter', () => peek(true));
     titlebar.addEventListener('mouseleave', () => peek(false));
-    const apply = (on) => {
+    const apply = (/** @type {boolean} */ on) => {
       document.body.classList.toggle('hide-titlebar', on && !isPhoneApp);
       if (!on) document.body.classList.remove('titlebar-peek');
       if (btn) btn.classList.toggle('active', on);
@@ -49,6 +51,7 @@ window.UrielApp.look = function ({ isPhoneApp, getAdv, setAdv, updateThemeFromSt
 
   // ---- icon packs: other shapes for the rail and the player controls ----
   var REPEAT_ONE_MARK = '<polyline class="repeat-one-mark" points="10.5 10.5 12.5 9 12.5 15" stroke-linecap="round" stroke-linejoin="round"></polyline>';
+  /** @type {Record<string, Record<string, string>>} */
   var ICON_PACKS = {
     sf: {
       '#nav-discover svg': '<circle cx="12" cy="12" r="9.5"></circle><polygon points="15.5 8.5 13.5 13.5 8.5 15.5 10.5 10.5 15.5 8.5" fill="currentColor"></polygon>',
@@ -99,7 +102,9 @@ window.UrielApp.look = function ({ isPhoneApp, getAdv, setAdv, updateThemeFromSt
       '#volume-icon': '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>'
     }
   };
+  /** @type {Record<string, string>} */
   var ICON_PACK_LABELS = { material: 'Google Symbols (Default)', sf: 'iOS / SF Symbols', lucide: 'Lucide Crisp', solar: 'Solar Duotone' };
+  /** @param {string} pack */
   function applyIconPack(pack) {
     if (!ICON_PACK_LABELS[pack]) pack = 'material';
     document.body.setAttribute('data-icon-pack', pack);
@@ -113,7 +118,7 @@ window.UrielApp.look = function ({ isPhoneApp, getAdv, setAdv, updateThemeFromSt
     });
     const label = document.getElementById('icon-pack-label');
     if (label) label.textContent = ICON_PACK_LABELS[pack];
-    document.querySelectorAll('#icon-pack-menu .m3-dropdown-option').forEach((/** @type {HTMLElement} */ o) => o.classList.toggle('selected', o.dataset.value === pack));
+    /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('#icon-pack-menu .m3-dropdown-option')).forEach((o) => o.classList.toggle('selected', o.dataset.value === pack));
   }
   applyIconPack(localStorage.getItem('uriel_icon_pack') || 'material');
   wireSettingDropdown('icon-pack', 'uriel_icon_pack', 'material', applyIconPack);
@@ -134,13 +139,14 @@ window.UrielApp.look = function ({ isPhoneApp, getAdv, setAdv, updateThemeFromSt
     { id: '11-cassette', label: 'Cassette' },
     { id: '12-invincible', label: 'Invincible' }
   ];
-  var homeIconSrc = (val) => {
+  var homeIconSrc = (/** @type {string} */ val) => {
     if (!val || val === 'classic') return '';
     if (/^(file:|https?:|data:|capacitor:|blob:)/.test(val)) return val;
     const item = HOME_ICONS.find((i) => i.id === val);
     if (!item) return '';
     return item.src || `assets/app-icons/${item.id}.svg`;
   };
+  /** @param {string} val */
   function applyHomeAppIcon(val) {
     const src = homeIconSrc(val);
     const img = /** @type {HTMLImageElement | null} */ (document.getElementById('nav-home-app-icon'));
@@ -151,8 +157,9 @@ window.UrielApp.look = function ({ isPhoneApp, getAdv, setAdv, updateThemeFromSt
       img.onerror = src ? () => { if (img.getAttribute('src') === src) applyHomeAppIcon('classic'); } : null;
     }
     if (nav) nav.classList.toggle('has-app-icon', !!src);
-    document.querySelectorAll('#app-icon-picker-grid .app-icon-option').forEach((/** @type {HTMLElement} */ b) => b.classList.toggle('active', b.dataset.icon === (src ? val : 'classic')));
+    /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('#app-icon-picker-grid .app-icon-option')).forEach((b) => b.classList.toggle('active', b.dataset.icon === (src ? val : 'classic')));
   }
+  /** @param {string} val */
   function setHomeAppIcon(val) {
     localStorage.setItem('uriel_app_icon', val);
     applyHomeAppIcon(val);
@@ -161,6 +168,7 @@ window.UrielApp.look = function ({ isPhoneApp, getAdv, setAdv, updateThemeFromSt
   // The app's own icon follows the Home button's: on computers the window, taskbar and Dock icon (any picture,
   // set again at every start), on phones the home-screen icon (one of the styles: phones can't use a picked
   // image, mobile/app-icon.ts). Phones only when picked: iOS says "You have changed the icon" each time.
+  /** @param {string} val @param {boolean} picked */
   async function syncAppIcon(val, picked) {
     if (window.UrielAppIcon) {
       if (!picked) return;
@@ -175,7 +183,7 @@ window.UrielApp.look = function ({ isPhoneApp, getAdv, setAdv, updateThemeFromSt
     try {
       const png = await new Promise((resolve, reject) => {
         const img = new Image();
-        img.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 256; c.getContext('2d').drawImage(img, 0, 0, 256, 256); resolve(c.toDataURL('image/png')); };
+        img.onload = () => { const c = document.createElement('canvas'); c.width = c.height = 256; /** @type {CanvasRenderingContext2D} */ (c.getContext('2d')).drawImage(img, 0, 0, 256, 256); resolve(c.toDataURL('image/png')); };
         img.onerror = reject;
         img.src = src;
       });
@@ -187,7 +195,7 @@ window.UrielApp.look = function ({ isPhoneApp, getAdv, setAdv, updateThemeFromSt
     if (grid) {
       const compass = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor"></polygon></svg>';
       grid.innerHTML = HOME_ICONS.map((i) => `<button type="button" class="app-icon-option" data-icon="${i.id}" title="${escapeHtml(i.label)}"><div class="app-icon-option-box">${i.id === 'classic' ? compass : `<img src="${homeIconSrc(i.id)}" alt="" draggable="false" loading="lazy">`}</div><span class="app-icon-option-label">${escapeHtml(i.label)}</span></button>`).join('');
-      grid.querySelectorAll('.app-icon-option').forEach((/** @type {HTMLElement} */ b) => b.addEventListener('click', () => setHomeAppIcon(b.dataset.icon)));
+      /** @type {NodeListOf<HTMLElement>} */ (grid.querySelectorAll('.app-icon-option')).forEach((b) => b.addEventListener('click', () => setHomeAppIcon(b.dataset.icon || '')));
     }
     const btnCustom = document.getElementById('btn-pick-custom-home-icon');
     if (btnCustom) {

@@ -25,11 +25,13 @@ function readBuildInfo(dir = path.join(__dirname, '..', 'shared')) {
   }
 }
 
+/** @param {string} dir */
 function writable(dir) {
   try { fs.accessSync(dir, fs.constants.W_OK); return true; } catch (e) { return false; }
 }
 
 // how this copy of Uriel was installed, or null when it can't replace itself
+/** @param {{ build: any, platform?: string, env?: NodeJS.ProcessEnv, exePath?: string, packaged?: boolean }} o */
 function installKind({ build, platform = process.platform, env = process.env, exePath = '', packaged = true }) {
   if (!build || !build.sha || build.sha === 'dev' || !packaged) return null;
   if (platform === 'win32' && build.channel === 'windows' && env.PORTABLE_EXECUTABLE_FILE) return 'portable';
@@ -44,6 +46,7 @@ function installKind({ build, platform = process.platform, env = process.env, ex
 }
 
 // .../Uriel.app/Contents/MacOS/Uriel -> .../Uriel.app
+/** @param {unknown} exePath */
 function macBundle(exePath) {
   const bundle = path.resolve(String(exePath || ''), '..', '..', '..');
   return /\.app$/.test(bundle) ? bundle : null;
@@ -71,7 +74,7 @@ async function download({ fetch, url, sha256, size, dest, onProgress = () => {},
       if (!out.write(value)) await once(out, 'drain');
       onProgress({ received, total });
     }
-    await new Promise((resolve, reject) => out.end((e) => (e ? reject(e) : resolve())));
+    await new Promise((/** @type {(value?: void) => void} */ resolve, reject) => out.end((/** @type {Error | null | undefined} */ e) => (e ? reject(e) : resolve())));
     if (size && received !== size) throw new Error('download incomplete');
     if (hash.digest('hex') !== sha256) throw new Error("download doesn't match GitHub's checksum");
     fs.renameSync(part, dest);
@@ -120,6 +123,7 @@ const APPIMAGE_RELAUNCH = 'i=0; while kill -0 "$1" 2>/dev/null && [ "$i" -lt 100
 
 // the environment for the new AppImage: without what the old one's launcher pointed into its own mount
 // (APPDIR, its libraries and schemas, and those entries in PATH and XDG_DATA_DIRS), which is gone by then
+/** @param {NodeJS.ProcessEnv} env */
 function appImageEnv(env) {
   const mount = env.APPDIR;
   const out = { ...env };
@@ -139,7 +143,10 @@ function register() {
   const build = readBuildInfo();
   const kind = installKind({ build, exePath: app.getPath('exe'), packaged: app.isPackaged });
   const workDir = path.join(os.tmpdir(), 'uriel-update');
+  const appImage = process.env.APPIMAGE || '';
+  /** @type {Promise<{ ok: boolean, version?: string, error?: string }> | null} */
   let downloading = null;
+  /** @type {{ kind: string | null, file: string, version: string } | null} */
   let staged = null; // { kind, file, version } once a verified update is ready to go in
   let applied = false;
 
@@ -149,9 +156,9 @@ function register() {
     if (!kind) return { ok: false, error: 'unsupported' };
     if (staged) return { ok: true, version: staged.version };
     if (!downloading) {
-      downloading = fetchUpdate((p) => { if (!event.sender.isDestroyed()) event.sender.send('updater-progress', p); })
+      downloading = fetchUpdate((/** @type {{ received: number, total: number }} */ p) => { if (!event.sender.isDestroyed()) event.sender.send('updater-progress', p); })
         .then((s) => { staged = s; return { ok: true, version: s.version }; })
-        .catch((e) => ({ ok: false, error: e.message }))
+        .catch((/** @type {Error} */ e) => ({ ok: false, error: e.message }))
         .finally(() => { downloading = null; });
     }
     return downloading;
@@ -165,7 +172,7 @@ function register() {
       return { ok: true };
     } catch (e) {
       applied = false;
-      return { ok: false, error: e.message };
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
   });
 
@@ -174,20 +181,21 @@ function register() {
     if (staged && !applied) { try { apply(false); } catch (e) {} }
   });
 
+  /** @param {(p: { received: number, total: number }) => void} onProgress */
   async function fetchUpdate(onProgress) {
-    const api = updateCore.releaseApi(build.repo, build.channel);
+    const api = /** @type {string} */ (updateCore.releaseApi(build.repo, build.channel));
     const res = await net.fetch(api, { headers: { Accept: 'application/vnd.github+json' } });
     if (!res.ok) throw new Error(`GitHub answered ${res.status}`);
     const rel = await res.json();
     if (!updateCore.isNewer(rel, build, build.channel)) throw new Error('no newer build');
-    const asset = updateCore.installAsset(rel, kind, process.arch);
+    const asset = updateCore.installAsset(rel, String(kind), process.arch);
     if (!asset) throw new Error('no verified download in this release');
-    const version = updateCore.describe(rel, build, build.channel).version;
+    const version = /** @type {{ version: string }} */ (updateCore.describe(rel, build, build.channel)).version;
 
     // the AppImage is downloaded next to the old one, so putting it in place is a rename on the same disk
-    const dir = kind === 'appimage' ? path.dirname(process.env.APPIMAGE) : workDir;
+    const dir = kind === 'appimage' ? path.dirname(appImage) : workDir;
     fs.mkdirSync(dir, { recursive: true });
-    const file = kind === 'appimage' ? path.join(dir, `.${path.basename(process.env.APPIMAGE)}.update`) : path.join(dir, asset.name);
+    const file = kind === 'appimage' ? path.join(dir, `.${path.basename(appImage)}.update`) : path.join(dir, asset.name);
     fs.rmSync(file, { recursive: true, force: true });
     let last = 0;
     await download({
@@ -199,30 +207,33 @@ function register() {
     return { kind, file, version };
   }
 
+  /** @param {string} zip */
   async function unzipApp(zip) {
     const out = path.join(workDir, 'app');
     fs.rmSync(out, { recursive: true, force: true });
-    await new Promise((resolve, reject) => execFile('/usr/bin/ditto', ['-x', '-k', zip, out], (e) => (e ? reject(e) : resolve())));
+    await new Promise((/** @type {(value?: void) => void} */ resolve, reject) => execFile('/usr/bin/ditto', ['-x', '-k', zip, out], (e) => (e ? reject(e) : resolve())));
     fs.rmSync(zip, { force: true });
     const name = fs.readdirSync(out).find((n) => n.endsWith('.app'));
     if (!name) throw new Error('no app in the download');
     return path.join(out, name);
   }
 
+  /** @param {string} cmd @param {string[]} args @param {import('child_process').SpawnOptions} [options] */
   function runDetached(cmd, args, options = {}) {
     spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true, ...options }).unref();
   }
 
+  /** @param {boolean} relaunch */
   function apply(relaunch) {
     applied = true;
-    const { file } = staged;
+    const { file } = /** @type {{ file: string }} */ (staged);
     if (kind === 'appimage') {
-      fs.renameSync(file, process.env.APPIMAGE);
+      fs.renameSync(file, appImage);
       // not app.relaunch(): its helper is this build's binary, inside the AppImage's mount that goes away as Uriel
       // quits, and the new AppImage then can't mount ("Cannot mount AppImage, please check your FUSE setup")
       if (relaunch) {
-        runDetached('/bin/sh', ['-c', APPIMAGE_RELAUNCH, 'uriel-update', String(process.pid), process.env.APPIMAGE],
-          { cwd: path.dirname(process.env.APPIMAGE), env: appImageEnv(process.env) });
+        runDetached('/bin/sh', ['-c', APPIMAGE_RELAUNCH, 'uriel-update', String(process.pid), appImage],
+          { cwd: path.dirname(appImage), env: appImageEnv(process.env) });
         app.exit(0);
       }
       return;
@@ -235,7 +246,7 @@ function register() {
     } else if (kind === 'mac') {
       const script = path.join(workDir, 'apply-update.sh');
       fs.writeFileSync(script, MAC_SCRIPT, { mode: 0o755 });
-      runDetached('/bin/sh', [script, String(process.pid), file, macBundle(app.getPath('exe')), relaunch ? '1' : '0']);
+      runDetached('/bin/sh', [script, String(process.pid), file, /** @type {string} */ (macBundle(app.getPath('exe'))), relaunch ? '1' : '0']);
     }
     if (relaunch) app.exit(0);
   }

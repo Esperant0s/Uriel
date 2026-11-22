@@ -1,50 +1,85 @@
 // @ts-check
 
-(function (global) {
+(function (/** @type {any} */ global) {
   'use strict';
 
   class UrielAudioEngine {
     constructor() {
+      /** @type {AudioContext | null} */
       this.ctx = null;
       // set by app.js on phones: true while the context must not be suspended (the app in the background)
+      /** @type {(() => boolean) | null} */
       this.keepRunning = null;
-      this.mediaSource = null;
+      // the graph's nodes are made together in init(); nothing reads them before graphInitialized
+      /** @type {MediaElementAudioSourceNode} */
+      this.mediaSource = /** @type {any} */ (null);
       this.graphInitialized = false;
 
-      this.stdInput = null;
-      this.dryGain = null;
-      this.distortionNode = null;
-      this.distortionGain = null;
-      this.delayNode = null;
-      this.delayFeedback = null;
-      this.delayGain = null;
-      this.convolverNode = null;
-      this.reverbGain = null;
+      /** @type {GainNode} */
+      this.stdInput = /** @type {any} */ (null);
+      /** @type {GainNode} */
+      this.dryGain = /** @type {any} */ (null);
+      /** @type {WaveShaperNode} */
+      this.distortionNode = /** @type {any} */ (null);
+      /** @type {GainNode} */
+      this.distortionGain = /** @type {any} */ (null);
+      /** @type {DelayNode} */
+      this.delayNode = /** @type {any} */ (null);
+      /** @type {GainNode} */
+      this.delayFeedback = /** @type {any} */ (null);
+      /** @type {GainNode} */
+      this.delayGain = /** @type {any} */ (null);
+      /** @type {ConvolverNode} */
+      this.convolverNode = /** @type {any} */ (null);
+      /** @type {GainNode} */
+      this.reverbGain = /** @type {any} */ (null);
 
-      this.hqInput = null;
-      this.hqCompressor = null;
-      this.hqBass = null;
-      this.hqVocal = null;
-      this.hqAir = null;
-      this.hqSaturation = null;
-      this.hqLimiter = null;
+      /** @type {GainNode} */
+      this.hqInput = /** @type {any} */ (null);
+      /** @type {DynamicsCompressorNode} */
+      this.hqCompressor = /** @type {any} */ (null);
+      /** @type {BiquadFilterNode} */
+      this.hqBass = /** @type {any} */ (null);
+      /** @type {BiquadFilterNode} */
+      this.hqVocal = /** @type {any} */ (null);
+      /** @type {BiquadFilterNode} */
+      this.hqAir = /** @type {any} */ (null);
+      /** @type {WaveShaperNode} */
+      this.hqSaturation = /** @type {any} */ (null);
+      /** @type {DynamicsCompressorNode} */
+      this.hqLimiter = /** @type {any} */ (null);
 
-      this.eqLow = null;
-      this.eqMid = null;
-      this.eqHigh = null;
+      /** @type {BiquadFilterNode} */
+      this.eqLow = /** @type {any} */ (null);
+      /** @type {BiquadFilterNode} */
+      this.eqMid = /** @type {any} */ (null);
+      /** @type {BiquadFilterNode} */
+      this.eqHigh = /** @type {any} */ (null);
+      /** @type {BiquadFilterNode[]} */
       this.eqBands = [];
 
-      this.masterGain = null;
-      this.analyserNode = null;
-      this.normGain = null;
-      this.normLimiter = null;
+      /** @type {GainNode} */
+      this.masterGain = /** @type {any} */ (null);
+      /** @type {AnalyserNode} */
+      this.analyserNode = /** @type {any} */ (null);
+      /** @type {GainNode} */
+      this.normGain = /** @type {any} */ (null);
+      /** @type {DynamicsCompressorNode} */
+      this.normLimiter = /** @type {any} */ (null);
+      /** @type {AnalyserNode | null} */
       this.levelAnalyser = null;
+      /** @type {Float32Array<ArrayBuffer> | null} */
       this.levelBuf = null;
-      this.fadeGain = null;
-      this.bus = null;
+      /** @type {GainNode} */
+      this.fadeGain = /** @type {any} */ (null);
+      /** @type {GainNode} */
+      this.bus = /** @type {any} */ (null);
       this._analyserConnected = false;
+      /** @type {ReturnType<typeof setTimeout> | null} */
       this._suspendTimer = null;
+      /** @type {HTMLMediaElement | null} */
       this._attachedElement = null;
+      /** @type {string | null} */
       this._routingState = null;
 
       this.hqEnabled = false;
@@ -71,7 +106,7 @@
     }
 
 
-    _createReverbImpulse(ctx) {
+    _createReverbImpulse(/** @type {BaseAudioContext} */ ctx) {
       const rate = ctx.sampleRate;
       const len = Math.floor(rate * 0.6);
       const impulse = ctx.createBuffer(2, len, rate);
@@ -112,7 +147,7 @@
     }
 
 
-    init(audioElement) {
+    init(/** @type {HTMLMediaElement} */ audioElement) {
       if (!audioElement) return;
 
       if (this.ctx) {
@@ -225,7 +260,7 @@
 
           const EQ_BAND_FREQS = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
           this.eqBands = EQ_BAND_FREQS.map(f => {
-            const node = this.ctx.createBiquadFilter();
+            const node = /** @type {AudioContext} */ (this.ctx).createBiquadFilter();
             node.type = 'peaking';
             node.frequency.value = f;
             node.Q.value = 1.1;
@@ -370,7 +405,7 @@
     }
 
 
-    setHqEnabled(enabled) {
+    setHqEnabled(/** @type {boolean} */ enabled) {
       this.hqEnabled = enabled;
       if (this.graphInitialized) {
         this._updateRouting();
@@ -378,7 +413,7 @@
       }
     }
 
-    setHqSettings(settings) {
+    setHqSettings(/** @type {any} */ settings) {
       Object.assign(this.hqSettings, settings);
       if (this.graphInitialized) this._applyHqParams();
     }
@@ -430,15 +465,15 @@
     }
 
 
-    setAudioSettings(settings) {
+    setAudioSettings(/** @type {any} */ settings) {
       Object.assign(this.audioSettings, settings);
       this.applySettings();
     }
 
-    setEq(eq) {
+    setEq(/** @type {any} */ eq) {
       if (!eq) return;
       if (!this.audioSettings.eq) this.audioSettings.eq = { low: 0, mid: 0, high: 0 };
-      const clamp = v => Math.max(-12, Math.min(12, typeof v === 'number' ? v : 0));
+      const clamp = (/** @type {unknown} */ v) => Math.max(-12, Math.min(12, typeof v === 'number' ? v : 0));
       if (eq.low !== undefined) this.audioSettings.eq.low = clamp(eq.low);
       if (eq.mid !== undefined) this.audioSettings.eq.mid = clamp(eq.mid);
       if (eq.high !== undefined) this.audioSettings.eq.high = clamp(eq.high);
@@ -448,17 +483,17 @@
       if (this.graphInitialized) this._updateRouting();
     }
 
-    setEqBands(gains) {
+    setEqBands(/** @type {unknown} */ gains) {
       if (!Array.isArray(gains)) return;
       if (!Array.isArray(this.audioSettings.eqBands)) {
         this.audioSettings.eqBands = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
       }
-      const clamp = v => Math.max(-12, Math.min(12, typeof v === 'number' ? v : 0));
+      const clamp = (/** @type {unknown} */ v) => Math.max(-12, Math.min(12, typeof v === 'number' ? v : 0));
       for (let i = 0; i < 10; i++) {
         const val = clamp(gains[i]);
         this.audioSettings.eqBands[i] = val;
         if (this.eqBands && this.eqBands[i]) {
-          if (this.ctx && this.eqBands[i].gain.setTargetAtTime) {
+          if (this.ctx && typeof this.eqBands[i].gain.setTargetAtTime === 'function') {
             this.eqBands[i].gain.setTargetAtTime(val, this.ctx.currentTime, 0.02);
           } else {
             this.eqBands[i].gain.value = val;
@@ -468,7 +503,7 @@
       if (this.graphInitialized) this._updateRouting();
     }
 
-    setVolume(volume, isMuted) {
+    setVolume(/** @type {number} */ volume, /** @type {boolean} */ isMuted) {
       this.volume = volume;
       this.isMuted = isMuted;
       this._applyMasterVolume();
@@ -481,6 +516,7 @@
       return { rate: s.speed, preservePitch: true };
     }
 
+    /** @param {HTMLMediaElement} [audioElement] */
     applySettings(audioElement) {
       const s = this.audioSettings;
 
@@ -560,7 +596,7 @@
       return this.analyserNode;
     }
 
-    setAnalyserEnabled(enabled) {
+    setAnalyserEnabled(/** @type {boolean} */ enabled) {
       this._analyserConnected = !!enabled;
     }
 
@@ -589,50 +625,51 @@
         this._suspendTimer = null;
       }
       if (this.needsResume()) {
-        return this.ctx.resume().catch(() => {});
+        return /** @type {AudioContext} */ (this.ctx).resume().catch(() => {});
       }
     }
 
-    setHidden(hidden) {
+    setHidden(/** @type {boolean} */ hidden) {
       if (this.analyserNode) {
         this.analyserNode.fftSize = hidden ? 32 : 128;
       }
       if (hidden) this.setAnalyserEnabled(false);
     }
 
-    getFrequencyData(buffer) {
+    getFrequencyData(/** @type {Uint8Array<ArrayBuffer>} */ buffer) {
       if (!this._analyserConnected) this.setAnalyserEnabled(true);
       if (this.analyserNode) this.analyserNode.getByteFrequencyData(buffer);
     }
 
-    getTimeDomainData(buffer) {
+    getTimeDomainData(/** @type {Uint8Array<ArrayBuffer>} */ buffer) {
       if (!this._analyserConnected) this.setAnalyserEnabled(true);
       if (this.analyserNode) this.analyserNode.getByteTimeDomainData(buffer);
     }
 
     getLevelDb() {
-      if (!this.levelAnalyser) return -120;
-      this.levelAnalyser.getFloatTimeDomainData(this.levelBuf);
+      const buf = this.levelBuf;
+      if (!this.levelAnalyser || !buf) return -120;
+      this.levelAnalyser.getFloatTimeDomainData(buf);
       let sum = 0;
-      for (let i = 0; i < this.levelBuf.length; i++) sum += this.levelBuf[i] * this.levelBuf[i];
-      const rms = Math.sqrt(sum / this.levelBuf.length);
+      for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+      const rms = Math.sqrt(sum / buf.length);
       return rms > 0 ? 20 * Math.log10(rms) : -120;
     }
 
-    setNormalizeGainDb(db) {
+    setNormalizeGainDb(/** @type {number} */ db) {
       if (!this.normGain || !this.ctx) return;
       this.normGain.gain.setTargetAtTime(Math.pow(10, db / 20), this.ctx.currentTime, 0.8);
     }
 
 
-    isLiveStream(audioElement) {
+    isLiveStream(/** @type {HTMLMediaElement} */ audioElement) {
       if (!audioElement) return false;
       const dur = audioElement.duration;
       return !isFinite(dur) || isNaN(dur);
     }
 
 
-    async renderOffline(sourceBuffer, settingsOverride, hqOverride) {
+    async renderOffline(/** @type {AudioBuffer} */ sourceBuffer, /** @type {any} */ settingsOverride, /** @type {any} */ hqOverride) {
       const s = settingsOverride || { ...this.audioSettings };
       const hq = hqOverride || { ...this.hqSettings };
       const useHq = this.hqEnabled;
@@ -779,7 +816,7 @@
       return offline.startRendering();
     }
 
-    audioBufferToWav(buffer) {
+    audioBufferToWav(/** @type {AudioBuffer} */ buffer) {
       const numChannels = buffer.numberOfChannels;
       const sampleRate = buffer.sampleRate;
       const bitDepth = 16;
@@ -799,7 +836,7 @@
       const arrayBuffer = new ArrayBuffer(totalSize);
       const view = new DataView(arrayBuffer);
 
-      const writeString = (offset, str) => {
+      const writeString = (/** @type {number} */ offset, /** @type {string} */ str) => {
         for (let i = 0; i < str.length; i++) {
           view.setUint8(offset + i, str.charCodeAt(i));
         }

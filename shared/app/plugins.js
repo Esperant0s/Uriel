@@ -2,31 +2,33 @@
 // Plugins (computers: JavaScript files in the plugins folder, run with the Uriel API) and the custom CSS editor
 // (Monaco). Part of app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
-window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomStyles }, out) {
+/** @param {UrielAppDeps} deps */
+window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomStyles }, /** @type {any} */ out) {
   Object.assign(out, {
     emitPluginEvent, reloadPluginsList, clearCssEditor, stopAllPlugins, renderPluginCards, loadPlugins,
   });
 
   const loadedPlugins = new Map();
+  /** @type {{ file: string, event: string, cb: (data: any) => void }[]} */
   const pluginListeners = [];
-  function emitPluginEvent(event, data) {
+  function emitPluginEvent(/** @type {string} */ event, /** @type {unknown} */ data) {
     pluginListeners.filter((l) => l.event === event).forEach((l) => { try { l.cb(data); } catch (e) { reportPluginError(l.file, e); } });
   }
-  function reportPluginError(file, e) {
+  function reportPluginError(/** @type {string} */ file, /** @type {unknown} */ e) {
     console.error('[plugin ' + file + ']', e);
-    showToast(Tm('Plugin {0} failed: {1}', file, e && e.message ? e.message : e), 'error');
+    showToast(Tm('Plugin {0} failed: {1}', file, e instanceof Error && e.message ? e.message : e), 'error');
   }
-  function createPluginApi(p) {
+  function createPluginApi(/** @type {any} */ p) {
     const prefix = `uriel_plugin_${p.file}_`;
     return {
       plugin: { file: p.file, name: p.name, author: p.author, version: p.version },
-      on(event, cb) {
+      on(/** @type {string} */ event, /** @type {(data: any) => void} */ cb) {
         const l = { event, cb, file: p.file };
         pluginListeners.push(l);
         return () => { const i = pluginListeners.indexOf(l); if (i >= 0) pluginListeners.splice(i, 1); };
       },
-      toast: (message, type) => showToast(String(message), type || 'info'),
-      addStyle(css) {
+      toast: (/** @type {unknown} */ message, /** @type {string} */ type) => showToast(String(message), type || 'info'),
+      addStyle(/** @type {string} */ css) {
         const s = document.createElement('style');
         s.dataset.urielCustom = 'plugin';
         s.dataset.plugin = p.file;
@@ -35,16 +37,16 @@ window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomSt
         return () => s.remove();
       },
       storage: {
-        get: (k, d) => { const v = localStorage.getItem(prefix + k); return v === null ? d : JSON.parse(v); },
-        set: (k, v) => localStorage.setItem(prefix + k, JSON.stringify(v))
+        get: (/** @type {string} */ k, /** @type {any} */ d) => { const v = localStorage.getItem(prefix + k); return v === null ? d : JSON.parse(v); },
+        set: (/** @type {string} */ k, /** @type {unknown} */ v) => localStorage.setItem(prefix + k, JSON.stringify(v))
       },
       getTrack: () => state.currentTrack,
       isPlaying: () => state.isPlaying,
       audio: () => el.nativeAudio,
-      query: (sel) => document.querySelector(sel)
+      query: (/** @type {string} */ sel) => document.querySelector(sel)
     };
   }
-  function runPlugin(p) {
+  function runPlugin(/** @type {any} */ p) {
     if (loadedPlugins.has(p.file)) return;
     try {
       const api = createPluginApi(p);
@@ -53,7 +55,7 @@ window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomSt
       loadedPlugins.set(p.file, { stop: result && typeof result.stop === 'function' ? result.stop : null });
     } catch (e) { reportPluginError(p.file, e); }
   }
-  function stopPlugin(p, silent) {
+  function stopPlugin(/** @type {any} */ p, /** @type {boolean} */ silent) {
     const entry = loadedPlugins.get(p.file);
     try { if (entry && entry.stop) entry.stop(); } catch (e) { reportPluginError(p.file, e); }
     for (let i = pluginListeners.length - 1; i >= 0; i--) if (pluginListeners[i].file === p.file) pluginListeners.splice(i, 1);
@@ -62,6 +64,7 @@ window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomSt
     loadedPlugins.delete(p.file);
     if (!silent && !hadStop) showToast(Tm('Restart Uriel to fully unload "{0}"', p.name), 'info');
   }
+  /** @type {any[]} */
   let pluginsCache = [];
   function renderPluginCards() {
     const list = document.getElementById('plugins-list');
@@ -75,15 +78,15 @@ window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomSt
       list.appendChild(empty);
       return;
     }
-    pluginsCache.forEach((p) => {
+    pluginsCache.forEach((/** @type {any} */ p) => {
       const card = document.createElement('div');
       card.className = 'ct-card plugin-card';
       card.innerHTML = '<div class="ct-info"><div class="ct-name"></div><div class="ct-meta"></div></div><button class="btn-icon-pill ct-remove" title="Delete file" data-i18n-attr="title"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button><button class="effect-switch-btn"><span class="thumb"></span></button>';
-      card.querySelector('.ct-name').textContent = p.wrongExt ? p.file : `${p.name}${p.version ? ' v' + p.version : ''}`;
-      card.querySelector('.ct-meta').textContent = p.wrongExt
+      (/** @type {HTMLElement} */ (card.querySelector('.ct-name'))).textContent = p.wrongExt ? p.file : `${p.name}${p.version ? ' v' + p.version : ''}`;
+      (/** @type {HTMLElement} */ (card.querySelector('.ct-meta'))).textContent = p.wrongExt
         ? T('Rename it to end in .js')
         : [p.author && `by ${p.author}`, p.description, p.file].filter(Boolean).join(' · ');
-      const toggle = card.querySelector('.effect-switch-btn');
+      const toggle = /** @type {HTMLElement} */ (card.querySelector('.effect-switch-btn'));
       if (p.wrongExt) toggle.remove();
       toggle.classList.toggle('active', !!p.enabled);
       toggle.addEventListener('click', () => {
@@ -92,7 +95,7 @@ window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomSt
         window.electronAPI.setPluginEnabled(p.file, p.enabled);
         if (p.enabled) runPlugin(p); else stopPlugin(p, false);
       });
-      card.querySelector('.ct-remove').addEventListener('click', () => {
+      (/** @type {HTMLElement} */ (card.querySelector('.ct-remove'))).addEventListener('click', () => {
         stopPlugin(p, true);
         window.electronAPI.removePlugin(p.file);
         pluginsCache = pluginsCache.filter((x) => x.file !== p.file);
@@ -105,22 +108,22 @@ window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomSt
   async function loadPlugins() {
     if (!window.electronAPI || !window.electronAPI.listPlugins) return;
     pluginsCache = await window.electronAPI.listPlugins();
-    pluginsCache.filter((p) => p.enabled).forEach(runPlugin);
+    pluginsCache.filter((/** @type {any} */ p) => p.enabled).forEach(runPlugin);
     renderPluginCards();
   }
   const pluginsApi = window.electronAPI;
   async function reloadPluginsList() {
     if (pluginsApi && pluginsApi.listPlugins) {
       pluginsCache = await pluginsApi.listPlugins();
-      const present = new Set(pluginsCache.map((x) => x.file));
+      const present = new Set(pluginsCache.map((/** @type {any} */ x) => x.file));
       [...loadedPlugins.keys()].filter((f) => !present.has(f)).forEach((f) => stopPlugin({ file: f, name: f }, true));
     }
     renderPluginCards();
   }
   if (pluginsApi && pluginsApi.listPlugins) {
-    document.getElementById('btn-plugins-folder').addEventListener('click', () => pluginsApi.openPluginsFolder());
-    document.getElementById('btn-plugins-reload').addEventListener('click', reloadPluginsList);
-    document.getElementById('btn-add-plugin').addEventListener('click', async () => {
+    (/** @type {HTMLElement} */ (document.getElementById('btn-plugins-folder'))).addEventListener('click', () => pluginsApi.openPluginsFolder());
+    (/** @type {HTMLElement} */ (document.getElementById('btn-plugins-reload'))).addEventListener('click', reloadPluginsList);
+    (/** @type {HTMLElement} */ (document.getElementById('btn-add-plugin'))).addEventListener('click', async () => {
       const added = await pluginsApi.importPlugins();
       if (!added) return;
       pluginsCache = await pluginsApi.listPlugins();
@@ -129,7 +132,9 @@ window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomSt
     });
   }
 
+  /** @type {any} */
   let cssEditorInstance = null;
+  /** @type {Promise<any> | null} */
   let cssEditorLoading = null;
 
   function loadMonaco() {
@@ -154,19 +159,19 @@ window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomSt
     return cssEditorLoading;
   }
 
-  function defineRiffMonacoTheme(monaco) {
+  function defineRiffMonacoTheme(/** @type {any} */ monaco) {
     const cs = getComputedStyle(document.documentElement);
-    const hex = (name, fallback) => { const v = cs.getPropertyValue(name).trim(); return /^#[0-9a-f]{6}$/i.test(v) ? v : fallback; };
+    const hex = (/** @type {string} */ name, /** @type {string} */ fallback) => { const v = cs.getPropertyValue(name).trim(); return /^#[0-9a-f]{6}$/i.test(v) ? v : fallback; };
     const bg = hex('--md-sys-color-surface-container-lowest-solid', '#141218');
     const high = hex('--md-sys-color-surface-container-high-solid', '#2b2930');
     const primary = hex('--md-sys-color-primary', '#d0bcff');
-    const lum = (h) => { const n = parseInt(h.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
+    const lum = (/** @type {string} */ h) => { const n = parseInt(h.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
     monaco.editor.defineTheme('uriel', { base: lum(bg) < 0.5 ? 'vs-dark' : 'vs', inherit: true, rules: [], colors: { 'editor.background': bg, 'editorGutter.background': bg, 'minimap.background': bg, 'editor.lineHighlightBackground': high, 'editorCursor.foreground': primary, 'editor.selectionBackground': primary + '55' } });
     monaco.editor.setTheme('uriel');
   }
 
   async function openCssEditor() {
-    const overlay = document.getElementById('css-editor');
+    const overlay = /** @type {HTMLElement} */ (document.getElementById('css-editor'));
     overlay.classList.remove('hidden');
     let monaco;
     try { monaco = await loadMonaco(); } catch (e) { overlay.classList.add('hidden'); showToast(Tm('Could not load the CSS editor'), 'error'); return; }
@@ -206,7 +211,7 @@ window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomSt
   const btnOpenCssEditor = document.getElementById('btn-open-css-editor');
   if (btnOpenCssEditor) btnOpenCssEditor.addEventListener('click', openCssEditor);
   const btnCssClose = document.getElementById('btn-css-close');
-  if (btnCssClose) btnCssClose.addEventListener('click', () => document.getElementById('css-editor').classList.add('hidden'));
+  if (btnCssClose) btnCssClose.addEventListener('click', () => (/** @type {HTMLElement} */ (document.getElementById('css-editor'))).classList.add('hidden'));
   const btnCssClear = document.getElementById('btn-css-clear');
   if (btnCssClear) btnCssClear.addEventListener('click', () => {
     const current = localStorage.getItem('uriel_custom_css') || '';

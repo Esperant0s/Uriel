@@ -3,14 +3,15 @@
 // settings), lyrics under the mini player on computers, which site is asked first (LRCLIB or Genius) and word
 // timings for word-by-word karaoke. Part of app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
-window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPositionState, rgbToHsl, hexToRgb, hslToHex, getTrackThumbUrl, isPhoneApp, resetTvIdleTimer, getAdv, getLineStartTime, getLineEndTime, escapeHtml, fetchAndApplyTranslation, renderLyricsView, updateSyncedLyricsHighlight, loadSyncedLyrics, wireSettingDropdown, getTvIdleTimer }, out) {
+/** @param {UrielAppDeps} deps */
+window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPositionState, rgbToHsl, hexToRgb, hslToHex, getTrackThumbUrl, isPhoneApp, resetTvIdleTimer, getAdv, getLineStartTime, getLineEndTime, escapeHtml, fetchAndApplyTranslation, renderLyricsView, updateSyncedLyricsHighlight, loadSyncedLyrics, wireSettingDropdown, getTvIdleTimer }, /** @type {any} */ out) {
   Object.assign(out, {
     miniLyricsShown, updateMiniLyricsHighlight, renderMiniLyrics, lyricsSourcePref, fetchAndUpgradeWords, lyricWordSpans, lineTimedWords, timedWordIndex, setTvkAmbient, syncTvkAmbientPlayback, syncTvkProgress,
   });
 
   // ---- fullscreen karaoke: seek bar, moving cover colors behind the lyrics, settings from the top edge ----
   var tvkSeekDragging = false;
-  function syncTvkProgress(cur, dur) {
+  function syncTvkProgress(/** @type {number} */ cur, /** @type {number} */ dur) {
     const slider = /** @type {HTMLInputElement | null} */ (document.getElementById('tvk-seek-slider'));
     const curEl = document.getElementById('tvk-time-current');
     const durEl = document.getElementById('tvk-time-duration');
@@ -50,9 +51,10 @@ window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPosit
     slider.addEventListener('mousemove', (e) => e.stopPropagation());
   })();
 
+  /** @type {string | null} */
   var tvkAmbientCover = null;
   var tvkPaletteCache = new Map();
-  function extractCoverPalette(src) {
+  function extractCoverPalette(/** @type {string} */ src) {
     const mono = [[22, 22, 26], [34, 34, 40], [48, 48, 56], [28, 28, 34], [42, 42, 50], [18, 18, 22], [58, 58, 68], [30, 30, 36], [40, 40, 46], [25, 25, 30]];
     if (!src) return Promise.resolve(mono);
     if (tvkPaletteCache.has(src)) return Promise.resolve(tvkPaletteCache.get(src));
@@ -65,7 +67,7 @@ window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPosit
           const c = document.createElement('canvas');
           c.width = 40;
           c.height = 40;
-          const ctx = c.getContext('2d');
+          const ctx = /** @type {CanvasRenderingContext2D} */ (c.getContext('2d'));
           ctx.drawImage(img, 0, 0, 40, 40);
           const data = ctx.getImageData(0, 0, 40, 40).data;
           const colorful = [];
@@ -78,6 +80,7 @@ window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPosit
             for (let k = 0; k < 10; k++) { const v = 18 + Math.round((k / 9) * 52); out.push([v, v, Math.min(255, v + 3)]); }
           } else {
             colorful.sort((a, b) => b.weight - a.weight);
+            /** @type {any[]} */
             const picked = [];
             for (let minHue = 22; picked.length < 6 && minHue >= 4; minHue -= 6) {
               for (const p of colorful) {
@@ -102,12 +105,12 @@ window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPosit
       img.src = src;
     });
   }
-  function paintTvkLayer(canvas, colors, seed) {
+  function paintTvkLayer(/** @type {HTMLCanvasElement} */ canvas, /** @type {number[][]} */ colors, /** @type {number} */ seed) {
     const ctx = canvas && canvas.getContext('2d');
     if (!ctx) return;
     const w = canvas.width;
     const h = canvas.height;
-    const rgb = (c) => `${c[0]}, ${c[1]}, ${c[2]}`;
+    const rgb = (/** @type {number[]} */ c) => `${c[0]}, ${c[1]}, ${c[2]}`;
     const c0 = colors[0];
     const base = ctx.createLinearGradient(0, 0, w, h);
     base.addColorStop(0, `rgb(${rgb(c0)})`);
@@ -143,7 +146,7 @@ window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPosit
     paintTvkLayer(a, colors, 0);
     paintTvkLayer(b, colors, 5);
   }
-  function setTvkAmbient(on) {
+  function setTvkAmbient(/** @type {boolean} */ on) {
     const tv = el.tvKaraoke || document.getElementById('tv-karaoke');
     if (!tv) return;
     tv.classList.toggle('tvk-ambient-on', !!on);
@@ -162,7 +165,8 @@ window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPosit
     const panel = document.getElementById('tvk-panel');
     const btnSettings = document.getElementById('btn-tvk-settings');
     if (!zone || !panel || isPhoneApp) return;
-    let closeTimer = null;
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let closeTimer;
     const open = () => {
       clearTimeout(closeTimer);
       if (panel.classList.contains('open')) return;
@@ -205,7 +209,7 @@ window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPosit
     if (!lines.length) { box.innerHTML = '<div class="mini-lyrics-empty">No lyrics</div>'; return; }
     box.innerHTML = '';
     const words = getAdv('karaoke_words', true) && state.lyricsMode === 'word';
-    lines.forEach((line, index) => {
+    lines.forEach((/** @type {any} */ line, /** @type {number} */ index) => {
       const div = document.createElement('div');
       div.className = 'mini-lyric-line';
       div.id = `mini-lyric-line-${index}`;
@@ -217,7 +221,7 @@ window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPosit
     });
     if (miniLyricsShown() && el.nativeAudio) updateMiniLyricsHighlight(el.nativeAudio.currentTime || 0);
   }
-  function updateMiniLyricsHighlight(currentTime) {
+  function updateMiniLyricsHighlight(/** @type {number} */ currentTime) {
     const lines = state.syncedLyrics || [];
     const box = document.getElementById('mini-lyrics-container');
     if (!box || !lines.length || !state.isWindowVisible || !miniLyricsShown()) return;
@@ -286,7 +290,7 @@ window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPosit
   function lyricsSourcePref() { return localStorage.getItem('uriel_lyrics_source') === 'genius' ? 'genius' : 'lrclib'; }
   var CJK_WORD = /[぀-ヿ㐀-䶿一-鿿가-힯]/;
   // the words to show for a line, with their times when the line has them (null: no times)
-  function lineTimedWords(line) {
+  function lineTimedWords(/** @type {any} */ line) {
     if (!line || !Array.isArray(line.words) || !line.words.length || !window.UrielLyricsSources) return null;
     if (line._timedFor !== line.words) {
       line._timed = window.UrielLyricsSources.timedWords(line.text, line.words);
@@ -295,20 +299,20 @@ window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPosit
     return line._timed;
   }
   // the word being sung at time t: the first one that hasn't finished yet
-  function timedWordIndex(timed, t) {
+  function timedWordIndex(/** @type {any} */ timed, /** @type {number} */ t) {
     for (let i = 0; i < timed.length; i++) if (t < timed[i].end) return i;
     return timed.length;
   }
-  function lyricWordSpans(line) {
+  function lyricWordSpans(/** @type {any} */ line) {
     const timed = lineTimedWords(line);
-    const words = timed ? timed.map((w) => w.text) : String(line.text || '').replace(/<[^>]+>/g, '').trim().split(/\s+/).filter(Boolean);
-    return words.map((w, i) => {
+    const words = timed ? timed.map((/** @type {any} */ w) => w.text) : String(line.text || '').replace(/<[^>]+>/g, '').trim().split(/\s+/).filter(Boolean);
+    return words.map((/** @type {any} */ w, /** @type {number} */ i) => {
       const sep = i === 0 || (CJK_WORD.test(w) && CJK_WORD.test(words[i - 1])) ? '' : ' ';
       return `${sep}<span class="lyric-word" data-word-idx="${i}">${escapeHtml(w)}</span>`;
     }).join('');
   }
   var wordsSessionCache = new Map();
-  async function fetchAndUpgradeWords(title, artist, token) {
+  async function fetchAndUpgradeWords(/** @type {string} */ title, /** @type {string} */ artist, /** @type {number} */ token) {
     const source = localStorage.getItem('uriel_word_source') || 'auto';
     const S = window.UrielLyricsSources;
     if (source === 'estimate' || !S || state.isCustomLyrics || !getAdv('online_lyrics', true)) return;
@@ -317,7 +321,7 @@ window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPosit
     const lines = state.syncedLyrics;
     if (!lines.length) return;
     // "Auto" keeps word times the lyrics brought themselves
-    if (source === 'auto' && lines.some((l) => Array.isArray(l.words) && l.words.length)) return;
+    if (source === 'auto' && lines.some((/** @type {any} */ l) => Array.isArray(l.words) && l.words.length)) return;
     const dur = Math.round(Number(state.currentTrack && state.currentTrack.duration) || (el.nativeAudio && el.nativeAudio.duration) || 0);
     const key = `${artist}\u0000${title}`;
     let data = wordsSessionCache.get(key);
@@ -333,15 +337,15 @@ window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPosit
       if (wordsSessionCache.size > 100) wordsSessionCache.delete(wordsSessionCache.keys().next().value);
     }
     if (token !== state.loadToken || state.syncedLyrics !== lines || !data.lines) return;
-    if (lines.some((l) => l.time >= 0)) {
+    if (lines.some((/** @type {any} */ l) => l.time >= 0)) {
       const aligned = S.alignWordTimings(lines, data.lines);
       if (!aligned) return;
-      aligned.forEach((words, i) => { if (words) lines[i].words = words; });
+      aligned.forEach((/** @type {any} */ words, /** @type {number} */ i) => { if (words) lines[i].words = words; });
     } else {
       // plain lyrics: NetEase's timed lines take their place, when they are the same lyrics
-      const ok = data.lines.filter((wl) => lines.some((l) => S.lineSimilarity(l.text, wl.text) >= 0.6)).length / data.lines.length >= 0.6;
+      const ok = data.lines.filter((/** @type {any} */ wl) => lines.some((/** @type {any} */ l) => S.lineSimilarity(l.text, wl.text) >= 0.6)).length / data.lines.length >= 0.6;
       if (!ok) return;
-      state.syncedLyrics = data.lines.map((l) => ({ time: l.start, text: l.text, words: l.words }));
+      state.syncedLyrics = data.lines.map((/** @type {any} */ l) => ({ time: l.start, text: l.text, words: l.words }));
       window.dispatchEvent(new Event('uriel:lyrics'));
       if (el.lyricsStatus) el.lyricsStatus.textContent = 'Synced';
       if (state.trActive) fetchAndApplyTranslation();

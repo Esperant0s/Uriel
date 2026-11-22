@@ -1,4 +1,5 @@
 // @ts-check
+/** @param {unknown} value */
 function normalizeSearch(value) {
   if (typeof value !== 'string') return '';
   return value

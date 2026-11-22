@@ -9,9 +9,9 @@ const STATE_PATH = path.join(PLUGINS_DIR, 'plugins.json');
 const MAX_BYTES = 1024 * 1024;
 // any file name ending in .js (#38): only plain letters were allowed before, so "plugin (1).js", "Plugin.JS" or a
 // name in another alphabet was skipped without a word. No slashes or control characters, so it stays in the folder.
-const safeName = (n) => /^[^\x00-\x1f/\\:*?"<>|]+\.js$/i.test(String(n)) && !String(n).startsWith('.');
+const safeName = (/** @type {unknown} */ n) => /^[^\x00-\x1f/\\:*?"<>|]+\.js$/i.test(String(n)) && !String(n).startsWith('.');
 // Notepad on Windows saves "plugin.js" as "plugin.js.txt" while hiding the .txt
-const txtName = (n) => /\.js\.txt$/i.test(String(n)) && safeName(String(n).slice(0, -4));
+const txtName = (/** @type {unknown} */ n) => /\.js\.txt$/i.test(String(n)) && safeName(String(n).slice(0, -4));
 
 const EXAMPLE = '/**\n * @name Hello plugin\n * @author Uriel\n * @version 1.0.0\n * @description Shows a message when the track changes. Edit or delete this file.\n */\nconst off = Uriel.on(\'trackchange\', (track) => Uriel.toast(\'Now playing: \' + track.title));\nreturn { stop() { off(); } };\n';
 
@@ -28,15 +28,17 @@ function readState() {
   } catch (e) { return {}; }
 }
 
+/** @param {Record<string, boolean>} enabled */
 function writeState(enabled) {
   ensureDir();
   fs.writeFileSync(STATE_PATH, JSON.stringify({ enabled }));
 }
 
+/** @param {string} code @param {string} fallbackName */
 function parseMeta(code, fallbackName) {
   const block = code.match(/\/\*[\s\S]*?\*\//);
   const text = block ? block[0] : '';
-  const pick = (key) => {
+  const pick = (/** @type {string} */ key) => {
     const m = text.match(new RegExp('@' + key + '[ \\t]+([^\\r\\n*]+)'));
     return m ? m[1].trim() : '';
   };
@@ -57,6 +59,7 @@ function listAll() {
   }).filter(Boolean);
 }
 
+/** @param {() => Electron.BrowserWindow | null} getWindow */
 function register(getWindow) {
   ipcMain.handle('plugins-list', () => listAll());
   ipcMain.on('plugins-set-enabled', (e, file, on) => {
@@ -76,7 +79,7 @@ function register(getWindow) {
   });
   ipcMain.handle('plugins-import', async () => {
     ensureDir();
-    const result = await dialog.showOpenDialog(getWindow(), { title: 'Add plugin', properties: ['openFile', 'multiSelections'], filters: [{ name: 'JavaScript plugin', extensions: ['js'] }] });
+    const result = await dialog.showOpenDialog(/** @type {Electron.BrowserWindow} */ (getWindow()), { title: 'Add plugin', properties: ['openFile', 'multiSelections'], filters: [{ name: 'JavaScript plugin', extensions: ['js'] }] });
     if (result.canceled) return 0;
     let added = 0;
     const s = readState();

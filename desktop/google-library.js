@@ -15,10 +15,10 @@ const YT_ID = /^[A-Za-z0-9_-]{11}$/;
 const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const LIMITS = { likePages: 60, playlists: 200, playlistPages: 40, tracksPerList: 5000, requests: 1500 };
 
-const partitionFor = (profile) => (PROFILE_RE.test(String(profile || '')) && profile !== 'default' ? `persist:muriel-google-${profile}` : 'persist:muriel-google');
+const partitionFor = (/** @type {string} */ profile) => (PROFILE_RE.test(String(profile || '')) && profile !== 'default' ? `persist:muriel-google-${profile}` : 'persist:muriel-google');
 
 const readySessions = new WeakSet();
-function googleSession(profile) {
+function googleSession(/** @type {string} */ profile) {
   const s = session.fromPartition(partitionFor(profile));
   if (!readySessions.has(s)) {
     readySessions.add(s);
@@ -30,7 +30,7 @@ function googleSession(profile) {
   return s;
 }
 
-async function sapisid(s) {
+async function sapisid(/** @type {any} */ s) {
   try {
     const cookies = await s.cookies.get({ name: 'SAPISID' });
     const c = Array.isArray(cookies) ? cookies.find((x) => x && x.value && /(^|\.)youtube\.com$|(^|\.)google\.com$/.test(String(x.domain || '').replace(/^\./, ''))) : null;
@@ -38,18 +38,18 @@ async function sapisid(s) {
   } catch (e) { return ''; }
 }
 
-const clip = (s, n) => (typeof s === 'string' || typeof s === 'number' ? String(s) : '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
-const httpsUrl = (s) => { try { const u = new URL(String(s)); return u.protocol === 'https:' && String(s).length < 2048 ? u.href : ''; } catch (e) { return ''; } };
+const clip = (/** @type {any} */ s, /** @type {any} */ n) => (typeof s === 'string' || typeof s === 'number' ? String(s) : '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
+const httpsUrl = (/** @type {any} */ s) => { try { const u = new URL(String(s)); return u.protocol === 'https:' && String(s).length < 2048 ? u.href : ''; } catch (e) { return ''; } };
 
-function text(node) {
+function text(/** @type {any} */ node) {
   if (!node) return '';
   if (typeof node === 'string') return node;
   if (typeof node.simpleText === 'string') return node.simpleText;
-  if (Array.isArray(node.runs)) return node.runs.map((r) => (r && r.text) || '').join('');
+  if (Array.isArray(node.runs)) return node.runs.map((/** @type {any} */ r) => (r && r.text) || '').join('');
   return '';
 }
 
-function seconds(v) {
+function seconds(/** @type {any} */ v) {
   if (typeof v === 'number') return v;
   const m = String(v || '').trim().match(/^(?:(\d+):)?(\d+):(\d{2})$/);
   if (m) return (m[1] ? Number(m[1]) * 3600 : 0) + Number(m[2]) * 60 + Number(m[3]);
@@ -58,7 +58,7 @@ function seconds(v) {
 }
 
 // walks a youtubei answer without recursing forever (the answers are deep but finite; this caps it anyway)
-function walk(root, visit) {
+function walk(/** @type {any} */ root, /** @type {(node: any) => boolean | void} */ visit) {
   const stack = [root];
   const seen = new Set();
   let steps = 0;
@@ -76,32 +76,33 @@ function walk(root, visit) {
   }
 }
 
-function find(root, pick) {
+function find(/** @type {any} */ root, /** @type {(node: any) => any} */ pick) {
+  /** @type {any} */
   let out = null;
-  walk(root, (n) => { if (out) return false; const v = pick(n); if (v) { out = v; return false; } return true; });
+  walk(root, (/** @type {any} */ n) => { if (out) return false; const v = pick(n); if (v) { out = v; return false; } return true; });
   return out;
 }
 
-const continuationOf = (root) => find(root, (n) => {
+const continuationOf = (/** @type {any} */ root) => find(root, (/** @type {any} */ n) => {
   if (n.continuationCommand && typeof n.continuationCommand.token === 'string') return n.continuationCommand.token;
   if (n.nextContinuationData && typeof n.nextContinuationData.continuation === 'string') return n.nextContinuationData.continuation;
   return null;
 });
 
-const thumbOf = (thumbs) => (Array.isArray(thumbs) && thumbs.length ? httpsUrl(thumbs[thumbs.length - 1] && thumbs[thumbs.length - 1].url) : '');
+const thumbOf = (/** @type {any} */ thumbs) => (Array.isArray(thumbs) && thumbs.length ? httpsUrl(thumbs[thumbs.length - 1] && thumbs[thumbs.length - 1].url) : '');
 
-function tracksIn(root, out, seen) {
-  walk(root, (n) => {
+function tracksIn(/** @type {any} */ root, /** @type {any[]} */ out, /** @type {Set<string>} */ seen) {
+  walk(root, (/** @type {any} */ n) => {
     const r = n.musicResponsiveListItemRenderer;
     if (r) {
-      const vid = (r.playlistItemData && r.playlistItemData.videoId) || find(r, (x) => (x.watchEndpoint && typeof x.watchEndpoint.videoId === 'string' ? x.watchEndpoint.videoId : null));
+      const vid = (r.playlistItemData && r.playlistItemData.videoId) || find(r, (/** @type {any} */ x) => (x.watchEndpoint && typeof x.watchEndpoint.videoId === 'string' ? x.watchEndpoint.videoId : null));
       if (YT_ID.test(vid || '') && !seen.has(vid)) {
         seen.add(vid);
-        const cols = Array.isArray(r.flexColumns) ? r.flexColumns.map((c) => c && c.musicResponsiveListItemFlexColumnRenderer && c.musicResponsiveListItemFlexColumnRenderer.text) : [];
+        const cols = Array.isArray(r.flexColumns) ? r.flexColumns.map((/** @type {any} */ c) => c && c.musicResponsiveListItemFlexColumnRenderer && c.musicResponsiveListItemFlexColumnRenderer.text) : [];
         const runs = cols[1] && Array.isArray(cols[1].runs) ? cols[1].runs : [];
         const artist = runs.length ? (runs[0].text || '') : text(cols[1]);
         let duration = 0;
-        walk(r, (x) => {
+        walk(r, (/** @type {any} */ x) => {
           if (duration) return false;
           if (Array.isArray(x.runs)) for (const run of x.runs) if (run && /^\d+:\d{2}(?::\d{2})?$/.test(String(run.text || '').trim())) { duration = seconds(run.text); break; }
           return true;
@@ -122,11 +123,11 @@ function tracksIn(root, out, seen) {
   });
 }
 
-function playlistsIn(root, out, seen) {
-  walk(root, (n) => {
+function playlistsIn(/** @type {any} */ root, /** @type {any[]} */ out, /** @type {Set<string>} */ seen) {
+  walk(root, (/** @type {any} */ n) => {
     const r = n.musicTwoRowItemRenderer;
     if (r) {
-      const id = (r.navigationEndpoint && r.navigationEndpoint.browseEndpoint && r.navigationEndpoint.browseEndpoint.browseId) || find(r, (x) => (x.browseEndpoint && typeof x.browseEndpoint.browseId === 'string' ? x.browseEndpoint.browseId : null));
+      const id = (r.navigationEndpoint && r.navigationEndpoint.browseEndpoint && r.navigationEndpoint.browseEndpoint.browseId) || find(r, (/** @type {any} */ x) => (x.browseEndpoint && typeof x.browseEndpoint.browseId === 'string' ? x.browseEndpoint.browseId : null));
       if (/^(?:VL)?(?:PL|LM|RD|OL|FL)[A-Za-z0-9_-]{0,60}$|^VL[A-Za-z0-9_-]{2,60}$/.test(id || '') && !seen.has(id)) {
         seen.add(id);
         out.push({ id, name: text(r.title), cover: thumbOf(r.thumbnailRenderer && r.thumbnailRenderer.musicThumbnailRenderer && r.thumbnailRenderer.musicThumbnailRenderer.thumbnail && r.thumbnailRenderer.musicThumbnailRenderer.thumbnail.thumbnails) });
@@ -147,7 +148,7 @@ function playlistsIn(root, out, seen) {
   });
 }
 
-const toTrack = (t) => ({
+const toTrack = (/** @type {any} */ t) => ({
   id: t.id,
   title: clip(t.title, 300) || 'Unknown',
   artist: clip(t.artist, 300),
@@ -157,7 +158,7 @@ const toTrack = (t) => ({
   platform: 'youtube',
 });
 
-async function importLibrary(opts) {
+async function importLibrary(/** @type {any} */ opts) {
   const profile = opts && opts.profile;
   const ytm = opts && opts.platform === 'ytmusic';
   const doLikes = !opts || opts.doLikes !== false;
@@ -169,7 +170,7 @@ async function importLibrary(opts) {
   const origin = ytm ? 'https://music.youtube.com' : 'https://www.youtube.com';
   const client = ytm ? { clientName: 'WEB_REMIX', clientVersion: '1.20240401.01.00', hl: 'en' } : { clientName: 'WEB', clientVersion: '2.20240401.01.00', hl: 'en' };
   let requests = 0;
-  async function browse(body) {
+  async function browse(/** @type {any} */ body) {
     if (++requests > LIMITS.requests) throw new Error('The library is too big to read at once');
     const ts = Math.floor(Date.now() / 1000);
     const hash = crypto.createHash('sha1').update(`${ts} ${sid} ${origin}`).digest('hex');
@@ -187,7 +188,8 @@ async function importLibrary(opts) {
     if (raw.length > 30e6) throw new Error('YouTube sent too much data');
     return JSON.parse(raw);
   }
-  async function allTracks(browseId, maxPages) {
+  async function allTracks(/** @type {string} */ browseId, /** @type {number} */ maxPages) {
+    /** @type {any[]} */
     const out = [];
     const seen = new Set();
     let data = await browse({ browseId });
@@ -208,6 +210,7 @@ async function importLibrary(opts) {
     const likes = doLikes ? await allTracks(ytm ? 'VLLM' : 'VLLL', LIMITS.likePages) : [];
     const playlists = [];
     if (doPlaylists) {
+      /** @type {any[]} */
       const found = [];
       const seen = new Set();
       let data = await browse({ browseId: ytm ? 'FEmusic_liked_playlists' : 'FEplaylist_aggregation' });
@@ -225,18 +228,19 @@ async function importLibrary(opts) {
       for (const pl of found.slice(0, LIMITS.playlists)) {
         const bare = pl.id.replace(/^VL/, '');
         if (bare === 'LM' || bare === 'LL' || bare === 'WL' || bare.startsWith('RD')) continue;
+        /** @type {any[]} */
         let tracks = [];
-        try { tracks = await allTracks(`VL${bare}`, LIMITS.playlistPages); } catch (e) { if (e.code === 'not_logged_in') throw e; }
+        try { tracks = await allTracks(`VL${bare}`, LIMITS.playlistPages); } catch (/** @type {any} */ e) { if (e.code === 'not_logged_in') throw e; }
         playlists.push({ id: bare, name: clip(pl.name, 100) || 'YouTube playlist', cover: pl.cover, tracks });
       }
     }
     return { success: true, likes, playlists };
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     return { success: false, code: e && e.code, error: clip((e && e.message) || "Couldn't read the library", 200) };
   }
 }
 
-function login(parent, profile) {
+function login(/** @type {Electron.BrowserWindow | null} */ parent, /** @type {string} */ profile) {
   const s = googleSession(profile);
   return new Promise((resolve) => {
     let finished = false;
@@ -254,7 +258,7 @@ function login(parent, profile) {
     // help links and the like open in the browser; the login itself only ever shows https pages
     wc.setWindowOpenHandler(({ url }) => { try { if (new URL(url).protocol === 'https:') shell.openExternal(url); } catch (e) {} return { action: 'deny' }; });
     wc.on('will-navigate', (e, url) => { try { if (new URL(url).protocol !== 'https:') e.preventDefault(); } catch (x) { e.preventDefault(); } });
-    const finish = (loggedIn) => {
+    const finish = (/** @type {boolean} */ loggedIn) => {
       if (finished) return;
       finished = true;
       clearInterval(timer);
@@ -285,7 +289,7 @@ function login(parent, profile) {
 // account session, which a file on disk has no reason to hold.
 const YT_COOKIE_DOMAIN = /(^|\.)youtube\.com$/;
 
-function netscapeCookies(cookies) {
+function netscapeCookies(/** @type {Electron.Cookie[]} */ cookies) {
   const lines = ['# Netscape HTTP Cookie File', '# Written by Uriel for yt-dlp. It holds your YouTube sign-in: keep it private.', ''];
   for (const c of cookies || []) {
     const domain = String((c && c.domain) || '');
@@ -296,7 +300,7 @@ function netscapeCookies(cookies) {
   return `${lines.join('\n')}\n`;
 }
 
-async function writeYoutubeCookies(profile, file) {
+async function writeYoutubeCookies(/** @type {string} */ profile, /** @type {string} */ file) {
   const s = googleSession(profile);
   if (!(await sapisid(s))) return false;
   const tmp = `${file}.${process.pid}.tmp`;
@@ -310,7 +314,7 @@ function playbackSignin() {
   const file = path.join(DATA_DIR, 'youtube-cookies.txt');
   const server = () => require('../shared/server');
   const get = () => { const v = readStartupConfig().ytPlaybackSignin; return v && typeof v === 'object' ? v : {}; };
-  const use = (on) => { try { server().setYtDlpCookies(on && fs.existsSync(file) ? file : null); } catch (e) {} };
+  const use = (/** @type {boolean} */ on) => { try { server().setYtDlpCookies(on && fs.existsSync(file) ? file : null); } catch (e) {} };
   const drop = () => { use(false); try { fs.rmSync(file, { force: true }); } catch (e) {} };
   // at start: the file from last time (yt-dlp keeps it fresh), or a new one from the login if it went missing
   (async () => {
@@ -320,11 +324,11 @@ function playbackSignin() {
     use(true);
   })();
   return {
-    async status(profile) {
+    async status(/** @type {string} */ profile) {
       const cfg = get();
       return { enabled: !!cfg.enabled, profile: cfg.profile || 'default', loggedIn: !!(await sapisid(googleSession(cfg.enabled ? cfg.profile : profile))) };
     },
-    async set(enabled, profile) {
+    async set(/** @type {boolean} */ enabled, /** @type {string} */ profile) {
       if (!enabled) { writeStartupConfig({ ytPlaybackSignin: { enabled: false } }); drop(); return this.status(profile); }
       if (!PROFILE_RE.test(String(profile || ''))) profile = 'default';
       let ok = false;
@@ -334,7 +338,7 @@ function playbackSignin() {
       return { ...(await this.status(profile)), error: ok ? '' : 'Sign in to YouTube first' };
     },
     // a new login (or logout) of the profile that plays: its cookies replace the old ones
-    async loginChanged(profile, loggedIn) {
+    async loginChanged(/** @type {string} */ profile, /** @type {boolean} */ loggedIn) {
       const cfg = get();
       if (!cfg.enabled || (cfg.profile || 'default') !== (profile || 'default')) return;
       if (!loggedIn) { writeStartupConfig({ ytPlaybackSignin: { enabled: false } }); drop(); return; }
@@ -343,7 +347,7 @@ function playbackSignin() {
   };
 }
 
-function register(getMainWindow) {
+function register(/** @type {() => Electron.BrowserWindow | null} */ getMainWindow) {
   for (const ch of ['google-auth-status', 'google-login', 'google-logout', 'google-import-library', 'yt-signin-status', 'yt-signin-set']) ipcMain.removeHandler(ch);
   const signin = playbackSignin();
   ipcMain.handle('google-auth-status', async (e, profile) => ({ loggedIn: !!(await sapisid(googleSession(profile))) }));

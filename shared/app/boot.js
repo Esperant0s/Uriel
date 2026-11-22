@@ -37,9 +37,9 @@
   try {
     const orig = Storage.prototype.setItem;
     let reportedAt = 0;
-    Storage.prototype.setItem = function setItem(key, value) {
+    Storage.prototype.setItem = function setItem(/** @type {string} */ key, /** @type {string} */ value) {
       try { return orig.call(this, key, value); } catch (e) {
-        if (!e || (e.name !== 'QuotaExceededError' && e.code !== 22 && e.code !== 1014)) throw e;
+        if (!(e instanceof DOMException) || (e.name !== 'QuotaExceededError' && e.code !== 22 && e.code !== 1014)) throw e;
         try { if (key !== 'uriel_debug_log') this.removeItem('uriel_debug_log'); } catch (_) {}
         try { if (key !== 'uriel_i18n_snap') this.removeItem('uriel_i18n_snap'); } catch (_) {}
         try { if (window.UrielEncore && window.UrielEncore.compact) window.UrielEncore.compact(90); } catch (_) {}
@@ -54,6 +54,7 @@
 (() => {
   let lastErrLogReset = Date.now();
   let errLogCount = 0;
+  /** @param {string} level @param {string} message @param {string | null} [stack] */
   function reportError(level, message, stack) {
     if (!window.electronAPI || typeof window.electronAPI.logError !== 'function') return;
     const now = Date.now();
@@ -99,7 +100,7 @@
   // a hidden window gets no frames: give up on time instead
   setTimeout(finish, Math.max(0, MAX_MS - performance.now()));
   let last = 0, smooth = 0;
-  const tick = (now) => {
+  const tick = (/** @type {number} */ now) => {
     if (!splash.isConnected) return;
     if (last) smooth = now - last > 50 ? 0 : smooth + (now - last);
     last = now;
@@ -114,9 +115,9 @@
 function libraryUnavailableScreen() {
   const L = window.UrielLibraryStore;
   if (!L || !L.store || L.store.mode() !== 'unavailable') return Promise.resolve();
-  const T = (s) => (window.UrielI18n && window.UrielI18n.T ? window.UrielI18n.T(s) : s);
+  const T = (/** @type {string} */ s) => (window.UrielI18n && window.UrielI18n.T ? window.UrielI18n.T(s) : s);
   document.getElementById('splash')?.remove();
-  return new Promise((resolve) => {
+  return new Promise((/** @type {(value?: void) => void} */ resolve) => {
     const box = document.createElement('div');
     box.id = 'library-unavailable';
     box.setAttribute('role', 'alertdialog');

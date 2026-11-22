@@ -9,7 +9,7 @@
   try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { saved = null; }
   if (!saved || typeof saved !== 'object') return;
   const root = document.documentElement;
-  const styleOf = (el, css) => {
+  const styleOf = (/** @type {HTMLElement} */ el, /** @type {string} */ css) => {
     if (typeof css !== 'string' || !css) return;
     const tmp = document.createElement('div');
     tmp.style.cssText = css;

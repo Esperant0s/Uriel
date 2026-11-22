@@ -20,7 +20,7 @@
 // Right-to-left languages keep Uriel's layout as it is (mirroring a layout built left to right breaks more than
 // it fixes); the translated text itself is laid out right to left (unicode-bidi: plaintext, styles.css), so
 // punctuation lands where it belongs. test/i18n.test.js runs the pure part in Node.
-(function (root) {
+(function (/** @type {any} */ root) {
   'use strict';
 
   // ---------- pure part ----------
@@ -36,13 +36,13 @@
     'rootscripts', 'cloverscripts', 'ctrl', 'shift', 'alt', 'esc', 'cmd', 'tab', 'enter']);
   const UNIT = /^[\d\s.,:;/+\-–—×x%°]*(ms|s|sec|min|h|x|db|hz|khz|px|kb|mb|gb|kbps|bpm|fps|lufs)?[\d\s.,:;/+\-–—×x%°]*$/i;
 
-  const normLang = (code) => (LANG_RE.test(String(code || '')) ? String(code) : 'en');
-  const isRtl = (code) => RTL.has(String(code || '').split('-')[0]);
+  const normLang = (/** @type {unknown} */ code) => (LANG_RE.test(String(code || '')) ? String(code) : 'en');
+  const isRtl = (/** @type {unknown} */ code) => RTL.has(String(code || '').split('-')[0]);
   // the key a string is cached under: HTML collapses whitespace anyway
-  const norm = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+  const norm = (/** @type {unknown} */ s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
 
   // is this worth sending to the translator? (numbers, times, codes, links and names: no)
-  function translatable(s) {
+  function translatable(/** @type {string} */ s) {
     if (typeof s !== 'string') return false;
     s = norm(s).replace(/\{\d\}/g, '0');
     if (s.length < 2 || s.length > MAX_LEN) return false;
@@ -60,27 +60,28 @@
 
   // page text with numbers in it ('12 tracks', '0 / 0 lines synced') is translated as '{0} tracks' and the numbers
   // put back: one entry for every count, and the numbers never leave the device
-  function numbered(s) {
+  function numbered(/** @type {string} */ s) {
     if (/\{\d\}/.test(s)) return null;
+    /** @type {string[]} */
     const args = [];
-    const template = s.replace(/\d+(?:[.,:]\d+)*/g, (m) => (args.length < 10 ? `{${args.push(m) - 1}}` : m));
+    const template = s.replace(/\d+(?:[.,:]\d+)*/g, (/** @type {string} */ m) => (args.length < 10 ? `{${args.push(m) - 1}}` : m));
     return args.length ? { template, args } : null;
   }
 
-  const slots = (s) => (String(s).match(/\{\d\}/g) || []).sort().join('');
+  const slots = (/** @type {unknown} */ s) => (String(s).match(/\{\d\}/g) || []).sort().join('');
   // a translation is used only when it is a real string that kept every {n} of the English one
-  function pick(src, tr) {
+  function pick(/** @type {string} */ src, /** @type {string} */ tr) {
     if (typeof tr !== 'string') return null;
     const out = norm(tr.replace(/\{\s*(\d)\s*\}/g, '{$1}'));
     if (!out || out.length > src.length * 4 + 60) return null;
     return slots(out) === slots(src) ? out : null;
   }
   // '{0} songs' + [12] -> '12 songs'; a missing argument leaves its slot empty
-  const fill = (template, args) => String(template).replace(/\{(\d)\}/g, (_, i) => (args && args[i] != null ? String(args[i]) : ''));
+  const fill = (/** @type {any} */ template, /** @type {any} */ args) => String(template).replace(/\{(\d)\}/g, (_, i) => (args && args[i] != null ? String(args[i]) : ''));
   // keeps the spaces around a string the way the page had them
-  function keepSpace(orig, tr) {
-    const lead = /^\s*/.exec(orig)[0];
-    const trail = orig.length > lead.length ? /\s*$/.exec(orig)[0] : '';
+  function keepSpace(/** @type {string} */ orig, /** @type {string} */ tr) {
+    const lead = /^\s*/.exec(orig)?.[0] || '';
+    const trail = orig.length > lead.length ? /\s*$/.exec(orig)?.[0] || '' : '';
     return lead + tr + trail;
   }
 
@@ -89,7 +90,7 @@
   if (typeof document === 'undefined' || !root.localStorage) return;
 
   // ---------- in the app ----------
-  const read = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const read = (/** @type {string} */ k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   let lang = normLang(read(KEY) || 'en');
   let dict = new Map(); // English (normalised) -> translation, for `lang`
   let back = new Map(); // translation -> English: text code put in already translated
@@ -97,10 +98,16 @@
   const asked = new Set(); // asked for this language and session; a failure takes them out again
   const queue = new Set();
   let base = ''; // the local server, once app.js knows its port
-  let flushTimer = null, busy = false, failUntil = 0;
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let flushTimer = null;
+  let busy = false, failUntil = 0;
+  /** @type {MutationObserver | null} */
   let observer = null;
+  /** @type {(() => void)[]} */
   const settled = []; // resolve() of setLang/ready waiting for the queue to empty
+  /** @type {any[]} */
   const statics = []; // { n: Text, src, cur }: the page as index.html had it
+  /** @type {any[]} */
   const staticAttrs = []; // { el, a, src, cur }
   const nodeRec = new WeakMap(); // Text inside [data-i18n] -> { src, cur }
   const attrRec = new WeakMap(); // [data-i18n-attr] element -> { [attr]: { src, cur } }
@@ -109,16 +116,16 @@
   const known = new Set(); // words code shows often that the page doesn't have (menus, messages): asked for up front
   const ATTRS = ['title', 'placeholder', 'aria-label'];
   const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'CODE', 'PRE', 'KBD', 'TEMPLATE', 'svg', 'SVG', 'math', 'CANVAS', 'VIDEO', 'AUDIO']);
-  const optedOut = (el) => el.hasAttribute('data-no-i18n') || el.getAttribute('translate') === 'no' || el.isContentEditable;
+  const optedOut = (/** @type {HTMLElement} */ el) => el.hasAttribute('data-no-i18n') || el.getAttribute('translate') === 'no' || el.isContentEditable;
 
-  function lookup(key) {
+  function lookup(/** @type {string} */ key) {
     if (!translatable(key)) return undefined;
     const tr = dict.get(key);
     if (tr === undefined) want(key);
     return tr;
   }
   // text found on the page: numbers in it become slots
-  function render(src) {
+  function render(/** @type {string} */ src) {
     if (lang === 'en') return src;
     const key = norm(src);
     const n = numbered(key);
@@ -126,19 +133,19 @@
     return tr === undefined ? src : keepSpace(src, n ? fill(tr, n.args) : tr);
   }
   // a string from code, taken as it is
-  function plain(s) {
+  function plain(/** @type {string} */ s) {
     if (lang === 'en') return s;
     const tr = lookup(norm(s));
     return tr === undefined ? s : keepSpace(s, tr);
   }
-  const T = (s) => (typeof s === 'string' && lang !== 'en' ? plain(s) : s);
-  const Tf = (template, ...args) => fill(T(template), args);
+  const T = (/** @type {unknown} */ s) => (typeof s === 'string' && lang !== 'en' ? plain(s) : s);
+  const Tf = (/** @type {any} */ template, /** @type {any[]} */ ...args) => fill(T(template), args);
   // a message that remembers what it was made of: showToast and text() translate it when it is shown and again
   // when a missing translation comes in; as a string it is Tf's result
-  const Tm = (template, ...args) => ({ i18n: String(template), args, toString() { return Tf(this.i18n, ...this.args); } });
+  const Tm = (/** @type {any} */ template, /** @type {any[]} */ ...args) => ({ i18n: String(template), args, toString() { return Tf(this.i18n, ...this.args); } });
   // for HTML built as a string: the translation is escaped, the {n} slots take HTML the caller built and escaped
-  const escHtml = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const Th = (template, ...argsHtml) => escHtml(T(String(template))).replace(/\{(\d)\}/g, (_, i) => (argsHtml[i] != null ? String(argsHtml[i]) : ''));
+  const escHtml = (/** @type {any} */ v) => String(v).replace(/[&<>"']/g, (c) => /** @type {Record<string, string>} */ ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const Th = (/** @type {any} */ template, /** @type {any[]} */ ...argsHtml) => escHtml(T(String(template))).replace(/\{(\d)\}/g, (_, i) => (argsHtml[i] != null ? String(argsHtml[i]) : ''));
 
   // the first look at the page: index.html as it is, before app.js puts anything from the library in it.
   // Only noted here (a few ms); what is worth translating is worked out when there is something to translate.
@@ -164,7 +171,7 @@
     for (let n = /** @type {Text} */ (walker.nextNode()); n; n = /** @type {Text} */ (walker.nextNode())) statics.push({ n, src: n.data, cur: n.data });
   }
 
-  function applyStatics(visibleFirst) {
+  function applyStatics(/** @type {boolean} */ visibleFirst) {
     // what is on screen goes into the first request, so a language switch shows there first
     let order = [...statics.keys()];
     if (visibleFirst) { const vis = statics.map(visible); order = [...statics.keys()].sort((a, b) => vis[b] - vis[a]); }
@@ -183,16 +190,16 @@
       if (v !== r.cur) { r.el.setAttribute(r.a, v); r.cur = v; }
     }
   }
-  function visible(r) {
+  function visible(/** @type {any} */ r) {
     const el = r && r.n.parentElement;
     if (!el) return 0;
     try { return el.checkVisibility ? (el.checkVisibility() ? 1 : 0) : (el.offsetParent ? 1 : 0); } catch (e) { return 0; }
   }
   // right to left: the element's text runs that way, the layout around it stays
-  function mark(el) { if (el && isRtl(lang) && !el.hasAttribute('data-i18n-bidi')) el.setAttribute('data-i18n-bidi', ''); }
+  function mark(/** @type {HTMLElement} */ el) { if (el && isRtl(lang) && !el.hasAttribute('data-i18n-bidi')) el.setAttribute('data-i18n-bidi', ''); }
 
   // text that is English, or a translation code put in itself (T()), or ours from before
-  function sourceOf(text, rec) {
+  function sourceOf(/** @type {string} */ text, /** @type {any} */ rec) {
     if (rec && text === rec.cur) return rec.src;
     const key = norm(text);
     if (dict.has(key)) return text;
@@ -202,15 +209,15 @@
     if (n && back.has(n.template) && !dict.has(n.template)) return keepSpace(text, fill(back.get(n.template), n.args));
     return text;
   }
-  function doText(n) {
+  function doText(/** @type {Text} */ n) {
     if (!n.data.trim()) return;
     const rec = nodeRec.get(n);
     const src = sourceOf(n.data, rec);
     const v = render(src);
-    if (v !== n.data) { n.data = v; mark(n.parentElement); }
+    if (v !== n.data) { n.data = v; mark(/** @type {HTMLElement} */ (n.parentElement)); }
     nodeRec.set(n, { src, cur: v });
   }
-  function doAttrs(el) {
+  function doAttrs(/** @type {HTMLElement} */ el) {
     const names = (el.getAttribute('data-i18n-attr') || 'title').split(/[\s,]+/).filter(Boolean);
     let recs = attrRec.get(el);
     if (!recs) attrRec.set(el, (recs = {}));
@@ -223,14 +230,14 @@
       recs[a] = { src, cur: v };
     }
   }
-  function doEl(el) {
-    if (el.hasAttribute('data-i18n')) for (const n of el.childNodes) if (n.nodeType === 3) doText(n);
+  function doEl(/** @type {HTMLElement} */ el) {
+    if (el.hasAttribute('data-i18n')) for (const n of el.childNodes) if (n.nodeType === 3) doText(/** @type {Text} */ (n));
     if (el.hasAttribute('data-i18n-attr')) doAttrs(el);
   }
-  const doAll = (rootEl) => { if (rootEl && rootEl.querySelectorAll) for (const el of rootEl.querySelectorAll('[data-i18n],[data-i18n-attr]')) doEl(el); };
+  const doAll = (/** @type {any} */ rootEl) => { if (rootEl && rootEl.querySelectorAll) for (const el of rootEl.querySelectorAll('[data-i18n],[data-i18n-attr]')) doEl(el); };
 
   // text set from code with text(): kept translated, also after a language switch
-  function text(el, template, ...args) {
+  function text(/** @type {HTMLElement} */ el, /** @type {any} */ template, /** @type {any[]} */ ...args) {
     if (!el) return;
     if (template && typeof template === 'object' && template.i18n) { args = template.args || []; template = template.i18n; }
     const v = Tf(String(template), ...args);
@@ -253,7 +260,7 @@
     }
   }
 
-  function refresh(visibleFirst) {
+  function refresh(/** @type {boolean} */ visibleFirst) {
     applyStatics(visibleFirst);
     doAll(document.body);
     applyLive();
@@ -261,7 +268,7 @@
   }
 
   // ---------- watching the page (other languages only) ----------
-  function onMutations(list) {
+  function onMutations(/** @type {any} */ list) {
     for (const m of list) {
       const tg = m.target;
       if (m.type === 'characterData') { const p = tg.parentElement; if (p && p.hasAttribute('data-i18n')) doText(tg); continue; }
@@ -274,7 +281,7 @@
       }
     }
   }
-  function watch(on) {
+  function watch(/** @type {boolean} */ on) {
     if (on && !observer && typeof MutationObserver === 'function' && document.body) {
       observer = new MutationObserver(onMutations);
       observer.observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ATTRS });
@@ -282,20 +289,20 @@
   }
 
   // ---------- asking the server ----------
-  function want(key) {
+  function want(/** @type {string} */ key) {
     if (asked.has(key) || queue.has(key)) return;
     queue.add(key);
     schedule(40);
   }
-  function schedule(ms) {
+  function schedule(/** @type {number} */ ms) {
     if (flushTimer || busy || !base) return;
     flushTimer = setTimeout(flush, Math.max(ms, failUntil - Date.now()));
   }
   function settle() {
     if ((queue.size || busy) && base && Date.now() >= failUntil) return;
-    while (settled.length) settled.shift()();
+    while (settled.length) /** @type {() => void} */ (settled.shift())();
   }
-  function learn(src, tr) {
+  function learn(/** @type {string} */ src, /** @type {string} */ tr) {
     const ok = pick(src, tr);
     if (!ok) return false;
     dict.set(src, ok);
@@ -323,20 +330,20 @@
     } catch (e) {
       failed = true;
       if (forLang === lang) texts.forEach((s) => asked.delete(s));
-      console.warn('[i18n]', e && e.message ? e.message : e);
+      console.warn('[i18n]', e instanceof Error && e.message ? e.message : e);
     }
     busy = false;
     if (forLang !== lang) { schedule(0); return settle(); } // switched meanwhile: the server kept them anyway
     // the service did not answer: English for now, again in a minute (or when the network is back)
     if (failed) failUntil = Date.now() + 60000;
     if (got) { refresh(false); saveSnapSoon(); }
-    if (failed) { while (settled.length) settled.shift()(); }
+    if (failed) { while (settled.length) /** @type {() => void} */ (settled.shift())(); }
     if (queue.size) schedule(0);
     settle();
   }
 
   // everything this device translated before, in one go: the server's copy of the disk cache
-  async function loadAll(forLang) {
+  async function loadAll(/** @type {string} */ forLang) {
     if (!base) return;
     try {
       const res = await fetch(`${base}/api/i18n-batch?target=${encodeURIComponent(forLang)}`);
@@ -346,7 +353,8 @@
     } catch (e) {}
   }
 
-  let snapTimer = null;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let snapTimer;
   function saveSnapSoon() {
     clearTimeout(snapTimer);
     snapTimer = setTimeout(() => {
@@ -373,20 +381,21 @@
 
   // ---------- switching ----------
   // resolves once what was missing has come in, or the service gave up for now
-  async function setLang(code) {
-    code = normLang(code);
+  async function setLang(/** @type {unknown} */ wanted) {
+    const code = normLang(wanted);
     try { localStorage.setItem(KEY, code); } catch (e) {}
     if (code === lang && (code === 'en' || dict.size)) return true;
     lang = code;
     prevBack = back;
     dict = new Map(); back = new Map(); asked.clear(); queue.clear(); failUntil = 0;
-    clearTimeout(flushTimer); flushTimer = null;
+    if (flushTimer) clearTimeout(flushTimer);
+    flushTimer = null;
     setRootAttrs();
     if (lang === 'en') { watch(false); refresh(false); return true; }
     loadSnap();
     await loadAll(lang);
     if (lang !== code) return false;
-    const done = new Promise((resolve) => settled.push(resolve));
+    const done = new Promise((/** @type {(value?: void) => void} */ resolve) => settled.push(resolve));
     refresh(true);
     for (const k of known) lookup(norm(k));
     watch(true);
@@ -397,7 +406,7 @@
   }
 
   // app.js tells where the server is (its port is known only after startup); until then nothing is asked
-  async function connect(url) {
+  async function connect(/** @type {string} */ url) {
     if (!url || base) return;
     base = String(url).replace(/\/+$/, '');
     if (lang === 'en') return;
@@ -411,12 +420,12 @@
   }
 
   // a toast can wait a moment for its words instead of showing English
-  function ready(template, ms = 700) {
+  function ready(/** @type {any} */ template, ms = 700) {
     if (lang === 'en' || !base || Date.now() < failUntil) return Promise.resolve();
     const key = norm(template);
     if (!translatable(key) || dict.has(key)) return Promise.resolve();
     T(template);
-    return new Promise((resolve) => {
+    return new Promise((/** @type {(value?: void) => void} */ resolve) => {
       const timer = setTimeout(resolve, ms);
       settled.push(() => { clearTimeout(timer); resolve(); });
     });
@@ -437,7 +446,7 @@
   // the language picker thought English was still on and ignored picking it again (#20)
   root.UrielI18n = Object.defineProperty(Object.assign({}, core, {
     T, Tf, Tm, Th, text, setLang, connect, ready,
-    known: (list) => { for (const k of list || []) if (typeof k === 'string') known.add(k); },
+    known: (/** @type {any} */ list) => { for (const k of list || []) if (typeof k === 'string') known.add(k); },
     refresh: () => refresh(false),
     // the page's own words as index.html has them (what a switch asks for), for checking what is sent
     strings: () => [...new Set(statics.filter(Boolean).map((r) => norm(r.src)).concat(staticAttrs.filter(Boolean).map((r) => norm(r.src)))

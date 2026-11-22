@@ -30,15 +30,18 @@
   ]);
   // how a song sounds, worked out once per device; logins the in-app server keeps for every profile (bridge.ts)
   const DEVICE_PREFIXES = ['uriel_audio_analysis_', 'uriel_secret_'];
-  const isDevice = (k) => DEVICE.has(k) || DEVICE_PREFIXES.some((p) => k.startsWith(p));
+  /** @typedef {{ get: (k: string) => string | null, set: (k: string, v: string) => void, remove: (k: string) => void, keys: () => string[] }} RawStore */
+  /** @typedef {{ id: string, name: string, color: string, emoji: string, created: number, [field: string]: any }} Profile */
+  const isDevice = (/** @type {string} */ k) => DEVICE.has(k) || DEVICE_PREFIXES.some((p) => k.startsWith(p));
 
   const COLORS = ['#D0BCFF', '#A8C7FA', '#7FD8C0', '#C5E1A5', '#FDD663', '#FFB59A', '#F4A7C6', '#B8C4D0'];
 
   // ---------- keys ----------
-  const nsOf = (id) => (id === FIRST ? '' : `${PREFIX}${id}:`);
+  const nsOf = (/** @type {string} */ id) => (id === FIRST ? '' : `${PREFIX}${id}:`);
   // where profile `id` keeps `key`
-  const rawKey = (id, key) => (isDevice(key) ? key : nsOf(id) + key);
+  const rawKey = (/** @type {string} */ id, /** @type {string} */ key) => (isDevice(key) ? key : nsOf(id) + key);
   // the key profile `id` sees for a stored key, or null when it belongs to another profile
+  /** @param {string} id @param {string} raw */
   function ownKey(id, raw) {
     if (raw.startsWith(PREFIX)) {
       const ns = nsOf(id);
@@ -49,16 +52,17 @@
     return id === FIRST || isDevice(raw) ? raw : null;
   }
   // the stored keys that are profile `id`'s own (not the device's)
-  const ownRawKeys = (store, id) => store.keys().filter((r) => (id === FIRST ? !r.startsWith(PREFIX) && !isDevice(r) : r.startsWith(nsOf(id))));
+  const ownRawKeys = (/** @type {RawStore} */ store, /** @type {string} */ id) => store.keys().filter((r) => (id === FIRST ? !r.startsWith(PREFIX) && !isDevice(r) : r.startsWith(nsOf(id))));
 
   // localStorage as profile `id` sees it. `store` is the real storage: { get, set, remove, keys } (a Map in tests).
+  /** @param {RawStore} store @param {string} id */
   function view(store, id) {
-    const keys = () => { const out = []; for (const r of store.keys()) { const k = ownKey(id, r); if (k !== null) out.push(k); } return out; };
+    const keys = () => { /** @type {string[]} */ const out = []; for (const r of store.keys()) { const k = ownKey(id, r); if (k !== null) out.push(k); } return out; };
     return {
-      getItem: (k) => store.get(rawKey(id, k)),
-      setItem: (k, v) => store.set(rawKey(id, k), v),
-      removeItem: (k) => store.remove(rawKey(id, k)),
-      key: (i) => { const ks = keys(); i = Number(i) >>> 0; return i < ks.length ? ks[i] : null; },
+      getItem: (/** @type {string} */ k) => store.get(rawKey(id, k)),
+      setItem: (/** @type {string} */ k, /** @type {string} */ v) => store.set(rawKey(id, k), v),
+      removeItem: (/** @type {string} */ k) => store.remove(rawKey(id, k)),
+      key: (/** @type {unknown} */ i) => { const ks = keys(); const n = Number(i) >>> 0; return n < ks.length ? ks[n] : null; },
       get length() { return keys().length; },
       keys,
       // this profile's own keys; the device's and the other profiles' stay
@@ -67,15 +71,17 @@
   }
 
   // ---------- the profiles on this device ----------
-  const parse = (s) => { try { return JSON.parse(s); } catch (e) { return null; } };
-  const cleanName = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, 24);
-  const cleanEmoji = (s) => String(s == null ? '' : s).trim().slice(0, 16);
-  const cleanColor = (c) => (/^#[0-9a-f]{6}$/i.test(String(c || '')) ? String(c).toUpperCase() : '');
+  const parse = (/** @type {any} */ s) => { try { return JSON.parse(s); } catch (e) { return null; } };
+  const cleanName = (/** @type {unknown} */ s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, 24);
+  const cleanEmoji = (/** @type {unknown} */ s) => String(s == null ? '' : s).trim().slice(0, 16);
+  const cleanColor = (/** @type {unknown} */ c) => (/^#[0-9a-f]{6}$/i.test(String(c || '')) ? String(c).toUpperCase() : '');
   const firstProfile = () => ({ id: FIRST, name: 'Me', color: COLORS[0], emoji: '', created: 0 });
-  const validId = (id) => id === FIRST || /^[a-z0-9]{4,16}$/.test(String(id || ''));
+  const validId = (/** @type {unknown} */ id) => id === FIRST || /^[a-z0-9]{4,16}$/.test(String(id || ''));
 
+  /** @param {RawStore} store @returns {Profile[]} */
   function list(store) {
     const saved = parse(store.get(LIST));
+    /** @type {Profile[]} */
     const out = [];
     for (const p of Array.isArray(saved) ? saved : []) {
       if (!p || !validId(p.id) || out.some((q) => q.id === p.id)) continue;
@@ -92,22 +98,24 @@
     }
     return out;
   }
-  const save = (store, profiles) => store.set(LIST, JSON.stringify(profiles));
+  const save = (/** @type {RawStore} */ store, /** @type {Profile[]} */ profiles) => store.set(LIST, JSON.stringify(profiles));
 
   // the profile to open: the one picked last, or the first one
+  /** @param {RawStore} store */
   function activeId(store) {
     const id = store.get(ACTIVE);
     const profiles = list(store);
-    return profiles.some((p) => p.id === id) ? id : profiles[0].id;
+    return profiles.some((p) => p.id === id) ? /** @type {string} */ (id) : profiles[0].id;
   }
 
   const randomId = () => {
-    const c = typeof crypto !== 'undefined' && crypto.getRandomValues ? crypto : null;
+    const c = typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function' ? crypto : null;
     const bytes = c ? [...c.getRandomValues(new Uint8Array(8))] : Array.from({ length: 8 }, () => Math.floor(Math.random() * 256));
     return bytes.map((b) => (b % 36).toString(36)).join('');
   };
 
   // a new, empty profile: default settings, nothing in it
+  /** @param {RawStore} store @param {{ name?: unknown, color?: unknown, emoji?: unknown }} [opts] */
   function create(store, opts = {}) {
     const profiles = list(store);
     let id = randomId();
@@ -125,6 +133,7 @@
   }
 
   // name, color and emoji; the id never changes
+  /** @param {RawStore} store @param {string} id @param {{ name?: unknown, color?: unknown, emoji?: unknown }} [patch] */
   function update(store, id, patch = {}) {
     const profiles = list(store);
     const p = profiles.find((q) => q.id === id);
@@ -137,6 +146,7 @@
   }
 
   // deletes the profile and everything in it. The open profile can't be deleted (so one always stays).
+  /** @param {RawStore} store @param {string} id @param {string} openId */
   function remove(store, id, openId) {
     const profiles = list(store);
     if (id === openId || !profiles.some((p) => p.id === id) || profiles.length < 2) return false;
@@ -147,6 +157,7 @@
   }
 
   // the profile the next start opens
+  /** @param {RawStore} store @param {string} id */
   function setActive(store, id) {
     const profiles = list(store);
     if (!profiles.some((p) => p.id === id)) return false;
@@ -160,6 +171,7 @@
   // clear/length, and window.localStorage itself for Object.keys(localStorage), localStorage.foo and `for in`.
   // Later patches of Storage.prototype (app.js for a full storage, sync.js to notice changes) wrap these, so they
   // see the keys as the app writes them.
+  /** @param {any} win */
   function install(win) {
     if (win.UrielProfiles) return win.UrielProfiles;
     let ls;
@@ -169,9 +181,9 @@
     if (!ls || !P || !lengthOf || !lengthOf.get) return null;
     const native = { getItem: P.getItem, setItem: P.setItem, removeItem: P.removeItem, key: P.key, clear: P.clear, length: lengthOf.get };
     const raw = {
-      get: (k) => native.getItem.call(ls, k),
-      set: (k, v) => native.setItem.call(ls, k, v),
-      remove: (k) => native.removeItem.call(ls, k),
+      get: (/** @type {string} */ k) => native.getItem.call(ls, k),
+      set: (/** @type {string} */ k, /** @type {string} */ v) => native.setItem.call(ls, k, v),
+      remove: (/** @type {string} */ k) => native.removeItem.call(ls, k),
       keys: () => { const out = []; for (let i = 0, n = native.length.call(ls); i < n; i++) out.push(native.key.call(ls, i)); return out; },
     };
     // playlists, favorites and history live in IndexedDB (library-store.js, loaded just before this file)
@@ -180,17 +192,18 @@
     // fixed for the life of the page: what is saved on the way out (the queue, Encore) still lands in this profile
     const id = activeId(store);
     const v = view(store, id);
+    /** @type {any} */
     let proxy = null;
-    const ours = (s) => s === ls || (s != null && s === proxy);
-    P.getItem = function getItem(k) { return ours(this) ? v.getItem(String(k)) : native.getItem.apply(this, arguments); };
-    P.setItem = function setItem(k, val) { return ours(this) ? v.setItem(String(k), String(val)) : native.setItem.apply(this, arguments); };
-    P.removeItem = function removeItem(k) { return ours(this) ? v.removeItem(String(k)) : native.removeItem.apply(this, arguments); };
-    P.key = function key(i) { return ours(this) ? v.key(i) : native.key.apply(this, arguments); };
+    const ours = (/** @type {unknown} */ s) => s === ls || (s != null && s === proxy);
+    P.getItem = function getItem(/** @type {string} */ k) { return ours(this) ? v.getItem(String(k)) : native.getItem.apply(this, arguments); };
+    P.setItem = function setItem(/** @type {string} */ k, /** @type {string} */ val) { return ours(this) ? v.setItem(String(k), String(val)) : native.setItem.apply(this, arguments); };
+    P.removeItem = function removeItem(/** @type {string} */ k) { return ours(this) ? v.removeItem(String(k)) : native.removeItem.apply(this, arguments); };
+    P.key = function key(/** @type {number} */ i) { return ours(this) ? v.key(i) : native.key.apply(this, arguments); };
     P.clear = function clear() { return ours(this) ? v.clear() : native.clear.apply(this, arguments); };
     Object.defineProperty(P, 'length', { configurable: true, enumerable: true, get() { return ours(this) ? v.length : native.length.call(this); } });
 
     try {
-      const item = (k) => typeof k === 'string' && !(k in P);
+      const item = /** @type {(k: string | symbol) => k is string} */ ((k) => typeof k === 'string' && !(k in P));
       proxy = new Proxy(Object.create(P), {
         get: (t, k) => { if (!item(k)) return Reflect.get(P, k, proxy); const val = v.getItem(k); return val === null ? undefined : val; },
         set: (t, k, val) => { if (typeof k === 'string') v.setItem(k, String(val)); return true; },
@@ -211,13 +224,13 @@
       id,
       current: () => list(store).find((p) => p.id === id) || firstProfile(),
       list: () => list(store),
-      create: (opts) => create(store, opts),
-      update: (pid, patch) => update(store, pid, patch),
-      remove: (pid) => remove(store, pid, id),
+      create: (/** @type {any} */ opts) => create(store, opts),
+      update: (/** @type {string} */ pid, /** @type {any} */ patch) => update(store, pid, patch),
+      remove: (/** @type {string} */ pid) => remove(store, pid, id),
       // opens with the next load; profiles.js stops the music and reloads
-      open: (pid) => setActive(store, pid),
+      open: (/** @type {string} */ pid) => setActive(store, pid),
       // one key of any profile, without opening it (song counts in Settings, the phone's song cache)
-      peek: (pid, key) => store.get(rawKey(pid, key)),
+      peek: (/** @type {string} */ pid, /** @type {string} */ key) => store.get(rawKey(pid, key)),
       isDevice,
       COLORS,
     };

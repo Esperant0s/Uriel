@@ -7,6 +7,7 @@ const { execFileSync } = require('child_process');
 
 const running = new Set();
 
+/** @param {any} proc */
 function track(proc) {
   if (proc && proc.pid) {
     running.add(proc);
@@ -16,6 +17,7 @@ function track(proc) {
 }
 
 // `ps -A -o pid=,ppid=` output -> the pids below root
+/** @param {unknown} psOutput @param {number | string} root */
 function descendants(psOutput, root) {
   const kids = new Map();
   for (const line of String(psOutput).split('\n')) {
@@ -24,6 +26,7 @@ function descendants(psOutput, root) {
     if (!kids.has(m[2])) kids.set(m[2], []);
     kids.get(m[2]).push(m[1]);
   }
+  /** @type {number[]} */
   const out = [];
   const todo = [String(root)];
   while (todo.length) {

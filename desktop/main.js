@@ -10,6 +10,7 @@ const { pathToFileURL, fileURLToPath } = require('url');
 const { spawn, execFile } = require('child_process');
 
 // GNOME's accent colors (Settings > Appearance), by the names gsettings gives
+/** @type {Record<string, string>} */
 const GNOME_ACCENTS = { blue: '#3584e4', teal: '#2190a4', green: '#3a944a', yellow: '#c88800', orange: '#ed5b00', red: '#e62d42', pink: '#d56199', purple: '#9141ac', slate: '#6f8396' };
 function gnomeAccent() {
   return new Promise((resolve) => {
@@ -33,7 +34,7 @@ const { LIBRARY_DIR, DATA_DIR, resolveBinary, tutorialDone, markTutorialDone, re
 const { getLauncherInfo, installLauncher } = require('./launcher');
 const { getSystemAudioOutputInfo } = require('./audio-output');
 const { log, tail, LOG_DIR } = require('./logger');
-const logger = { log, tail, LOG_DIR, error: (msg, err) => log('ERROR', `${msg}: ${err && err.message ? err.message : err}`) };
+const logger = { log, tail, LOG_DIR, error: (/** @type {string} */ msg, /** @type {any} */ err) => log('ERROR', `${msg}: ${err && err.message ? err.message : err}`) };
 
 process.on('uncaughtException', (err) => {
   try { logger.error('Uncaught exception in main', err); } catch (_) {}
@@ -131,7 +132,8 @@ if (process.argv.includes('lyrics') || process.argv.includes('--lyrics')) {
 function runGUI() {
   const { startServer, PORT, getServerToken } = require('../shared/server');
 
-  let mainWindow = null;
+  /** @type {Electron.BrowserWindow | null} */
+let mainWindow = null;
   // Must match build.appId so the NSIS shortcut, pinned icons and the running window share one taskbar identity.
   if (process.platform === 'win32') app.setAppUserModelId('io.github.esperant0s.mural');
   const gotLock = app.requestSingleInstanceLock();
@@ -144,11 +146,13 @@ function runGUI() {
     }
   });
   let serverPort = PORT;
-  let tray = null;
+  /** @type {Electron.Tray | null} */
+let tray = null;
   let isQuitting = false;
   let trayOnClose = process.platform !== 'linux';
   let isMiniWindow = false;
-  let preMiniBounds = null;
+  /** @type {Electron.Rectangle | null} */
+let preMiniBounds = null;
 
   const windowStatePath = path.join(app.getPath('userData'), 'window-state.json');
 
@@ -163,11 +167,13 @@ function runGUI() {
     }
   }
 
-  function clampBoundsToDisplay(bounds) {
+  /** @param {Partial<Electron.Rectangle> | null} bounds */
+function clampBoundsToDisplay(bounds) {
     const primaryDisplay = screen.getPrimaryDisplay();
     const primaryWorkArea = primaryDisplay.workArea;
     const scaleFactor = primaryDisplay.scaleFactor;
 
+    /** @type {Partial<Electron.Rectangle>} */
     const sourceBounds = bounds && Number.isFinite(bounds.width) && Number.isFinite(bounds.height)
     ? { ...bounds }
     : {};
@@ -289,7 +295,7 @@ function runGUI() {
         if (!mainWindow || mainWindow.isDestroyed()) return;
         const result = detail && !detail.skipped ? detail : null;
         mainWindow.setBackgroundColor('#000000');
-        mainWindow.webContents.once('did-finish-load', () => { if (result) mainWindow.webContents.send('welcome-result', result); });
+        mainWindow.webContents.once('did-finish-load', () => { if (result && mainWindow) mainWindow.webContents.send('welcome-result', result); });
         mainWindow.loadFile(path.join(__dirname, '..', 'shared', 'index.html'));
       });
     }
@@ -300,7 +306,7 @@ function runGUI() {
       return { action: 'deny' };
     });
     // the window only ever shows Uriel's own pages; anything else would get the preload API and the server token
-    const isAppPage = (u) => {
+    const isAppPage = (/** @type {string} */ u) => {
       try {
         const x = new URL(u);
         return x.protocol === 'file:' && path.resolve(fileURLToPath(x)).startsWith(path.resolve(__dirname, '..') + path.sep);
@@ -312,7 +318,7 @@ function runGUI() {
     mainWindow.webContents.on('before-input-event', (e, input) => {
       if (input.type !== 'keyDown' || input.key !== '=' || input.shift || input.alt || !(input.control || input.meta)) return;
       e.preventDefault();
-      mainWindow.webContents.zoomLevel += 0.5;
+      /** @type {Electron.BrowserWindow} */ (mainWindow).webContents.zoomLevel += 0.5;
     });
 
     mainWindow.on('minimize', () => {
@@ -353,7 +359,7 @@ function runGUI() {
       persistWindowState();
       if (trayOnClose && tray && !isQuitting) {
         e.preventDefault();
-        mainWindow.hide();
+        /** @type {Electron.BrowserWindow} */ (mainWindow).hide();
       }
     });
 
@@ -470,7 +476,7 @@ function runGUI() {
         const isBackup = payload.kind === 'backup';
         const base = path.basename(String(payload.defaultName || '')).replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').replace(/^\.+/, '');
         const name = base || (isBackup ? 'uriel-backup.json' : 'playlists.json');
-        const win = BrowserWindow.fromWebContents(event.sender) || mainWindow;
+        const win = /** @type {Electron.BrowserWindow} */ (BrowserWindow.fromWebContents(event.sender) || mainWindow);
         const r = await dialog.showSaveDialog(win, {
           title: isBackup ? 'Save a backup of this profile' : 'Export playlists',
           defaultPath: path.join(app.getPath('documents'), name.toLowerCase().endsWith('.json') ? name : `${name}.json`),
@@ -551,13 +557,14 @@ function runGUI() {
       });
 
       ipcMain.handle('pick-media', async () => {
-        const r = await dialog.showOpenDialog(mainWindow, { properties: ['openFile'], filters: [{ name: 'Media', extensions: ['png','jpg','jpeg','webp','gif','mp4','webm'] }] });
+        const r = await dialog.showOpenDialog(/** @type {Electron.BrowserWindow} */ (mainWindow), { properties: ['openFile'], filters: [{ name: 'Media', extensions: ['png','jpg','jpeg','webp','gif','mp4','webm'] }] });
         return r.canceled ? null : pathToFileURL(r.filePaths[0]).href;
       });
 
       const AUDIO_EXTS = ['mp3','wav','flac','opus','ogg','oga','m4a','aac','webm','weba'];
       // the audio files in a picked folder and its subfolders (a few levels, at most 1000 files)
-      async function audioFilesIn(dir, out, depth = 0) {
+      /** @param {string} dir @param {string[]} out @param {number} [depth] */
+async function audioFilesIn(dir, out, depth = 0) {
         let entries = [];
         try { entries = await fs.promises.readdir(dir, { withFileTypes: true }); } catch (e) { return; }
         for (const entry of entries) {
@@ -571,7 +578,7 @@ function runGUI() {
       // opts.folder: pick folders instead of files (from Riff 43.1); the files are copied into the library either way
       ipcMain.handle('import-audio-files', async (e, opts) => {
         const folder = !!(opts && opts.folder);
-        const r = await dialog.showOpenDialog(mainWindow, folder
+        const r = await dialog.showOpenDialog(/** @type {Electron.BrowserWindow} */ (mainWindow), folder
           ? { properties: ['openDirectory', 'multiSelections'] }
           : { properties: ['openFile', 'multiSelections'], filters: [{ name: 'Audio', extensions: AUDIO_EXTS }] });
         if (r.canceled) return [];
@@ -603,14 +610,16 @@ function runGUI() {
 
       // set-data-dir / set-download-dir accept only the folder the user just picked in the dialog, not any
       // path a script in the window passes in (with "move", the old folder's Uriel files get deleted)
-      let pickedDataDir = null;
-      let pickedDownloadDir = null;
-      const isPicked = (picked, dir) => !!picked && path.resolve(String(dir)) === path.resolve(picked);
-      const isNetworkPath = (dir) => /^(\\\\|\/\/)/.test(String(dir));
+      /** @type {string | null} */
+  let pickedDataDir = null;
+      /** @type {string | null} */
+  let pickedDownloadDir = null;
+      const isPicked = (/** @type {string | null} */ picked, /** @type {unknown} */ dir) => !!picked && path.resolve(String(dir)) === path.resolve(picked);
+      const isNetworkPath = (/** @type {unknown} */ dir) => /^(\\\\|\/\/)/.test(String(dir));
 
       ipcMain.handle('pick-data-dir', async () => {
         const platform = require('./platform');
-        const r = await dialog.showOpenDialog(mainWindow, {
+        const r = await dialog.showOpenDialog(/** @type {Electron.BrowserWindow} */ (mainWindow), {
           title: 'Choose music folder',
           defaultPath: platform.DATA_DIR,
           properties: ['openDirectory', 'createDirectory']
@@ -651,7 +660,7 @@ function runGUI() {
           try {
             await platform.copyDirContents(current, target, undefined, platform.URIEL_DATA_ENTRIES);
           } catch (e) {
-            return { ok: false, error: 'Could not move files: ' + e.message };
+            return { ok: false, error: 'Could not move files: ' + (e instanceof Error ? e.message : String(e)) };
           }
         }
 
@@ -682,7 +691,7 @@ function runGUI() {
 
       ipcMain.handle('pick-download-dir', async () => {
         const platform = require('./platform');
-        const r = await dialog.showOpenDialog(mainWindow, {
+        const r = await dialog.showOpenDialog(/** @type {Electron.BrowserWindow} */ (mainWindow), {
           title: 'Choose download folder',
           defaultPath: platform.resolveDownloadDir() || defaultDownloadsDir() || undefined,
           properties: ['openDirectory', 'createDirectory']
@@ -728,7 +737,7 @@ function runGUI() {
       // with them the Windows overlay and lock screen controls (from Riff 43.1)
       let mediaKeysWanted = false;
       let mediaKeysActive = false;
-      const sendMedia = (cmd) => {
+      const sendMedia = (/** @type {string} */ cmd) => {
         if (process.env.URIEL_DEBUG === '1') console.log('[media] globalShortcut', cmd);
         if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('media-command', cmd);
       };
@@ -755,7 +764,8 @@ function runGUI() {
       powerMonitor.on('unlock-screen', registerMediaKeys);
       app.on('will-quit', () => globalShortcut.unregisterAll());
 
-      let preMiniLyricsH = null;
+      /** @type {number | null} */
+  let preMiniLyricsH = null;
       ipcMain.removeHandler('toggle-mini-window');
       ipcMain.handle('toggle-mini-window', () => {
         if (!mainWindow || mainWindow.isDestroyed()) return false;

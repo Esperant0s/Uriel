@@ -13,6 +13,7 @@ function rotate() {
   } catch (e) {}
 }
 
+/** @param {string} level @param {unknown} message */
 function log(level, message) {
   try {
     fs.mkdirSync(LOG_DIR, { recursive: true });
@@ -21,13 +22,16 @@ function log(level, message) {
   } catch (e) {}
 }
 
+/** @param {number} lines */
 function tail(lines) {
   try { return fs.readFileSync(LOG_PATH, 'utf8').split('\n').filter(Boolean).slice(-lines); } catch (e) { return []; }
 }
 
-const describe = (message, err) => (err ? `${message}: ${(err && (err.stack || err.message)) || err}` : message);
+const describe = (/** @type {string} */ message, /** @type {any} */ err) => (err ? `${message}: ${(err && (err.stack || err.message)) || err}` : message);
+/** @param {string} message @param {unknown} [err] */
 const error = (message, err) => log('error', describe(message, err));
+/** @param {string} message @param {unknown} [err] */
 const warn = (message, err) => log('warn', describe(message, err));
-const info = (message) => log('info', message);
+const info = (/** @type {string} */ message) => log('info', message);
 
 module.exports = { log, error, warn, info, tail, LOG_DIR };

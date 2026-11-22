@@ -40,11 +40,13 @@ function installWindows() {
   if (fs.existsSync(lnk)) return { ok: true };
   const target = process.env.PORTABLE_EXECUTABLE_FILE || process.execPath;
   fs.mkdirSync(path.dirname(lnk), { recursive: true });
+  /** @type {Electron.ShortcutDetails} */
   const options = { target, cwd: path.dirname(target), description: COMMENT, icon: target, iconIndex: 0 };
   if (APP_ID) options.appUserModelId = APP_ID;
   return { ok: shell.writeShortcutLink(lnk, 'create', options) };
 }
 
+/** @param {string} file */
 function quoteExec(file) {
   return '"' + file.replace(/(["`$\\])/g, '\\$1').replace(/%/g, '%%') + '"';
 }

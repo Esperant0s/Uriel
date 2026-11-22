@@ -2,7 +2,8 @@
 // Importing music from elsewhere, the part with no page in it: reading Spotify's and Apple Music's export files,
 // lengths given in seconds, milliseconds or m:ss, names tidied for matching, and what an import error means.
 // app.js and app/imports.js run it in the app, test/import-core.test.js in Node.
-(function (root) {
+(function (/** @type {any} */ root) {
+  /** @param {any} str */
   function normalizeImportText(str) {
     if (!str) return '';
     return str
@@ -20,6 +21,7 @@
   // search results give seconds; only a value longer than a day is taken as milliseconds (the old cut-off,
   // 1000, turned every song or episode over 16 minutes into a few seconds)
   const MS_DURATION_ABOVE = 86400;
+  /** @param {unknown} dur */
   function toSeconds(dur) {
     if (typeof dur === 'string') {
       const trimmed = dur.trim();
@@ -38,7 +40,9 @@
     return 0;
   }
 
+  /** @type {Record<string, string>} */
   const CYR = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya', і: 'i', ї: 'yi', є: 'ye', ґ: 'g' };
+  /** @param {unknown} s */
   function normalizeForMatch(s) {
     return String(s || '').toLowerCase()
       .replace(/\(.*?\)|\[.*?\]/g, ' ')
@@ -51,10 +55,11 @@
   // One of Spotify's export files, already parsed (YourLibrary.json, Playlist1.json, or a streaming history): the
   // songs it lists as { likes, playlists: [{ name, tracks }] }. msPlayed (streaming history) is how long a song was
   // listened to, not how long it is, so it is never taken as the length.
+  /** @param {any} json */
   function parseSpotifyExport(json) {
     const likes = [];
     const playlists = [];
-    const song = (title, artist, durMs) => ({ title: String(title).trim(), artist: String(artist).trim(), duration: durMs ? Math.round(durMs / 1000) : undefined });
+    const song = (/** @type {unknown} */ title, /** @type {unknown} */ artist, /** @type {number} */ durMs) => ({ title: String(title).trim(), artist: String(artist).trim(), duration: durMs ? Math.round(durMs / 1000) : undefined });
     const rawTracks = Array.isArray(json?.tracks) ? json.tracks : (Array.isArray(json) ? json : null);
     if (rawTracks) {
       for (const item of rawTracks) {
@@ -82,6 +87,7 @@
   }
 
   // each song once: a streaming-history file lists a song once per play (60 plays of 3 songs meant 60 searches)
+  /** @param {{ title: string, artist: string }[]} list */
   function uniqueSongs(list) {
     const seen = new Set();
     return list.filter((t) => {
@@ -94,6 +100,7 @@
 
   // `ms`: the field says milliseconds (durationInMillis, duration_ms, "Milliseconds"). Otherwise only a big number
   // is taken as milliseconds: the old cut-off, 1000, made a 20-minute track given in seconds last 1 second
+  /** @param {unknown} val @param {boolean} [ms] */
   function parseAppleDuration(val, ms = false) {
     if (val == null) return undefined;
     const s = String(val).trim();
@@ -109,10 +116,12 @@
     return undefined;
   }
 
+  /** @param {string} text */
   function parseAppleCSV(text) {
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     if (!lines.length) return { headers: [], rows: [] };
     const delim = lines[0].includes('\t') ? '\t' : (lines[0].includes(';') && !lines[0].includes(',') ? ';' : ',');
+    /** @param {string} row */
     function splitRow(row) {
       const res = [];
       let cur = '';
@@ -134,6 +143,7 @@
     const rows = [];
     for (let i = 1; i < lines.length; i++) {
       const cols = splitRow(lines[i]);
+      /** @type {Record<string, string>} */
       const row = {};
       for (let j = 0; j < headers.length; j++) row[headers[j]] = cols[j] || '';
       rows.push(row);
@@ -141,6 +151,7 @@
     return { headers, rows };
   }
 
+  /** @param {string} text */
   function parseAppleExportCSV(text) {
     const { headers, rows } = parseAppleCSV(text);
     const titleCol = headers.find(h => /^(title|name|track\s*name|song(\s*name)?|track\s*description)$/i.test(h)) || headers.find(h => /(title|song|track)/i.test(h));
@@ -170,10 +181,13 @@
     return { likes, playlists };
   }
 
+  /** @param {any} json */
   function parseAppleExportJSON(json) {
+    /** @type {any[]} */
     const likes = [];
     const playlistsMap = new Map();
 
+    /** @param {any} node @param {string} [currentPl] */
     function walk(node, currentPl = '') {
       if (!node || typeof node !== 'object') return;
       if (Array.isArray(node)) {
@@ -181,6 +195,7 @@
         return;
       }
       // Apple's own export writes "Title", "Artist", "Track Duration": also look keys up in lower case, like the CSV path
+      /** @type {Record<string, any>} */
       const lowered = {};
       for (const [k, v] of Object.entries(node)) { lowered[k] = v; const lk = k.toLowerCase(); if (!(lk in lowered)) lowered[lk] = v; }
       node = lowered;
@@ -230,6 +245,7 @@
 
   // What went wrong with an import, for people: { code, title, hint, icon } (icon is a name; app/imports.js has the
   // pictures). `online`: whether the device has a connection.
+  /** @param {string} provider @param {unknown} statusOrError @param {any} [body] @param {boolean} [online] */
   function classifyImportError(provider, statusOrError, body, online = true) {
     let status = typeof statusOrError === 'number' ? statusOrError : 0;
     let rawMsg = '';

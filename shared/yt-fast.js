@@ -9,11 +9,12 @@ const VOS_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1
 const VISITOR_MAX_AGE = 30 * 60e3;
 const PREFERRED_ITAGS = [251, 140, 250, 249, 139];
 
+/** @param {string} url @param {{ method?: string, headers?: Record<string, string>, body?: string | null, timeout?: number, maxBytes?: number, redirects?: number }} [o] @returns {Promise<{ status: number | undefined, body: string }>} */
 function request(url, { method = 'GET', headers = {}, body = null, timeout = 4000, maxBytes = 4 * 1024 * 1024, redirects = 3 } = {}) {
   return new Promise((resolve, reject) => {
     const req = https.request(url, { method, headers, timeout, maxHeaderSize: 128 * 1024 }, (res) => {
       // googlevideo moves a request to another server with a redirect; only https ones are followed
-      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0 && method === 'GET') {
+      if ([301, 302, 303, 307, 308].includes(res.statusCode || 0) && res.headers.location && redirects > 0 && method === 'GET') {
         res.resume();
         let next;
         try { next = new URL(res.headers.location, url); } catch (e) { reject(e); return; }
@@ -21,9 +22,10 @@ function request(url, { method = 'GET', headers = {}, body = null, timeout = 400
         request(next.href, { method, headers, timeout, maxBytes, redirects: redirects - 1 }).then(resolve, reject);
         return;
       }
+      /** @type {Buffer[]} */
       const chunks = [];
       let size = 0;
-      res.on('data', (c) => {
+      res.on('data', (/** @type {Buffer} */ c) => {
         size += c.length;
         if (size > maxBytes) { req.destroy(new Error('response too large')); return; }
         chunks.push(c);
@@ -38,8 +40,10 @@ function request(url, { method = 'GET', headers = {}, body = null, timeout = 400
   });
 }
 
+/** @type {string | null} */
 let visitor = null;
 let visitorAt = 0;
+/** @param {boolean} force */
 async function visitorId(force) {
   if (visitor && !force && Date.now() - visitorAt < VISITOR_MAX_AGE) return visitor;
   const r = await request('https://www.youtube.com/', { headers: { 'User-Agent': VOS_UA, 'Accept-Language': 'en-US' } });
@@ -48,6 +52,7 @@ async function visitorId(force) {
   return visitor;
 }
 
+/** @param {string} id @param {string | null} v */
 function playerBody(id, v) {
   return JSON.stringify({
     context: { client: { clientName: 'VISIONOS', clientVersion: '1.02', deviceMake: 'Apple', deviceModel: 'RealityDevice17,1', userAgent: VOS_UA, osName: 'visionOS', osVersion: '26.5.23O471', hl: 'en', timeZone: 'UTC', utcOffsetMinutes: 0, visitorData: v || undefined } },
@@ -56,24 +61,27 @@ function playerBody(id, v) {
 }
 
 // audio-only formats with a plain link, best first
+/** @param {any} player */
 function pickFormats(player) {
   const formats = ((player && player.streamingData && player.streamingData.adaptiveFormats) || [])
-    .filter((f) => f && f.url && /^audio\//.test(f.mimeType || ''));
-  const rank = (f) => { const i = PREFERRED_ITAGS.indexOf(f.itag); return i === -1 ? PREFERRED_ITAGS.length : i; };
-  return formats.sort((a, b) => rank(a) - rank(b));
+    .filter((/** @type {any} */ f) => f && f.url && /^audio\//.test(f.mimeType || ''));
+  const rank = (/** @type {any} */ f) => { const i = PREFERRED_ITAGS.indexOf(f.itag); return i === -1 ? PREFERRED_ITAGS.length : i; };
+  return formats.sort((/** @type {any} */ a, /** @type {any} */ b) => rank(a) - rank(b));
 }
 
-const videoId = (u) => { const m = String(u || '').match(/(?:v=|youtu\.be\/|\/shorts\/|^)([\w-]{11})(?:[&?#]|$)/); return m ? m[1] : null; };
+const videoId = (/** @type {unknown} */ u) => { const m = String(u || '').match(/(?:v=|youtu\.be\/|\/shorts\/|^)([\w-]{11})(?:[&?#]|$)/); return m ? m[1] : null; };
 
 // while YouTube asks this address to prove it isn't a bot, looking up other uploads of a song this way is pointless
 const BOT_PAUSE = 10 * 60 * 1000;
 let botUntil = 0;
 const botBlocked = () => Date.now() < botUntil;
 
+/** @param {string} id */
 async function lookup(id) {
   if (!/^[\w-]{11}$/.test(String(id || ''))) return null;
   for (const force of [false, true]) {
     const v = await visitorId(force);
+    /** @type {Record<string, string>} */
     const headers = { 'User-Agent': VOS_UA, 'Content-Type': 'application/json', 'X-Youtube-Client-Name': '101', 'X-Youtube-Client-Version': '1.02', Origin: 'https://www.youtube.com' };
     if (v) headers['X-Goog-Visitor-Id'] = v;
     const r = await request('https://www.youtube.com/youtubei/v1/player?prettyPrint=false', { method: 'POST', headers, body: playerBody(id, v) });

@@ -34,10 +34,11 @@ function ffmpegAsset() {
 
 // Without a timeout a stalled download kept the status at 'downloading' forever, and ensureTools()
 // refuses to start again while it says that. 60s without a single byte counts as failed.
+/** @param {string} url @param {number} [redirects] @returns {Promise<import('http').IncomingMessage>} */
 function get(url, redirects = 6) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, { headers: { 'User-Agent': 'Uriel' }, timeout: 60000 }, (res) => {
-      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location && redirects > 0) {
+      if ([301, 302, 303, 307, 308].includes(res.statusCode || 0) && res.headers.location && redirects > 0) {
         res.resume();
         return resolve(get(new URL(res.headers.location, url).toString(), redirects - 1));
       }
@@ -53,6 +54,7 @@ function get(url, redirects = 6) {
   });
 }
 
+/** @param {string} url */
 async function getText(url) {
   const res = await get(url);
   let out = '';
@@ -61,19 +63,20 @@ async function getText(url) {
   return out;
 }
 
+/** @param {string} url @param {string} dest */
 async function downloadFile(url, dest) {
   const res = await get(url);
   const total = Number(res.headers['content-length']) || 0;
   let done = 0;
   const hash = crypto.createHash('sha256');
-  await new Promise((resolve, reject) => {
+  await new Promise((/** @type {(value?: void) => void} */ resolve, reject) => {
     const out = fs.createWriteStream(dest);
-    res.on('data', (c) => {
+    res.on('data', (/** @type {Buffer} */ c) => {
       hash.update(c);
       done += c.length;
       if (total) state.percent = Math.round((done / total) * 100);
     });
-    res.on('error', (e) => { out.destroy(); reject(e); });
+    res.on('error', (/** @type {Error} */ e) => { out.destroy(); reject(e); });
     out.on('error', reject);
     out.on('finish', () => resolve());
     res.pipe(out);
@@ -81,6 +84,7 @@ async function downloadFile(url, dest) {
   return hash.digest('hex');
 }
 
+/** @param {string} sums @param {string} fileName */
 function expectedHash(sums, fileName) {
   for (const line of sums.split(/\r?\n/)) {
     const m = line.trim().match(/^([a-f0-9]{64})\s+\*?(?:\.\/)?(.+)$/i);
@@ -89,6 +93,7 @@ function expectedHash(sums, fileName) {
   return null;
 }
 
+/** @param {string} cmd @param {string[]} args @param {number} [timeoutMs] @returns {Promise<void>} */
 function run(cmd, args, timeoutMs = 600000) {
   return new Promise((resolve, reject) => {
     const p = spawn(cmd, args, { windowsHide: true });
@@ -113,6 +118,7 @@ function run(cmd, args, timeoutMs = 600000) {
   });
 }
 
+/** @param {string} dir @param {string} fileName @returns {string | null} */
 function findFile(dir, fileName) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
@@ -139,6 +145,7 @@ async function installYtDlp() {
   fs.renameSync(tmp, target);
 }
 
+/** @param {string} archive @param {string} target */
 async function installMacYtDlpDir(archive, target) {
   const work = fs.mkdtempSync(path.join(BIN_DIR, '.yt-dlp-unpack-'));
   try {
@@ -165,6 +172,7 @@ function hasSlowMacYtDlp() {
   try { return fs.lstatSync(path.join(BIN_DIR, 'yt-dlp')).isFile(); } catch (_) { return false; }
 }
 
+/** @param {string} file */
 function sha256OfFile(file) {
   return new Promise((resolve, reject) => {
     const h = crypto.createHash('sha256');
@@ -192,7 +200,7 @@ async function installFfmpeg() {
     const tar = IS_WIN ? path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe') : 'tar';
     if (IS_WIN && /\.zip$/i.test(archive)) {
       // .NET's ZipFile doesn't depend on which tar is installed; System32 tar is the fallback
-      const q = p => p.replace(/'/g, "''");
+      const q = (/** @type {string} */ p) => p.replace(/'/g, "''");
       try {
         await run('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command',
           `Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory('${q(archive)}', '${q(work)}')`]);
@@ -236,7 +244,7 @@ async function ensureTools() {
   } catch (e) {
     try { logger.error(`Tool download failed: ${state.tool}`, e); } catch (_) {}
     state.status = 'error';
-    state.error = e.message;
+    state.error = e instanceof Error ? e.message : String(e);
   }
   return toolsStatus();
 }

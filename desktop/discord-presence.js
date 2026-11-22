@@ -7,11 +7,14 @@ const crypto = require('crypto');
 
 const MAX_FRAME_BYTES = 1024 * 1024;
 const CLIENT_ID = '1564605359610400929'; // Uriel's own Discord application
+/** @type {import('net').Socket | null} */
 let socket = null;
 let buffer = Buffer.alloc(0);
+/** @type {object | null} */
 let activity = null;
 let ready = false;
 let connecting = false;
+/** @type {NodeJS.Timeout | null} */
 let retryTimer = null;
 
 function ipcPaths() {
@@ -28,6 +31,7 @@ function ipcPaths() {
   return [...new Set(paths)];
 }
 
+/** @param {number} opcode @param {unknown} value */
 function frame(opcode, value) {
   const payload = Buffer.from(JSON.stringify(value), 'utf8');
   const header = Buffer.alloc(8);
@@ -54,6 +58,7 @@ function scheduleRetry() {
   if (retryTimer.unref) retryTimer.unref();
 }
 
+/** @param {number} index */
 function connectCandidate(index) {
   if (!CLIENT_ID || !activity || socket || connecting) return;
   const candidates = ipcPaths();
@@ -120,16 +125,19 @@ function connectCandidate(index) {
   });
 }
 
+/** @param {unknown} value */
 function cleanText(value) {
   if (typeof value !== 'string') return '';
   return value.replace(/[\r\n\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 128);
 }
 
+/** @param {any} rawTrack */
 function setPresence(rawTrack) {
   const details = cleanText(rawTrack && rawTrack.title) || 'Unknown Track';
   const state = cleanText(rawTrack && rawTrack.artist) || 'Unknown Artist';
   if (!details && !state) return { ok: false, error: 'Presence text is empty.' };
 
+  /** @type {{ type: number, details: string, state: string, instance: boolean, timestamps?: { start: number, end?: number }, assets?: { large_image: string }, buttons?: { label: string, url: string }[] }} */
   const nextActivity = {
     type: 2,
     details,
@@ -172,8 +180,9 @@ function clearPresence() {
   if (current && !current.destroyed) current.end();
 }
 
+/** @param {() => Electron.BrowserWindow | null} getWindow */
 function register(getWindow) {
-  const isAppWindow = (event) => {
+  const isAppWindow = (/** @type {Electron.IpcMainEvent} */ event) => {
     const win = getWindow();
     return !!(win && !win.isDestroyed() && event.sender === win.webContents);
   };

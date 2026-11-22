@@ -3,23 +3,26 @@
 // delete). Which keys belong to a profile and how localStorage keeps them apart is in profiles-core.js. Switching
 // stops the music and reloads the app, so everything in memory starts fresh with the other profile's things.
 (() => {
-  const P = window.UrielProfiles;
+  const P = /** @type {UrielProfilesApi} */ (window.UrielProfiles);
   if (!P) return;
 
   const EMOJI = ['', '🎧', '🎸', '🎹', '🎤', '🥁', '🦊', '🐱', '🐼', '🌙', '⭐', '🔥', '🌈', '🍀'];
-  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  /** @type {Record<string, string>} */
+  const ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  const esc = (/** @type {unknown} */ s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ESCAPES[c]);
+  /** @param {string} m @param {string} [kind] */
   const toast = (m, kind) => { try { window.UrielCore && window.UrielCore.toast(m, kind || 'info'); } catch (e) {} };
   // UI language (i18n.js): data-i18n marks Uriel's own words in the HTML below; profile names only go into {0} slots
-  const I18n = window.UrielI18n || (() => { const f = (s, ...a) => String(s).replace(/\{(\d)\}/g, (_, i) => (a[i] != null ? a[i] : '')); return { T: (s) => s, Tf: f, Tm: f, Th: f, text: (el, s, ...a) => { if (el) el.textContent = f(s, ...a); } }; })();
-  const initial = (name) => (Array.from(String(name || '').trim())[0] || '?').toUpperCase();
+  const I18n = window.UrielI18n || (() => { const f = (/** @type {string} */ s, /** @type {any[]} */ ...a) => String(s).replace(/\{(\d)\}/g, (_, i) => (a[i] != null ? a[i] : '')); return { T: (/** @type {string} */ s) => s, Tf: f, Tm: f, Th: f, text: (/** @type {HTMLElement | null} */ el, /** @type {string} */ s, /** @type {any[]} */ ...a) => { if (el) el.textContent = f(s, ...a); } }; })();
+  const initial = (/** @type {unknown} */ name) => (Array.from(String(name || '').trim())[0] || '?').toUpperCase();
   // dark letters on light colors, white on dark ones
-  const inkOn = (hex) => {
+  const inkOn = (/** @type {string} */ hex) => {
     const n = parseInt(String(hex).slice(1), 16) || 0;
     return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255 > 0.6 ? '#1D1B20' : '#FFFFFF';
   };
-  const avatar = (p, size = '') => `<span class="profile-avatar${size ? ` ${size}` : ''}${p.emoji ? ' emoji' : ''}" style="background:${p.color};color:${inkOn(p.color)}" aria-hidden="true">${esc(p.emoji || initial(p.name))}</span>`;
+  const avatar = (/** @type {{ name: string, color: string, emoji: string }} */ p, size = '') => `<span class="profile-avatar${size ? ` ${size}` : ''}${p.emoji ? ' emoji' : ''}" style="background:${p.color};color:${inkOn(p.color)}" aria-hidden="true">${esc(p.emoji || initial(p.name))}</span>`;
   // '1 playlist' / '{0} playlists', each translated as a whole
-  const plural = (n, one, many) => (n === 1 ? I18n.T(`1 ${one}`) : I18n.Tf(`{0} ${many}`, n));
+  const plural = (/** @type {number} */ n, /** @type {string} */ one, /** @type {string} */ many) => (n === 1 ? I18n.T(`1 ${one}`) : I18n.Tf(`{0} ${many}`, n));
 
   const ICON = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
   const PLUS = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
@@ -28,6 +31,7 @@
   const CHECK = '<svg class="profile-menu-check" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 
   // ---------- switching ----------
+  /** @param {string} id */
   function switchTo(id) {
     const target = P.list().find((p) => p.id === id);
     if (!target || id === P.id) return;
@@ -49,6 +53,7 @@
   }
 
   // ---------- top bar: avatar + switcher ----------
+  /** @type {HTMLElement | null} */
   let menu = null;
   function renderSwitcher() {
     const btn = document.getElementById('profile-switch');
@@ -112,6 +117,7 @@
   window.addEventListener('resize', closeMenu);
   window.addEventListener('blur', closeMenu);
 
+  /** @param {boolean} [add] */
   function openSettings(add) {
     const nav = document.getElementById('nav-settings');
     if (nav) nav.click();
@@ -120,10 +126,18 @@
   }
 
   // ---------- Settings → Profiles ----------
+  /** @type {HTMLElement | null} */
   let section = null;
-  let adding = false, editing = null, draft = null, fresh = null;
+  let adding = false;
+  /** @type {string | null} */
+  let editing = null;
+  /** @type {{ name: string, color: string, emoji: string } | null} */
+  let draft = null;
+  /** @type {string | null} */
+  let fresh = null;
 
-  const count = (id, key) => { try { const v = JSON.parse(P.peek(id, key) || '[]'); return Array.isArray(v) ? v.length : 0; } catch (e) { return 0; } };
+  const count = (/** @type {string} */ id, /** @type {string} */ key) => { try { const v = JSON.parse(P.peek(id, key) || '[]'); return Array.isArray(v) ? v.length : 0; } catch (e) { return 0; } };
+  /** @param {UrielProfile} p */
   function summary(p) {
     const parts = [];
     const pl = count(p.id, 'devsize_playlists'), fav = count(p.id, 'devsize_favorites');
@@ -135,6 +149,7 @@
     return parts.length ? parts.join(' · ') : I18n.T('Nothing saved yet');
   }
 
+  /** @param {UrielProfile | null} [p] */
   function form(p) {
     const d = draft || (draft = { name: p ? p.name : '', color: p ? p.color : nextColor(), emoji: p ? p.emoji : '' });
     const shown = { name: d.name || (p ? p.name : I18n.T('New profile')), color: d.color, emoji: d.emoji };
@@ -149,18 +164,21 @@
   }
   const nextColor = () => { const used = new Set(P.list().map((p) => p.color)); return P.COLORS.find((c) => !used.has(c)) || P.COLORS[0]; };
   // the preview follows the name, color and picture without redrawing the form (it would lose the keyboard)
+  /** @param {HTMLElement} f */
   function refreshPreview(f) {
+    // only called while a profile is being added or edited
+    const d = /** @type {{ name: string, color: string, emoji: string }} */ (draft);
     const id = f.dataset.id;
     const p = id ? P.list().find((q) => q.id === id) : null;
-    const shown = { name: draft.name || (p ? p.name : I18n.T('New profile')), color: draft.color, emoji: draft.emoji };
+    const shown = { name: d.name || (p ? p.name : I18n.T('New profile')), color: d.color, emoji: d.emoji };
     const old = f.querySelector('.profile-form-top .profile-avatar');
     if (old) old.outerHTML = avatar(shown, 'lg');
     const letter = f.querySelector('.profile-emoji-letter');
     if (letter) letter.textContent = initial(shown.name);
-    f.querySelectorAll('.profile-swatch').forEach((b) => { b.classList.toggle('on', b.dataset.color === draft.color); b.setAttribute('aria-pressed', String(b.dataset.color === draft.color)); });
-    f.querySelectorAll('.profile-emoji').forEach((b) => { b.classList.toggle('on', b.dataset.emoji === draft.emoji); b.setAttribute('aria-pressed', String(b.dataset.emoji === draft.emoji)); });
+    /** @type {NodeListOf<HTMLElement>} */ (f.querySelectorAll('.profile-swatch')).forEach((b) => { b.classList.toggle('on', b.dataset.color === d.color); b.setAttribute('aria-pressed', String(b.dataset.color === d.color)); });
+    /** @type {NodeListOf<HTMLElement>} */ (f.querySelectorAll('.profile-emoji')).forEach((b) => { b.classList.toggle('on', b.dataset.emoji === d.emoji); b.setAttribute('aria-pressed', String(b.dataset.emoji === d.emoji)); });
   }
-  const focusName = () => { const i = section && section.querySelector('.profile-name-input'); if (i) i.focus(); };
+  const focusName = () => { const i = section && /** @type {HTMLElement | null} */ (section.querySelector('.profile-name-input')); if (i) i.focus(); };
 
   function render() {
     renderSwitcher();
@@ -190,13 +208,14 @@
     section.innerHTML = parts.join('');
   }
 
+  /** @param {MouseEvent} e */
   function onClick(e) {
-    const b = e.target.closest('button');
+    const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('button'));
     if (!b) return;
-    const f = b.closest('.profile-form');
-    if (f && (b.dataset.color || b.dataset.emoji !== undefined) && !b.dataset.act) {
+    const f = /** @type {HTMLElement | null} */ (b.closest('.profile-form'));
+    if (f && draft && (b.dataset.color || b.dataset.emoji !== undefined) && !b.dataset.act) {
       if (b.dataset.color) draft.color = b.dataset.color;
-      else draft.emoji = b.dataset.emoji;
+      else draft.emoji = b.dataset.emoji || '';
       refreshPreview(f);
       return;
     }
@@ -213,11 +232,12 @@
       render();
     }
   }
+  /** @param {SubmitEvent} e */
   function onSubmit(e) {
     e.preventDefault();
-    const f = e.target.closest('.profile-form');
+    const f = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('.profile-form'));
     if (!f || !draft) return;
-    const name = f.querySelector('.profile-name-input').value;
+    const name = /** @type {HTMLInputElement} */ (f.querySelector('.profile-name-input')).value;
     try {
       if (f.dataset.id) {
         P.update(f.dataset.id, { name, color: draft.color, emoji: draft.emoji });
@@ -232,10 +252,12 @@
     draft = null;
     render();
   }
+  /** @param {Event} e */
   function onInput(e) {
-    if (!e.target.classList.contains('profile-name-input') || !draft) return;
-    draft.name = e.target.value;
-    refreshPreview(e.target.closest('.profile-form'));
+    const input = /** @type {HTMLInputElement} */ (e.target);
+    if (!input.classList.contains('profile-name-input') || !draft) return;
+    draft.name = input.value;
+    refreshPreview(/** @type {HTMLElement} */ (input.closest('.profile-form')));
   }
 
   function mount() {
@@ -250,7 +272,8 @@
     section = document.createElement('div');
     section.className = 'settings-section profile-section';
     section.dataset.cat = 'profiles';
-    about.parentElement.insertBefore(section, about.parentElement.querySelector('.sync-section') || about);
+    const parent = /** @type {HTMLElement} */ (about.parentElement);
+    parent.insertBefore(section, parent.querySelector('.sync-section') || about);
     section.addEventListener('click', onClick);
     section.addEventListener('submit', onSubmit);
     section.addEventListener('input', onInput);

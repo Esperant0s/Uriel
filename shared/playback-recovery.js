@@ -8,11 +8,13 @@ const MAX_TRIES = 3;
 const CALM_MS = 60000; // this long after the last try, a new failure starts counting from the beginning
 
 function createMidSongRecovery({ maxTries = MAX_TRIES, calmMs = CALM_MS, now = Date.now } = {}) {
+  /** @type {unknown} */
   let song = null;
   let tries = 0;
   let last = 0;
   return {
     // song: anything that changes with the loaded song. Returns 'retry', 'wait-online' or 'give-up'.
+    /** @param {{ song: unknown, local?: boolean, online?: boolean }} o */
     decide({ song: current, local = false, online = true }) {
       if (local) return 'give-up'; // a file doesn't come back by looking it up again
       if (!online) return 'wait-online';
@@ -28,6 +30,7 @@ function createMidSongRecovery({ maxTries = MAX_TRIES, calmMs = CALM_MS, now = D
 }
 
 // where to continue: the start says nothing was heard yet, and seeking to the very end would just end the song
+/** @param {number} position @param {number} duration */
 function resumePosition(position, duration) {
   if (!(position > 1)) return 0;
   return !duration || position < duration - 2 ? position : 0;

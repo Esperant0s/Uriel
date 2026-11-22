@@ -41,6 +41,7 @@ function resolveDataDir() {
 
 // written beside and renamed into place: a crash halfway used to leave a cut-off file, read back as {}, so the
 // data folder silently went back to the default and the next save dropped it for good
+/** @param {object} cfg */
 function writeConfig(cfg) {
   fs.mkdirSync(CONFIG_DIR, { recursive: true });
   const tmp = `${CONFIG_PATH}.${process.pid}.tmp`;
@@ -48,6 +49,7 @@ function writeConfig(cfg) {
   fs.renameSync(tmp, CONFIG_PATH);
 }
 
+/** @param {unknown} dir */
 function setDataDir(dir) {
   const cfg = readConfig();
   if (dir && String(dir).trim()) cfg.dataDir = path.resolve(String(dir).trim());
@@ -64,6 +66,7 @@ function resolveDownloadDir() {
   return null;
 }
 
+/** @param {unknown} dir */
 function setDownloadDir(dir) {
   const cfg = readConfig();
   if (dir && String(dir).trim()) cfg.downloadDir = path.resolve(String(dir).trim());
@@ -94,6 +97,7 @@ const TUTORIAL_MARKER_FALLBACK = path.join(DATA_DIR, '.urieltutorial');
 const TUTORIAL_MARKERS_BEFORE = [IS_WIN ? 'C:\\Mural\\.murieltutorial' : path.join(os.homedir(), '.murieltutorial'), path.join(DATA_DIR, '.murieltutorial')];
 const STARTUP_PATH = path.join(DATA_DIR, 'startup.json');
 function readStartupConfig() { try { return JSON.parse(fs.readFileSync(STARTUP_PATH, 'utf8')) || {}; } catch (e) { return {}; } }
+/** @param {object} patch */
 function writeStartupConfig(patch) {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -113,6 +117,7 @@ function markTutorialDone() {
 const URIEL_DATA_ENTRIES = ['tracks', 'custom-lyrics', 'lyrics', 'thumbnails', 'library', 'bin', 'plugins', 'logs', 'backups', 'metadata.json', 'library.json', 'startup.json', 'spotify-auth.enc', 'lastfm-auth.enc', '.urieltutorial', 'i18n'];
 
 // `only`: names to take at the top level (deeper levels take everything under them)
+/** @param {string} fromDir @param {string} toDir @param {Set<string>} [skipNames] @param {string[] | null} [only] */
 async function copyDirContents(fromDir, toDir, skipNames = new Set(['config.json']), only = null) {
   await fs.promises.mkdir(toDir, { recursive: true });
   const entries = await fs.promises.readdir(fromDir, { withFileTypes: true });
@@ -125,6 +130,7 @@ async function copyDirContents(fromDir, toDir, skipNames = new Set(['config.json
   }
 }
 
+/** @param {string} dir @param {Set<string>} [skipNames] @param {string[] | null} [only] */
 async function removeDirContents(dir, skipNames = new Set(['config.json']), only = null) {
   const entries = await fs.promises.readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
@@ -139,6 +145,7 @@ async function removeDirContents(dir, skipNames = new Set(['config.json']), only
   }
 }
 
+/** @param {string} p */
 function isExecutableFile(p) {
   try {
     fs.accessSync(p, fs.constants.X_OK);
@@ -165,6 +172,7 @@ function systemBinDirs(env = process.env, platform = process.platform, home = os
   return [...dirs, '/snap/bin', '/home/linuxbrew/.linuxbrew/bin', path.join(home, '.nix-profile', 'bin'), '/run/current-system/sw/bin', '/var/lib/flatpak/exports/bin'];
 }
 
+/** @param {string} name @param {NodeJS.ProcessEnv} [env] @param {NodeJS.Platform} [platform] */
 function findInPath(name, env = process.env, platform = process.platform) {
   const win = platform === 'win32';
   const dirs = (env.PATH || env.Path || '').split(win ? ';' : ':').filter(Boolean);
@@ -179,22 +187,25 @@ function findInPath(name, env = process.env, platform = process.platform) {
   return null;
 }
 
+/** @type {Record<string, string | null>} */
 const binaryCache = {};
 
 // a miss is looked up again after a while, so a tool installed with a package manager while Uriel is open counts
 const MISS_TTL = 30000;
+/** @type {Record<string, number>} */
 const missedAt = {};
 
+/** @param {string} name */
 function resolveBinary(name) {
   if (name in binaryCache && (binaryCache[name] || Date.now() - missedAt[name] < MISS_TTL)) return binaryCache[name];
   const exe = IS_WIN ? `${name}.exe` : name;
   const envKey = `URIEL_${name.replace(/[^a-z0-9]/gi, '').toUpperCase()}`;
-  const candidates = [
+  const candidates = /** @type {string[]} */ ([
     process.env[envKey],
     path.join(BIN_DIR, exe),
     process.resourcesPath && path.join(process.resourcesPath, 'bin', exe),
     path.join(__dirname, 'bin', exe)
-  ].filter(Boolean);
+  ].filter(Boolean));
   // then the copies Uriel (or Riff) downloaded before the rename: they were skipped when the Uriel folder
   // already existed, and the app offered to download ~400 MB it already had
   const found = candidates.find(isExecutableFile) || findInPath(name) || LEGACY_BIN_DIRS.map((d) => path.join(d, exe)).find(isExecutableFile);
@@ -203,6 +214,7 @@ function resolveBinary(name) {
   return binaryCache[name];
 }
 
+/** @param {string[]} args */
 function ytDlpCommand(args) {
   const bin = resolveBinary('yt-dlp');
   if (!bin) {

@@ -13,10 +13,11 @@ const { normalizeSearch } = require('./search-text');
 
 const UNKNOWN_ARTIST = 'unknown artist';
 // a local file and a streamed upload of the same recording differ by a few seconds of silence at most
-const durationTolerance = (want) => Math.max(5, want * 0.03);
+const durationTolerance = (/** @type {number} */ want) => Math.max(5, want * 0.03);
 
-const compact = (s) => s.replace(/^the /, '').replace(/ /g, '');
+const compact = (/** @type {string} */ s) => s.replace(/^the /, '').replace(/ /g, '');
 
+/** @param {unknown} artist */
 function artistsOf(artist) {
   const raw = normalizeSearch(String(artist || ''));
   if (!raw || matchNorm(raw) === UNKNOWN_ARTIST) return [];
@@ -25,11 +26,13 @@ function artistsOf(artist) {
 
 // the title keys a song is known by: its clean title, and for "Artist - Title" uploads on someone else's
 // channel the part after the dash too (with that artist counted as one of the song's artists)
+/** @param {unknown} title @param {unknown} artist */
 function keysFor(title, artist) {
   const t = normalizeSearch(String(title || ''));
   const artists = artistsOf(artist);
+  /** @type {{ key: string, artists: string[] }[]} */
   const out = [];
-  const add = (k, a) => { k = compact(k || ''); if (k && !out.some((o) => o.key === k)) out.push({ key: k, artists: a }); };
+  const add = (/** @type {string} */ k, /** @type {string[]} */ a) => { k = compact(k || ''); if (k && !out.some((o) => o.key === k)) out.push({ key: k, artists: a }); };
   add(cleanTitle(t, splitArtists(normalizeSearch(String(artist || '')))), artists);
   const dash = t.split(/\s[-–—|]\s/);
   if (dash.length > 1) {
@@ -39,6 +42,7 @@ function keysFor(title, artist) {
   return out;
 }
 
+/** @param {string[]} a @param {string[]} b */
 function sameArtist(a, b) {
   for (const x of a) {
     for (const y of b) {
@@ -52,16 +56,20 @@ function sameArtist(a, b) {
 }
 
 // songs: [{ id, title, artist, duration }]. Returns { find({ title, artist, duration }) -> song | null, size }.
+/** @param {any[]} songs */
 function createLocalIndex(songs) {
+  /** @type {Map<string, { song: any, artists: string[] }[]>} */
   const byKey = new Map();
   for (const song of songs || []) {
     if (!song || !song.id || !song.title) continue;
     for (const { key, artists } of keysFor(song.title, song.artist)) {
-      if (!byKey.has(key)) byKey.set(key, []);
-      byKey.get(key).push({ song, artists });
+      const list = byKey.get(key) || [];
+      list.push({ song, artists });
+      byKey.set(key, list);
     }
   }
 
+  /** @param {any} track */
   function find(track) {
     if (!track || !track.title || !byKey.size) return null;
     const want = Number(track.duration) || 0;

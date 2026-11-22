@@ -21,6 +21,7 @@ function paths(home = os.homedir()) {
 
 // An older launcher entry of this app becomes uriel.desktop, so the window (app id "uriel") finds it.
 // An entry is this app's when it starts the same AppImage.
+/** @param {string} home @param {string} [image] */
 function adoptOldEntry(home, image) {
   const p = paths(home);
   if (fs.existsSync(p.desktop) || !image) return false;

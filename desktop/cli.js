@@ -13,6 +13,7 @@ if (!args.includes('lyrics') && !args.includes('--lyrics')) {
 const PORT = 38472;
 const URL = `http://127.0.0.1:${PORT}/api/lyrics-stream`;
 
+/** @type {any} */
 let cfonts = null;
 try {
   cfonts = require('cfonts');
@@ -20,8 +21,10 @@ try {
 
 let lastStateKey = '';
 
+/** @param {string} word @param {number} cols @param {number} rows */
 function renderLatin(word, cols, rows) {
   const clean = word.toUpperCase();
+  /** @type {string[]} */
   let renderedLines = [];
 
   if (cfonts) {
@@ -43,7 +46,7 @@ function renderLatin(word, cols, rows) {
         env: 'node'
       });
 
-      renderedLines = out.string.split('\n').filter(l => l.trim().length > 0);
+      renderedLines = out.string.split('\n').filter((/** @type {string} */ l) => l.trim().length > 0);
     } catch (e) {
     }
   }
@@ -59,6 +62,7 @@ function renderLatin(word, cols, rows) {
   renderedLines.forEach(line => process.stdout.write(line + '\n'));
 }
 
+/** @param {string} word @param {number} cols @param {number} rows */
 function renderNonLatin(word, cols, rows) {
   const clean = word.toLowerCase();
 
@@ -71,6 +75,7 @@ function renderNonLatin(word, cols, rows) {
   process.stdout.write(' '.repeat(padX) + `\x1b[1;97m${clean}\x1b[0m\n`);
 }
 
+/** @param {string} rawWord */
 function renderWord(rawWord) {
   // control characters out first: lyrics come from outside providers, and an escape sequence would be run by the terminal
   const cleanWord = rawWord.replace(/[\u0000-\u001f\u007f-\u009f]/g, '').replace(/[,.!?:;"'()[\]«»—–-、。「」]/g, '').trim();
@@ -100,7 +105,7 @@ function startStream() {
     res.on('data', (chunk) => {
       buffer += chunk.toString();
       const parts = buffer.split('\n\n');
-      buffer = parts.pop();
+      buffer = parts.pop() || '';
 
       for (const part of parts) {
         if (!part.startsWith('data: ')) continue;

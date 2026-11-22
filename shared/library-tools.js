@@ -1,8 +1,10 @@
 // @ts-check
 // keyOf (optional) gives each track an identity string; with it the check is one pass instead of comparing every
 // pair, which froze big playlists (2 s for 6,000 songs on every open and every filter keystroke)
+/** @template T @param {T[]} tracks @param {(a: T, b: T) => boolean} same @param {(t: T) => string} [keyOf] */
 function dedupeTracks(tracks, same, keyOf) {
   if (!Array.isArray(tracks)) return [];
+  /** @type {T[]} */
   const kept = [];
   if (typeof keyOf === 'function') {
     const seen = new Set();

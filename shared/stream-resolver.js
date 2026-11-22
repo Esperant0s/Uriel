@@ -11,16 +11,18 @@ const REST_MS = [60e3, 120e3, 240e3, 480e3, 600e3];
 
 // Per source ('youtube-fast', 'youtube-ytdlp', 'soundcloud', ...): blocked until, resting until, counts.
 function createHealth({ now = () => Date.now() } = {}) {
+  /** @typedef {{ blockedUntil: number, restUntil: number, fails: number, rests: number, ok: number, blocked: number, failed: number }} SourceHealth */
+  /** @type {Map<string, SourceHealth>} */
   const sources = new Map();
-  const get = (src) => {
+  const get = (/** @type {string} */ src) => {
     if (!sources.has(src)) sources.set(src, { blockedUntil: 0, restUntil: 0, fails: 0, rests: 0, ok: 0, blocked: 0, failed: 0 });
-    return sources.get(src);
+    return /** @type {SourceHealth} */ (sources.get(src));
   };
   return {
-    blocked(src) { if (!src) return false; const s = get(src); return now() < s.blockedUntil || now() < s.restUntil; },
-    block(src, ms = BLOCK_MS) { const s = get(src); s.blockedUntil = now() + ms; s.blocked++; },
+    blocked(/** @type {string} */ src) { if (!src) return false; const s = get(src); return now() < s.blockedUntil || now() < s.restUntil; },
+    block(/** @type {string} */ src, ms = BLOCK_MS) { const s = get(src); s.blockedUntil = now() + ms; s.blocked++; },
     // a soft failure: after SOFT_FAILS in a row the source rests 1, 2, 4, 8, then 10 minutes
-    fail(src) {
+    fail(/** @type {string} */ src) {
       const s = get(src);
       s.failed++;
       if (++s.fails < SOFT_FAILS) return;
@@ -28,10 +30,12 @@ function createHealth({ now = () => Date.now() } = {}) {
       s.rests++;
       s.fails = 0;
     },
-    ok(src) { const s = get(src); s.ok++; s.fails = 0; s.rests = 0; s.restUntil = 0; s.blockedUntil = 0; },
+    ok(/** @type {string} */ src) { const s = get(src); s.ok++; s.fails = 0; s.rests = 0; s.restUntil = 0; s.blockedUntil = 0; },
     // signing in to YouTube, or the network changing: try again at once
+    /** @param {string} [src] */
     reset(src) { for (const [k, s] of sources) if (!src || k === src) { s.blockedUntil = 0; s.restUntil = 0; s.fails = 0; s.rests = 0; } },
     stats() {
+      /** @type {Record<string, { ok: number, blocked: number, failed: number, waiting: number }>} */
       const out = {};
       for (const [k, s] of sources) out[k] = { ok: s.ok, blocked: s.blocked, failed: s.failed, waiting: Math.max(0, Math.max(s.blockedUntil, s.restUntil) - now()) };
       return out;
@@ -40,6 +44,7 @@ function createHealth({ now = () => Date.now() } = {}) {
 }
 
 class ResolveError extends Error {
+  /** @param {string} code @param {any[]} tried */
   constructor(code, tried) {
     super(code === 'blocked' ? 'blocked' : code === 'aborted' ? 'aborted' : 'unavailable');
     this.code = code;
@@ -47,9 +52,11 @@ class ResolveError extends Error {
   }
 }
 
-const sourceOf = (s, song) => (typeof s.source === 'function' ? s.source(song) : s.source) || null;
+const sourceOf = (/** @type {any} */ s, /** @type {any} */ song) => (typeof s.source === 'function' ? s.source(song) : s.source) || null;
 
+/** @template T @param {Promise<T>} promise @param {number} ms @returns {Promise<T>} */
 function withTimeout(promise, ms) {
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
   let timer;
   return Promise.race([promise, new Promise((_, reject) => { timer = setTimeout(() => reject(Object.assign(new Error('timed out'), { timeout: true })), ms); })])
     .finally(() => clearTimeout(timer));
@@ -93,7 +100,7 @@ function createResolver({ strategies, health = createHealth(), isBlocked = () =>
           tried.push({ name: s.name, outcome: 'blocked', ms: now() - t0 });
         } else {
           if (src) health.fail(src);
-          tried.push({ name: s.name, outcome: e && e.timeout ? 'timeout' : 'error', ms: now() - t0, error: e && e.message });
+          tried.push({ name: s.name, outcome: /** @type {any} */ (e)?.timeout ? 'timeout' : 'error', ms: now() - t0, error: e instanceof Error ? e.message : undefined });
         }
       }
     }
@@ -104,7 +111,7 @@ function createResolver({ strategies, health = createHealth(), isBlocked = () =>
   return {
     health,
     // the same song asked for twice at once (a prefetch and a tap) shares one lookup
-    resolve(song, opts = {}) {
+    resolve(/** @type {any} */ song, opts = {}) {
       const key = song && song.key;
       if (key && inFlight.has(key)) return inFlight.get(key);
       const p = run(song, opts).finally(() => { if (key) inFlight.delete(key); });

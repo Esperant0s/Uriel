@@ -2,6 +2,7 @@
 // Song radio (#28): songs like one song or a few picked together, a queue that grows as it plays; and sharing the
 // song that's playing. Part of app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
+/** @param {UrielAppDeps} deps @param {any} out */
 window.UrielApp.radio = function ({ Lib, state, getBlocks, isBlocked, Tm, showToast, isSameTrack, updateQueueBadge, playTrack, el, I18N, sharePlaylist }, out) {
   Object.assign(out, {
     songRadioEnabled, startSongRadio,
@@ -9,21 +10,26 @@ window.UrielApp.radio = function ({ Lib, state, getBlocks, isBlocked, Tm, showTo
 
   // ---- song radio (#28): a mix of songs like one song, or a few picked together; the queue grows as it plays ----
   // Settings > Tracks > Song radio shows or hides its buttons (on unless turned off).
+  /** @typedef {{ id: number, seeds: any[], label: string, ids: Set<string>, keys: Set<string>, loading: boolean, exhausted: boolean }} SongRadio */
+  /** @type {{ current: SongRadio | null, nextId: number }} */
   const songRadio = { current: null, nextId: 1 };
   function songRadioEnabled() {
     try { return localStorage.getItem('uriel_song_radio') !== '0'; } catch (e) { return true; }
   }
+  /** @param {any} t */
   function radioSeedOf(t) {
     return { id: t.id || '', title: t.title || '', artist: t.artist || '', platform: t.platform || 'youtube' };
   }
+  /** @param {any} t */
   function radioTrackKey(t) {
     return `${Lib.nameKey(t && t.artist)}::${Lib.nameKey(t && t.title)}`;
   }
   // the radio is on while its songs are still in the queue (playing something else from a list replaces the queue)
   function activeSongRadio() {
     const r = songRadio.current;
-    return r && state.queue.some((t) => t && t._radio === r.id) ? r : null;
+    return r && state.queue.some((/** @type {any} */ t) => t && t._radio === r.id) ? r : null;
   }
+  /** @param {SongRadio} r @param {number} limit @returns {Promise<any[]>} */
   async function fetchSongRadio(r, limit) {
     const blocks = getBlocks();
     const res = await fetch(`http://127.0.0.1:${state.serverPort}/api/radio`, {
@@ -39,13 +45,15 @@ window.UrielApp.radio = function ({ Lib, state, getBlocks, isBlocked, Tm, showTo
     const data = await res.json();
     const tracks = data && data.success && Array.isArray(data.tracks) ? data.tracks : [];
     // the server already leaves these out; this keeps a repeat out even if it found one under another id
-    const fresh = tracks.filter((t) => t && t.title && !r.ids.has(String(t.id || '')) && !r.keys.has(radioTrackKey(t)) && !isBlocked(t));
-    fresh.forEach((t) => { if (t.id) r.ids.add(String(t.id)); r.keys.add(radioTrackKey(t)); t._radio = r.id; });
+    const fresh = tracks.filter((/** @type {any} */ t) => t && t.title && !r.ids.has(String(t.id || '')) && !r.keys.has(radioTrackKey(t)) && !isBlocked(t));
+    fresh.forEach((/** @type {any} */ t) => { if (t.id) r.ids.add(String(t.id)); r.keys.add(radioTrackKey(t)); t._radio = r.id; });
     return fresh;
   }
+  /** @param {any[]} seeds */
   async function startSongRadio(seeds) {
-    const list = (seeds || []).filter((t) => t && t.title).slice(0, 5);
+    const list = (seeds || []).filter((/** @type {any} */ t) => t && t.title).slice(0, 5);
     if (!list.length) return;
+    /** @type {SongRadio} */
     const r = {
       id: songRadio.nextId++,
       seeds: list,
@@ -56,7 +64,7 @@ window.UrielApp.radio = function ({ Lib, state, getBlocks, isBlocked, Tm, showTo
     songRadio.current = r;
     showToast(list.length === 1 ? Tm('Starting radio from "{0}"…', list[0].title) : Tm('Starting radio from {0} songs…', list.length), 'info');
     let tracks = [];
-    try { tracks = await fetchSongRadio(r, 25); } catch (e) { console.warn('[radio]', e && e.message); }
+    try { tracks = await fetchSongRadio(r, 25); } catch (e) { console.warn('[radio]', e instanceof Error ? e.message : e); }
     r.loading = false;
     if (songRadio.current !== r) return; // another radio was started meanwhile
     if (!tracks.length) {

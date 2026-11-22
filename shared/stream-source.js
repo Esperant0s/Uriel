@@ -9,6 +9,7 @@
 // yt-dlp arguments that print the media URL(s), then the request headers as one JSON line
 const LOOKUP_PRINT_ARGS = ['--print', 'urls', '--print', '%(http_headers)j'];
 
+/** @param {unknown} raw */
 function parseLookup(raw) {
   const lines = String(raw || '').split('\n').map((l) => l.trim()).filter(Boolean);
   const url = lines.find((l) => l.startsWith('http')) || null;
@@ -26,7 +27,9 @@ function parseLookup(raw) {
 // headers for the upstream request: Range (and the rest) from the player, yt-dlp's User-Agent etc. win
 // over the browser's. Cookies and anything else from the renderer never go upstream.
 const YT_HEADERS = new Set(['user-agent', 'accept', 'accept-language', 'sec-fetch-mode', 'referer', 'origin']);
+/** @param {Record<string, any> | null | undefined} reqHeaders @param {Record<string, unknown> | null | undefined} ytHeaders @param {{ googlevideo?: boolean }} [opts] */
 function upstreamHeaders(reqHeaders, ytHeaders, opts) {
+  /** @type {Record<string, any>} */
   const out = {};
   const from = reqHeaders || {};
   for (const key of ['range', 'accept', 'accept-language', 'user-agent']) {
@@ -48,7 +51,9 @@ function upstreamHeaders(reqHeaders, ytHeaders, opts) {
 
 // upstream response headers passed to the audio element, without the upstream's CORS and cookie headers
 // (the local server answers CORS itself)
+/** @param {Record<string, any> | null | undefined} upstream */
 function downstreamHeaders(upstream) {
+  /** @type {Record<string, any>} */
   const out = {};
   for (const [k, v] of Object.entries(upstream || {})) {
     const key = k.toLowerCase();
@@ -59,12 +64,14 @@ function downstreamHeaders(upstream) {
   return out;
 }
 
+/** @param {unknown} u */
 function isGoogleVideoUrl(u) {
-  try { const h = new URL(u).hostname; return h === 'googlevideo.com' || h.endsWith('.googlevideo.com'); } catch (_) { return false; }
+  try { const h = new URL(String(u)).hostname; return h === 'googlevideo.com' || h.endsWith('.googlevideo.com'); } catch (_) { return false; }
 }
 
 // the src the audio element gets for a /api/stream-info answer: YouTube streams go through the local
 // proxy on desktop; phones (which play downloaded files) and HLS keep the URL they were given
+/** @param {any} data @param {boolean} isMobile */
 function pickStreamSrc(data, isMobile) {
   if (!data || !data.streamUrl) return null;
   if (!isMobile && !data.isHls && !data.isLocal && data.proxyUrl && isGoogleVideoUrl(data.streamUrl)) return data.proxyUrl;
@@ -77,18 +84,21 @@ function pickStreamSrc(data, isMobile) {
 const YT_CHUNK_BYTES = 10 * 1024 * 1024;
 
 // "bytes=N-" -> N; anything else (no Range, a bounded or suffix Range) -> -1
+/** @param {unknown} range */
 function openRangeStart(range) {
   const m = /^bytes=\s*(\d+)\s*-\s*$/i.exec(String(range || '').trim());
   return m ? Number(m[1]) : -1;
 }
 
 // the bounded Range for the chunk starting at `start` (inside `total` when it is known)
+/** @param {number} start @param {number} total */
 function chunkRange(start, total) {
   const end = start + YT_CHUNK_BYTES - 1;
   return `bytes=${start}-${total > 0 ? Math.min(total - 1, end) : end}`;
 }
 
 // "bytes 0-1023/4096" -> { start, end, total } (total 0 when the server sent "*")
+/** @param {unknown} value */
 function parseContentRange(value) {
   const m = /^bytes\s+(\d+)-(\d+)\/(\d+|\*)$/i.exec(String(value || '').trim());
   if (!m) return null;

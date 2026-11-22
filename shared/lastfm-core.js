@@ -4,13 +4,14 @@
 // Last.fm's rules (last.fm/api/scrobbling): a song longer than 30 seconds is scrobbled once it has been listened to
 // for half its length or for 4 minutes, whichever comes first. Only listening counts: time spent paused or skipped
 // over by seeking doesn't. "Now playing" goes out as soon as a song really plays.
-(function (root) {
+(function (/** @type {any} */ root) {
   const MIN_LENGTH = 30;
   const MAX_WAIT = 240;
   const NOW_PLAYING_AFTER = 1; // seconds listened: a song skipped straight away isn't announced
 
   // seconds of listening a song needs before it is scrobbled; 0 = never (30 s or shorter, or a live stream).
   // A song whose length isn't known yet waits the full 4 minutes, which also proves it is longer than 30 s.
+  /** @param {number} duration */
   function scrobbleAfter(duration) {
     const d = Number(duration);
     if (d === Infinity) return 0;
@@ -23,6 +24,7 @@
   // it answers with what to send now: { nowPlaying: true } and/or { scrobble: { timestamp } } (Unix seconds of the
   // moment the song started, as Last.fm wants it).
   function createTracker() {
+    /** @type {string | null} */
     let key = null;
     let startedAt = 0;
     let listened = 0;
@@ -31,6 +33,7 @@
     let announced = false;
     let scrobbled = false;
 
+    /** @param {string} k @param {number} now @param {number} pos */
     function restart(k, now, pos) {
       key = k;
       startedAt = Math.floor(now / 1000);
@@ -41,10 +44,12 @@
       scrobbled = false;
     }
 
+    /** @param {{ key: string, playing: boolean, position: number, duration: number, now?: number }} o */
     function tick({ key: k, playing, position, duration, now }) {
+      /** @type {{ nowPlaying: boolean, scrobble: { timestamp: number } | null }} */
       const out = { nowPlaying: false, scrobble: null };
       const pos = Number.isFinite(position) && position >= 0 ? position : 0;
-      const at = Number.isFinite(now) ? now : Date.now();
+      const at = typeof now === 'number' && Number.isFinite(now) ? now : Date.now();
       if (!k) { key = null; return out; }
       if (k !== key) restart(k, at, pos);
       // the same song again from the top (repeat one, or played again): a new listen once the last one counted
@@ -73,10 +78,11 @@
 
   const NOISE = /\s*[([]\s*(?:official\s*(?:music\s*)?(?:video|audio|lyric\s*video|visuali[sz]er)|lyrics?(?:\s*video)?|audio|hd|hq|4k|remastered|explicit|clean|visuali[sz]er|mv|clip\s*officiel|slowed(?:\s*\+\s*reverb)?|sped\s*up|nightcore)\s*[)\]]/gi;
   const CHANNEL = /(?:vevo|official|records|music|tv|channel)$/i;
-  const clip = (s, n) => (typeof s === 'string' || typeof s === 'number' ? String(s) : '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const clip = (/** @type {unknown} */ s, /** @type {number} */ n) => (typeof s === 'string' || typeof s === 'number' ? String(s) : '').replace(/\s+/g, ' ').trim().slice(0, n);
 
   // What Last.fm should hear for a song: YouTube titles carry "(Official Video)" and "Artist - Title", channels end
   // in " - Topic" or "VEVO", and only the first of several listed artists names the song's artist.
+  /** @param {any} track */
   function cleanMeta(track) {
     if (!track) return null;
     let title = clip(track.title, 512).replace(NOISE, '').trim();
@@ -97,6 +103,7 @@
     if (artist.includes(',')) artist = artist.split(',')[0];
     artist = artist.trim();
     if (!title || !artist || artist.toLowerCase() === 'unknown artist') return null;
+    /** @type {{ artist: string, track: string, album?: string, duration?: number }} */
     const out = { artist, track: title };
     const album = clip(track.album, 512);
     if (album) out.album = album;
@@ -106,7 +113,7 @@
   }
 
   // the song as the tracker knows it: a new key is a new listen
-  const trackKey = (t) => (t ? `${t.platform || ''}|${t.id || ''}|${t.title || ''}|${t.artist || ''}` : '');
+  const trackKey = (/** @type {any} */ t) => (t ? `${t.platform || ''}|${t.id || ''}|${t.title || ''}|${t.artist || ''}` : '');
 
   const api = { MIN_LENGTH, MAX_WAIT, scrobbleAfter, createTracker, cleanMeta, trackKey };
   if (typeof module === 'object' && module.exports) module.exports = api;

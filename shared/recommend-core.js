@@ -2,12 +2,13 @@
 // Recommendations (#19), the parts that are plain data: reading YouTube Music's radio for a song (its "Up next"
 // watch playlist) and Last.fm's similar songs and artists, and keeping blocked and just-played songs out.
 // No network: server.js fetches and uses these in My Wave / the Daily Mixes, test/recommend-core.test.js runs them.
-(function (root) {
+(function (/** @type {any} */ root) {
   const lib = typeof module === 'object' && module.exports ? require('./library-pages') : root.UrielLibrary;
-  const list = (v) => (Array.isArray(v) ? v : []);
+  const list = (/** @type {any} */ v) => (Array.isArray(v) ? v : []);
   const VIDEO_ID = /^[\w-]{11}$/;
-  const runsText = (r) => list(r && r.runs).map((x) => (x && x.text) || '').join('');
+  const runsText = (/** @type {any} */ r) => list(r && r.runs).map((x) => (x && x.text) || '').join('');
 
+  /** @param {unknown} text */
   function parseLength(text) {
     const s = String(text || '').trim();
     if (!/^\d+(:\d{1,2}){1,2}$/.test(s)) return 0;
@@ -18,7 +19,7 @@
   const TITLE_NOISE = /\s*[([][^)\]]*\b(?:official|video|audio|lyrics?|visuali[sz]er|hd|hq|4k|remaster(?:ed)?|upgrade|mv|m\/v)\b[^)\]]*[)\]]/gi;
   // talk, not songs
   const NOT_MUSIC = /\b(?:documentary|interview|trailer|reaction|behind the scenes|making of|podcast|full album|live stream)\b/i;
-  const fold = (x) => String(x || '').normalize('NFKD').toLowerCase().replace(/[\u0300-\u036f\u20d0-\u20ff\ufe00-\ufe0f]/g, '').replace(/[^\p{L}\p{N}\p{M}]/gu, '');
+  const fold = (/** @type {unknown} */ x) => String(x || '').normalize('NFKD').toLowerCase().replace(/[\u0300-\u036f\u20d0-\u20ff\ufe00-\ufe0f]/g, '').replace(/[^\p{L}\p{N}\p{M}]/gu, '');
 
   // A video's title often carries its artist ("Radiohead - No Surprises (Official Video)"): the song's own name,
   // and the artist the title names (a re-upload's channel is not the artist).
@@ -27,12 +28,13 @@
   // after an artist's name is a song called that
   const VERSION_TAG = /^(?:(?:\d{4}\s+)?(?:digital(?:ly)?\s+)?re-?master(?:ed)?(?:\s+\d{4})?(?:\s+version)?|live\s+(?:at|from)\s+.+|(?:\d{4}\s+)?(?:mono|stereo)\s+(?:mix|version)|(?:radio|single|album|extended|original)\s+(?:edit|version|mix)|(?:acoustic|demo)\s+version)$/i;
 
+  /** @param {unknown} title @param {unknown} artist */
   function cleanVideoTitle(title, artist) {
     let t = String(title || '').replace(TITLE_NOISE, '').replace(/\s+/g, ' ').trim();
     const given = String(artist || '').replace(/\s*-\s*Topic$/i, '').trim();
     // "OasisVEVO", "Radiohead Official": the channel, named after the artist
     let a = given.replace(/\s*(?:VEVO|Official)$/i, '').trim() || given;
-    const same = (x) => !!fold(x) && !!fold(a) && (fold(x) === fold(a) || fold(a).includes(fold(x)) || fold(x).includes(fold(a)));
+    const same = (/** @type {string} */ x) => !!fold(x) && !!fold(a) && (fold(x) === fold(a) || fold(a).includes(fold(x)) || fold(x).includes(fold(a)));
     // "Artist - Song" (the same artist repeated, as in "Pixies - Pixies - Where Is My Mind?", too)
     for (let i = 0; i < 2; i++) {
       const m = t.match(/^(.+?)\s+[-–—]\s+(.+)$/);
@@ -50,6 +52,7 @@
 
   // YouTube Music's radio for a song: the `next` call with playlistId RDAMVM<videoId>. Its queue lists the songs
   // YouTube Music would play after this one (the seed itself first). Only songs of a normal length.
+  /** @param {any} json @param {string} seedId */
   function parseWatchPlaylist(json, seedId) {
     const tabs = (((((json || {}).contents || {}).singleColumnMusicWatchNextResultsRenderer || {}).tabbedRenderer || {})
       .watchNextTabbedResultsRenderer || {}).tabs;
@@ -89,10 +92,11 @@
     return out;
   }
 
-  const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
-  const one = (v) => (Array.isArray(v) ? v : v && typeof v === 'object' ? [v] : []); // Last.fm sends one item as an object
+  const num = (/** @type {unknown} */ v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
+  const one = (/** @type {any} */ v) => (Array.isArray(v) ? v : v && typeof v === 'object' ? [v] : []); // Last.fm sends one item as an object
 
   // track.getSimilar: [{ title, artist, match (0..1), duration }]
+  /** @param {any} json */
   function parseSimilarTracks(json) {
     const items = one(json && json.similartracks && json.similartracks.track);
     return items.map((t) => ({
@@ -104,6 +108,7 @@
   }
 
   // artist.getSimilar: [{ name, match (0..1) }]
+  /** @param {any} json */
   function parseSimilarArtists(json) {
     return one(json && json.similarartists && json.similarartists.artist)
       .map((a) => ({ name: String((a && a.name) || '').trim(), match: Math.max(0, Math.min(1, num(a && a.match))) }))
@@ -111,6 +116,7 @@
   }
 
   // artist.getTopTracks: [{ title, artist }]
+  /** @param {any} json @param {string} [fallbackArtist] */
   function parseTopTracks(json, fallbackArtist = '') {
     return one(json && json.toptracks && json.toptracks.track).map((t) => ({
       title: String((t && t.name) || '').trim(),
@@ -127,7 +133,7 @@
     const ids = recentIds instanceof Set ? recentIds : new Set(list(recentIds));
     const b = { artists: list(blocks && blocks.artists), songs: list(blocks && blocks.songs) };
     const hasBlocks = b.artists.length > 0 || b.songs.length > 0;
-    const key = typeof keyOf === 'function' ? keyOf : (t) => `${lib.nameKey(t.artist)}::${lib.nameKey(t.title)}`;
+    const key = typeof keyOf === 'function' ? keyOf : (/** @type {any} */ t) => `${lib.nameKey(t.artist)}::${lib.nameKey(t.title)}`;
     const seenKeys = new Set();
     const seenIds = new Set();
     const out = [];
@@ -149,7 +155,7 @@
   // already queued). At most `perArtist` songs by one artist, so one seed's artist doesn't take over.
   /** @param {any[][]} perSeed @param {{ limit?: number, exclude?: any, keyOf?: (t: any) => string, perArtist?: number }} [o] */
   function mixRadio(perSeed, { limit = 25, exclude, keyOf, perArtist = 3 } = {}) {
-    const key = typeof keyOf === 'function' ? keyOf : (t) => `${lib.nameKey(t.artist)}::${lib.nameKey(t.title)}`;
+    const key = typeof keyOf === 'function' ? keyOf : (/** @type {any} */ t) => `${lib.nameKey(t.artist)}::${lib.nameKey(t.title)}`;
     const ex = exclude || {};
     const exKeys = ex.keys instanceof Set ? ex.keys : new Set(list(ex.keys));
     const exIds = ex.ids instanceof Set ? ex.ids : new Set(list(ex.ids));

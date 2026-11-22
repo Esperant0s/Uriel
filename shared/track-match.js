@@ -14,8 +14,10 @@ const NOISE = new RegExp(`\\b(${NOISE_WORDS})\\b`, 'g');
 const BRACKET_NOISE = new RegExp(`\\b(${NOISE_WORDS}|from .*)\\b`, 'g');
 
 // Cyrillic spelled in Latin letters, so "Кино" on Spotify meets "Kino" on YouTube
+/** @type {Record<string, string>} */
 const CYR = { а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh', з: 'z', и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'sch', ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya', і: 'i', ї: 'yi', є: 'ye', ґ: 'g' };
 
+/** @param {unknown} s */
 function matchNorm(s) {
   return String(s || '').toLowerCase()
     .replace(/[а-яёіїєґ]/g, (c) => CYR[c])
@@ -27,6 +29,7 @@ function matchNorm(s) {
 }
 
 // "Artist A, Artist B & C feat. D" -> ['artist a', 'artist b', 'c', 'd']
+/** @param {unknown} artist */
 function splitArtists(artist) {
   return String(artist || '')
     .replace(/\s+-\s+topic\s*$/i, '')
@@ -37,10 +40,11 @@ function splitArtists(artist) {
 
 // Spotify's " - Remastered 2011", " - From "8 Mile" Soundtrack", " - Radio Edit" endings, which the uploads leave out
 const TAIL_NOISE = /\b(\d{4} )?remaster(ed)?( \d{4})?( version)?|\b(radio|single|album) (edit|version)|\b(mono|stereo)( version)?|\bbonus track|\boriginal mix|\bedit\b/g;
+/** @param {unknown} title */
 function dropTail(title) {
   const parts = String(title || '').split(/\s[-–—]\s/);
   // "From …" only when it names a film or show: "The Beatles - From Me to You" is a song
-  const noise = (x) => /^from\s+["“']|^from\b.*\b(soundtrack|motion picture|film|movie|series|musical)\b/i.test(x.trim())
+  const noise = (/** @type {string} */ x) => /^from\s+["“']|^from\b.*\b(soundtrack|motion picture|film|movie|series|musical)\b/i.test(x.trim())
     || !matchNorm(x).replace(TAIL_NOISE, '').trim();
   while (parts.length > 1 && noise(parts[parts.length - 1])) parts.pop();
   return parts.join(' - ');
@@ -48,13 +52,16 @@ function dropTail(title) {
 
 // Names written down as their consonants, in Latin or Arabic letters, so "Umm Kulthum", "Om Kolthoum" and
 // "ام كلثوم" come out the same. Vowels, h, w and y are the parts transliterations disagree on.
+/** @type {Record<string, string>} */
 const ARABIC = { ب: 'b', ت: 't', ث: 't', ج: 'j', خ: 'k', د: 'd', ذ: 'd', ر: 'r', ز: 'z', س: 's', ش: 's', ص: 's', ض: 'd', ط: 't', ظ: 'z', غ: 'g', ف: 'f', ق: 'k', ك: 'k', ل: 'l', م: 'm', ن: 'n' };
+/** @param {unknown} s */
 function skeleton(s) {
   return matchNorm(s).replace(/[\u0600-\u06ff]/g, (c) => ARABIC[c] || '')
     .replace(/q/g, 'k').replace(/[^a-z0-9]|[aeiouyhw]/g, '').replace(/(.)\1+/g, '$1');
 }
-const isArabic = (s) => /[\u0600-\u06ff]/.test(String(s || ''));
+const isArabic = (/** @type {unknown} */ s) => /[\u0600-\u06ff]/.test(String(s || ''));
 // the same name in two spellings: short ones only count across scripts, where nothing else could match
+/** @param {string} a @param {string} b */
 function sameSkeleton(a, b) {
   const x = skeleton(a);
   return x === skeleton(b) && x.length >= (isArabic(a) !== isArabic(b) ? 3 : 5);
@@ -62,18 +69,20 @@ function sameSkeleton(a, b) {
 
 // credits that name no performer: the uploads of these songs are by whoever posted them
 const NO_ARTIST = /^(various artists|unknown artist|.+ sound team)$/;
-const realArtists = (artist) => splitArtists(artist).filter((a) => !NO_ARTIST.test(a));
+const realArtists = (/** @type {unknown} */ artist) => splitArtists(artist).filter((a) => !NO_ARTIST.test(a));
 
+/** @param {unknown} t */
 function stripFeat(t) {
   return String(t || '').replace(/[([]\s*(feat|ft|with)\.?\s[^)\]]*[)\]]/gi, ' ').replace(/\s(feat|ft)\.?\s.*$/i, ' ');
 }
 
 // the song title with the artist prefix, featured artists and "(Official Video)" style noise removed
+/** @param {unknown} title @param {string[]} [artists] */
 function cleanTitle(title, artists = []) {
   let t = stripFeat(dropTail(title));
   t = t.replace(/[([]([^)\]]*)[)\]]/g, (m, inner) => (matchNorm(inner).replace(BRACKET_NOISE, '').trim() ? ` ${inner} ` : ' '));
   // a title that is nothing but such words (Madonna's "Music") stays as it is
-  const denoise = (x) => matchNorm(x).replace(NOISE, ' ').replace(/\s+/g, ' ').trim() || matchNorm(x);
+  const denoise = (/** @type {string} */ x) => matchNorm(x).replace(NOISE, ' ').replace(/\s+/g, ' ').trim() || matchNorm(x);
   let n = denoise(t);
   // "Artist - Title" uploads
   // split the title with its brackets already cleaned, so "(from Frozen)" and "(Official Video)" are gone here too
@@ -87,8 +96,10 @@ function cleanTitle(title, artists = []) {
   return n;
 }
 
+/** @param {unknown} s */
 function tokens(s) { return new Set(matchNorm(s).split(' ').filter(Boolean)); }
 
+/** @param {unknown} a @param {unknown} b */
 function titleSimilarity(a, b) {
   const A = tokens(a); const B = tokens(b);
   if (!A.size || !B.size) return 0;
@@ -102,19 +113,22 @@ function titleSimilarity(a, b) {
   return Math.max(jac, cover * 0.85);
 }
 
+/** @param {string} text @param {string} word */
 function hasWord(text, word) {
   return new RegExp(`(^| )${word.replace(/ /g, '[ -]?')}( |$)`).test(text);
 }
+/** @param {unknown} text */
 function versionWords(text) {
   const n = matchNorm(text);
   return MATCH_VERSION_WORDS.filter((w) => hasWord(n, w));
 }
 
 // how sure we are that the result is by (one of) the wanted artists: 0..1
+/** @param {string[]} wanted @param {any} result */
 function artistScore(wanted, result) {
   if (!wanted.length) return 0.5;
   const channel = splitArtists(result.artist || result.uploader || '');
-  const compact = (s) => s.replace(/^the /, '').replace(/ /g, '');
+  const compact = (/** @type {string} */ s) => s.replace(/^the /, '').replace(/ /g, '');
   let best = 0;
   for (const w of wanted) {
     for (const c of channel) {
@@ -137,6 +151,7 @@ function artistScore(wanted, result) {
 }
 
 // sp: { title, artist, duration (s) }; results: search results { title, artist, duration }
+/** @param {any} sp @param {any} r */
 function scoreCandidate(sp, r) {
   const wanted = realArtists(sp.artist);
   const wantTitle = cleanTitle(sp.title, wanted);
@@ -167,6 +182,7 @@ function scoreCandidate(sp, r) {
   return { score, accept, tSim, aSim, dDiff };
 }
 
+/** @param {any} sp @param {any[] | null | undefined} results */
 function pickBestMatch(sp, results) {
   let best = null;
   let bestScore = -Infinity;
@@ -179,11 +195,13 @@ function pickBestMatch(sp, results) {
 }
 
 // search queries for an imported song, best first: main artist + clean title, then all artists + title
+/** @param {any} sp */
 function matchQueries(sp) {
   const artists = splitArtists(sp.artist);
   const title = String(stripFeat(dropTail(sp.title || ''))).trim();
+  /** @type {string[]} */
   const out = [];
-  const add = (q) => { q = String(q || '').replace(/\s+/g, ' ').trim(); if (q && !out.includes(q)) out.push(q); };
+  const add = (/** @type {string} */ q) => { q = String(q || '').replace(/\s+/g, ' ').trim(); if (q && !out.includes(q)) out.push(q); };
   const main = String(sp.artist || '').split(/\s*(?:,|&|\bfeat\.?|\bft\.?)\s*/i)[0];
   add(/^various artists$/i.test(main.trim()) ? title : `${main} ${title}`);
   if (artists.length > 1) add(`${title} ${String(sp.artist || '')}`);

@@ -11,6 +11,7 @@ const AUDIO = /\.(opus|webm|m4a|mp3|aac)$/i;
 const KEEP_NEWEST = 4;
 
 // files: [{ id, name, size, used, temp }]. Returns the files to delete.
+/** @param {{ id: string, name: string, size: number, used: number, temp?: boolean }[]} files @param {number} limitBytes @param {number} [keepNewest] */
 function planEviction(files, limitBytes, keepNewest = KEEP_NEWEST) {
   if (!(limitBytes > 0)) return [];
   let total = files.reduce((n, f) => n + f.size, 0); // a download still being written counts towards the limit

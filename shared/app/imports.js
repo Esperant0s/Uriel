@@ -3,7 +3,8 @@
 // files), the YouTube sign-in for importing from YouTube Music, and import by link (Yandex and others). Part of
 // app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
-window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHtml, T, openModal, closeModal, getTrackCanonicalId, stampAddedAt, createWavyProgress, updateFavoritesBadge, updateFavoriteIcon, renderFavoritesView, createPlaylist, showToast, renderPlaylistsList, I18N, Tm, isSameTrack, openPlaylistDetail, isFavoriteSong, importSharedPlaylist, setPlatform, el }, out) {
+/** @param {UrielAppDeps} deps */
+window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHtml, T, openModal, closeModal, getTrackCanonicalId, stampAddedAt, createWavyProgress, updateFavoritesBadge, updateFavoriteIcon, renderFavoritesView, createPlaylist, showToast, renderPlaylistsList, I18N, Tm, isSameTrack, openPlaylistDetail, isFavoriteSong, importSharedPlaylist, setPlatform, el }, /** @type {any} */ out) {
   Object.assign(out, {
     refreshYtSignin, matchSpotifyTracks,
   });
@@ -12,19 +13,20 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   const { normalizeForMatch, parseAppleExportCSV, parseAppleExportJSON } = Core;
 
   // the artist has to match as well as the title, covers / live / sped-up uploads lose (#18; track-match.js)
-  const pickBestMatch = (sp, results) => window.trackMatch.pickBestMatch(sp, results);
+  const pickBestMatch = (/** @type {any} */ sp, /** @type {any[]} */ results) => window.trackMatch.pickBestMatch(sp, results);
 
-  async function matchSpotifyTracks(list, onProgress) {
+  async function matchSpotifyTracks(/** @type {any[]} */ list, /** @type {(done: number, total: number) => void} */ onProgress) {
     const total = Array.isArray(list) ? list.length : 0;
     let completed = 0;
     let errorCount = 0;
     let nomatchCount = 0;
     let aborted = false;
+    /** @type {Record<string, number>} */
     const errorMap = {};
 
     if (typeof onProgress === 'function') onProgress(0, total);
 
-    async function searchCandidates(q, plat = state.platform || 'youtube', again = true) {
+    async function searchCandidates(/** @type {string} */ q, plat = state.platform || 'youtube', again = true) {
       // a search that fails in the middle of a big import is usually the source being busy: wait and ask once more
       if (again) {
         try { return await searchCandidates(q, plat, false); } catch (e) {
@@ -40,7 +42,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       throw new Error((sData && sData.error) || `Status ${sRes.status}`);
     }
 
-    const results = await pool(list || [], 6, async (t) => {
+    const results = await pool(list || [], 6, async (/** @type {any} */ t) => {
       if (aborted) return null;
       let matched = null;
       let lastErr = null;
@@ -60,7 +62,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
             matched = pickBestMatch(t, r);
             if (matched) break outer;
           } catch (e) {
-            lastErr = e.message || String(e);
+            lastErr = (e instanceof Error && e.message) || String(e);
           }
         }
       }
@@ -74,7 +76,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
             hadCandidates = true;
             matched = pickBestMatch(t, r3);
           } catch (e) {
-            lastErr = e.message || String(e);
+            lastErr = (e instanceof Error && e.message) || String(e);
           }
         }
       }
@@ -152,7 +154,9 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   const spChkLikes2 = /** @type {any} */ (document.getElementById('sp-chk-likes-2'));
   const spChkPlaylists2 = /** @type {any} */ (document.getElementById('sp-chk-playlists-2'));
   let currentSpotifyImportMode = 'link';
+  /** @type {{ likes: any[], playlists: any[] }} */
   let parsedSpotifyExport = { likes: [], playlists: [] };
+  /** @type {ReturnType<typeof setInterval> | null} */
   let spLoginPollTimer = null;
   let spotifyConnected = false;
   const spotifyHeaders = { 'X-Uriel-Token': window.electronAPI?.serverToken || '' };
@@ -177,6 +181,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     } catch (e) {}
   }
 
+  /** @type {Record<string, string>} */
   const IMPORT_ICONS = {
     lock: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
     search: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
@@ -186,12 +191,12 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     unknown: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
   };
   // what went wrong, with its picture (import-core.js decides which)
-  function classifyImportError(provider, statusOrError, body) {
+  function classifyImportError(/** @type {string} */ provider, /** @type {unknown} */ statusOrError, /** @type {any} */ body) {
     const info = Core.classifyImportError(provider, statusOrError, body, navigator.onLine);
     return { ...info, icon: IMPORT_ICONS[info.icon] };
   }
 
-  function showImportError(containerEl, errInfo) {
+  function showImportError(/** @type {HTMLElement} */ containerEl, /** @type {any} */ errInfo) {
     if (!containerEl) return;
     containerEl.innerHTML = `
       <div class="import-error-icon">${errInfo.icon}</div>
@@ -203,22 +208,22 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     containerEl.classList.remove('hidden');
   }
 
-  function clearImportError(containerEl) {
+  function clearImportError(/** @type {HTMLElement} */ containerEl) {
     if (!containerEl) return;
     containerEl.innerHTML = '';
     containerEl.classList.add('hidden');
   }
 
-  function setSpotifyImportMode(mode) {
+  function setSpotifyImportMode(/** @type {string | undefined} */ mode) {
     currentSpotifyImportMode = mode || 'link';
     if (spModesContainer) {
-      spModesContainer.querySelectorAll('button').forEach(btn => {
+      spModesContainer.querySelectorAll('button').forEach((/** @type {HTMLElement} */ btn) => {
         btn.classList.toggle('active', btn.dataset.mode === currentSpotifyImportMode);
       });
     }
     clearImportError(spotifyLinkError);
     if (spotifyModal) {
-      spotifyModal.querySelectorAll('.sp-pane').forEach(pane => {
+      spotifyModal.querySelectorAll('.sp-pane').forEach((/** @type {HTMLElement} */ pane) => {
         pane.classList.toggle('hidden', pane.dataset.mode !== currentSpotifyImportMode);
       });
     }
@@ -237,7 +242,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   }
 
   if (spModesContainer) {
-    spModesContainer.querySelectorAll('button').forEach(btn => {
+    spModesContainer.querySelectorAll('button').forEach((/** @type {HTMLElement} */ btn) => {
       btn.addEventListener('click', () => {
         setSpotifyImportMode(btn.dataset.mode);
       });
@@ -306,7 +311,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
         spLoginPollTimer = setInterval(async () => {
           elapsed += 2000;
           if (elapsed > 180000) {
-            clearInterval(spLoginPollTimer);
+            if (spLoginPollTimer) clearInterval(spLoginPollTimer);
             spLoginPollTimer = null;
             if (spLoginStatus) {
               spLoginStatus.textContent = 'Login timed out';
@@ -318,7 +323,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
             const sRes = await fetch(`http://127.0.0.1:${state.serverPort}/api/spotify-status`, { headers: spotifyHeaders });
             const sData = await sRes.json();
             if (sData.connected) {
-              clearInterval(spLoginPollTimer);
+              if (spLoginPollTimer) clearInterval(spLoginPollTimer);
               spLoginPollTimer = null;
               spotifyConnected = true;
               if (spLoginStatus) {
@@ -329,7 +334,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
                 btnConfirmSpotifyImport.disabled = false;
               }
             } else if (sData.error) {
-              clearInterval(spLoginPollTimer);
+              if (spLoginPollTimer) clearInterval(spLoginPollTimer);
               spLoginPollTimer = null;
               if (spLoginStatus) {
                 spLoginStatus.textContent = sData.error;
@@ -341,7 +346,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
         }, 2000);
       } catch (err) {
         if (spLoginStatus) {
-          spLoginStatus.textContent = err.message || 'Error connecting to server';
+          spLoginStatus.textContent = (err instanceof Error && err.message) || 'Error connecting to server';
           spLoginStatus.style.color = 'var(--md-sys-color-error, #ba1a1a)';
         }
       }
@@ -373,7 +378,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   }
 
   if (spotifyTargetTrigger && spotifyTargetDropdown) {
-    spotifyTargetTrigger.addEventListener('click', (e) => {
+    spotifyTargetTrigger.addEventListener('click', (/** @type {any} */ e) => {
       e.stopPropagation();
       spotifyTargetDropdown.classList.toggle('open');
     });
@@ -407,7 +412,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (spotifyImportTarget) {
       spotifyImportTarget.disabled = false;
       spotifyImportTarget.innerHTML = '<option value="new">New playlist (Spotify name)</option>';
-      state.playlists.forEach(p => {
+      state.playlists.forEach((/** @type {any} */ p) => {
         const opt = document.createElement('option');
         opt.value = p.id;
         opt.textContent = p.name;
@@ -418,7 +423,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (spotifyTargetMenu) {
       spotifyTargetMenu.innerHTML = '<button class="m3-dropdown-option selected" data-value="new" type="button">New playlist (Spotify name)</button>';
       if (spotifyTargetLabel) spotifyTargetLabel.textContent = 'New playlist (Spotify name)';
-      state.playlists.forEach(p => {
+      state.playlists.forEach((/** @type {any} */ p) => {
         const opt = document.createElement('button');
         opt.type = 'button';
         opt.className = 'm3-dropdown-option';
@@ -426,13 +431,13 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
         opt.textContent = p.name || 'untitled';
         spotifyTargetMenu.appendChild(opt);
       });
-      spotifyTargetMenu.querySelectorAll('.m3-dropdown-option').forEach(opt => {
-        opt.addEventListener('click', (e) => {
+      spotifyTargetMenu.querySelectorAll('.m3-dropdown-option').forEach((/** @type {HTMLElement} */ opt) => {
+        opt.addEventListener('click', (/** @type {any} */ e) => {
           e.stopPropagation();
           const val = opt.dataset.value;
           if (spotifyImportTarget) spotifyImportTarget.value = val;
           if (spotifyTargetLabel) spotifyTargetLabel.textContent = opt.textContent;
-          spotifyTargetMenu.querySelectorAll('.m3-dropdown-option').forEach(o => o.classList.remove('selected'));
+          spotifyTargetMenu.querySelectorAll('.m3-dropdown-option').forEach((/** @type {Element} */ o) => o.classList.remove('selected'));
           opt.classList.add('selected');
           if (spotifyTargetDropdown) spotifyTargetDropdown.classList.remove('open');
         });
@@ -461,12 +466,12 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (spotifyModal) closeModal(spotifyModal);
   }
 
-  const importErrorText = (err, fallback = 'Failed to import songs') => (err && err.message === 'search_unresponsive'
+  const importErrorText = (/** @type {any} */ err, fallback = 'Failed to import songs') => (err && err.message === 'search_unresponsive'
     ? 'Search is not responding, so the import stopped. Try again later; nothing gets added twice. If it keeps happening, open Settings -> About -> Copy diagnostics and send it with your report.'
     : (err && err.message) || fallback);
 
   // adds the songs that aren't favorites yet (one pass with a Set; comparing every pair froze big imports)
-  function mergeIntoFavorites(tracks) {
+  function mergeIntoFavorites(/** @type {any[]} */ tracks) {
     const have = new Set(state.favorites.map(getTrackCanonicalId));
     let added = 0;
     for (const track of tracks || []) {
@@ -479,6 +484,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     return added;
   }
 
+  /** @param {{ likes?: any[], playlists?: any[], skippedPlaylists?: any[] }} o */
   async function runSpotifyImport({ likes = [], playlists = [], skippedPlaylists = [] }) {
     const likesToImport = likes || [];
     const playlistsToImport = playlists || [];
@@ -519,7 +525,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     let totalFoundCount = 0;
     try {
       if (likesToImport.length > 0) {
-        const foundLikes = await matchSpotifyTracks(likesToImport, (completed) => {
+        const foundLikes = await matchSpotifyTracks(likesToImport, (/** @type {number} */ completed) => {
           const cur = globalCompleted + completed;
           wavy.set(Math.round((cur / totalItemsCount) * 100));
           if (spotifyProgressLabel) spotifyProgressLabel.textContent = `${cur} / ${totalItemsCount}`;
@@ -539,7 +545,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
         // match every playlist before creating any: a failure half way left some behind, and a retry made them twice
         const matched = [];
         for (const pl of playlistsToImport) {
-          const found = await matchSpotifyTracks(pl.tracks || [], (completed) => {
+          const found = await matchSpotifyTracks(pl.tracks || [], (/** @type {number} */ completed) => {
             const cur = globalCompleted + completed;
             wavy.set(Math.round((cur / totalItemsCount) * 100));
             if (spotifyProgressLabel) spotifyProgressLabel.textContent = `${cur} / ${totalItemsCount}`;
@@ -650,10 +656,10 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
         return;
       }
 
-      if (!(data.likes?.length || data.playlists?.some(pl => pl.tracks?.length))) {
+      if (!(data.likes?.length || data.playlists?.some((/** @type {any} */ pl) => pl.tracks?.length))) {
         if (spotifyStatus) {
           spotifyStatus.textContent = data.partial
-            ? `No available songs to import. ${(data.skippedPlaylists || []).map(pl => `${pl.name}: ${pl.error}`).join('; ')}`
+            ? `No available songs to import. ${(data.skippedPlaylists || []).map((/** @type {any} */ pl) => `${pl.name}: ${pl.error}`).join('; ')}`
             : 'No songs found in your Spotify library';
           spotifyStatus.style.color = 'var(--md-sys-color-error, #ba1a1a)';
           spotifyStatus.classList.remove('hidden');
@@ -664,7 +670,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       }
       if (data.partial) {
         const skipped = data.skippedPlaylists || [];
-        const details = skipped.map(pl => `• ${pl.name}: ${pl.error}`).join('\n');
+        const details = skipped.map((/** @type {any} */ pl) => `• ${pl.name}: ${pl.error}`).join('\n');
         if (!window.confirm(`${skipped.length} Spotify playlist(s) could not be read:\n${details}\n\nImport the available songs only?`)) {
           if (spotifyStatus) {
             spotifyStatus.textContent = 'Partial import cancelled';
@@ -678,7 +684,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       await runSpotifyImport({ likes: data.likes || [], playlists: data.playlists || [], skippedPlaylists: data.skippedPlaylists || [] });
     } catch (err) {
       if (spotifyStatus) {
-        spotifyStatus.textContent = err.message || 'Failed to fetch Spotify library';
+        spotifyStatus.textContent = (err instanceof Error && err.message) || 'Failed to fetch Spotify library';
         spotifyStatus.style.color = 'var(--md-sys-color-error, #ba1a1a)';
         spotifyStatus.classList.remove('hidden');
       }
@@ -745,7 +751,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
 
       let foundTracks;
       try {
-        foundTracks = await matchSpotifyTracks(tracks, (completed, tot) => {
+        foundTracks = await matchSpotifyTracks(tracks, (/** @type {number} */ completed, /** @type {number} */ tot) => {
           wavy.set(Math.round((completed / tot) * 100));
           if (spotifyProgressLabel) spotifyProgressLabel.textContent = `${completed} / ${tot}`;
         });
@@ -771,11 +777,11 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       if (targetVal === 'new') {
         createPlaylist(data.name || 'Spotify Playlist', foundTracks, data.cover || '');
       } else {
-        const pl = state.playlists.find(p => p.id === targetVal);
+        const pl = state.playlists.find((/** @type {any} */ p) => p.id === targetVal);
         if (pl) {
           if (!pl.cover && data.cover) pl.cover = data.cover;
-          const existingIds = new Set(pl.tracks.map(t => t.id));
-          const newTracks = foundTracks.filter(t => !existingIds.has(t.id));
+          const existingIds = new Set(pl.tracks.map((/** @type {any} */ t) => t.id));
+          const newTracks = foundTracks.filter((/** @type {any} */ t) => !existingIds.has(t.id));
           pl.tracks.push(...newTracks.map(stampAddedAt));
           localStorage.setItem('devsize_playlists', JSON.stringify(state.playlists));
           renderPlaylistsList();
@@ -808,7 +814,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       if (btnCancelSpotifyImport) btnCancelSpotifyImport.disabled = false;
     } catch (err) {
       if (spotifyProgressWrap) spotifyProgressWrap.classList.add('hidden');
-      const errInfo = classifyImportError('spotify', err, err.message);
+      const errInfo = classifyImportError('spotify', err, err instanceof Error ? err.message : undefined);
       showImportError(spotifyLinkError, errInfo);
       if (spotifyImportUrl) spotifyImportUrl.disabled = false;
       if (spotifyImportTarget) spotifyImportTarget.disabled = false;
@@ -823,7 +829,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   if (btnConfirmSpotifyImport) btnConfirmSpotifyImport.addEventListener('click', handleSpotifyImportAction);
   if (spotifyImportUrl) {
     spotifyImportUrl.addEventListener('input', () => clearImportError(spotifyLinkError));
-    spotifyImportUrl.addEventListener('keydown', (e) => {
+    spotifyImportUrl.addEventListener('keydown', (/** @type {any} */ e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         handleSpotifyImportAction();
@@ -858,18 +864,19 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   const appleBtnText = /** @type {any} */ (document.getElementById('apple-import-btn-text'));
 
   let currentAppleImportMode = 'link';
+  /** @type {{ likes: any[], playlists: any[] }} */
   let parsedAppleExport = { likes: [], playlists: [] };
 
-  function setAppleImportMode(mode) {
+  function setAppleImportMode(/** @type {string | undefined} */ mode) {
     currentAppleImportMode = mode || 'link';
     if (appleModesContainer) {
-      appleModesContainer.querySelectorAll('button').forEach(btn => {
+      appleModesContainer.querySelectorAll('button').forEach((/** @type {HTMLElement} */ btn) => {
         btn.classList.toggle('active', btn.dataset.mode === currentAppleImportMode);
       });
     }
     clearImportError(appleLinkError);
     if (appleModal) {
-      appleModal.querySelectorAll('.sp-pane').forEach(pane => {
+      appleModal.querySelectorAll('.sp-pane').forEach((/** @type {HTMLElement} */ pane) => {
         pane.classList.toggle('hidden', pane.dataset.mode !== currentAppleImportMode);
       });
     }
@@ -884,7 +891,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   }
 
   if (appleModesContainer) {
-    appleModesContainer.querySelectorAll('button').forEach(btn => {
+    appleModesContainer.querySelectorAll('button').forEach((/** @type {HTMLElement} */ btn) => {
       btn.addEventListener('click', () => {
         setAppleImportMode(btn.dataset.mode);
       });
@@ -896,7 +903,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       appleFileInput.click();
     });
 
-    appleFileInput.addEventListener('change', async (e) => {
+    appleFileInput.addEventListener('change', async (/** @type {any} */ e) => {
       const files = Array.from(e.target.files || []);
       if (!files.length) return;
       parsedAppleExport = { likes: [], playlists: [] };
@@ -948,7 +955,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   }
 
   if (appleTargetTrigger && appleTargetDropdown) {
-    appleTargetTrigger.addEventListener('click', (e) => {
+    appleTargetTrigger.addEventListener('click', (/** @type {any} */ e) => {
       e.stopPropagation();
       appleTargetDropdown.classList.toggle('open');
     });
@@ -977,7 +984,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (appleImportTarget) {
       appleImportTarget.disabled = false;
       appleImportTarget.innerHTML = '<option value="new">New playlist (Apple Music name)</option>';
-      state.playlists.forEach(p => {
+      state.playlists.forEach((/** @type {any} */ p) => {
         const opt = document.createElement('option');
         opt.value = p.id;
         opt.textContent = p.name;
@@ -988,7 +995,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (appleTargetMenu) {
       appleTargetMenu.innerHTML = '<button class="m3-dropdown-option selected" data-value="new" type="button">New playlist (Apple Music name)</button>';
       if (appleTargetLabel) appleTargetLabel.textContent = 'New playlist (Apple Music name)';
-      state.playlists.forEach(p => {
+      state.playlists.forEach((/** @type {any} */ p) => {
         const opt = document.createElement('button');
         opt.type = 'button';
         opt.className = 'm3-dropdown-option';
@@ -996,13 +1003,13 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
         opt.textContent = p.name || 'untitled';
         appleTargetMenu.appendChild(opt);
       });
-      appleTargetMenu.querySelectorAll('.m3-dropdown-option').forEach(opt => {
-        opt.addEventListener('click', (e) => {
+      appleTargetMenu.querySelectorAll('.m3-dropdown-option').forEach((/** @type {HTMLElement} */ opt) => {
+        opt.addEventListener('click', (/** @type {any} */ e) => {
           e.stopPropagation();
           const val = opt.dataset.value;
           if (appleImportTarget) appleImportTarget.value = val;
           if (appleTargetLabel) appleTargetLabel.textContent = opt.textContent;
-          appleTargetMenu.querySelectorAll('.m3-dropdown-option').forEach(o => o.classList.remove('selected'));
+          appleTargetMenu.querySelectorAll('.m3-dropdown-option').forEach((/** @type {Element} */ o) => o.classList.remove('selected'));
           opt.classList.add('selected');
           if (appleTargetDropdown) appleTargetDropdown.classList.remove('open');
         });
@@ -1039,7 +1046,9 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (currentAppleImportMode === 'file') {
       const hasLikes = parsedAppleExport.likes.length > 0;
       const hasPlaylists = parsedAppleExport.playlists.length > 0;
+      /** @type {any[]} */
       let likesToImport = [];
+      /** @type {any[]} */
       let playlistsToImport = [];
 
       if (hasLikes && hasPlaylists) {
@@ -1077,7 +1086,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       let totalFoundCount = 0;
       try {
         if (likesToImport.length > 0) {
-          const foundLikes = await matchSpotifyTracks(likesToImport, (completed) => {
+          const foundLikes = await matchSpotifyTracks(likesToImport, (/** @type {number} */ completed) => {
             const cur = globalCompleted + completed;
             wavy.set(Math.round((cur / totalItemsCount) * 100));
             if (appleProgressLabel) appleProgressLabel.textContent = `${cur} / ${totalItemsCount}`;
@@ -1097,7 +1106,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
           // match every playlist before creating any (see the Spotify import)
           const matched = [];
           for (const pl of playlistsToImport) {
-            const found = await matchSpotifyTracks(pl.tracks || [], (completed) => {
+            const found = await matchSpotifyTracks(pl.tracks || [], (/** @type {number} */ completed) => {
               const cur = globalCompleted + completed;
               wavy.set(Math.round((cur / totalItemsCount) * 100));
               if (appleProgressLabel) appleProgressLabel.textContent = `${cur} / ${totalItemsCount}`;
@@ -1187,7 +1196,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       const total = tracks.length;
       if (appleProgressLabel) appleProgressLabel.textContent = `0 / ${total}`;
 
-      const foundTracks = await matchSpotifyTracks(tracks, (completed, tot) => {
+      const foundTracks = await matchSpotifyTracks(tracks, (/** @type {number} */ completed, /** @type {number} */ tot) => {
         wavy.set(Math.round((completed / tot) * 100));
         if (appleProgressLabel) appleProgressLabel.textContent = `${completed} / ${tot}`;
       });
@@ -1197,11 +1206,11 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       if (targetVal === 'new') {
         createPlaylist(data.name || 'Apple Music Playlist', foundTracks, data.cover || '');
       } else {
-        const pl = state.playlists.find(p => p.id === targetVal);
+        const pl = state.playlists.find((/** @type {any} */ p) => p.id === targetVal);
         if (pl) {
           if (!pl.cover && data.cover) pl.cover = data.cover;
-          const existingIds = new Set(pl.tracks.map(t => t.id));
-          const newTracks = foundTracks.filter(t => !existingIds.has(t.id));
+          const existingIds = new Set(pl.tracks.map((/** @type {any} */ t) => t.id));
+          const newTracks = foundTracks.filter((/** @type {any} */ t) => !existingIds.has(t.id));
           pl.tracks.push(...newTracks.map(stampAddedAt));
           localStorage.setItem('devsize_playlists', JSON.stringify(state.playlists));
           renderPlaylistsList();
@@ -1231,7 +1240,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       if (btnCancelAppleImport) btnCancelAppleImport.disabled = false;
     } catch (err) {
       if (appleProgressWrap) appleProgressWrap.classList.add('hidden');
-      const errInfo = classifyImportError('apple', err, err.message);
+      const errInfo = classifyImportError('apple', err, err instanceof Error ? err.message : undefined);
       showImportError(appleLinkError, errInfo);
       if (appleImportUrl) appleImportUrl.disabled = false;
       if (appleImportTarget) appleImportTarget.disabled = false;
@@ -1246,7 +1255,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   if (btnConfirmAppleImport) btnConfirmAppleImport.addEventListener('click', handleAppleImportAction);
   if (appleImportUrl) {
     appleImportUrl.addEventListener('input', () => clearImportError(appleLinkError));
-    appleImportUrl.addEventListener('keydown', (e) => {
+    appleImportUrl.addEventListener('keydown', (/** @type {any} */ e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         handleAppleImportAction();
@@ -1285,7 +1294,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   const ytSigninBtn = /** @type {any} */ (document.getElementById('btn-yt-signin'));
   const ytSigninStatus = /** @type {any} */ (document.getElementById('yt-signin-status'));
   const YT_SIGNIN_HINT = ytSigninStatus ? ytSigninStatus.textContent : '';
-  function showYtSignin(st) {
+  function showYtSignin(/** @type {any} */ st) {
     if (!ytSigninToggle || !st) return;
     ytSigninToggle.classList.toggle('active', !!st.enabled);
     if (ytSigninBtn) ytSigninBtn.hidden = !!st.loggedIn;
@@ -1323,6 +1332,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     refreshYtSignin();
   }
 
+  /** @param {string} text @param {boolean} [isError] */
   function setLinkStatus(text, isError) {
     if (!linkImportStatus) return;
     linkImportStatus.textContent = text || '';
@@ -1330,6 +1340,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     linkImportStatus.classList.toggle('hidden', !text);
   }
 
+  /** @param {boolean} busy @param {string} [label] */
   function setLinkImportBusy(busy, label) {
     if (linkImportUrl) linkImportUrl.disabled = busy;
     if (btnConfirmLinkImport) {
@@ -1341,7 +1352,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   }
 
   // "Import into": a new playlist, or one of yours (the hidden <select> holds the choice)
-  function fillImportTarget(prefix, newLabel) {
+  function fillImportTarget(/** @type {string} */ prefix, /** @type {string} */ newLabel) {
     const sel = /** @type {any} */ (document.getElementById(`${prefix}-import-target`));
     const menu = /** @type {any} */ (document.getElementById(`${prefix}-target-menu`));
     const label = /** @type {any} */ (document.getElementById(`${prefix}-target-label`));
@@ -1350,7 +1361,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (!sel || !menu) return;
     sel.innerHTML = '';
     menu.innerHTML = '';
-    const add = (value, text, selected) => {
+    const add = (/** @type {string} */ value, /** @type {string} */ text, /** @type {boolean} */ selected) => {
       const opt = document.createElement('option');
       opt.value = value;
       opt.textContent = text;
@@ -1364,32 +1375,32 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
         e.stopPropagation();
         sel.value = value;
         if (label) label.textContent = text;
-        menu.querySelectorAll('.m3-dropdown-option').forEach((o) => o.classList.toggle('selected', o === b));
+        menu.querySelectorAll('.m3-dropdown-option').forEach((/** @type {Element} */ o) => o.classList.toggle('selected', o === b));
         if (drop) drop.classList.remove('open');
       });
       menu.appendChild(b);
     };
     add('new', newLabel, true);
-    state.playlists.forEach((p) => add(p.id, p.name || 'untitled', false));
+    state.playlists.forEach((/** @type {any} */ p) => add(p.id, p.name || 'untitled', false));
     sel.value = 'new';
     if (label) label.textContent = newLabel;
     if (trigger && drop && !trigger._targetBound) {
       trigger._targetBound = true;
-      trigger.addEventListener('click', (e) => { e.stopPropagation(); drop.classList.toggle('open'); });
+      trigger.addEventListener('click', (/** @type {any} */ e) => { e.stopPropagation(); drop.classList.toggle('open'); });
       document.addEventListener('click', () => drop.classList.remove('open'));
     }
   }
 
   // songs into the playlist picked under "Import into" (or a new one, opened unless several come in a row);
   // returns how many went in
-  function addImportedTracks(targetId, name, tracks, cover, open = true) {
-    const target = targetId && targetId !== 'new' ? state.playlists.find((p) => p.id === targetId) : null;
+  function addImportedTracks(/** @type {string} */ targetId, /** @type {string} */ name, /** @type {any[]} */ tracks, /** @type {string} */ cover, open = true) {
+    const target = targetId && targetId !== 'new' ? state.playlists.find((/** @type {any} */ p) => p.id === targetId) : null;
     if (!target) {
       const pl = createPlaylist(name || 'Imported playlist', tracks, cover || '', { open });
       return pl ? pl.tracks.length : 0;
     }
     if (!target.cover && cover) target.cover = cover;
-    const fresh = tracks.filter((t) => !target.tracks.some((x) => isSameTrack(x, t)));
+    const fresh = tracks.filter((/** @type {any} */ t) => !target.tracks.some((/** @type {any} */ x) => isSameTrack(x, t)));
     target.tracks.push(...fresh.map(stampAddedAt));
     localStorage.setItem('devsize_playlists', JSON.stringify(state.playlists));
     renderPlaylistsList();
@@ -1413,10 +1424,10 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     updateGoogleAuthUI();
   }
 
-  function setLinkImportMode(mode) {
+  function setLinkImportMode(/** @type {string | undefined} */ mode) {
     currentLinkImportMode = mode === 'login' && googleApi() ? 'login' : 'link';
-    if (linkModesContainer) linkModesContainer.querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.mode === currentLinkImportMode));
-    if (linkImportModal) linkImportModal.querySelectorAll('.link-pane').forEach((p) => p.classList.toggle('hidden', p.dataset.mode !== currentLinkImportMode));
+    if (linkModesContainer) linkModesContainer.querySelectorAll('button').forEach((/** @type {HTMLElement} */ b) => b.classList.toggle('active', b.dataset.mode === currentLinkImportMode));
+    if (linkImportModal) linkImportModal.querySelectorAll('.link-pane').forEach((/** @type {any} */ p) => p.classList.toggle('hidden', p.dataset.mode !== currentLinkImportMode));
     clearImportError(linkImportError);
     setLinkStatus('');
     if (btnConfirmLinkImport && btnConfirmLinkImport.dataset.action !== 'done') {
@@ -1426,7 +1437,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (currentLinkImportMode === 'login') checkGoogleAuthStatus();
   }
 
-  if (linkModesContainer) linkModesContainer.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => setLinkImportMode(b.dataset.mode)));
+  if (linkModesContainer) linkModesContainer.querySelectorAll('button').forEach((/** @type {HTMLElement} */ b) => b.addEventListener('click', () => setLinkImportMode(b.dataset.mode)));
 
   if (btnGoogleLogin) {
     btnGoogleLogin.addEventListener('click', async () => {
@@ -1455,6 +1466,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (!linkImportModal) return;
     currentLinkImportPlatform = platform || '';
     clearImportError(linkImportError);
+    /** @type {Record<string, string>} */
     const titles = { youtube: 'Import from YouTube', ytmusic: 'Import from YouTube Music', soundcloud: 'Import from SoundCloud', yandex: 'Import from Yandex Music' };
     if (linkImportTitle) linkImportTitle.textContent = T(titles[platform] || 'Import from link');
     // logging in to Google works for YouTube and YouTube Music, and only in the desktop app
@@ -1489,7 +1501,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (linkImportModal) closeModal(linkImportModal);
   }
 
-  function linkImportDone(message) {
+  function linkImportDone(/** @type {string} */ message) {
     if (linkImportProgressWrap) linkImportProgressWrap.classList.add('hidden');
     setLinkImportBusy(false, 'Done');
     if (btnConfirmLinkImport) { btnConfirmLinkImport.disabled = false; btnConfirmLinkImport.dataset.action = 'done'; }
@@ -1502,14 +1514,14 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (linkImportProgressLabel) linkImportProgressLabel.textContent = '0 / 0';
     const wavy = linkImportWavyContainer ? createWavyProgress(linkImportWavyContainer) : { set() {} };
     wavy.set(0);
-    return (done, total) => {
+    return (/** @type {number} */ done, /** @type {number} */ total) => {
       wavy.set(total ? Math.round((done / total) * 100) : 0);
       if (linkImportProgressLabel) linkImportProgressLabel.textContent = `${done} / ${total}`;
     };
   }
 
   // Yandex Music: the server reads the playlist (titles and artists), then each song is found on YouTube
-  async function handleYandexLinkImport(url) {
+  async function handleYandexLinkImport(/** @type {string} */ url) {
     const progress = linkImportProgress();
     const res = await fetch(`http://127.0.0.1:${state.serverPort}/api/yandex-import?url=${encodeURIComponent(url)}`);
     const data = await res.json().catch(() => ({}));
@@ -1556,7 +1568,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       }
       const likes = Array.isArray(res.likes) ? res.likes : [];
       const playlists = Array.isArray(res.playlists) ? res.playlists : [];
-      const total = likes.length + playlists.reduce((n, p) => n + (Array.isArray(p.tracks) ? p.tracks.length : 0), 0);
+      const total = likes.length + playlists.reduce((/** @type {number} */ n, /** @type {any} */ p) => n + (Array.isArray(p.tracks) ? p.tracks.length : 0), 0);
       if (!total) { setLinkStatus('No songs found to import', true); setLinkImportBusy(false); return; }
       const progress = linkImportProgress();
       let done = 0;
@@ -1632,14 +1644,14 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       closeLinkImportModal();
     } catch (err) {
       if (linkImportProgressWrap) linkImportProgressWrap.classList.add('hidden');
-      const errInfo = classifyImportError('link', err, err.message);
+      const errInfo = classifyImportError('link', err, err instanceof Error ? err.message : undefined);
       showImportError(linkImportError, errInfo);
       setLinkImportBusy(false);
     }
   }
 
-  const linkImportBtns = document.querySelectorAll('.btn-open-link-import, #btn-open-link-import');
-  linkImportBtns.forEach((/** @type {HTMLElement} */ btn) => {
+  const linkImportBtns = /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.btn-open-link-import, #btn-open-link-import'));
+  linkImportBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       // the round buttons in "Create playlist" open the importer in its place
       if (el.createPlaylistModal && el.createPlaylistModal.contains(btn)) closeModal(el.createPlaylistModal);
@@ -1660,7 +1672,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   if (btnConfirmLinkImport) btnConfirmLinkImport.addEventListener('click', handleLinkImportAction);
   if (linkImportUrl) {
     linkImportUrl.addEventListener('input', () => clearImportError(linkImportError));
-    linkImportUrl.addEventListener('keydown', (e) => {
+    linkImportUrl.addEventListener('keydown', (/** @type {any} */ e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         handleLinkImportAction();

@@ -15,10 +15,10 @@
 //    'unavailable': changes stay in memory only, because anything saved to localStorage would win over the real
 //    lists at the next start. app.js tells the user and sync.js stays off (it would read the gaps as deletions).
 // No DOM: test/library-store.test.js runs this in Node with a fake database.
-(function (root) {
+(function (/** @type {any} */ root) {
   const LISTS = ['devsize_playlists', 'devsize_favorites', 'devsize_history'];
   // every profile's copy too ("uriel_p:<id>:devsize_playlists", profiles-core.js)
-  const isLibraryKey = (k) => LISTS.some((l) => k === l || (k.startsWith('uriel_p:') && k.endsWith(':' + l)));
+  const isLibraryKey = (/** @type {string} */ k) => LISTS.some((l) => k === l || (k.startsWith('uriel_p:') && k.endsWith(':' + l)));
   // set once the lists have moved: from then on a slow IndexedDB is waited for, never skipped (skipping would
   // show empty lists, and the next change would overwrite the real ones)
   const MOVED = 'uriel_library_idb';
@@ -35,7 +35,8 @@
     let mode = 'starting'; // 'starting' | 'idb' | 'local' | 'unavailable'
     let closing = false;
 
-    const keep = (k, v) => { try { base.set(k, v); return true; } catch (e) { onError(e, k); return false; } };
+    const keep = (/** @type {string} */ k, /** @type {string} */ v) => { try { base.set(k, v); return true; } catch (e) { onError(e, k); return false; } };
+    /** @param {string} k */
     function write(k) {
       const n = (seq.get(k) || 0) + 1;
       seq.set(k, n);
@@ -53,19 +54,20 @@
       });
     }
 
-    const store = {
-      get: (k) => {
+    /** @type {{ get: (k: string) => any, set: (k: string, v: any) => void, remove: (k: string) => void, keys: () => string[], closing: (on?: boolean) => void, ready: Promise<string>, mode: () => string }} */
+    const store = /** @type {any} */ ({
+      get: (/** @type {string} */ k) => {
         if (!isLibraryKey(k)) return base.get(k);
         if (mode === 'idb') return mem.has(k) ? mem.get(k) : null;
         return mode === 'unavailable' && mem.has(k) ? mem.get(k) : base.get(k);
       },
-      set: (k, v) => {
+      set: (/** @type {string} */ k, /** @type {any} */ v) => {
         if (mode === 'unavailable' && isLibraryKey(k)) { mem.set(k, String(v)); return; }
         if (mode !== 'idb' || !isLibraryKey(k)) return base.set(k, v);
         mem.set(k, String(v));
         write(k);
       },
-      remove: (k) => {
+      remove: (/** @type {string} */ k) => {
         if (mode === 'unavailable' && isLibraryKey(k)) { mem.set(k, null); return; }
         if (mode !== 'idb' || !isLibraryKey(k)) return base.remove(k);
         mem.delete(k);
@@ -78,7 +80,7 @@
         if (mode === 'unavailable') for (const [k, v] of mem) { const at = out.indexOf(k); if (v == null) { if (at >= 0) out.splice(at, 1); } else if (at < 0) out.push(k); }
         return out;
       },
-    };
+    });
 
     // the page is going (closing, reloading for another profile): what IndexedDB hasn't confirmed goes to
     // localStorage too, which wins at the next start
@@ -87,7 +89,8 @@
       if (on) for (const k of pending) if (mem.has(k)) keep(k, mem.get(k));
     };
 
-    const loadWithin = (ms) => {
+    const loadWithin = (/** @type {number} */ ms) => {
+      /** @type {ReturnType<typeof setTimeout> | undefined} */
       let timer;
       return Promise.race([
         Promise.resolve().then(() => db.loadAll()),
@@ -105,7 +108,7 @@
             saved = await loadWithin(movedTimeoutMs);
           } catch (e) {
             onError(e);
-            if (attempt >= retryMs.length || /too long/.test(e && e.message)) { mode = 'unavailable'; return mode; }
+            if (attempt >= retryMs.length || /too long/.test(e instanceof Error ? e.message : '')) { mode = 'unavailable'; return mode; }
             await new Promise((r) => setTimeout(r, retryMs[attempt]));
           }
         }
@@ -138,7 +141,9 @@
   }
 
   // IndexedDB: one table of key → text
+  /** @param {IDBFactory} indexedDB @param {string} [name] */
   function idbBackend(indexedDB, name = 'mural-library') {
+    /** @type {Promise<IDBDatabase> | null} */
     let opening = null;
     const open = () => opening || (opening = new Promise((resolve, reject) => {
       const req = indexedDB.open(name, 1);
@@ -147,7 +152,7 @@
       req.onerror = () => reject(req.error);
       req.onblocked = () => reject(new Error('IndexedDB is blocked'));
     }).catch((e) => { opening = null; throw e; })); // a retry opens it again rather than repeating this failure
-    const tx = (mode, fn) => open().then((db) => new Promise((resolve, reject) => {
+    const tx = (/** @type {IDBTransactionMode} */ mode, /** @type {(s: IDBObjectStore) => any} */ fn) => open().then((db) => new Promise((resolve, reject) => {
       const t = db.transaction('kv', mode);
       const out = fn(t.objectStore('kv'));
       t.oncomplete = () => resolve(out && 'result' in out ? out.result : undefined);
@@ -161,12 +166,13 @@
         req.onsuccess = () => { const c = req.result; if (!c) return resolve(map); map.set(String(c.key), c.value); c.continue(); };
         req.onerror = () => reject(req.error);
       })),
-      put: (k, v) => tx('readwrite', (s) => s.put(v, k)),
-      del: (k) => tx('readwrite', (s) => s.delete(k)),
+      put: (/** @type {string} */ k, /** @type {string} */ v) => tx('readwrite', (s) => s.put(v, k)),
+      del: (/** @type {string} */ k) => tx('readwrite', (s) => s.delete(k)),
     };
   }
 
   // for profiles-core.js: wrap the raw store it built, once
+  /** @param {any} base */
   function attach(base) {
     if (root.UrielLibraryStore && root.UrielLibraryStore.store) return root.UrielLibraryStore.store;
     let idb = null;

@@ -9,19 +9,20 @@
 // JSON: { v: 1, n: name, t: [[kind, ref, title, artist, seconds], ...] }; kind "y" = YouTube / YouTube Music
 // (ref = video id), "s" = SoundCloud (ref = track URL), "u" = anything else with a URL. Songs from files on
 // the device can't be shared and are left out. Used by the app (app.js), the website (site/play) and tests.
-(function (root) {
+(function (/** @type {any} */ root) {
   const WEB = 'https://cloverscripts.github.io/riff-muriel/play/';
   const MAX_TRACKS = 500;
-  const clip = (s, n) => String(s == null ? '' : s).slice(0, n);
+  const clip = (/** @type {unknown} */ s, /** @type {number} */ n) => String(s == null ? '' : s).slice(0, n);
   const YT_ID = /^[A-Za-z0-9_-]{11}$/;
 
-  const ytId = (t) => {
+  const ytId = (/** @type {any} */ t) => {
     if (t && YT_ID.test(String(t.id || ''))) return String(t.id);
     const m = /(?:v=|youtu\.be\/|\/shorts\/|\/embed\/)([A-Za-z0-9_-]{11})/.exec(String((t && t.url) || ''));
     return m ? m[1] : '';
   };
 
   // a Uriel track -> a compact row, or null when it can't be shared
+  /** @param {any} t @returns {(string | number)[] | null} */
   function packTrack(t) {
     if (!t || t.platform === 'local' || t.isLocal) return null;
     const meta = [clip(t.title, 140), clip(t.artist, 80), Math.max(0, Math.round(Number(t.duration) || 0))];
@@ -35,6 +36,7 @@
   }
 
   // a compact row -> a track the app and the web player both understand
+  /** @param {any} r */
   function unpackTrack(r) {
     if (!Array.isArray(r) || typeof r[1] !== 'string') return null;
     const [kind, ref, title, artist, duration] = r;
@@ -48,12 +50,12 @@
   }
 
   const b64url = {
-    enc(bytes) {
+    enc(/** @type {Uint8Array} */ bytes) {
       let s = '';
-      for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+      for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, /** @type {any} */ (bytes.subarray(i, i + 0x8000)));
       return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     },
-    dec(str) {
+    dec(/** @type {unknown} */ str) {
       const s = atob(String(str).replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((String(str).length + 3) % 4));
       const out = new Uint8Array(s.length);
       for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
@@ -61,15 +63,17 @@
     },
   };
   const canZip = typeof CompressionStream === 'function' && typeof DecompressionStream === 'function';
+  /** @param {Uint8Array} bytes @param {typeof CompressionStream | typeof DecompressionStream} Stream @param {CompressionFormat} fmt */
   async function pipe(bytes, Stream, fmt) {
-    const res = new Response(new Blob([bytes]).stream().pipeThrough(new Stream(fmt)));
+    const res = new Response(new Blob([/** @type {BlobPart} */ (bytes)]).stream().pipeThrough(new Stream(fmt)));
     return new Uint8Array(await res.arrayBuffer());
   }
 
   // a YouTube id is 64 bits: 11 base64url characters whose last one carries 2 unused bits
-  const idBytes = (id) => { const b = b64url.dec(id); return b.length === 8 && b64url.enc(b) === id ? b : null; };
+  const idBytes = (/** @type {string} */ id) => { const b = b64url.dec(id); return b.length === 8 && b64url.enc(b) === id ? b : null; };
 
   // name + ids only; null when a song isn't a plain YouTube video
+  /** @param {string} name @param {any[]} rows */
   function packIds(name, rows) {
     if (!rows.length || rows.some((r) => r[0] !== 'y')) return null;
     const ids = rows.map((r) => idBytes(r[1]));
@@ -79,11 +83,12 @@
     const out = new Uint8Array(1 + nameBytes.length + ids.length * 8);
     out[0] = nameBytes.length;
     out.set(nameBytes, 1);
-    ids.forEach((b, i) => out.set(b, 1 + nameBytes.length + i * 8));
+    ids.forEach((b, i) => out.set(/** @type {Uint8Array} */ (b), 1 + nameBytes.length + i * 8));
     return 'y' + b64url.enc(out);
   }
 
   // { name, tracks } -> payload string (and how many songs made it in)
+  /** @param {any} playlist */
   async function encode(playlist) {
     const rows = (playlist && Array.isArray(playlist.tracks) ? playlist.tracks : []).map(packTrack).filter(Boolean).slice(0, MAX_TRACKS);
     const name = clip((playlist && playlist.name) || 'Playlist', 100);
@@ -96,6 +101,7 @@
   }
 
   // payload string -> { name, tracks } (throws on anything that isn't a Uriel playlist)
+  /** @param {unknown} payload */
   async function decode(payload) {
     const p = String(payload || '').trim();
     if (p.length < 2 || p.length > 400000) throw new Error('not a playlist link');
@@ -124,12 +130,14 @@
 
   // the payload in a pasted link: the web player link or uriel://playlist?p=…
   // (a bare payload isn't taken: "juicewrld" typed into the search bar looked like one)
+  /** @param {unknown} text */
   function payloadFrom(text) {
     const m = /[#?&]p=([yzj][A-Za-z0-9_-]+)/.exec(String(text || '').trim());
     return m ? m[1] : '';
   }
 
   // "Artist - Song (Official Video)" uploaded by "ArtistVEVO" -> { title: 'Song', artist: 'Artist' }
+  /** @param {unknown} title @param {unknown} author */
   function tidy(title, author) {
     const junk = /\s*[([](?:[^)\]]*\b(?:official|lyrics?|audio|video|visuali[sz]er|hd|4k|remaster(?:ed)?|m\/?v)\b[^)\]]*)[)\]]/gi;
     let t = String(title || '').replace(junk, '').replace(/\s{2,}/g, ' ').trim();
@@ -145,8 +153,9 @@
 
   // Looks up the title and artist of songs from a short link (YouTube's oEmbed, open to any page).
   // Songs it can't find keep "YouTube video". opts.fetch for tests, opts.onUpdate(track) as each one lands.
+  /** @param {any[]} tracks @param {{ fetch?: (url: string, init?: RequestInit) => Promise<Response>, onUpdate?: (t: any) => void }} [opts] */
   async function fillInfo(tracks, opts = {}) {
-    const get = opts.fetch || ((u, o) => fetch(u, o));
+    const get = opts.fetch || ((/** @type {string} */ u, /** @type {RequestInit} */ o) => fetch(u, o));
     const todo = (tracks || []).filter((t) => t && t.needsInfo);
     let next = 0;
     const worker = async () => {
@@ -168,8 +177,8 @@
     return tracks;
   }
 
-  const webLink = (payload) => `${WEB}#p=${payload}`;
-  const appLink = (payload) => `uriel://playlist?p=${payload}`;
+  const webLink = (/** @type {string} */ payload) => `${WEB}#p=${payload}`;
+  const appLink = (/** @type {string} */ payload) => `uriel://playlist?p=${payload}`;
 
   const api = { encode, decode, payloadFrom, fillInfo, tidy, webLink, appLink, packTrack, unpackTrack, WEB };
   if (typeof module === 'object' && module.exports) module.exports = api;

@@ -16,6 +16,7 @@ const LINKABLE = new Set(['tracks', 'thumbnails', 'library', 'bin']);
 // Chromium's caches: rebuilt on their own, and often large
 const SKIP = new Set(['Cache', 'Code Cache', 'GPUCache', 'DawnCache', 'DawnGraphiteCache', 'DawnWebGPUCache', 'Crashpad', 'blob_storage', 'SingletonLock', 'SingletonSocket', 'SingletonCookie']);
 
+/** @param {string} from @param {string} to @param {boolean} [link] */
 function copyTree(from, to, link = false) {
   fs.mkdirSync(to, { recursive: true });
   for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
@@ -33,9 +34,11 @@ function copyTree(from, to, link = false) {
 }
 
 // [old, new] folder pairs for this computer: the old one is Mural's where it exists, else Muriel's
+/** @param {string} appDataDir @param {string} [platform] @param {NodeJS.ProcessEnv} [env] @param {string} [home] */
 function folderPairs(appDataDir, platform = process.platform, env = process.env, home = os.homedir()) {
   const dirs = [appDataDir];
   if (platform === 'win32') dirs.push(env.LOCALAPPDATA || path.join(home, 'AppData', 'Local'));
+  /** @type {[string, string[]][]} */
   const pairs = dirs.map((d) => [d, ['Muriel', 'Mural', 'Uriel']]);
   if (platform !== 'win32' && platform !== 'darwin') {
     pairs.push([path.join(home, '.cache'), ['muriel', 'mural', 'uriel']]);
@@ -49,6 +52,7 @@ function folderPairs(appDataDir, platform = process.platform, env = process.env,
 }
 
 // Copies each old folder to its new place, once: a new folder that already exists is never touched.
+/** @param {string} appDataDir @param {{ platform?: string, env?: NodeJS.ProcessEnv, home?: string }} [opts] */
 function migrate(appDataDir, opts = {}) {
   const moved = [];
   for (const [from, to] of folderPairs(appDataDir, opts.platform, opts.env, opts.home)) {

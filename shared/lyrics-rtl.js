@@ -2,6 +2,7 @@
 const RTL_RE = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFF]/;
 const LETTER_RE = /\p{L}/u;
 
+/** @param {unknown} text */
 function isRtlText(text) {
   const clean = String(text || '').replace(/<[^>]*>/g, '');
   for (const ch of clean) {

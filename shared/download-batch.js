@@ -7,6 +7,7 @@
 (function () {
   // what a failed download says: 'rate' (YouTube is refusing us: wait before anything else), 'retry' (worth
   // another go), 'fatal' (won't change)
+  /** @param {any} err */
   function classifyError(err) {
     if (!err) return 'retry';
     if (err.name === 'AbortError') return 'fatal';
@@ -18,12 +19,14 @@
   }
 
   // milliseconds to wait before attempt number `attempt` (1 = the first retry): doubling, capped, with jitter
+  /** @param {number} attempt @param {string} kind @param {{ baseMs?: number, rateBaseMs?: number, maxMs?: number, random?: () => number }} [o] */
   function backoffMs(attempt, kind, { baseMs = 2000, rateBaseMs = 15000, maxMs = 120000, random = Math.random } = {}) {
     const base = kind === 'rate' ? rateBaseMs : baseMs;
     const ms = Math.min(maxMs, base * 2 ** Math.max(0, attempt - 1));
     return Math.round(ms * (0.85 + random() * 0.3));
   }
 
+  /** @param {number} ms @param {AbortSignal | null} [signal] @returns {Promise<void>} */
   const realSleep = (ms, signal) => new Promise((resolve) => {
     if (!(ms > 0) || (signal && signal.aborted)) return resolve();
     const t = setTimeout(done, ms);
@@ -33,18 +36,22 @@
 
   // items: what to download. worker(item, { attempt, fresh }) resolves when the song is saved, throws otherwise
   // (err.status for an HTTP answer). Resolves { done: [items], failed: [{ item, error }], aborted }.
+  /** @template T @param {Iterable<T> | ArrayLike<T> | null | undefined} items @param {(item: T, o: { attempt: number, fresh: boolean }) => Promise<any>} worker @param {{ concurrency?: number, retries?: number, finalPass?: boolean, finalPassDelayMs?: number, signal?: AbortSignal | null, sleep?: (ms: number, signal?: AbortSignal | null) => Promise<void>, now?: () => number, onProgress?: ((p: { done: number, failed: number, total: number, current: T | null }) => void) | null, backoff?: { baseMs?: number, rateBaseMs?: number, maxMs?: number, random?: () => number } }} [opts] */
   async function runDownloadBatch(items, worker, opts = {}) {
     const {
       concurrency = 2, retries = 3, finalPass = true, finalPassDelayMs = 20000, signal = null,
       sleep = realSleep, now = () => Date.now(), onProgress = null, backoff = {},
     } = opts;
     const list = Array.from(items || []);
+    /** @type {T[]} */
     const done = [];
+    /** @type {{ item: T, error: unknown }[]} */
     let failed = [];
     let pauseUntil = 0; // a refusal pauses every worker, not only the one that saw it
     const aborted = () => !!(signal && signal.aborted);
-    const report = (current) => { if (onProgress) { try { onProgress({ done: done.length, failed: failed.length, total: list.length, current }); } catch (e) {} } };
+    const report = (/** @type {T | null} */ current) => { if (onProgress) { try { onProgress({ done: done.length, failed: failed.length, total: list.length, current }); } catch (e) {} } };
 
+    /** @param {T} item @param {number} maxRetries @param {boolean} freshFirst @returns {Promise<{ ok?: boolean, aborted?: boolean, error?: unknown }>} */
     async function attemptItem(item, maxRetries, freshFirst) {
       let lastErr = null;
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -68,8 +75,10 @@
       return { ok: false, error: lastErr };
     }
 
+    /** @param {T[]} queue @param {number} workers @param {number} maxRetries @param {boolean} fresh */
     async function pass(queue, workers, maxRetries, fresh) {
       let next = 0;
+      /** @type {{ item: T, error: unknown }[]} */
       const out = [];
       const run = async () => {
         while (next < queue.length && !aborted()) {

@@ -7,13 +7,15 @@
 // so the callers don't change, and songs that can never play here are left out:
 // Go+ previews (30 seconds) and DRM-only songs (only encrypted streams).
 
+/** @param {any} t */
 function playable(t) {
   if (!t || t.policy === 'SNIP' || t.policy === 'BLOCK') return false;
   const list = (t.media && t.media.transcodings) || [];
-  if (list.some((x) => x && x.snipped)) return false;
-  return list.some((x) => x && !x.snipped && x.format && (x.format.protocol === 'progressive' || x.format.protocol === 'hls'));
+  if (list.some((/** @type {any} */ x) => x && x.snipped)) return false;
+  return list.some((/** @type {any} */ x) => x && !x.snipped && x.format && (x.format.protocol === 'progressive' || x.format.protocol === 'hls'));
 }
 
+/** @param {any} t */
 function toEntry(t) {
   const art = t.artwork_url || (t.user && t.user.avatar_url) || '';
   return {
@@ -29,6 +31,7 @@ function toEntry(t) {
 }
 
 // opts: { fetch(url) -> Response, clientId() -> Promise<string>, resetClientId() }
+/** @param {string} query @param {number} limit @param {{ clientId: () => Promise<string>, fetch: (url: string) => Promise<any>, resetClientId?: () => void }} opts */
 async function searchSoundcloudApi(query, limit, opts) {
   const ask = async () => {
     const cid = await opts.clientId();
@@ -42,7 +45,7 @@ async function searchSoundcloudApi(query, limit, opts) {
   if (!r || !r.ok) throw new Error(`SoundCloud search answered ${r ? r.status : 'nothing'}`);
   const body = await r.json();
   if (!body || !Array.isArray(body.collection)) throw new Error('SoundCloud search: unexpected answer');
-  return body.collection.filter((t) => t && (t.kind === 'track' || t.kind === undefined) && playable(t)).slice(0, limit).map(toEntry);
+  return body.collection.filter((/** @type {any} */ t) => t && (t.kind === 'track' || t.kind === undefined) && playable(t)).slice(0, limit).map(toEntry);
 }
 
 module.exports = { searchSoundcloudApi, soundcloudSearchPlayable: playable };

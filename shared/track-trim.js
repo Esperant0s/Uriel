@@ -5,9 +5,10 @@
 // is on the device, otherwise a stand-in shape. No DOM here: app.js draws it, test/track-trim.test.js runs this.
 (function () {
   const MIN_KEEP = 1; // seconds a trim has to keep
-  const round1 = (v) => Math.round(v * 10) / 10;
+  const round1 = (/** @type {number} */ v) => Math.round(v * 10) / 10;
 
   // what to save for a start/end pick on a song of `duration` seconds: null when it keeps (almost) everything
+  /** @param {unknown} start @param {unknown} end @param {unknown} duration */
   function normalizeTrim(start, end, duration) {
     const dur = Number(duration) > 0 ? Number(duration) : 0;
     let s = Math.max(0, Number(start) || 0);
@@ -19,9 +20,10 @@
   }
 
   // a saved trim is usable when it keeps a real stretch of the song
-  const isActive = (trim) => !!trim && Number.isFinite(trim.end) && trim.end > (trim.start || 0) + 1.5;
+  const isActive = (/** @type {any} */ trim) => !!trim && Number.isFinite(trim.end) && trim.end > (trim.start || 0) + 1.5;
 
   // during playback at `time`: 'start' (seek to the trim start), 'end' (the kept part is over) or null
+  /** @param {any} trim @param {number} time */
   function trimAction(trim, time) {
     if (!isActive(trim) || !Number.isFinite(time)) return null;
     if (trim.start > 0 && time < trim.start - 0.25) return 'start';
@@ -32,6 +34,7 @@
   // Crossfade setting (#22): the song fades out over its last `fade` seconds while it keeps playing up to
   // `end` (its real end, or the trim end); the next song starts on 'ended'. Seconds the fade takes from `time`
   // at playback `rate`, or 0 when it isn't time yet (or the song is too short / already over).
+  /** @param {number} time @param {number} end @param {number} fade @param {number} rate */
   function endFadeSeconds(time, end, fade, rate) {
     if (!(fade > 0) || !(end > fade * 2) || !Number.isFinite(time) || time < end - fade || time >= end) return 0;
     return (end - time) / (rate > 0 ? rate : 1);
@@ -39,12 +42,14 @@
 
   // Crossfade with overlap (#29): the second (in song time) at which the next song starts while this one plays
   // its last `fade` seconds on a second player, fading out up to `end`; null when the song is too short for it
+  /** @param {number} end @param {number} fade */
   function crossfadePoint(end, fade) {
     return fade > 0 && Number.isFinite(end) && end > fade * 2 ? end - fade : null;
   }
 
   // what to do at playback `time`: 'prepare' (open the second player at the point, `lead` seconds ahead),
   // 'start' (hand over now), or null
+  /** @param {number} time @param {number} end @param {number} fade @param {number} rate @param {number} [lead] */
   function crossfadeStep(time, end, fade, rate, lead = 4) {
     const point = crossfadePoint(end, fade);
     if (point === null || !Number.isFinite(time) || time >= end) return null;
@@ -54,10 +59,11 @@
   }
 
   // equal-power curves for progress p (0..1) through the fade: the two together keep the loudness steady
-  const fadeOutGain = (p) => Math.cos(Math.min(1, Math.max(0, Number(p) || 0)) * Math.PI / 2);
-  const fadeInGain = (p) => Math.sin(Math.min(1, Math.max(0, Number(p) || 0)) * Math.PI / 2);
+  const fadeOutGain = (/** @type {unknown} */ p) => Math.cos(Math.min(1, Math.max(0, Number(p) || 0)) * Math.PI / 2);
+  const fadeInGain = (/** @type {unknown} */ p) => Math.sin(Math.min(1, Math.max(0, Number(p) || 0)) * Math.PI / 2);
 
   // "1:05.3"
+  /** @param {any} sec */
   function formatPreciseTime(sec) {
     if (!Number.isFinite(sec) || sec < 0) sec = 0;
     const tenths = Math.floor(sec * 10 + 1e-6);
@@ -67,6 +73,7 @@
   }
 
   // `bars` heights (0.12..1) from decoded samples: the loudest sample in each slice, scaled to the loudest slice
+  /** @param {ArrayLike<number>} samples @param {number} bars */
   function wavePeaks(samples, bars) {
     const out = new Array(bars).fill(0.3);
     const n = samples ? samples.length : 0;
@@ -87,6 +94,7 @@
   }
 
   // a song-shaped stand-in until (or instead of) the real waveform: the same song always gets the same shape
+  /** @param {string} key @param {number} bars */
   function placeholderPeaks(key, bars) {
     let seed = 0;
     const k = String(key || '');

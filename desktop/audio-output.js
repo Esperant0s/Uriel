@@ -16,7 +16,7 @@ function getSystemAudioOutputInfo() {
           if (addrMatch && /^[0-9A-F]{2}(:[0-9A-F]{2}){5}$/i.test(addrMatch[1].trim())) btAddress = addrMatch[1].trim();
         }
 
-        const getPactlFallback = () => new Promise((res) => {
+        const getPactlFallback = () => new Promise((/** @type {(value?: void) => void} */ res) => {
           if (name) return res();
           exec('pactl info 2>/dev/null && pactl list sinks 2>/dev/null', { timeout: 1500 }, (err2, out2) => {
             if (!err2 && out2) {
@@ -37,6 +37,7 @@ function getSystemAudioOutputInfo() {
 
         getPactlFallback().then(() => {
           exec('upower -d 2>/dev/null', { timeout: 1500 }, (err3, upowerOut) => {
+            /** @type {number | null} */
             let battery = null;
             if (!err3 && upowerOut) {
               const devices = upowerOut.split(/Device:\s*/);

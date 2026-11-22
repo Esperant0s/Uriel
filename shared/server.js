@@ -8,7 +8,8 @@ const path = require('path');
 const os = require('os');
 const childProcs = require('./child-procs');
 /** @type {(...args: any[]) => any} */
-const spawn = (...args) => childProcs.track(require('child_process').spawn.apply(null, args));
+/** @type {(...args: any[]) => any} */
+const spawn = (...args) => childProcs.track(require('child_process').spawn.apply(null, /** @type {any} */ (args)));
 const { StringDecoder } = require("string_decoder");
 const dns = require('dns');
 const net = require('net');
@@ -30,7 +31,7 @@ const streamSource = require('./stream-source');
 const ytFast = require('./yt-fast');
 // request headers yt-dlp would use for each media URL it resolved (#17), for the audio proxy
 const streamHeaders = new Map();
-function rememberStreamHeaders(url, headers) {
+function rememberStreamHeaders(/** @type {string} */ url, /** @type {any} */ headers) {
   if (!url || !headers) return;
   streamHeaders.delete(url);
   streamHeaders.set(url, headers);
@@ -46,27 +47,28 @@ function rememberStreamHeaders(url, headers) {
 const YT_BOT_RE = /confirm you.?re not a bot/i;
 const { createHealth, createResolver } = require('./stream-resolver');
 const streamHealth = createHealth();
-const isStreamBlock = (e) => !!e && (YT_BOT_RE.test(String(e.message || e)) || /HTTP Error 429/.test(String(e.message || e)));
+const isStreamBlock = (/** @type {any} */ e) => !!e && (YT_BOT_RE.test(String(e.message || e)) || /HTTP Error 429/.test(String(e.message || e)));
 const ytBotBlocked = () => streamHealth.blocked('youtube-ytdlp');
-function noteYtDlpError(e) {
+function noteYtDlpError(/** @type {any} */ e) {
   if (isStreamBlock(e)) streamHealth.block('youtube-ytdlp');
 }
 
 // Settings → Integrations → YouTube: "Play with my YouTube sign-in" (google-library.js writes the cookies.txt).
 // Every yt-dlp run then goes as that signed-in user, which is what gets past "confirm you're not a bot".
+/** @type {any} */
 let ytDlpCookiesFile = null;
-function setYtDlpCookies(file) {
+function setYtDlpCookies(/** @type {string | null} */ file) {
   ytDlpCookiesFile = file && fs.existsSync(file) ? file : null;
   // signed in now: YouTube may let yt-dlp in again, so stop skipping it
   if (ytDlpCookiesFile) streamHealth.reset('youtube-ytdlp');
 }
-function withYtDlpCookies(args) {
+function withYtDlpCookies(/** @type {string[]} */ args) {
   if (!ytDlpCookiesFile || !Array.isArray(args) || args.includes('--cookies')) return args;
   const at = args[0] === '--no-config' ? 1 : 0;
   return [...args.slice(0, at), '--cookies', ytDlpCookiesFile, ...args.slice(at)];
 }
 
-async function fastYouTubeStream(trackUrl, id) {
+async function fastYouTubeStream(/** @type {string} */ trackUrl, /** @type {string | null} */ id) {
   const vid = ytFast.videoId(id) || ytFast.videoId(trackUrl);
   if (!vid) return null;
   const started = Date.now();
@@ -76,7 +78,7 @@ async function fastYouTubeStream(trackUrl, id) {
     if (!r) return null;
     rememberStreamHeaders(r.url, r.headers);
     return r.url;
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     if (YTDLP_DEBUG) logger.log('info', `yt-fast ${vid} failed: ${e.message}`);
     return null;
   }
@@ -89,11 +91,11 @@ const AUDIO_PROXY_DEBUG = YTDLP_DEBUG || process.env.URIEL_DEBUG === '1';
 const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const SAFE_MEDIA_URL = /^https?:\/\//i;
 
-function isSafeMediaUrl(value) {
+function isSafeMediaUrl(/** @type {any} */ value) {
   return typeof value === 'string' && SAFE_MEDIA_URL.test(value);
 }
 
-function ipv4IsPrivate(a, b) {
+function ipv4IsPrivate(/** @type {any} */ a, /** @type {any} */ b) {
   if (a === 0 || a === 10 || a === 127) return true;
   if (a === 169 && b === 254) return true;
   if (a === 172 && b >= 16 && b <= 31) return true;
@@ -105,7 +107,7 @@ function ipv4IsPrivate(a, b) {
   return false;
 }
 
-function isPrivateIp(address) {
+function isPrivateIp(/** @type {any} */ address) {
   const kind = net.isIP(address);
   if (kind === 4) {
     const p = address.split('.').map(Number);
@@ -114,7 +116,7 @@ function isPrivateIp(address) {
   if (kind === 6) {
     const w = ipv6Words(address);
     if (!w) return true;
-    const zeros = (from, to) => w.slice(from, to).every((x) => x === 0);
+    const zeros = (/** @type {any} */ from, /** @type {any} */ to) => w.slice(from, to).every((x) => x === 0);
     if (zeros(0, 8)) return true; // ::
     if (zeros(0, 7) && w[7] === 1) return true; // ::1
     if ((w[0] & 0xffc0) === 0xfe80) return true; // link-local
@@ -122,7 +124,7 @@ function isPrivateIp(address) {
     if ((w[0] & 0xff00) === 0xff00) return true; // multicast
     // forms that carry an IPv4 address: ::ffff:a.b.c.d (also written ::ffff:7f00:1), ::a.b.c.d, NAT64 64:ff9b::/96,
     // 6to4 2002:AABB:CCDD::. new URL() normalises [::ffff:127.0.0.1] to [::ffff:7f00:1], which used to pass as public.
-    const v4 = (hi) => ipv4IsPrivate(hi >> 8, hi & 255);
+    const v4 = (/** @type {any} */ hi) => ipv4IsPrivate(hi >> 8, hi & 255);
     if (zeros(0, 5) && (w[5] === 0xffff || w[5] === 0)) return v4(w[6]);
     if (w[0] === 0x64 && w[1] === 0xff9b && zeros(2, 6)) return v4(w[6]);
     if (w[0] === 0x2002) return v4(w[1]);
@@ -132,7 +134,7 @@ function isPrivateIp(address) {
 }
 
 // "::ffff:7f00:1" or "::ffff:127.0.0.1" -> eight 16-bit numbers, or null
-function ipv6Words(address) {
+function ipv6Words(/** @type {any} */ address) {
   let a = String(address).toLowerCase().replace(/%.*$/, '');
   const dotted = a.match(/^(.*:)(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (dotted) {
@@ -150,7 +152,7 @@ function ipv6Words(address) {
   return words.length === 8 && words.every((x) => Number.isInteger(x) && x >= 0 && x <= 0xffff) ? words : null;
 }
 
-function normalizeNumericHost(h) {
+function normalizeNumericHost(/** @type {any} */ h) {
   if (/^\d+$/.test(h) && h.length < 11) {
     const n = Number(h);
     if (n >= 0 && n <= 0xffffffff) {
@@ -168,7 +170,7 @@ function normalizeNumericHost(h) {
 }
 
 // The address to connect to for a public host, or null when the host is (or resolves to) anything private.
-async function publicAddressOf(hostname) {
+async function publicAddressOf(/** @type {any} */ hostname) {
   let host = (hostname || '').toLowerCase().replace(/^\[|\]$/g, '');
   if (!host) return null;
   if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) return null;
@@ -184,7 +186,7 @@ async function publicAddressOf(hostname) {
   }
 }
 
-function streamFileToResponse(stream, res) {
+function streamFileToResponse(/** @type {any} */ stream, /** @type {import('http').ServerResponse} */ res) {
   stream.on('error', () => {
     if (!res.headersSent) {
       try { res.writeHead(500); } catch (e) {}
@@ -201,7 +203,7 @@ function streamFileToResponse(stream, res) {
 
 // Serves an audio file with HTTP Range support. An end past the file is clamped (a Content-Length larger
 // than the bytes sent leaves the player waiting forever) and an unsatisfiable range gets a 416.
-function sendFileWithRange(req, res, filePath, fileSize, contentType) {
+function sendFileWithRange(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {any} */ filePath, /** @type {any} */ fileSize, /** @type {any} */ contentType) {
   const range = req.headers.range;
   if (!range || !/^bytes=/i.test(range)) {
     res.writeHead(200, { 'Content-Length': fileSize, 'Content-Type': contentType, 'Accept-Ranges': 'bytes' });
@@ -228,22 +230,22 @@ function sendFileWithRange(req, res, filePath, fileSize, contentType) {
   streamFileToResponse(fs.createReadStream(filePath, { start, end }), res);
 }
 
-const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+const hasOwn = (/** @type {any} */ obj, /** @type {string} */ key) => Object.prototype.hasOwnProperty.call(obj, key);
 
 // The in-memory caches live as long as the app does; past `max` entries the oldest go first.
-function trimCache(map, max) {
+function trimCache(/** @type {any} */ map, /** @type {any} */ max) {
   while (map.size > max) map.delete(map.keys().next().value);
 }
 
 // A bare fetch() waits up to five minutes on a server that stops answering.
-function fetchWithTimeout(target, options = {}, timeoutMs = 15000) {
+function fetchWithTimeout(/** @type {any} */ target, options = {}, timeoutMs = 15000) {
   const signal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(timeoutMs) : undefined;
   return fetch(target, signal ? { ...options, signal } : options);
 }
 
 // fetch() follows redirects on its own, so a public URL could bounce the server into the local network before
 // anything checked where it landed. This follows them by hand and checks every hop; null when one is private.
-async function fetchPublic(target, options = {}, timeoutMs = 15000, hops = 5) {
+async function fetchPublic(/** @type {any} */ target, options = {}, timeoutMs = 15000, hops = 5) {
   let url = String(target);
   for (let i = 0; i <= hops; i++) {
     let u;
@@ -260,9 +262,9 @@ async function fetchPublic(target, options = {}, timeoutMs = 15000, hops = 5) {
 
 // a response body up to max bytes, or null beyond that: Content-Length can be missing (chunked) or wrong, and
 // arrayBuffer() would hold an endless body in memory until the timeout
-async function readCapped(res, max) {
+async function readCapped(/** @type {Response} */ res, /** @type {any} */ max) {
   if (Number(res.headers.get('content-length')) > max) { try { await res.body?.cancel(); } catch (e) {} return null; }
-  const reader = res.body.getReader();
+  const reader = /** @type {ReadableStream<Uint8Array>} */ (res.body).getReader();
   const chunks = [];
   let size = 0;
   for (;;) {
@@ -287,7 +289,7 @@ if (!fs.existsSync(LIBRARY_DIR)) fs.mkdirSync(LIBRARY_DIR, { recursive: true });
 // not something to rely on); there the write goes through an in-memory copy first anyway.
 const SWAP_WRITES = !(process.versions && process.versions.mobile);
 
-function writeJsonFile(file, value) {
+function writeJsonFile(/** @type {string} */ file, /** @type {any} */ value) {
   const text = JSON.stringify(value, null, 2);
   if (!SWAP_WRITES) return fs.writeFileSync(file, text, 'utf-8');
   const tmp = `${file}.${process.pid}.tmp`;
@@ -301,7 +303,7 @@ function writeJsonFile(file, value) {
   }
 }
 
-function readJsonFile(file) {
+function readJsonFile(/** @type {string} */ file) {
   if (!fs.existsSync(file)) return {};
   try {
     const value = JSON.parse(fs.readFileSync(file, 'utf-8'));
@@ -335,7 +337,7 @@ function dropCachedPreviews() {
 }
 try { dropCachedPreviews(); } catch (e) {}
 
-function saveTrackMetadata(cleanId, meta) {
+function saveTrackMetadata(/** @type {string} */ cleanId, /** @type {any} */ meta) {
   // "__proto__" survives cleanTrackId and would swap the index's prototype instead of adding an entry
   if (!cleanId || cleanId === '__proto__') return;
   trackMetadataIndex[cleanId] = {
@@ -351,6 +353,7 @@ function saveTrackMetadata(cleanId, meta) {
 
 let libraryIndex = readJsonFile(LIBRARY_PATH);
 // local-match.js over the imported and found songs (findLocalSong), built again after a change
+/** @type {any} */
 let localMatchIndex = null;
 let localSongsVersion = 0;
 
@@ -369,14 +372,18 @@ const deviceLibrary = require('./device-library');
 const DEVICE_MUSIC_PATH = path.join(DATA_DIR, 'device-music.json');
 // enabled: Settings → Local files. hidden: found songs taken out of the library (their files stay).
 // durations: measured once by the page, kept so a rescan doesn't forget them.
+/** @type {{ enabled: boolean, hidden: string[], durations: Record<string, number>, [k: string]: any }} */
 const deviceMusic = { enabled: true, hidden: [], durations: {}, ...readJsonFile(DEVICE_MUSIC_PATH) };
+/** @type {Record<string, any>} */
 let deviceIndex = {};
+/** @type {any} */
 let deviceStopWatching = null;
 function saveDeviceMusic() {
   try { writeJsonFile(DEVICE_MUSIC_PATH, deviceMusic); } catch (e) {}
 }
-function setDeviceSongs(list) {
+function setDeviceSongs(/** @type {any} */ list) {
   const hidden = new Set(deviceMusic.hidden);
+  /** @type {Record<string, any>} */
   const next = {};
   for (const song of Array.isArray(list) ? list : []) {
     if (!song || typeof song.id !== 'string' || !/^local_[a-f0-9]{12}$/.test(song.id) || hidden.has(song.id)) continue;
@@ -388,7 +395,7 @@ function setDeviceSongs(list) {
   localSongsVersion++;
 }
 // an imported song, or a found one that is still in the library
-function libraryItem(id) {
+function libraryItem(/** @type {string} */ id) {
   if (typeof id !== 'string') return null;
   if (hasOwn(libraryIndex, id)) return libraryIndex[id];
   return deviceMusic.enabled && hasOwn(deviceIndex, id) ? deviceIndex[id] : null;
@@ -396,7 +403,7 @@ function libraryItem(id) {
 // A playlist song that is already on the device plays from that file and counts as offline (local-match.js).
 // The index is built again after a scan or a library change; the version tells the page its answers changed.
 const { createLocalIndex } = require('./local-match');
-function findLocalSong(title, artist, duration) {
+function findLocalSong(/** @type {any} */ title, /** @type {any} */ artist, /** @type {any} */ duration) {
   if (!title) return null;
   if (!localMatchIndex) {
     const songs = Object.values(libraryIndex);
@@ -406,7 +413,7 @@ function findLocalSong(title, artist, duration) {
   const song = localMatchIndex.find({ title, artist, duration: Number(duration) || 0 });
   return song && libraryItem(song.id) ? song : null;
 }
-const libraryFilePath = (item) => item.path || path.join(LIBRARY_DIR, item.file);
+const libraryFilePath = (/** @type {any} */ item) => item.path || path.join(LIBRARY_DIR, item.file);
 function deviceFolders() {
   let music = path.join(os.homedir(), 'Music');
   try { music = require('electron').app.getPath('music') || music; } catch (e) {}
@@ -444,7 +451,7 @@ const downloadProcs = new Map(); // cleanId -> the yt-dlp process caching it (ph
 
 // Search results go stale (isCached flags, new uploads) and every query adds a key, so they expire after
 // five minutes and the cache keeps at most 500 of them.
-function cacheSearchResult(key, value, ttlMs = 300000) {
+function cacheSearchResult(/** @type {string} */ key, /** @type {any} */ value, ttlMs = 300000) {
   searchCache.set(key, value);
   const timer = setTimeout(() => { if (searchCache.get(key) === value) searchCache.delete(key); }, ttlMs);
   if (timer && typeof timer.unref === 'function') timer.unref();
@@ -454,7 +461,7 @@ function cacheSearchResult(key, value, ttlMs = 300000) {
 let currentAppState = {};
 const sseClients = new Set();
 
-function broadcastSSE(data) {
+function broadcastSSE(/** @type {any} */ data) {
   const msg = `data: ${JSON.stringify(data)}\n\n`;
   for (const client of sseClients) {
     try {
@@ -465,7 +472,7 @@ function broadcastSSE(data) {
   }
 }
 
-function cleanTrackId(id) {
+function cleanTrackId(/** @type {string | null | undefined} */ id) {
   return (id || '').replace(/[^a-zA-Z0-9_-]/g, '_');
 }
 
@@ -477,7 +484,7 @@ function cleanTrackId(id) {
 // covers videos that can't be embedded
 const YT_PLAYER_CLIENTS = 'youtube:player_client=web_embedded,android';
 const YT_RETRY_CLIENTS = 'youtube:player_client=tv,web_safari,android_vr';
-function youtubeVideoId(trackUrl) {
+function youtubeVideoId(/** @type {string} */ trackUrl) {
   try {
     const u = new URL(trackUrl);
     const host = u.hostname.replace(/^www\./, '');
@@ -489,7 +496,7 @@ function youtubeVideoId(trackUrl) {
 // Deezer and Apple Music songs (dz_30879048, am_123) have no video yet: the id is the catalogue's and the url a
 // YouTube search page, and the video is found by search. `unresolved`: there is nothing to give yt-dlp yet.
 const CATALOG_TRACK_ID = /^(dz|am)_/;
-function youtubeSearchPageQuery(trackUrl) {
+function youtubeSearchPageQuery(/** @type {string} */ trackUrl) {
   try {
     const u = new URL(trackUrl);
     const host = u.hostname.replace(/^www\./, '');
@@ -497,7 +504,7 @@ function youtubeSearchPageQuery(trackUrl) {
   } catch (_) {}
   return '';
 }
-function youtubeExtractTarget(trackUrl, trackId, platform) {
+function youtubeExtractTarget(/** @type {string} */ trackUrl, /** @type {string} */ trackId, /** @type {string} */ platform) {
   // a search for yt-dlp (a download with no video in mind): the id only names its cache file
   if (/^ytsearch\d*:/.test(trackUrl || '')) return { url: trackUrl, youtube: true };
   const fromUrl = trackUrl ? youtubeVideoId(trackUrl) : '';
@@ -509,7 +516,7 @@ function youtubeExtractTarget(trackUrl, trackId, platform) {
   return { url: `https://www.youtube.com/watch?v=${id}`, youtube: true };
 }
 
-async function findCachedFile(trackId) {
+async function findCachedFile(/** @type {string} */ trackId) {
   const cleanId = cleanTrackId(trackId);
   const extensions = ['.opus', '.webm', '.m4a', '.mp3', '.aac'];
   for (const ext of extensions) {
@@ -530,8 +537,9 @@ async function findCachedFile(trackId) {
 
 // A Deezer or Apple Music song has no video until it is searched for, and its copy is saved under the video's id,
 // so its own id never finds it. The saved title and artist do (the same rule as songs on the device).
+/** @type {any} */
 let cachedSongIndex = null;
-async function findCachedSong(title, artist, duration) {
+async function findCachedSong(/** @type {any} */ title, /** @type {any} */ artist, /** @type {any} */ duration) {
   if (!title) return null;
   if (!cachedSongIndex) {
     cachedSongIndex = createLocalIndex(Object.entries(trackMetadataIndex).map(([id, m]) => ({ id, title: m && m.title, artist: m && m.artist, duration: m && m.duration })));
@@ -556,7 +564,7 @@ async function enforceCacheLimit() {
         fs.promises.unlink(path.join(THUMBNAILS_DIR, `${id}.jpg`)).catch(() => {});
       },
     });
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     try { logger.log('warn', `cache limit: ${e && e.message}`); } catch (_) {}
   } finally {
     cacheLimitRunning = false;
@@ -591,7 +599,7 @@ async function pruneDiskCache() {
 
 pruneDiskCache();
 
-function parseDurationSeconds(str) {
+function parseDurationSeconds(/** @type {string} */ str) {
   if (!str) return 0;
   const parts = str.split(':').map(Number);
   if (parts.length === 2) return parts[0] * 60 + parts[1];
@@ -599,7 +607,7 @@ function parseDurationSeconds(str) {
   return 0;
 }
 
-function isSpamOrUnofficial(title, duration, channelName = '') {
+function isSpamOrUnofficial(/** @type {any} */ title, /** @type {any} */ duration, channelName = '') {
   if (duration && (duration < 90 || duration > 420)) return true;
 
   const t = (title || '').toLowerCase();
@@ -665,7 +673,7 @@ function isSpamOrUnofficial(title, duration, channelName = '') {
   return false;
 }
 
-function safeJsonParse(value, fallback) {
+function safeJsonParse(/** @type {any} */ value, /** @type {any} */ fallback) {
   try {
     const parsed = JSON.parse(value);
     return parsed ?? fallback;
@@ -674,7 +682,7 @@ function safeJsonParse(value, fallback) {
   }
 }
 
-function getTrackNormalizedKey(artist, title) {
+function getTrackNormalizedKey(/** @type {any} */ artist, /** @type {any} */ title) {
   let a = String(artist || '').toLowerCase();
   let t = String(title || '').toLowerCase();
   t = t.replace(/\s*\([^)]*official[^)]*\)/gi, '')
@@ -688,7 +696,7 @@ function getTrackNormalizedKey(artist, title) {
   return `${a}::${t}`;
 }
 
-function normalizeTrack(track) {
+function normalizeTrack(/** @type {any} */ track) {
   if (!track || typeof track !== 'object') return null;
   const title = String(track.title || '').trim();
   const artist = String(track.artist || '').trim();
@@ -706,7 +714,7 @@ function normalizeTrack(track) {
   };
 }
 
-function normalizeArtistName(name) {
+function normalizeArtistName(/** @type {string} */ name) {
   return String(name || '')
     .replace(/\b(official|vevo|records|topic)\b/gi, '')
     .replace(/[^\w\s&-]/g, ' ')
@@ -715,7 +723,7 @@ function normalizeArtistName(name) {
     .toLowerCase();
 }
 
-function trackFingerprint(track) {
+function trackFingerprint(/** @type {any} */ track) {
   const clean = normalizeTrack(track);
   if (!clean) return '';
   return getTrackNormalizedKey(clean.artist, clean.title);
@@ -729,6 +737,7 @@ const recentlyRecommendedKeys = new Set();
 // that get refused (401/403) reset it and read it again.
 const SC_CLIENT_ID_PATH = path.join(DATA_DIR, 'soundcloud-client.json');
 const SC_CLIENT_ID_MAX_AGE = 7 * 24 * 3600 * 1000;
+/** @type {any} */
 let scClientIdCache = null;
 function scClientIdKept() {
   if (scClientIdCache) return scClientIdCache;
@@ -739,10 +748,11 @@ function scClientIdKept() {
   } catch (_) {}
   return scClientIdCache;
 }
+/** @param {string} [html] */
 async function soundcloudClientId(html) {
   const kept = scClientIdKept();
   if (kept.id && Date.now() - kept.at < SC_CLIENT_ID_MAX_AGE) return kept.id;
-  const page = html || await fetchWithTimeout('https://soundcloud.com/', { headers: { 'User-Agent': 'Mozilla/5.0' } }, 8000).then((r) => r.text());
+  const page = /** @type {string} */ (html || await fetchWithTimeout('https://soundcloud.com/', { headers: { 'User-Agent': 'Mozilla/5.0' } }, 8000).then((r) => r.text()));
   const scripts = [...page.matchAll(/src="(https:\/\/a-v2\.sndcdn\.com\/assets\/[^"]+\.js)"/g)].map((x) => x[1]).reverse();
   for (const s of scripts) {
     try {
@@ -759,15 +769,15 @@ async function soundcloudClientId(html) {
 
 // Whether SoundCloud streams a track in a form that can be played here: many major-label songs are only
 // offered encrypted (DRM; yt-dlp: "This video is DRM protected") or as a 30-second Go+ preview.
-function soundcloudTrackPlayable(t) {
+function soundcloudTrackPlayable(/** @type {any} */ t) {
   if (!t || t.policy === 'SNIP' || t.policy === 'BLOCK') return false;
   const list = (t.media && t.media.transcodings) || [];
-  return list.some((x) => x && !x.snipped && x.format && (x.format.protocol === 'progressive' || x.format.protocol === 'hls'));
+  return list.some((/** @type {any} */ x) => x && !x.snipped && x.format && (x.format.protocol === 'progressive' || x.format.protocol === 'hls'));
 }
 
 // Of these SoundCloud track ids, the ones that can be played; null when SoundCloud couldn't be asked
 // (then nothing is left out: a song that fails still falls back to YouTube when played).
-async function soundcloudPlayableIds(ids) {
+async function soundcloudPlayableIds(/** @type {any} */ ids) {
   if (!ids.length) return new Set();
   try {
     const cid = await soundcloudClientId();
@@ -781,7 +791,7 @@ async function soundcloudPlayableIds(ids) {
 
 // SoundCloud search without a yt-dlp process (#17): SoundCloud's api first, yt-dlp's scsearch only when that
 // fails. Resolves to the flat-search JSON yt-dlp would print ({ entries }).
-async function soundcloudFlatSearch(query, limit, priority, reason) {
+async function soundcloudFlatSearch(/** @type {any} */ query, /** @type {any} */ limit, /** @type {string} */ priority, /** @type {string} */ reason) {
   try {
     const entries = await searchSoundcloudApi(query, limit, {
       fetch: (u) => fetchWithTimeout(u, { headers: { 'User-Agent': 'Mozilla/5.0' } }, 8000),
@@ -789,23 +799,27 @@ async function soundcloudFlatSearch(query, limit, priority, reason) {
       resetClientId: () => { scClientIdCache = { id: '', at: 0 }; },
     });
     return { entries };
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     try { logger.log('warn', `SoundCloud api search failed, using yt-dlp: ${String(e && e.message || e).slice(0, 200)}`); } catch (_) {}
   }
   const raw = await executeYtDlp([`scsearch${limit}:${query}`, '--dump-single-json', '--flat-playlist', '--skip-download', '--no-warnings'], 18000, { priority, reason });
   return JSON.parse(raw);
 }
 
-async function searchSoundcloud(query, limit = 14, priority = 'normal') {
+async function searchSoundcloud(/** @type {any} */ query, limit = 14, priority = 'normal') {
   const cacheKey = `sc:${limit}:${String(query || '').trim().toLowerCase()}`;
   if (searchCache.has(cacheKey)) {
     return searchCache.get(cacheKey);
   }
 
-  const searchPromise = (async () => {
+  /** @type {Promise<any> | undefined} */
+
+  let searchPromise;
+
+  searchPromise = (async () => {
     try {
       const data = await soundcloudFlatSearch(query, limit, priority, 'soundcloud-search');
-      let entries = (data.entries || []).map((item) => {
+      let entries = (data.entries || []).map((/** @type {any} */ item) => {
         let thumbnail = '';
         if (item.thumbnails && item.thumbnails.length > 0) {
           thumbnail = item.thumbnails[item.thumbnails.length - 1].url;
@@ -828,12 +842,12 @@ async function searchSoundcloud(query, limit = 14, priority = 'normal') {
           playable: item.playable === true
         };
       // SoundCloud Go+ previews (always exactly 30 s) only ever play the first 30 seconds
-      }).filter((t) => !(t.duration >= 29.5 && t.duration <= 30.5));
+      }).filter((/** @type {any} */ t) => !(t.duration >= 29.5 && t.duration <= 30.5));
       // yt-dlp's search doesn't say which songs are DRM-only and can never play; ask SoundCloud
       // (the phone build's search already checked, and marks its results playable)
-      const unknown = entries.filter((t) => !t.playable && /^\d+$/.test(t.id)).map((t) => t.id);
+      const unknown = entries.filter((/** @type {any} */ t) => !t.playable && /^\d+$/.test(t.id)).map((/** @type {any} */ t) => t.id);
       const ok = unknown.length ? await soundcloudPlayableIds(unknown) : null;
-      entries = entries.filter((t) => !ok || !unknown.includes(t.id) || ok.has(t.id)).map(({ playable, ...t }) => t);
+      entries = entries.filter((/** @type {any} */ t) => !ok || !unknown.includes(t.id) || ok.has(t.id)).map((/** @type {any} */ { playable, ...t }) => t);
 
       if (entries.length > 0) {
         cacheSearchResult(cacheKey, entries);
@@ -852,8 +866,8 @@ async function searchSoundcloud(query, limit = 14, priority = 'normal') {
   return searchPromise;
 }
 
-function buildDiscoveryQueries(profile) {
-  const artists = (profile.topArtists || []).map(a => typeof a === 'string' ? a : a.name).filter(Boolean);
+function buildDiscoveryQueries(/** @type {any} */ profile) {
+  const artists = (profile.topArtists || []).map((/** @type {any} */ a) => typeof a === 'string' ? a : a.name).filter(Boolean);
   const shuffled = [...artists].sort(() => Math.random() - 0.5);
   const queries = [];
 
@@ -875,7 +889,7 @@ function buildDiscoveryQueries(profile) {
   return queries;
 }
 
-function scoreDiscoveryCandidate(track, profile, heardKeys, heardIds) {
+function scoreDiscoveryCandidate(/** @type {any} */ track, /** @type {any} */ profile, /** @type {any} */ heardKeys, /** @type {any} */ heardIds) {
   const normalized = normalizeTrack(track);
   if (!normalized) return null;
   const key = getTrackNormalizedKey(normalized.artist, normalized.title);
@@ -896,8 +910,8 @@ function scoreDiscoveryCandidate(track, profile, heardKeys, heardIds) {
   }
 
   const candArtist = normalizeArtistName(normalized.artist);
-  const artistNames = (profile.topArtists || []).map(a => typeof a === 'string' ? a : a.name);
-  if (artistNames.some(a => candArtist.includes(a) || a.includes(candArtist))) {
+  const artistNames = (profile.topArtists || []).map((/** @type {any} */ a) => typeof a === 'string' ? a : a.name);
+  if (artistNames.some((/** @type {any} */ a) => candArtist.includes(a) || a.includes(candArtist))) {
     score += 3.0;
   }
 
@@ -921,13 +935,13 @@ function scoreDiscoveryCandidate(track, profile, heardKeys, heardIds) {
   };
 }
 
-async function httpGetJson(url, timeoutMs = 6000) {
+async function httpGetJson(/** @type {string} */ url, timeoutMs = 6000) {
   return new Promise((resolve) => {
     try {
       const parsed = new URL(url);
       const mod = parsed.protocol === 'http:' ? http : https;
       const req = mod.get(url, { headers: { 'User-Agent': 'Uriel' }, timeout: timeoutMs }, (res) => {
-        if (res.statusCode < 200 || res.statusCode >= 300) {
+        if (Number(res.statusCode) < 200 || Number(res.statusCode) >= 300) {
           res.resume();
           return resolve(null);
         }
@@ -966,7 +980,7 @@ async function httpGetJson(url, timeoutMs = 6000) {
 
 const dzArtistIdCache = new Map();
 
-async function dzArtistId(name) {
+async function dzArtistId(/** @type {string} */ name) {
   if (!name || typeof name !== 'string') return null;
   const clean = normalizeArtistName(name);
   if (!clean) return null;
@@ -978,7 +992,11 @@ async function dzArtistId(name) {
     return cached.promise;
   }
 
-  const lookupPromise = (async () => {
+  /** @type {Promise<any> | undefined} */
+
+  let lookupPromise;
+
+  lookupPromise = (async () => {
     try {
       const url = `https://api.deezer.com/search/artist?q=${encodeURIComponent(name.trim())}&limit=1`;
       const data = await httpGetJson(url, 6000);
@@ -998,7 +1016,7 @@ async function dzArtistId(name) {
   return lookupPromise;
 }
 
-async function dzRelatedTracks(artist) {
+async function dzRelatedTracks(/** @type {any} */ artist) {
   try {
     const id = await dzArtistId(artist);
     if (!id) return [];
@@ -1007,14 +1025,14 @@ async function dzRelatedTracks(artist) {
     const relatedList = (relData?.data || []).slice(0, 6);
     if (relatedList.length === 0) return [];
 
-    const tracksNested = await Promise.all(relatedList.map(async (relArtist, relatedIndex) => {
+    const tracksNested = await Promise.all(relatedList.map(async (/** @type {any} */ relArtist, /** @type {any} */ relatedIndex) => {
       try {
         if (!relArtist?.id) return [];
         const topUrl = `https://api.deezer.com/artist/${encodeURIComponent(relArtist.id)}/top?limit=4`;
         const topData = await httpGetJson(topUrl, 6000);
         const topTracks = topData?.data || [];
         const match = 1 - (relatedIndex / 12) * 0.6;
-        return topTracks.map(item => ({
+        return topTracks.map((/** @type {any} */ item) => ({
           artist: item.artist?.name || relArtist.name || 'unknown artist',
           title: item.title || 'untitled',
           match,
@@ -1030,14 +1048,14 @@ async function dzRelatedTracks(artist) {
   }
 }
 
-async function dzRadioTracks(artist) {
+async function dzRadioTracks(/** @type {any} */ artist) {
   try {
     const id = await dzArtistId(artist);
     if (!id) return [];
     const radUrl = `https://api.deezer.com/artist/${encodeURIComponent(id)}/radio?limit=25`;
     const radData = await httpGetJson(radUrl, 6000);
     const items = radData?.data || [];
-    return items.map(item => ({
+    return items.map((/** @type {any} */ item) => ({
       artist: item.artist?.name || 'unknown artist',
       title: item.title || 'untitled',
       match: 0.7,
@@ -1050,7 +1068,7 @@ async function dzRadioTracks(artist) {
 
 const ytMixCache = new Map();
 
-async function ytMixTracks(seed) {
+async function ytMixTracks(/** @type {any} */ seed) {
   if (!seed || seed.platform !== 'youtube') return [];
   let id = cleanTrackId(seed.id || '');
   if (id.length > 11 && (id.startsWith('yt_') || id.startsWith('youtube_'))) {
@@ -1066,7 +1084,11 @@ async function ytMixTracks(seed) {
     return cached.promise;
   }
 
-  const lookupPromise = (async () => {
+  /** @type {Promise<any> | undefined} */
+
+  let lookupPromise;
+
+  lookupPromise = (async () => {
     try {
       const args = [
         '--flat-playlist',
@@ -1081,9 +1103,10 @@ async function ytMixTracks(seed) {
       const raw = await executeYtDlp(args, 25000, { reason: 'recommend-mix' });
       const data = JSON.parse(raw);
       const entries = Array.isArray(data?.entries) ? data.entries : [];
+      /** @type {any[]} */
       const results = [];
 
-      entries.forEach((entry, index) => {
+      entries.forEach((/** @type {any} */ entry, /** @type {any} */ index) => {
         if (!entry || !entry.id || entry.id === id) return;
         const duration = Number(entry.duration) || 0;
         if (duration > 480) return;
@@ -1130,18 +1153,19 @@ async function ytMixTracks(seed) {
 // YouTube Music's radio for a song (#19): what it would play next, over plain HTTPS (no yt-dlp, so it works on
 // phones too). These are songs, not search results, and play as they are.
 const ytmRadioCache = new Map();
-function seedVideoId(seed) {
+function seedVideoId(/** @type {any} */ seed) {
   if (!seed || (seed.platform && seed.platform !== 'youtube' && seed.platform !== 'ytmusic')) return '';
   const id = cleanTrackId(String(seed.id || '')).replace(/^(yt_|youtube_)/, '');
   return /^[A-Za-z0-9_-]{11}$/.test(id) ? id : '';
 }
-async function ytmRadioTracks(seed) {
+async function ytmRadioTracks(/** @type {any} */ seed) {
   const id = seedVideoId(seed);
   if (!id) return [];
   const cached = ytmRadioCache.get(id);
   if (cached && Date.now() < cached.expires) return cached.tracks;
   if (cached && cached.promise) return cached.promise;
   const lookup = (async () => {
+    /** @type {any[]} */
     let tracks = [];
     try {
       const json = await ytmRequest('next', { videoId: id, playlistId: `RDAMVM${id}`, isAudioOnly: true }, 6000);
@@ -1162,11 +1186,11 @@ async function ytmRadioTracks(seed) {
 // Last.fm's similar songs (track.getSimilar), with the key Uriel scrobbles with; when Last.fm knows none for the
 // song, the top songs of the artists most like this one (artist.getSimilar). Found on YouTube when picked.
 const lastfmSimilarCache = new Map();
-function lastfmGet(params) {
+function lastfmGet(/** @type {any} */ params) {
   const q = new URLSearchParams({ ...params, api_key: LASTFM_API_KEY, format: 'json', autocorrect: '1' });
   return httpGetJson(`https://ws.audioscrobbler.com/2.0/?${q}`, 6000);
 }
-async function lastfmSimilarTracks(seed) {
+async function lastfmSimilarTracks(/** @type {any} */ seed) {
   const artist = String((seed && seed.artist) || '').replace(/\s*-\s*Topic$/i, '').trim();
   const title = String((seed && seed.title) || '').trim();
   if (!artist || /unknown artist/i.test(artist)) return [];
@@ -1175,6 +1199,7 @@ async function lastfmSimilarTracks(seed) {
   if (cached && Date.now() < cached.expires) return cached.tracks;
   if (cached && cached.promise) return cached.promise;
   const lookup = (async () => {
+    /** @type {any[]} */
     let tracks = [];
     let reached = false;
     try {
@@ -1202,7 +1227,7 @@ async function lastfmSimilarTracks(seed) {
   return lookup;
 }
 
-async function gatherCandidates(seeds) {
+async function gatherCandidates(/** @type {any[]} */ seeds) {
   const seedList = (Array.isArray(seeds) ? seeds : []).slice(0, 4);
   const perSeed = await Promise.all(seedList.map(async (seed) => {
     const weight = Number(seed?.weight) || 1;
@@ -1214,20 +1239,21 @@ async function gatherCandidates(seeds) {
     ]);
     // the yt-dlp mix only when YouTube Music's radio had nothing (it costs a yt-dlp run, and phones have none)
     const ytmix = radio && radio.length ? [] : await ytMixTracks(seed).catch(() => []);
+    /** @type {any[]} */
     const list = [];
-    (radio || []).forEach(t => {
+    (radio || []).forEach((/** @type {any} */ t) => {
       list.push({ ...t, match: (Number(t.match) || 0.7) * 1.4, seedWeight: weight });
     });
-    (similar || []).forEach(t => {
+    (similar || []).forEach((/** @type {any} */ t) => {
       list.push({ ...t, seedWeight: weight });
     });
-    (ytmix || []).forEach(t => {
+    (ytmix || []).forEach((/** @type {any} */ t) => {
       list.push({ ...t, match: (Number(t.match) || 0.7) * 1.3, seedWeight: weight });
     });
     (dzRel || []).forEach(t => {
       list.push({ ...t, seedWeight: weight });
     });
-    (dzRad || []).forEach(t => {
+    (dzRad || []).forEach((/** @type {any} */ t) => {
       list.push({ ...t, seedWeight: weight });
     });
     return list;
@@ -1235,7 +1261,7 @@ async function gatherCandidates(seeds) {
   return perSeed.flat();
 }
 
-function rankCandidates(cands, profile, heardKeys, avoid, limit = 10) {
+function rankCandidates(/** @type {any} */ cands, /** @type {any} */ profile, /** @type {any} */ heardKeys, /** @type {any} */ avoid, limit = 10) {
   const avoidKeys = avoid?.keys instanceof Set ? avoid.keys : new Set();
   const avoidArtists = avoid?.artists instanceof Set ? avoid.artists : new Set();
   const heardKeySet = heardKeys instanceof Set ? heardKeys : new Set();
@@ -1281,7 +1307,7 @@ function rankCandidates(cands, profile, heardKeys, avoid, limit = 10) {
 
   const topArtistNames = new Set(
     (profile?.topArtists || [])
-      .map(a => typeof a === 'string' ? a : a?.name)
+      .map((/** @type {any} */ a) => typeof a === 'string' ? a : a?.name)
       .filter(Boolean)
       .map(normalizeArtistName)
   );
@@ -1310,6 +1336,7 @@ function rankCandidates(cands, profile, heardKeys, avoid, limit = 10) {
 
   const targetCount = (limit || 10) * 2;
   const maxTopCount = Math.max(1, Math.floor(targetCount * 0.3));
+  /** @type {Record<string, number>} */
   const artistCounts = {};
   let topCount = 0;
   const result = [];
@@ -1330,7 +1357,7 @@ function rankCandidates(cands, profile, heardKeys, avoid, limit = 10) {
 
 const resolvedCache = new Map();
 
-async function resolveCandidate(c) {
+async function resolveCandidate(/** @type {any} */ c) {
   if (!c) return null;
   if (c.playable) {
     const { match, source, seedWeight, playable, key, normArtist, isTop, rankScore, ...clean } = c;
@@ -1348,7 +1375,11 @@ async function resolveCandidate(c) {
     return cached.promise;
   }
 
-  const lookupPromise = (async () => {
+  /** @type {Promise<any> | undefined} */
+
+  let lookupPromise;
+
+  lookupPromise = (async () => {
     let resolved = null;
     // the song on YouTube Music (a song row, by the same artist and title) first; SoundCloud after
     try {
@@ -1356,7 +1387,7 @@ async function resolveCandidate(c) {
       const candTitleNorm = (c.title || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
       if (Date.now() >= ytmFailUntil && candArtistNorm && candTitleNorm) {
         const songs = await searchYtmTracks(`${c.artist} ${c.title}`.trim(), 5);
-        const hit = (songs || []).find((r) => {
+        const hit = (songs || []).find((/** @type {any} */ r) => {
           const rArtistNorm = normalizeArtistName(r.artist || '');
           const rTitleNorm = (r.title || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
           return rArtistNorm && rTitleNorm && (rArtistNorm.includes(candArtistNorm) || candArtistNorm.includes(rArtistNorm))
@@ -1403,7 +1434,7 @@ async function resolveCandidate(c) {
   return lookupPromise;
 }
 
-function pickWeightedSeeds(seeds, count = 4) {
+function pickWeightedSeeds(/** @type {any[]} */ seeds, count = 4) {
   const pool = [...seeds];
   const picked = [];
   while (picked.length < count && pool.length > 0) {
@@ -1423,7 +1454,7 @@ function pickWeightedSeeds(seeds, count = 4) {
   return picked;
 }
 
-async function recommendVibeTracks(historyTracks, favoriteTracks, platform = 'youtube', limit = 10, clientProfile = null, extra = {}) {
+async function recommendVibeTracks(/** @type {any} */ historyTracks, /** @type {any} */ favoriteTracks, platform = 'youtube', limit = 10, /** @type {any} */ clientProfile = null, /** @type {any} */ extra = {}) {
   const normalizedHistory = (historyTracks || []).map(normalizeTrack).filter(Boolean);
   const normalizedFavorites = (favoriteTracks || []).map(normalizeTrack).filter(Boolean);
   const totalUserTracks = normalizedFavorites.length + normalizedHistory.length;
@@ -1437,8 +1468,10 @@ async function recommendVibeTracks(historyTracks, favoriteTracks, platform = 'yo
     if (key) heardKeys.add(key);
   });
 
+  /** @type {Record<string, number>} */
   const artistCounts = {};
   let cyrillicCount = 0;
+  /** @type {any[]} */
   const durations = [];
 
   [...normalizedFavorites, ...normalizedHistory].forEach(t => {
@@ -1470,7 +1503,7 @@ async function recommendVibeTracks(historyTracks, favoriteTracks, platform = 'yo
 
   let candidateSeeds = [];
   if (hasExtraSeeds) {
-    candidateSeeds = extra.seeds.map(s => ({
+    candidateSeeds = extra.seeds.map((/** @type {any} */ s) => ({
       artist: s.artist || '',
       title: s.title || '',
       id: s.id || '',
@@ -1479,13 +1512,13 @@ async function recommendVibeTracks(historyTracks, favoriteTracks, platform = 'yo
     }));
   } else {
     const seedMap = new Map();
-    normalizedFavorites.forEach(t => {
+    normalizedFavorites.forEach((/** @type {any} */ t) => {
       const k = getTrackNormalizedKey(t.artist, t.title);
       if (k && !seedMap.has(k)) {
         seedMap.set(k, { artist: t.artist, title: t.title, id: t.id, platform: t.platform || 'youtube', weight: 3 });
       }
     });
-    normalizedHistory.forEach(t => {
+    normalizedHistory.forEach((/** @type {any} */ t) => {
       const k = getTrackNormalizedKey(t.artist, t.title);
       if (k && !seedMap.has(k)) {
         seedMap.set(k, { artist: t.artist, title: t.title, id: t.id, platform: t.platform || 'youtube', weight: 1 });
@@ -1502,14 +1535,14 @@ async function recommendVibeTracks(historyTracks, favoriteTracks, platform = 'yo
       .map(normalizeArtistName)
       .filter(Boolean)
   );
-  const avoidArtistNames = (Array.isArray(extra?.avoid?.artists) ? extra.avoid.artists : []).filter((a) => typeof a === 'string');
+  const avoidArtistNames = (Array.isArray(extra?.avoid?.artists) ? extra.avoid.artists : []).filter((/** @type {any} */ a) => typeof a === 'string');
   const avoid = { keys: avoidKeys, artists: avoidArtists, artistNames: avoidArtistNames };
 
   const sortedSeedKeys = chosenSeeds.map(s => getTrackNormalizedKey(s.artist, s.title) || s.id).sort().join('|');
   if (!extra?.refresh && sortedSeedKeys && vibeCache.has(sortedSeedKeys)) {
     const cached = vibeCache.get(sortedSeedKeys);
     if (cached && Date.now() < cached.expires) {
-      const filtered = (cached.tracks || []).filter(t => {
+      const filtered = (cached.tracks || []).filter((/** @type {any} */ t) => {
         const k = getTrackNormalizedKey(t.artist, t.title);
         return !recentlyRecommendedTrackIds.has(t.id) && (!k || !recentlyRecommendedKeys.has(k));
       });
@@ -1519,6 +1552,7 @@ async function recommendVibeTracks(historyTracks, favoriteTracks, platform = 'yo
     }
   }
 
+  /** @type {any[]} */
   let finalTracks = [];
   try {
     const cands = await gatherCandidates(chosenSeeds);
@@ -1632,6 +1666,7 @@ async function recommendVibeTracks(historyTracks, favoriteTracks, platform = 'yo
     ranked = unshown;
   }
 
+  /** @type {Record<string, number>} */
   const artistTrackCount = {};
   const fallbackTracks = [];
   for (const track of ranked) {
@@ -1673,7 +1708,7 @@ async function recommendVibeTracks(historyTracks, favoriteTracks, platform = 'yo
   };
 }
 
-function directYoutubeSearch(query, filterSpam = false) {
+function directYoutubeSearch(/** @type {any} */ query, filterSpam = false) {
   return new Promise((resolve) => {
     const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
     const req = https.get(searchUrl, {
@@ -1715,7 +1750,7 @@ function directYoutubeSearch(query, filterSpam = false) {
                 }
 
                 const isCached = await findCachedFile(vidId);
-                const isExplicit = libraryPages.isExplicitText(title) || (v.badges || []).some((b) => /explicit/i.test((b.metadataBadgeRenderer && b.metadataBadgeRenderer.label) || ''));
+                const isExplicit = libraryPages.isExplicitText(title) || (v.badges || []).some((/** @type {any} */ b) => /explicit/i.test((b.metadataBadgeRenderer && b.metadataBadgeRenderer.label) || ''));
 
                 tracks.push({
                   id: vidId,
@@ -1751,17 +1786,17 @@ function directYoutubeSearch(query, filterSpam = false) {
 // opts.cacheMs remembers the output, opts.reason names the caller in the log.
 const ytdlpQueue = createTaskQueue({ limit: 2, backgroundLimit: 1 });
 
-function spawnYtDlp(cmd, priority, reason) {
+function spawnYtDlp(/** @type {any} */ cmd, /** @type {string} */ priority, /** @type {string} */ reason) {
   const proc = spawn(cmd.bin, cmd.args, { windowsHide: true, env: cmd.env });
   // background runs (and the JS runtime they start, which inherits it) yield to the app and the desktop
   if (priority !== 'play') lowerPriority(proc.pid);
   if (YTDLP_DEBUG) {
-    try { logger.log('info', `yt-dlp spawn [${reason || 'unknown'}/${priority}] ${cmd.args.filter((a) => !/^--(no-config|no-warnings|no-playlist)$/.test(a)).join(' ').slice(0, 300)} ${JSON.stringify(ytdlpQueue.stats())}`); } catch (_) {}
+    try { logger.log('info', `yt-dlp spawn [${reason || 'unknown'}/${priority}] ${cmd.args.filter((/** @type {any} */ a) => !/^--(no-config|no-warnings|no-playlist)$/.test(a)).join(' ').slice(0, 300)} ${JSON.stringify(ytdlpQueue.stats())}`); } catch (_) {}
   }
   return proc;
 }
 
-function executeYtDlp(args, timeoutMs = 25000, opts = {}) {
+function executeYtDlp(/** @type {string[]} */ args, timeoutMs = 25000, /** @type {{ priority?: string, reason?: string, key?: string, cacheMs?: number, onChild?: (proc: any) => void }} */ opts = {}) {
   const priority = opts.priority || 'normal';
   const queuedAt = Date.now();
   return ytdlpQueue.run(() => {
@@ -1773,7 +1808,7 @@ function executeYtDlp(args, timeoutMs = 25000, opts = {}) {
   }, { key: opts.key, priority, cacheMs: opts.cacheMs });
 }
 
-function runYtDlpNow(args, timeoutMs, opts, priority) {
+function runYtDlpNow(/** @type {string[]} */ args, /** @type {number} */ timeoutMs, /** @type {any} */ opts, /** @type {string} */ priority) {
   return new Promise((resolve, reject) => {
     const cmd = ytDlpCommand(withYtDlpCookies(args));
     const proc = spawnYtDlp(cmd, priority, opts.reason);
@@ -1795,10 +1830,10 @@ function runYtDlpNow(args, timeoutMs, opts, priority) {
       }, timeoutMs);
     }
 
-    proc.stdout.on('data', (d) => { stdout += outDecoder.write(d); });
-    proc.stderr.on('data', (d) => { stderr += errDecoder.write(d); });
+    proc.stdout.on('data', (/** @type {any} */ d) => { stdout += outDecoder.write(d); });
+    proc.stderr.on('data', (/** @type {any} */ d) => { stderr += errDecoder.write(d); });
 
-    proc.on('close', (code) => {
+    proc.on('close', (/** @type {any} */ code) => {
       if (timer) clearTimeout(timer);
       if (timedOut) {
         reject(new Error(`yt-dlp timed out after ${timeoutMs}ms`));
@@ -1812,7 +1847,7 @@ function runYtDlpNow(args, timeoutMs, opts, priority) {
       }
     });
 
-    proc.on('error', (err) => {
+    proc.on('error', (/** @type {any} */ err) => {
       if (timer) clearTimeout(timer);
       const firstArgs = (args || []).slice(0, 3).join(' ');
       const errSnippet = String(err && err.message ? err.message : err).slice(0, 300);
@@ -1822,7 +1857,7 @@ function runYtDlpNow(args, timeoutMs, opts, priority) {
   });
 }
 
-async function cacheThumbnailToDisk(cleanId, thumbnailUrl) {
+async function cacheThumbnailToDisk(/** @type {string} */ cleanId, /** @type {any} */ thumbnailUrl) {
   if (!cleanId || !thumbnailUrl || !thumbnailUrl.startsWith('http')) return null;
   const destPath = path.join(THUMBNAILS_DIR, `${cleanId}.jpg`);
   if (fs.existsSync(destPath)) return destPath;
@@ -1842,7 +1877,8 @@ async function cacheThumbnailToDisk(cleanId, thumbnailUrl) {
 // priority: 'play' when the listener is waiting for this song (phones play from the cache), otherwise
 // 'background' (caching a song that already plays, or the next one); a background download that failed
 // isn't tried again until its backoff has passed
-async function downloadTrackToDisk(trackUrl, trackId, platform, meta = {}, priority = 'background', clients = YT_PLAYER_CLIENTS) {
+/** @returns {Promise<any>} */
+async function downloadTrackToDisk(/** @type {string} */ trackUrl, /** @type {string} */ trackId, /** @type {string} */ platform, /** @type {any} */ meta = {}, priority = 'background', clients = YT_PLAYER_CLIENTS) {
   const cleanId = cleanTrackId(trackId);
   const target = youtubeExtractTarget(trackUrl, trackId, platform);
   if (target.unresolved) return;
@@ -1898,7 +1934,7 @@ async function downloadTrackToDisk(trackUrl, trackId, platform, meta = {}, prior
   const copyFromStream = async () => {
     if (STREAM_VIA_CACHE || cancelled || !meta.streamUrl || !isSafeMediaUrl(meta.streamUrl)) return false;
     const started = Date.now();
-    const done = await copyStreamToCache(resolveBinary('ffmpeg'), meta.streamUrl, tempPath, {
+    const done = await copyStreamToCache(/** @type {string} */ (resolveBinary('ffmpeg')), meta.streamUrl, tempPath, {
       onChild: (proc) => { if (priority !== 'play') lowerPriority(proc.pid); downloadProcs.set(cleanId, proc); },
     }).catch(() => false);
     if (downloadProcs.get(cleanId) !== placeholder) downloadProcs.set(cleanId, placeholder);
@@ -1913,14 +1949,15 @@ async function downloadTrackToDisk(trackUrl, trackId, platform, meta = {}, prior
     if (downloadProcs.get(cleanId) === placeholder) downloadProcs.delete(cleanId);
     return true;
   };
-  const job = ytdlpQueue.run(() => copyFromStream().then((copied) => (copied ? undefined : new Promise((resolve, reject) => {
+  /** @type {Promise<any>} */
+  const job = ytdlpQueue.run(() => copyFromStream().then((copied) => (copied ? undefined : new Promise((/** @type {(value?: void) => void} */ resolve, reject) => {
     if (cancelled) { if (downloadProcs.get(cleanId) === placeholder) downloadProcs.delete(cleanId); return resolve(); }
     const proc = spawnYtDlp(cmd, priority, 'cache-download');
     downloadProcs.set(cleanId, proc);
     // yt-dlp's reason ("ERROR: ...") goes into the log, so a shared error log says why a song failed
     let errText = '';
-    if (proc.stderr) proc.stderr.on('data', (d) => { errText = (errText + d).slice(-2000); });
-    proc.on('close', async (code) => {
+    if (proc.stderr) proc.stderr.on('data', (/** @type {any} */ d) => { errText = (errText + d).slice(-2000); });
+    proc.on('close', async (/** @type {any} */ code) => {
       if (downloadProcs.get(cleanId) === proc) downloadProcs.delete(cleanId);
       const found = findTemp();
       if (code === 0 && found) {
@@ -1956,7 +1993,7 @@ async function downloadTrackToDisk(trackUrl, trackId, platform, meta = {}, prior
       resolve();
     });
 
-    proc.on('error', (err) => {
+    proc.on('error', (/** @type {any} */ err) => {
       try { logger.error('Download spawn error: ' + (meta.title || trackId), err); } catch (_) {}
       reject(err);
     });
@@ -1970,7 +2007,7 @@ async function downloadTrackToDisk(trackUrl, trackId, platform, meta = {}, prior
 
 // priority 'normal' for the song that plays next (the app asks near the end of the current one, and it
 // should be ready in time), 'background' for guesses such as the top search result
-async function prefetchTrack(trackUrl, trackId, platform, meta = null, priority = 'background') {
+async function prefetchTrack(/** @type {string} */ trackUrl, /** @type {string} */ trackId, /** @type {string} */ platform, /** @type {any} */ meta = null, priority = 'background') {
   // a song without a video yet: prepare the video the app will find when it is played (the same search)
   if (youtubeExtractTarget(trackUrl, trackId, platform).unresolved) {
     if (prefetchingSet.size > 2) return;
@@ -2051,12 +2088,12 @@ const YTM_CLIENT_VERSION = '1.20250101.01.00';
 let ytmFailUntil = 0;
 let ytmFailCount = 0;
 
-function ytmSearchRequest(query, params = YTM_SONGS_PARAMS) {
+function ytmSearchRequest(/** @type {any} */ query, params = YTM_SONGS_PARAMS) {
   return ytmRequest('search', { query, params });
 }
 
 // one YouTube Music innertube call: 'search', 'browse' (artist pages, playlists) or 'next' (who a video is by)
-function ytmRequest(endpoint, payload, timeoutMs = 8000) {
+function ytmRequest(/** @type {any} */ endpoint, /** @type {any} */ payload, timeoutMs = 8000) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       context: { client: { clientName: 'WEB_REMIX', clientVersion: YTM_CLIENT_VERSION, hl: 'en', gl: 'US' } },
@@ -2083,7 +2120,7 @@ function ytmRequest(endpoint, payload, timeoutMs = 8000) {
           try { logger.log('warn', `ytmusic ${endpoint} status ${res.statusCode}`); } catch (_) {}
           return reject(new Error(`ytmusic status ${res.statusCode}`));
         }
-        try { resolve(JSON.parse(data)); } catch (e) {
+        try { resolve(JSON.parse(data)); } catch (/** @type {any} */ e) {
           try { logger.log('warn', `ytmusic ${endpoint} parse error: ${e.message}`); } catch (_) {}
           reject(e);
         }
@@ -2102,12 +2139,12 @@ function ytmRequest(endpoint, payload, timeoutMs = 8000) {
   });
 }
 
-function parseYtmDuration(text) {
+function parseYtmDuration(/** @type {string | undefined} */ text) {
   if (!text || !/^\d+(:\d{1,2}){1,2}$/.test(text.trim())) return 0;
-  return text.trim().split(':').map(Number).reduce((acc, n) => acc * 60 + n, 0);
+  return text.trim().split(':').map(Number).reduce((/** @type {any} */ acc, /** @type {any} */ n) => acc * 60 + n, 0);
 }
 
-function parseYtmSongs(json) {
+function parseYtmSongs(/** @type {any} */ json) {
   const out = [];
   const tabs = (json && json.contents && json.contents.tabbedSearchResultsRenderer && json.contents.tabbedSearchResultsRenderer.tabs) || [];
   const sections = (tabs[0] && tabs[0].tabRenderer && tabs[0].tabRenderer.content && tabs[0].tabRenderer.content.sectionListRenderer && tabs[0].tabRenderer.content.sectionListRenderer.contents) || [];
@@ -2117,12 +2154,12 @@ function parseYtmSongs(json) {
       const r = wrap && wrap.musicResponsiveListItemRenderer;
       if (!r) continue;
       const cols = r.flexColumns || [];
-      const runsOf = (i) => (cols[i] && cols[i].musicResponsiveListItemFlexColumnRenderer && cols[i].musicResponsiveListItemFlexColumnRenderer.text && cols[i].musicResponsiveListItemFlexColumnRenderer.text.runs) || [];
+      const runsOf = (/** @type {number} */ i) => (cols[i] && cols[i].musicResponsiveListItemFlexColumnRenderer && cols[i].musicResponsiveListItemFlexColumnRenderer.text && cols[i].musicResponsiveListItemFlexColumnRenderer.text.runs) || [];
       const overlay = r.overlay && r.overlay.musicItemThumbnailOverlayRenderer && r.overlay.musicItemThumbnailOverlayRenderer.content && r.overlay.musicItemThumbnailOverlayRenderer.content.musicPlayButtonRenderer;
       const videoId = (r.playlistItemData && r.playlistItemData.videoId) || (overlay && overlay.playNavigationEndpoint && overlay.playNavigationEndpoint.watchEndpoint && overlay.playNavigationEndpoint.watchEndpoint.videoId);
       if (!videoId || !/^[\w-]{11}$/.test(videoId)) continue;
 
-      const title = runsOf(0).map((x) => x.text).join('').trim();
+      const title = runsOf(0).map((/** @type {any} */ x) => x.text).join('').trim();
       const segments = [];
       let cur = [];
       for (const run of runsOf(1)) {
@@ -2150,7 +2187,7 @@ function parseYtmSongs(json) {
 }
 
 // Songs first; music videos when the songs search comes back empty
-async function searchYtmSongs(query) {
+async function searchYtmSongs(/** @type {any} */ query) {
   const songs = parseYtmSongs(await ytmSearchRequest(query));
   if (songs.length) return songs;
   const videos = parseYtmSongs(await ytmSearchRequest(query, YTM_VIDEOS_PARAMS));
@@ -2158,7 +2195,7 @@ async function searchYtmSongs(query) {
   return videos.map((v) => (/\bviews?$/i.test(v.album) ? { ...v, album: '' } : v));
 }
 
-async function searchYtmTracks(query, limit = 16) {
+async function searchYtmTracks(/** @type {any} */ query, limit = 16) {
   const cacheKey = `ytm_vibe:${limit}:${String(query || '').trim().toLowerCase()}`;
   if (searchCache.has(cacheKey)) {
     return searchCache.get(cacheKey);
@@ -2187,7 +2224,7 @@ async function searchYtmTracks(query, limit = 16) {
   } catch (e) {
     try {
       const dy = await directYoutubeSearch(query, true);
-      return (dy || []).slice(0, limit).map(t => ({
+      return (dy || []).slice(0, limit).map((/** @type {any} */ t) => ({
         ...t,
         platform: 'youtube'
       }));
@@ -2197,7 +2234,7 @@ async function searchYtmTracks(query, limit = 16) {
   }
 }
 
-async function handleSearch(req, res, query, platform = 'youtube', limit = 20) {
+async function handleSearch(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {any} */ query, platform = 'youtube', limit = 20) {
   const cacheKey = `${platform}:${query}:${limit}`;
   while (true) {
     const cached = searchCache.get(cacheKey);
@@ -2215,12 +2252,14 @@ async function handleSearch(req, res, query, platform = 'youtube', limit = 20) {
 
   /** @type {(value: any) => void} */
 
+  /** @type {any} */
+
   let resolveSearchOutcome;
   const searchOutcome = new Promise(resolve => { resolveSearchOutcome = resolve; });
   const cacheEntry = { promise: searchOutcome };
   searchCache.set(cacheKey, cacheEntry);
   let responseOutcome = null;
-  const sendResponse = (status, body) => {
+  const sendResponse = (/** @type {number} */ status, /** @type {any} */ body) => {
     responseOutcome = { status, body };
     resolveSearchOutcome(responseOutcome);
     res.writeHead(status, { 'Content-Type': 'application/json' });
@@ -2283,9 +2322,9 @@ async function handleSearch(req, res, query, platform = 'youtube', limit = 20) {
       const args = ['--flat-playlist', '--playlist-end', String(limit), '-J', `https://music.youtube.com/search?q=${encodeURIComponent(query)}#songs`];
       const raw = await executeYtDlp(args, 25000, { priority: 'play', reason: 'search-ytmusic' });
       const data = JSON.parse(raw);
-      const rawEntries = (data.entries || []).filter((item) => item && /^[\w-]{11}$/.test(String(item.id || '')) && item.live_status !== 'is_live' && !(item.duration && (item.duration < 30 || item.duration > 1200)) && !/\b(advert(isement)?|sponsored|ad)\b|реклама/i.test(item.title || '')).slice(0, limit);
+      const rawEntries = (data.entries || []).filter((/** @type {any} */ item) => item && /^[\w-]{11}$/.test(String(item.id || '')) && item.live_status !== 'is_live' && !(item.duration && (item.duration < 30 || item.duration > 1200)) && !/\b(advert(isement)?|sponsored|ad)\b|реклама/i.test(item.title || '')).slice(0, limit);
 
-      function extractArtist(item) {
+      function extractArtist(/** @type {any} */ item) {
         let a = '';
         if (Array.isArray(item.artists) && item.artists.length > 0) a = item.artists.join(', ');
         else if (item.artist) a = item.artist;
@@ -2295,6 +2334,7 @@ async function handleSearch(req, res, query, platform = 'youtube', limit = 20) {
         return a ? a.replace(/\s*-\s*Topic$/i, '').trim() : '';
       }
 
+      /** @type {any[]} */
       const toFetch = [];
       for (let i = 0; i < Math.min(20, rawEntries.length); i++) {
         const item = rawEntries[i];
@@ -2326,7 +2366,7 @@ async function handleSearch(req, res, query, platform = 'youtube', limit = 20) {
                 `https://www.youtube.com/watch?v=${item.id}`
               // 'normal', not 'play': up to 20 of these per search must not hold up a song the listener clicks (#17)
               ], 10000, { priority: 'normal', key: `artist:${item.id}`, reason: 'search-artist' });
-              const lines = (out || '').split('\n').map(s => s.trim()).filter(s => s && s !== 'NA');
+              const lines = (out || '').split('\n').map((/** @type {any} */ s) => s.trim()).filter((/** @type {any} */ s) => s && s !== 'NA');
               if (lines.length > 0) {
                 const val = lines[0].replace(/\s*-\s*Topic$/i, '').trim();
                 if (val) {
@@ -2342,7 +2382,7 @@ async function handleSearch(req, res, query, platform = 'youtube', limit = 20) {
         await Promise.all(workers);
       }
 
-      const entries = await Promise.all(rawEntries.map(async (item) => {
+      const entries = await Promise.all(rawEntries.map(async (/** @type {any} */ item) => {
         let thumbnail = `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`;
         if (item.thumbnails && item.thumbnails.length > 0) {
           thumbnail = item.thumbnails[item.thumbnails.length - 1].url;
@@ -2402,11 +2442,11 @@ async function handleSearch(req, res, query, platform = 'youtube', limit = 20) {
     if (platform === 'soundcloud') {
       // songs SoundCloud only streams encrypted (DRM) can never play here: leave them out (#13).
       // The phone build's search checked already and marks its results playable.
-      const unknown = found.filter((item) => item && item.playable !== true && /^\d+$/.test(String(item.id))).map((item) => String(item.id));
+      const unknown = found.filter((/** @type {any} */ item) => item && item.playable !== true && /^\d+$/.test(String(item.id))).map((/** @type {any} */ item) => String(item.id));
       const ok = unknown.length ? await soundcloudPlayableIds(unknown) : null;
-      if (ok) found = found.filter((item) => !item || !unknown.includes(String(item.id)) || ok.has(String(item.id)));
+      if (ok) found = found.filter((/** @type {any} */ item) => !item || !unknown.includes(String(item.id)) || ok.has(String(item.id)));
     }
-    const entries = await Promise.all(found.map(async (item) => {
+    const entries = await Promise.all(found.map(async (/** @type {any} */ item) => {
       let thumbnail = '';
       if (item.thumbnails && item.thumbnails.length > 0) {
         thumbnail = item.thumbnails[item.thumbnails.length - 1].url;
@@ -2445,7 +2485,7 @@ async function handleSearch(req, res, query, platform = 'youtube', limit = 20) {
     }, 60);
 
     return sendResponse(200, result);
-  } catch (err) {
+  } catch (/** @type {any} */ err) {
     return sendResponse(500, { success: false, error: err.message });
   }
   } finally {
@@ -2460,7 +2500,7 @@ async function handleSearch(req, res, query, platform = 'youtube', limit = 20) {
   }
 }
 
-async function handleVibeRecommendations(req, res, payload) {
+async function handleVibeRecommendations(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {any} */ payload) {
   const historyTracks = Array.isArray(payload?.history) ? payload.history : [];
   const favoriteTracks = Array.isArray(payload?.favorites) ? payload.favorites : [];
   const platform = 'youtube';
@@ -2476,7 +2516,7 @@ async function handleVibeRecommendations(req, res, payload) {
     const result = await recommendVibeTracks(historyTracks, favoriteTracks, platform, limit, clientProfile, extra);
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true, ...result }));
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     res.writeHead(500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: false, error: error.message }));
   }
@@ -2492,7 +2532,7 @@ async function songRadioTracks(seeds, { limit = 25, exclude = {}, blocks = {} } 
     artist: String(s.artist || ''), title: String(s.title || ''), id: String(s.id || ''), platform: s.platform || 'youtube', weight: 1,
   }));
   if (!seedList.length) return [];
-  const keyOf = (t) => getTrackNormalizedKey(t.artist, t.title);
+  const keyOf = (/** @type {any} */ t) => getTrackNormalizedKey(t.artist, t.title);
   const exKeys = new Set((Array.isArray(exclude.keys) ? exclude.keys : []).filter((k) => typeof k === 'string'));
   const exIds = new Set((Array.isArray(exclude.ids) ? exclude.ids : []).map((x) => String(x || '').replace(/^(yt_|youtube_)/, '')).filter(Boolean));
   for (const s of seedList) {
@@ -2529,13 +2569,13 @@ async function songRadioTracks(seeds, { limit = 25, exclude = {}, blocks = {} } 
   return recommendCore.dropUnwanted(tracks, { blocks: blockSet, recentKeys: exKeys, recentIds: exIds, keyOf }).slice(0, limit);
 }
 
-async function handleSongRadio(req, res, payload) {
+async function handleSongRadio(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {any} */ payload) {
   const limit = Math.max(5, Math.min(parseInt(payload?.limit || '25', 10) || 25, 40));
   try {
     const tracks = await songRadioTracks(payload?.seeds, { limit, exclude: payload?.exclude || {}, blocks: payload?.blocks || {} });
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true, tracks }));
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     res.writeHead(500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: false, error: error.message }));
   }
@@ -2550,7 +2590,7 @@ const STREAM_BLOCKED = STREAM_VIA_CACHE
 const downloadFailures = new Map();
 
 // ---- finding a stream: one resolver, the strategies this platform has (stream-resolver.js) ----
-async function ytDlpLookup(url, clients, timeoutMs, reason) {
+async function ytDlpLookup(/** @type {string} */ url, /** @type {any} */ clients, /** @type {number} */ timeoutMs, /** @type {string} */ reason) {
   const args = ['--no-config', ...streamSource.LOOKUP_PRINT_ARGS, '--no-warnings', '--no-playlist', '--prefer-free-formats', '-f', 'bestaudio/best'];
   if (clients) args.push('--extractor-args', clients);
   args.push('--', url);
@@ -2562,22 +2602,23 @@ const fastTurnedAway = () => new Error("YouTube's fast lookup: confirm you're no
 
 // computers: a stream URL, played through the audio proxy
 const DESKTOP_STRATEGIES = [
-  { name: 'fast', source: 'youtube-fast', maxMs: 10000, canHandle: (s) => s.safe && s.youtube,
-    async attempt(s) {
+  { name: 'fast', source: 'youtube-fast', maxMs: 10000, canHandle: (/** @type {any} */ s) => s.safe && s.youtube,
+    async attempt(/** @type {any} */ s) {
       const url = await fastYouTubeStream(s.trackUrl, s.cleanId);
       if (url) return { url };
       if (ytFast.botBlocked()) throw fastTurnedAway();
       return null;
     } },
-  { name: 'ytDlp', source: (s) => (s.youtube ? 'youtube-ytdlp' : null), maxMs: 25000, canHandle: (s) => s.safe,
-    async attempt(s) {
+  { name: 'ytDlp', source: (/** @type {any} */ s) => (s.youtube ? 'youtube-ytdlp' : null), maxMs: 25000, canHandle: (/** @type {any} */ s) => s.safe,
+    async attempt(/** @type {any} */ s) {
       const url = await ytDlpLookup(s.trackUrl, s.youtube ? YT_PLAYER_CLIENTS : null, 25000, 'stream');
       return url ? { url } : null;
     } },
   // other YouTube uploads of the song: the fast lookup first, yt-dlp while YouTube lets it in
   // (no search for them at all while both YouTube routes are turned away: it cost a second for nothing)
   { name: 'otherUploads', source: null, maxMs: 20000,
-    canHandle: (s, health) => s.platform !== 'local' && !!(s.title || s.artist) && !(health.blocked('youtube-fast') && health.blocked('youtube-ytdlp')),
+    canHandle: (/** @type {any} */ s, /** @type {any} */ health) => s.platform !== 'local' && !!(s.title || s.artist) && !(health.blocked('youtube-fast') && health.blocked('youtube-ytdlp')),
+    /** @param {any} s @param {{ health: any, signal?: AbortSignal }} o */
     async attempt(s, { health, signal }) {
       for (const alt of await alternativeUploads(s.cleanId, s.title, s.artist, s.duration)) {
         if (signal && signal.aborted) return null;
@@ -2598,18 +2639,18 @@ const DESKTOP_STRATEGIES = [
       }
       return null;
     } },
-  { name: 'soundcloud', source: 'soundcloud', maxMs: 20000, canHandle: (s) => !!(s.title || s.artist),
-    async attempt(s) {
+  { name: 'soundcloud', source: 'soundcloud', maxMs: 20000, canHandle: (/** @type {any} */ s) => !!(s.title || s.artist),
+    async attempt(/** @type {any} */ s) {
       const sc = await soundcloudFallback(s.title, s.artist, s.duration);
       if (!sc) return null;
       const raw = await executeYtDlp(['--no-config', '-g', '--no-warnings', '--no-playlist', '--prefer-free-formats', '-f', 'bestaudio/best', '--', sc], 15000, { key: `g:${sc}`, priority: 'play', reason: 'stream-soundcloud' });
-      const url = raw.trim().split('\n').map((l) => l.trim()).find((l) => l.startsWith('http'));
+      const url = raw.trim().split('\n').map((/** @type {any} */ l) => l.trim()).find((/** @type {any} */ l) => l.startsWith('http'));
       return url ? { url } : null;
     } },
 ];
 
 // phones: the song is downloaded into the cache by the in-app extractor and played from there
-async function downloadInto(s, url, platform) {
+async function downloadInto(/** @type {any} */ s, /** @type {string} */ url, /** @type {string} */ platform) {
   downloadFailures.delete(s.cleanId);
   await downloadTrackToDisk(url, s.cleanId, platform, s.meta, 'play');
   if (await findCachedFile(s.cleanId)) return { local: true };
@@ -2618,10 +2659,11 @@ async function downloadInto(s, url, platform) {
   return null;
 }
 const PHONE_STRATEGIES = [
-  { name: 'download', source: (s) => (s.youtube ? 'youtube-fast' : null), maxMs: 60000, canHandle: (s) => !!s.cleanId && !!s.trackUrl,
-    attempt: (s) => downloadInto(s, s.trackUrl, s.platform) },
+  { name: 'download', source: (/** @type {any} */ s) => (s.youtube ? 'youtube-fast' : null), maxMs: 60000, canHandle: (/** @type {any} */ s) => !!s.cleanId && !!s.trackUrl,
+    attempt: (/** @type {any} */ s) => downloadInto(s, s.trackUrl, s.platform) },
   // any song that won't play (SoundCloud and YouTube Music included) tries other YouTube uploads of it
-  { name: 'otherUploads', source: 'youtube-fast', maxMs: 90000, canHandle: (s) => !!s.cleanId && s.platform !== 'local' && !!(s.title || s.artist),
+  { name: 'otherUploads', source: 'youtube-fast', maxMs: 90000, canHandle: (/** @type {any} */ s) => !!s.cleanId && s.platform !== 'local' && !!(s.title || s.artist),
+    /** @param {any} s @param {{ signal?: AbortSignal }} o */
     async attempt(s, { signal }) {
       for (const alt of await alternativeUploads(s.cleanId, s.title, s.artist, s.duration)) {
         if (signal && signal.aborted) return null;
@@ -2631,8 +2673,8 @@ const PHONE_STRATEGIES = [
       }
       return null;
     } },
-  { name: 'soundcloud', source: 'soundcloud', maxMs: 60000, canHandle: (s) => !!s.cleanId && !!(s.title || s.artist),
-    async attempt(s) {
+  { name: 'soundcloud', source: 'soundcloud', maxMs: 60000, canHandle: (/** @type {any} */ s) => !!s.cleanId && !!(s.title || s.artist),
+    async attempt(/** @type {any} */ s) {
       const sc = await soundcloudFallback(s.title, s.artist, s.duration);
       return sc ? downloadInto(s, sc, 'soundcloud') : null;
     } },
@@ -2658,32 +2700,32 @@ function streamHealthStats() { return streamHealth.stats(); }
 // 30-second preview (SoundCloud Go+): that was played as the whole song and stopped at 0:29. Only a full
 // upload of about the same length counts, and remixes / sped-up versions only when the song is one.
 const VERSION_WORDS = /\b(remix|sped[ -]?up|slowed|nightcore|reverb|8d|bass[ -]?boost(ed)?|cover|flip|mashup|instrumental|karaoke|loop)\b/i;
-async function soundcloudFallback(title, artist, duration) {
+async function soundcloudFallback(/** @type {any} */ title, /** @type {any} */ artist, /** @type {any} */ duration) {
   const query = `${artist || ''} ${title || ''}`.trim();
   if (!query) return null;
   const want = Number(duration) || 0;
   const wantsVersion = VERSION_WORDS.test(title || '');
   const found = await searchSoundcloud(query, 8, 'play').catch(() => []);
-  const pick = (found || []).find((t) => t && t.url
+  const pick = (found || []).find((/** @type {any} */ t) => t && t.url
     && t.duration > 31 // previews are exactly 30 s
     && (!want || Math.abs(t.duration - want) <= Math.max(12, want * 0.08))
     && (wantsVersion || !VERSION_WORDS.test(t.title || '')));
   return pick ? pick.url : null;
 }
 
-async function alternativeUploads(cleanId, title, artist, duration) {
+async function alternativeUploads(/** @type {string} */ cleanId, /** @type {any} */ title, /** @type {any} */ artist, /** @type {any} */ duration) {
   const query = `${artist || ''} ${title || ''}`.trim();
   if (!query) return [];
   const want = Number(duration) || 0;
   const found = await directYoutubeSearch(query).catch(() => []);
   return (found || [])
-    .filter((t) => t && t.id && t.id !== cleanId && (!want || !t.duration || Math.abs(t.duration - want) <= Math.max(15, want * 0.12)))
+    .filter((/** @type {any} */ t) => t && t.id && t.id !== cleanId && (!want || !t.duration || Math.abs(t.duration - want) <= Math.max(15, want * 0.12)))
     .slice(0, 2)
-    .map((t) => `https://www.youtube.com/watch?v=${t.id}`);
+    .map((/** @type {any} */ t) => `https://www.youtube.com/watch?v=${t.id}`);
 }
 
 // The answer for a song already on this device, or null. Touches no network.
-async function localCopyAnswer(cleanId, trackUrl, trackId, platform, title, artist, duration) {
+async function localCopyAnswer(/** @type {string} */ cleanId, /** @type {string} */ trackUrl, /** @type {string} */ trackId, /** @type {string} */ platform, /** @type {any} */ title, /** @type {any} */ artist, /** @type {any} */ duration) {
   const [cachedFile, downloadedName] = await Promise.all([
     cleanId ? findCachedFile(cleanId) : Promise.resolve(null),
     (title || artist) ? findDownloadedFile(title, artist) : Promise.resolve(null)
@@ -2709,7 +2751,7 @@ async function localCopyAnswer(cleanId, trackUrl, trackId, platform, title, arti
 
 // fresh: the app could not play the URL it got last time (or the lookup failed): skip the remembered URL.
 // localOnly: answer from this device or not at all, so the app can ask before it searches online.
-async function handleStreamInfo(req, res, trackUrl, trackId, platform = 'youtube', title = '', artist = '', duration = 0, thumbnail = '', fresh = false, localOnly = false) {
+async function handleStreamInfo(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {string} */ trackUrl, /** @type {string} */ trackId, platform = 'youtube', title = '', artist = '', duration = 0, thumbnail = '', fresh = false, localOnly = false) {
   let cleanId = cleanTrackId(trackId);
   if (!cleanId && trackUrl && trackUrl.includes('v=')) {
     cleanId = cleanTrackId(trackUrl.split('v=')[1].split('&')[0]);
@@ -2748,8 +2790,11 @@ async function handleStreamInfo(req, res, trackUrl, trackId, platform = 'youtube
 
   /** @type {(value: any) => void} */
 
+  /** @type {any} */
+
   let resolveLookup;
   const lookupPromise = new Promise(resolve => { resolveLookup = resolve; });
+  /** @type {{ promise: Promise<any>, waiters?: number }} */
   const inFlightEntry = { promise: lookupPromise };
   if (cacheKey) streamUrlCache.set(cacheKey, inFlightEntry);
 
@@ -2771,7 +2816,7 @@ async function handleStreamInfo(req, res, trackUrl, trackId, platform = 'youtube
     let blocked = false;
     try {
       await streamResolver.resolve({ id: cleanId, cleanId, trackUrl, platform, title, artist, duration, meta, youtube: ytTarget.youtube }, { reason: 'play', deadlineMs: 180000, signal: skip });
-    } catch (e) { blocked = e && e.code === 'blocked'; }
+    } catch (/** @type {any} */ e) { blocked = e && e.code === 'blocked'; }
     if (gone) { resolveLookup({ success: false, error: 'cancelled' }); if (cacheKey && streamUrlCache.get(cacheKey) === inFlightEntry) streamUrlCache.delete(cacheKey); return; }
     // settle the in-flight entry so concurrent lookups for this track don't wait forever,
     // and drop it so later prefetches don't mistake it for a cached stream URL
@@ -2789,7 +2834,7 @@ async function handleStreamInfo(req, res, trackUrl, trackId, platform = 'youtube
   try {
     const found = await streamResolver.resolve({ id: cleanId || trackUrl, cleanId, trackUrl, platform, title, artist, duration, safe: isSafeMediaUrl(trackUrl), youtube: ytTarget.youtube }, { reason: 'play' });
     streamUrl = found.url;
-  } catch (e) { blocked = e && e.code === 'blocked'; }
+  } catch (/** @type {any} */ e) { blocked = e && e.code === 'blocked'; }
 
   if (!streamUrl) {
     const failure = { success: false, error: blocked ? STREAM_BLOCKED : STREAM_FAILED, blocked };
@@ -2818,7 +2863,7 @@ async function handleStreamInfo(req, res, trackUrl, trackId, platform = 'youtube
 
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(data));
-  } catch (error) {
+  } catch (/** @type {any} */ error) {
     const failure = { success: false, error: error.message };
     resolveLookup(failure);
     if (cacheKey && streamUrlCache.get(cacheKey) === inFlightEntry) {
@@ -2834,20 +2879,22 @@ const videoArtists = new Map();
 
 // Several artists can share a name. With the artist's channel id (tracks from YouTube / YouTube Music carry it)
 // or the video a track plays, the page is the one of that artist; with only a name it's the best-known namesake.
-async function fetchArtistInfo(artistName, artistId = '', videoId = '') {
+/** @returns {Promise<any>} */
+async function fetchArtistInfo(/** @type {any} */ artistName, artistId = '', videoId = '') {
   const cleanName = (artistName || '').replace(/ - Topic|VEVO|Official|Records/gi, '').trim();
   const id = await resolveArtistId(cleanName, artistId, videoId);
   const cacheKey = id ? `id:${id}` : cleanName.toLowerCase();
   if (artistCache.has(cacheKey)) return artistCache.get(cacheKey);
   // the same artist page requested again while its lookup runs shares that lookup
   if (artistInFlight.has(cacheKey)) return artistInFlight.get(cacheKey);
+  /** @type {Promise<any>} */
   const lookup = (id ? lookupYtmArtist(id, cleanName, cacheKey) : lookupArtistInfo(cleanName, cacheKey)).finally(() => artistInFlight.delete(cacheKey));
   artistInFlight.set(cacheKey, lookup);
   return lookup;
 }
 
 // Tracks saved before they kept `artistId`: the artist YouTube Music credits the video to, if it has that name
-async function resolveArtistId(cleanName, artistId, videoId) {
+async function resolveArtistId(/** @type {string} */ cleanName, /** @type {any} */ artistId, /** @type {string} */ videoId) {
   if (ytmArtist.channelId(artistId)) return artistId;
   if (!ytmArtist.VIDEO_ID.test(videoId || '')) return '';
   if (!videoArtists.has(videoId)) {
@@ -2862,7 +2909,8 @@ async function resolveArtistId(cleanName, artistId, videoId) {
 }
 
 // the artist page from the artist's YouTube Music channel; the page by name when that can't be reached
-async function lookupYtmArtist(id, cleanName, cacheKey) {
+/** @returns {Promise<any>} */
+async function lookupYtmArtist(/** @type {string} */ id, /** @type {string} */ cleanName, /** @type {any} */ cacheKey) {
   let page = null;
   try { page = ytmArtist.parseArtistPage(await ytmRequest('browse', { browseId: id }, 5000), id); } catch (e) {}
   if (!page) return fetchArtistInfo(cleanName);
@@ -2900,14 +2948,14 @@ async function lookupYtmArtist(id, cleanName, cacheKey) {
 }
 
 // other artists with the same name, for the chooser on the artist page
-async function handleArtistMatches(req, res, parsedUrl) {
+async function handleArtistMatches(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {Omit<import('url').UrlWithParsedQuery, 'query' | 'pathname'> & { pathname: string, query: Record<string, string> }} */ parsedUrl) {
   const name = (parsedUrl.query.name || '').trim();
   const cacheKey = `artist-matches:${ytmArtist.nameKey(name)}`;
   let artists = getAlbumCache(cacheKey);
   if (!artists && name) {
     try {
       const found = ytmArtist.parseArtistResults(await ytmRequest('search', { query: name, params: YTM_ARTISTS_PARAMS }, 5000));
-      artists = found.filter((a) => ytmArtist.nameKey(a.name) === ytmArtist.nameKey(name)).slice(0, 8);
+      artists = found.filter((/** @type {any} */ a) => ytmArtist.nameKey(a.name) === ytmArtist.nameKey(name)).slice(0, 8);
       setAlbumCache(cacheKey, artists);
     } catch (e) {}
   }
@@ -2915,7 +2963,7 @@ async function handleArtistMatches(req, res, parsedUrl) {
   return res.end(JSON.stringify({ success: true, artists: artists || [] }));
 }
 
-async function lookupArtistInfo(cleanName, cacheKey) {
+async function lookupArtistInfo(/** @type {string} */ cleanName, /** @type {any} */ cacheKey) {
   let bio = '';
   let avatar = '';
   let isVerified = false;
@@ -2929,8 +2977,8 @@ async function lookupArtistInfo(cleanName, cacheKey) {
 
     if (dzData && dzData.data && dzData.data.length > 0) {
       // Deezer's first hit for "Queen" is "Queen(Ares)": the best-known artist of exactly that name first
-      const sameName = dzData.data.filter((a) => a && ytmArtist.nameKey(a.name) === ytmArtist.nameKey(cleanName));
-      const topArtist = sameName.sort((a, b) => (b.nb_fan || 0) - (a.nb_fan || 0))[0] || dzData.data[0];
+      const sameName = dzData.data.filter((/** @type {any} */ a) => a && ytmArtist.nameKey(a.name) === ytmArtist.nameKey(cleanName));
+      const topArtist = sameName.sort((/** @type {any} */ a, /** @type {any} */ b) => (b.nb_fan || 0) - (a.nb_fan || 0))[0] || dzData.data[0];
       if (topArtist.name) resolvedName = topArtist.name;
       avatar = topArtist.picture_xl || topArtist.picture_big || topArtist.picture_medium || '';
       isVerified = (topArtist.nb_fan || 0) > 30000;
@@ -2970,7 +3018,7 @@ async function lookupArtistInfo(cleanName, cacheKey) {
     // and about this name at all, not a page the title lookup landed on that never mentions it
     const extLower = String(wikiData && wikiData.extract || '').toLowerCase();
     const nameLower = cleanName.toLowerCase();
-    const aboutName = extLower.includes(nameLower) || nameLower.split(/\s+/).some(w => w.length >= 3 && extLower.includes(w));
+    const aboutName = extLower.includes(nameLower) || nameLower.split(/\s+/).some((/** @type {any} */ w) => w.length >= 3 && extLower.includes(w));
     if (wikiData && wikiData.extract && wikiData.type !== 'disambiguation' && aboutName) {
       bio = wikiData.extract;
       if (!avatar && wikiData.originalimage?.source) {
@@ -2982,7 +3030,7 @@ async function lookupArtistInfo(cleanName, cacheKey) {
   if (tracks.length === 0) {
     try {
       const ytOfficialTracks = await directYoutubeSearch(`${cleanName} official audio`, true);
-      tracks = (ytOfficialTracks || []).filter(t => !isSpamOrUnofficial(t.title, t.duration)).slice(0, 25);
+      tracks = (ytOfficialTracks || []).filter((/** @type {any} */ t) => !isSpamOrUnofficial(t.title, t.duration)).slice(0, 25);
     } catch (e) {}
   }
 
@@ -3004,7 +3052,7 @@ async function lookupArtistInfo(cleanName, cacheKey) {
   return result;
 }
 
-async function handleLocalTrack(req, res, trackId) {
+async function handleLocalTrack(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {string} */ trackId) {
   const cleanId = cleanTrackId(trackId);
   const filePath = await findCachedFile(cleanId);
 
@@ -3018,6 +3066,7 @@ async function handleLocalTrack(req, res, trackId) {
     const fileSize = stat.size;
 
     const ext = path.extname(filePath).toLowerCase();
+    /** @type {Record<string, string>} */
     const mimeTypes = {
       '.opus': 'audio/ogg; codecs=opus',
       '.webm': 'audio/webm',
@@ -3033,6 +3082,7 @@ async function handleLocalTrack(req, res, trackId) {
   }
 }
 
+/** @type {Record<string, string>} */
 const LIBRARY_MIME_TYPES = {
   '.mp3': 'audio/mpeg',
   '.wav': 'audio/wav',
@@ -3046,7 +3096,7 @@ const LIBRARY_MIME_TYPES = {
   '.weba': 'audio/webm'
 };
 
-async function handleLibraryFile(req, res, trackId) {
+async function handleLibraryFile(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {string} */ trackId) {
   const item = libraryItem(trackId);
   if (!item || (!item.file && !item.path && !item.vpath)) {
     res.writeHead(404);
@@ -3054,7 +3104,8 @@ async function handleLibraryFile(req, res, trackId) {
   }
   // a phone's own song: the app hands the WebView a URL for the file itself (mobile/shims/store.ts)
   if (item.vpath) {
-    if (typeof res.__pipeFile === 'function') return res.__pipeFile(item.vpath);
+    const pipeFile = /** @type {any} */ (res).__pipeFile;
+    if (typeof pipeFile === 'function') return pipeFile(item.vpath);
     res.writeHead(404);
     return res.end('File not found in library');
   }
@@ -3073,7 +3124,7 @@ async function handleLibraryFile(req, res, trackId) {
   }
 }
 
-async function handleDownloadedTrack(req, res, name) {
+async function handleDownloadedTrack(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {string} */ name) {
   const safeName = path.basename(String(name || ''));
   const ext = path.extname(safeName).toLowerCase();
   const dir = getDownloadsDir();
@@ -3096,13 +3147,13 @@ async function handleDownloadedTrack(req, res, name) {
   }
 }
 
-function forgetStreamUrl(streamUrl) {
+function forgetStreamUrl(/** @type {any} */ streamUrl) {
   for (const [key, entry] of streamUrlCache) {
     if (entry && entry.data && entry.data.streamUrl === streamUrl) streamUrlCache.delete(key);
   }
 }
 
-async function handleAudioProxy(req, res, targetUrl) {
+async function handleAudioProxy(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {string} */ targetUrl) {
   if (!targetUrl) {
     res.writeHead(400);
     return res.end('Missing url');
@@ -3135,6 +3186,7 @@ async function handleAudioProxy(req, res, targetUrl) {
     if (chunkFrom >= 0) headers.range = streamSource.chunkRange(chunkFrom, 0);
     const host = (() => { try { return parsed.host; } catch (_) { return '?'; } })();
     let clientGone = false;
+    /** @type {any} */
     let proxyReq = null;
     res.on('close', () => {
       // the player drops a request on every seek; without this the upstream download keeps its
@@ -3145,16 +3197,16 @@ async function handleAudioProxy(req, res, targetUrl) {
     });
     req.on('error', () => { try { if (proxyReq) proxyReq.destroy(); } catch (e) {} });
 
-    const fail = (code, text) => {
+    const fail = (/** @type {any} */ code, /** @type {string} */ text) => {
       if (clientGone) return;
       if (!res.headersSent) { res.writeHead(code); res.end(text); } else { try { res.destroy(); } catch (err) {} }
     };
 
     // the rest of a chunked stream (#17): each chunk's bytes go to the player as they come, then the next chunk
     // is asked for from where the last one really ended, until the end of the file
-    const pipeChunks = (chunkRes, chunkStart, total, conn) => {
+    const pipeChunks = (/** @type {any} */ chunkRes, /** @type {any} */ chunkStart, /** @type {any} */ total, /** @type {any} */ conn) => {
       let got = 0;
-      chunkRes.on('data', (b) => { got += b.length; });
+      chunkRes.on('data', (/** @type {any} */ b) => { got += b.length; });
       chunkRes.on('error', () => { try { res.destroy(); } catch (e) {} });
       chunkRes.on('end', () => {
         if (clientGone || res.destroyed) return;
@@ -3165,7 +3217,7 @@ async function handleAudioProxy(req, res, targetUrl) {
           lookup: conn.lookup,
           method: 'GET',
           headers: { ...headers, range: streamSource.chunkRange(from, total), host: conn.host }
-        }, (next) => {
+        }, (/** @type {any} */ next) => {
           if (clientGone) { next.destroy(); return; }
           const cr = next.statusCode === 206 ? streamSource.parseContentRange(next.headers['content-range']) : null;
           if (!cr || cr.start !== from) {
@@ -3178,7 +3230,7 @@ async function handleAudioProxy(req, res, targetUrl) {
           pipeChunks(next, from, total, conn);
         });
         proxyReq.setTimeout(60000, () => { proxyReq.destroy(new Error('Proxy timeout')); });
-        proxyReq.on('error', (e) => {
+        proxyReq.on('error', (/** @type {any} */ e) => {
           try { logger.log('warn', `audio-proxy ${host}: ${e && e.message}`); } catch (_) {}
           try { res.destroy(); } catch (err) {}
         });
@@ -3190,7 +3242,7 @@ async function handleAudioProxy(req, res, targetUrl) {
     // googlevideo answers some requests with a redirect to another rr server; follow it (each hop is
     // checked like the first) instead of handing the audio element a redirect to a host it then fetches
     // with its own headers
-    const fetchHop = async (hopUrl, hops) => {
+    const fetchHop = async (/** @type {any} */ hopUrl, /** @type {any} */ hops) => {
       let hopParsed;
       try { hopParsed = new URL(hopUrl); } catch (e) { return fail(502, 'Bad redirect'); }
       if (hopParsed.protocol !== 'http:' && hopParsed.protocol !== 'https:') return fail(502, 'Bad redirect');
@@ -3199,13 +3251,13 @@ async function handleAudioProxy(req, res, targetUrl) {
       if (clientGone) return;
       const client = hopParsed.protocol === 'https:' ? https : http;
       // connect to the address checked above instead of resolving the name a second time
-      const lookup = (hostname, opts, cb) => (opts && opts.all ? cb(null, [target]) : cb(null, target.address, target.family));
+      const lookup = (/** @type {any} */ hostname, /** @type {any} */ opts, /** @type {any} */ cb) => (opts && opts.all ? cb(null, [target]) : cb(null, target.address, target.family));
       proxyReq = client.request(hopUrl, {
         lookup,
         method: req.method,
         headers: { ...headers, host: hopParsed.host }
       }, (proxyRes) => {
-        const status = proxyRes.statusCode;
+        const status = /** @type {number} */ (proxyRes.statusCode);
         if (res.writableEnded || clientGone) { proxyRes.destroy(); return; }
         if ([301, 302, 303, 307, 308].includes(status) && proxyRes.headers.location && hops < 5) {
           proxyRes.resume();
@@ -3239,7 +3291,7 @@ async function handleAudioProxy(req, res, targetUrl) {
         proxyRes.pipe(res);
       });
       proxyReq.setTimeout(60000, () => { proxyReq.destroy(new Error('Proxy timeout')); });
-      proxyReq.on('error', (e) => {
+      proxyReq.on('error', (/** @type {Error} */ e) => {
         try { logger.log('warn', `audio-proxy ${host}: ${e && e.message}`); } catch (_) {}
         fail(502, 'Proxy error');
       });
@@ -3266,7 +3318,7 @@ function getDownloadsDir() {
   return dir;
 }
 
-function sanitizeFilename(str) {
+function sanitizeFilename(/** @type {string} */ str) {
   return (str || 'track')
   .replace(/[<>:"/\\|?*]/g, '')
   .replace(/\s+/g, ' ')
@@ -3275,6 +3327,7 @@ function sanitizeFilename(str) {
 
 const AUDIO_EXTENSIONS = new Set(['.mp3', '.m4a', '.flac', '.opus', '.wav', '.ogg', '.oga', '.aac', '.webm', '.weba']);
 
+/** @type {any} */
 let downloadsIndex = null;
 let downloadsIndexBuiltAt = 0;
 const DOWNLOADS_INDEX_TTL = 15000;
@@ -3297,7 +3350,7 @@ async function buildDownloadsIndex() {
   return map;
 }
 
-async function findDownloadedFile(title, artist) {
+async function findDownloadedFile(/** @type {any} */ title, /** @type {any} */ artist) {
   if (!title && !artist) return null;
   if (!downloadsIndex || Date.now() - downloadsIndexBuiltAt > DOWNLOADS_INDEX_TTL) {
     await buildDownloadsIndex();
@@ -3306,7 +3359,7 @@ async function findDownloadedFile(title, artist) {
   return downloadsIndex.get(key) || null;
 }
 
-async function cleanupDownloadArtifacts(dir, beforeSet, baseName, videoId, chosenExt, keepSuccessFile) {
+async function cleanupDownloadArtifacts(/** @type {any} */ dir, /** @type {any} */ beforeSet, /** @type {any} */ baseName, /** @type {string} */ videoId, /** @type {any} */ chosenExt, /** @type {any} */ keepSuccessFile) {
   try {
     const afterFiles = await fs.promises.readdir(dir);
     const trashExts = new Set(['.webp', '.webm', '.part', '.ytdl', '.temp', '.jpg', '.jpeg', '.png', '.json', '.vtt', '.m4a', '.opus', '.mp4']);
@@ -3339,15 +3392,16 @@ async function cleanupDownloadArtifacts(dir, beforeSet, baseName, videoId, chose
 
 // ---- cover art for local library tracks: embedded picture first, then iTunes ----
 const localCoverQueued = new Set();
+/** @type {any[]} */
 const localCoverQueue = [];
 let localCoverWorking = false;
 let lastOnlineCoverLookup = 0;
 
-function localCoverPath(id) {
+function localCoverPath(/** @type {string} */ id) {
   return path.join(THUMBNAILS_DIR, `localcover_${id}.jpg`);
 }
 
-function extractEmbeddedCover(src, dest) {
+function extractEmbeddedCover(/** @type {any} */ src, /** @type {any} */ dest) {
   return new Promise((resolve) => {
     const ffmpegBin = resolveBinary('ffmpeg');
     if (!ffmpegBin || !fs.existsSync(src)) return resolve(false);
@@ -3358,7 +3412,7 @@ function extractEmbeddedCover(src, dest) {
     } catch (e) { return resolve(false); }
     const timer = setTimeout(() => { try { proc.kill('SIGKILL'); } catch (_) {} }, 20000);
     proc.on('error', () => { clearTimeout(timer); resolve(false); });
-    proc.on('close', (code) => {
+    proc.on('close', (/** @type {any} */ code) => {
       clearTimeout(timer);
       try {
         if (code === 0 && fs.existsSync(tmp) && fs.statSync(tmp).size > 500) {
@@ -3372,16 +3426,16 @@ function extractEmbeddedCover(src, dest) {
   });
 }
 
-async function fetchOnlineCover(item, dest) {
+async function fetchOnlineCover(/** @type {any} */ item, /** @type {any} */ dest) {
   try {
-    const norm = (s) => (s || '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+    const norm = (/** @type {any} */ s) => (s || '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
     const title = (item.title || '').replace(/\(.*?\)|\[.*?\]/g, '').trim();
     if (!title) return false;
     const artist = item.artist && !/^unknown artist$/i.test(item.artist) ? item.artist : '';
     const term = `${artist} ${title}`.trim();
     const data = await fetchItunesJson(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=5${itunesCountryParam()}`);
     const results = (data && Array.isArray(data.results)) ? data.results : [];
-    const hit = results.find(r => r && r.artworkUrl100 && norm(r.trackName).includes(norm(title)) && (!artist || norm(r.artistName).includes(norm(artist)) || norm(artist).includes(norm(r.artistName))));
+    const hit = results.find((/** @type {any} */ r) => r && r.artworkUrl100 && norm(r.trackName).includes(norm(title)) && (!artist || norm(r.artistName).includes(norm(artist)) || norm(artist).includes(norm(r.artistName))));
     if (!hit) return false;
     const res = await fetchWithTimeout(hit.artworkUrl100.replace('100x100', '600x600'));
     if (!res.ok) return false;
@@ -3402,7 +3456,7 @@ const IMAGE_PROXY_MAX = 8 * 1024 * 1024;
 const imageHostFails = new Map(); // hostname -> retry after (ms)
 const imageCoverMisses = new Map(); // artist + title -> no iTunes cover, ask again after (ms)
 
-function imageContentType(buf) {
+function imageContentType(/** @type {any} */ buf) {
   if (buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8) return 'image/jpeg';
   if (buf.length > 8 && buf[0] === 0x89 && buf[1] === 0x50) return 'image/png';
   if (buf.length > 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') return 'image/webp';
@@ -3410,7 +3464,7 @@ function imageContentType(buf) {
   return '';
 }
 
-async function fetchProxiedImage(target) {
+async function fetchProxiedImage(/** @type {any} */ target) {
   let u;
   try { u = new URL(target); } catch (e) { return null; }
   if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
@@ -3427,7 +3481,7 @@ async function fetchProxiedImage(target) {
   }
 }
 
-async function handleImageProxy(req, res, parsedUrl) {
+async function handleImageProxy(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {Omit<import('url').UrlWithParsedQuery, 'query' | 'pathname'> & { pathname: string, query: Record<string, string> }} */ parsedUrl) {
   const target = String(parsedUrl.query.url || '');
   const artist = String(parsedUrl.query.artist || '').slice(0, 200);
   const title = String(parsedUrl.query.title || '').slice(0, 300);
@@ -3458,7 +3512,7 @@ async function handleImageProxy(req, res, parsedUrl) {
   return sendImage(res, buffer);
 }
 
-function sendImage(res, buffer) {
+function sendImage(/** @type {import('http').ServerResponse} */ res, /** @type {any} */ buffer) {
   res.writeHead(200, { 'Content-Type': imageContentType(buffer) || 'image/jpeg', 'Cache-Control': 'private, max-age=31536000' });
   return res.end(buffer);
 }
@@ -3487,7 +3541,7 @@ async function processLocalCovers() {
   }
 }
 
-function queueLocalCovers(ids) {
+function queueLocalCovers(/** @type {any} */ ids) {
   for (const id of ids) {
     if (localCoverQueued.has(id) || fs.existsSync(localCoverPath(id))) continue;
     localCoverQueued.add(id);
@@ -3496,7 +3550,7 @@ function queueLocalCovers(ids) {
   if (localCoverQueue.length) processLocalCovers().catch(() => {});
 }
 
-function handleLocalCover(req, res, parsedUrl) {
+function handleLocalCover(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {Omit<import('url').UrlWithParsedQuery, 'query' | 'pathname'> & { pathname: string, query: Record<string, string> }} */ parsedUrl) {
   const id = String(parsedUrl.query.id || '');
   const file = /^[\w-]{1,64}$/.test(id) && libraryItem(id) ? localCoverPath(id) : '';
   if (!file || !fs.existsSync(file)) {
@@ -3508,7 +3562,7 @@ function handleLocalCover(req, res, parsedUrl) {
   streamFileToResponse(fs.createReadStream(file), res);
 }
 
-async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3', quality = '0', startParam = null, endParam = null, raw = false, trackId = null, streamUrlParam = null) {
+async function handleDownload(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {string} */ trackUrl, /** @type {any} */ title, /** @type {any} */ artist, format = 'mp3', quality = '0', /** @type {number | string | null} */ startParam = null, /** @type {number | string | null} */ endParam = null, raw = false, /** @type {string | null} */ trackId = null, /** @type {string | null} */ streamUrlParam = null) {
   if (!trackUrl && (!title || !artist)) {
     res.writeHead(400, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ success: false, error: 'missing track information' }));
@@ -3519,8 +3573,9 @@ async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3',
   res.on('close', () => { if (!res.writableEnded) clientGone = true; });
   // the same download asked for twice (Download all and a single download of that song) shares one run: it only
   // counts as cancelled once every request waiting for it is gone
+  /** @type {(Promise<any> & { waiting?: number }) | null} */
   let downloadPromise = null;
-  const abandoned = () => clientGone && !(downloadPromise && downloadPromise.waiting > 0);
+  const abandoned = () => clientGone && !(downloadPromise && (downloadPromise.waiting || 0) > 0);
 
   let start = null;
   if (startParam !== null && startParam !== undefined && startParam !== '') {
@@ -3554,10 +3609,10 @@ async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3',
   const safeQuality = /^\d+$/.test(String(quality)) ? String(quality) : '0';
   const tempName = isRaw ? ('raw_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.wav') : null;
   const outFilename = isRaw ? tempName : `${cleanArtist} - ${cleanTitle}.${ext}`;
-  const outPath = isRaw ? path.join(tmpDir, tempName) : path.join(downloadsDir, outFilename);
+  const outPath = isRaw ? path.join(tmpDir, /** @type {string} */ (tempName)) : path.join(downloadsDir, /** @type {string} */ (outFilename));
   // a % in a title would be read by yt-dlp as a template field: %% writes a plain %
-  const tplSafe = (x) => String(x).replace(/%/g, '%%');
-  const tempTemplate = isRaw ? path.join(tmpDir, tempName.replace(/\.wav$/, '.%(ext)s')) : path.join(downloadsDir, `${tplSafe(cleanArtist)} - ${tplSafe(cleanTitle)}.%(ext)s`);
+  const tplSafe = (/** @type {any} */ x) => String(x).replace(/%/g, '%%');
+  const tempTemplate = isRaw ? path.join(tmpDir, /** @type {string} */ (tempName).replace(/\.wav$/, '.%(ext)s')) : path.join(downloadsDir, `${tplSafe(cleanArtist)} - ${tplSafe(cleanTitle)}.%(ext)s`);
 
   let targetUrl = trackUrl;
   if (!isSafeMediaUrl(targetUrl) || targetUrl.includes('deezer.com') || youtubeSearchPageQuery(targetUrl)) {
@@ -3582,11 +3637,13 @@ async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3',
 
   /** @type {(value: any) => void} */
 
+  /** @type {any} */
+
   let resolveDownload;
   downloadPromise = downloadKey ? new Promise(resolve => { resolveDownload = resolve; }) : null;
   if (downloadKey) downloadInFlight.set(downloadKey, downloadPromise);
   let downloadOutcome = null;
-  const sendDownloadResponse = (status, body) => {
+  const sendDownloadResponse = (/** @type {number} */ status, /** @type {any} */ body) => {
     downloadOutcome = { status, body };
     if (resolveDownload) resolveDownload(downloadOutcome);
     if (!res.writableEnded) {
@@ -3622,7 +3679,7 @@ async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3',
       });
       try {
         await streamResolver.resolve({ id: cacheId, cleanId: cacheId, trackUrl: ytTarget.url, platform, title, artist, duration: Number(query.duration) || 0, meta: { title, artist }, youtube: ytTarget.youtube }, { reason: 'play', deadlineMs: 180000, signal: skip });
-      } catch (e) { blocked = !!e && e.code === 'blocked'; }
+      } catch (/** @type {any} */ e) { blocked = !!e && e.code === 'blocked'; }
       cached = await findCachedFile(cacheId);
     }
     if (!cached) return sendDownloadResponse(blocked ? 429 : 500, { success: false, blocked, error: blocked ? STREAM_BLOCKED : "Couldn't get this song right now. Try again later, or another version from search" });
@@ -3636,6 +3693,7 @@ async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3',
   if (cachedFile) {
     const ffmpegBin = resolveBinary('ffmpeg');
     if (ffmpegBin) {
+      /** @type {Record<string, string>} */
       const bitrateMap = { '0': '320k', '2': '256k', '4': '192k', '5': '128k' };
       const bitrate = bitrateMap[safeQuality] || '320k';
       const ffmpegArgs = ['-y'];
@@ -3649,6 +3707,7 @@ async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3',
       ffmpegArgs.push('-metadata', `artist=${artist || cleanArtist}`);
       ffmpegArgs.push(outPath);
 
+      /** @type {import('child_process').ChildProcess | null} */
       let ffmpegProc = null;
       res.on('close', () => {
         if (abandoned() && ffmpegProc) {
@@ -3660,13 +3719,14 @@ async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3',
       if (abandoned()) return;
 
       try {
-        await new Promise((resolve, reject) => {
-          ffmpegProc = spawn(ffmpegBin, ffmpegArgs, { windowsHide: true });
-          ffmpegProc.on('close', code => {
+        await new Promise((/** @type {(value?: void) => void} */ resolve, reject) => {
+          const proc = spawn(ffmpegBin, ffmpegArgs, { windowsHide: true });
+          ffmpegProc = proc;
+          proc.on('close', (/** @type {any} */ code) => {
             if (code === 0) resolve();
             else reject(new Error(`ffmpeg exited with code ${code}`));
           });
-          ffmpegProc.on('error', reject);
+          proc.on('error', reject);
         });
         downloadsIndex = null;
         return sendDownloadResponse(200, isRaw ? {
@@ -3686,12 +3746,13 @@ async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3',
 
   const targetDir = isRaw ? tmpDir : downloadsDir;
   const beforeFiles = new Set(await fs.promises.readdir(targetDir).catch(() => []));
+  /** @type {import('child_process').ChildProcess | null} */
   let child = null;
 
   async function cleanupPartial() {
     try {
       const files = await fs.promises.readdir(targetDir);
-      const prefix = isRaw ? tempName.replace(/\.wav$/, '') : `${cleanArtist} - ${cleanTitle}.`;
+      const prefix = isRaw ? /** @type {string} */ (tempName).replace(/\.wav$/, '') : `${cleanArtist} - ${cleanTitle}.`;
       for (const f of files) {
         if (beforeFiles.has(f)) continue;
         if (!f.startsWith(prefix)) continue;
@@ -3716,12 +3777,12 @@ async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3',
     }
   });
   // a run that was still waiting in the yt-dlp queue when the app cancelled is stopped as soon as it starts
-  const onChild = (c) => {
+  const onChild = (/** @type {any} */ c) => {
     child = c;
     if (abandoned()) { try { c.kill('SIGKILL'); } catch (e) {} }
   };
 
-  const baseName = isRaw ? tempName.replace(/\.wav$/, '') : `${cleanArtist} - ${cleanTitle}`;
+  const baseName = isRaw ? /** @type {string} */ (tempName).replace(/\.wav$/, '') : `${cleanArtist} - ${cleanTitle}`;
   const videoId = cleanId;
 
   const coverFormats = ['mp3', 'm4a', 'flac', 'opus', 'ogg'];
@@ -3759,7 +3820,7 @@ async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3',
       filename: outFilename,
       directory: downloadsDir
     });
-  } catch (err) {
+  } catch (/** @type {any} */ err) {
     try { logger.error('Download primary failed: ' + (title || trackUrl), err); } catch (_) {}
     if (res.writableEnded) {
       sendDownloadResponse(500, { success: false, error: err.message });
@@ -3800,7 +3861,7 @@ async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3',
         filename: outFilename,
         directory: downloadsDir
       });
-    } catch (e2) {
+    } catch (/** @type {any} */ e2) {
       if (!isRaw) {
         await cleanupDownloadArtifacts(downloadsDir, beforeFiles, baseName, videoId, ext, false);
       } else {
@@ -3820,7 +3881,7 @@ async function handleDownload(req, res, trackUrl, title, artist, format = 'mp3',
   }
 }
 
-function handleTmpFile(req, res, parsedUrl) {
+function handleTmpFile(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {Omit<import('url').UrlWithParsedQuery, 'query' | 'pathname'> & { pathname: string, query: Record<string, string> }} */ parsedUrl) {
   const fileName = parsedUrl.query.name || '';
   if (!/^[\w .-]+\.wav$/.test(fileName) || fileName.includes('/') || fileName.includes('\\') || fileName.includes('..')) {
     res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -3840,7 +3901,7 @@ function handleTmpFile(req, res, parsedUrl) {
   streamFileToResponse(fs.createReadStream(filePath), res);
 }
 
-async function handleEncode(req, res, parsedUrl) {
+async function handleEncode(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {Omit<import('url').UrlWithParsedQuery, 'query' | 'pathname'> & { pathname: string, query: Record<string, string> }} */ parsedUrl) {
   const sourceName = parsedUrl.query.name || '';
   const title = parsedUrl.query.title || 'untitled';
   const artist = parsedUrl.query.artist || 'unknown artist';
@@ -3850,6 +3911,7 @@ async function handleEncode(req, res, parsedUrl) {
   const validFormats = ['mp3', 'm4a', 'flac', 'opus', 'wav', 'ogg'];
   const safeFormat = String(format || '').toLowerCase();
   const ext = validFormats.includes(safeFormat) ? safeFormat : 'mp3';
+  /** @type {Record<string, string>} */
   const bitrateMap = {
     '0': '320k',
     '2': '256k',
@@ -3878,8 +3940,8 @@ async function handleEncode(req, res, parsedUrl) {
   const fileWriteStream = fs.createWriteStream(renderTempPath);
 
   try {
-    await new Promise((resolve, reject) => {
-      req.on('data', chunk => {
+    await new Promise((/** @type {(value?: void) => void} */ resolve, reject) => {
+      req.on('data', (/** @type {Buffer} */ chunk) => {
         receivedBytes += chunk.length;
         if (receivedBytes > MAX_BODY_SIZE) {
           aborted = true;
@@ -3898,7 +3960,7 @@ async function handleEncode(req, res, parsedUrl) {
       req.on('end', () => {
         fileWriteStream.end(() => resolve());
       });
-      req.on('error', err => {
+      req.on('error', (/** @type {any} */ err) => {
         try { fs.unlinkSync(renderTempPath); } catch (_) {}
         reject(err);
       });
@@ -3907,7 +3969,7 @@ async function handleEncode(req, res, parsedUrl) {
         reject(err);
       });
     });
-  } catch (readErr) {
+  } catch (/** @type {any} */ readErr) {
     if (aborted) return;
     try { fs.unlinkSync(renderTempPath); } catch (_) {}
     if (!res.writableEnded) {
@@ -3927,6 +3989,7 @@ async function handleEncode(req, res, parsedUrl) {
     return;
   }
 
+  /** @type {import('child_process').ChildProcess | null} */
   let ffmpegProc = null;
   res.on('close', () => {
     if (!res.writableEnded && ffmpegProc) {
@@ -3945,13 +4008,14 @@ async function handleEncode(req, res, parsedUrl) {
   ffmpegArgs.push(outPath);
 
   try {
-    await new Promise((resolve, reject) => {
-      ffmpegProc = spawn(ffmpegBin, ffmpegArgs, { windowsHide: true });
-      ffmpegProc.on('close', code => {
+    await new Promise((/** @type {(value?: void) => void} */ resolve, reject) => {
+      const proc = spawn(ffmpegBin, ffmpegArgs, { windowsHide: true });
+      ffmpegProc = proc;
+      proc.on('close', (/** @type {any} */ code) => {
         if (code === 0) resolve();
         else reject(new Error(`ffmpeg exited with code ${code}`));
       });
-      ffmpegProc.on('error', reject);
+      proc.on('error', reject);
     });
 
     downloadsIndex = null;
@@ -3963,7 +4027,7 @@ async function handleEncode(req, res, parsedUrl) {
         directory: downloadsDir
       }));
     }
-  } catch (err) {
+  } catch (/** @type {any} */ err) {
     try { logger.error('Encode failure: ' + (title || sourceName) + ' (' + err.message + ')', err); } catch (_) {}
     try { await fs.promises.unlink(outPath); } catch (_) {}
     if (!res.writableEnded) {
@@ -3981,7 +4045,7 @@ async function handleEncode(req, res, parsedUrl) {
 const { parseForLyrics, pickBest, syncedFits, withLength, dropLength, savedFits, untimed } = require('./lyrics-match');
 const LRCLIB_UA = 'Uriel (https://github.com/Esperant0s/Uriel)';
 
-function lrclibJson(pathAndQuery) {
+function lrclibJson(/** @type {any} */ pathAndQuery) {
   return new Promise((resolve) => {
     const req = https.get(`https://lrclib.net${pathAndQuery}`, { headers: { 'User-Agent': LRCLIB_UA }, timeout: 5000 }, (res) => {
       let data = '';
@@ -4000,12 +4064,12 @@ function lrclibJson(pathAndQuery) {
 
 // YouTube-style titles ("Artist, Feat - Song (Official Video)") are cleaned into what lrclib lists, tried as
 // exact lookups first (with the song length when known), then as a search where only a real match counts
-async function fetchLyricsDirect(title, artist, duration = 0) {
+async function fetchLyricsDirect(/** @type {any} */ title, /** @type {any} */ artist, duration = 0) {
   const want = parseForLyrics(title, artist);
   const [t0, t1] = want.titles;
   const [a0, a1] = want.artists;
   if (!t0) return null;
-  const q = (o) => Object.entries(o).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+  const q = (/** @type {any} */ o) => Object.entries(o).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
   const dur = duration > 0 ? Math.round(duration) : 0;
   const tries = [[t0, a0, dur], [t0, a0, 0], [t0, a1, 0], [t1, a0, 0]].filter(([t, a, d], i) => t && a && (i !== 1 || dur));
   const exact = await Promise.all(tries.map(([t, a, d]) => lrclibJson(`/api/get?${q({ track_name: t, artist_name: a, duration: d })}`)));
@@ -4038,7 +4102,7 @@ const BACKUPS_DIR = path.join(DATA_DIR, 'backups');
 const AUTO_BACKUP_MAX_BYTES = 64 * 1024 * 1024;
 const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
-function lyricsPageText(url, headers = {}, timeoutMs = 8000) {
+function lyricsPageText(/** @type {string} */ url, headers = {}, timeoutMs = 8000) {
   return new Promise((resolve) => {
     const req = https.get(url, { headers: { 'User-Agent': BROWSER_UA, ...headers }, timeout: timeoutMs }, (res) => {
       let data = '';
@@ -4051,17 +4115,18 @@ function lyricsPageText(url, headers = {}, timeoutMs = 8000) {
     req.on('timeout', () => { req.destroy(); resolve(null); });
   });
 }
+/** @param {string} url @param {any} [headers] */
 const lyricsPageJson = async (url, headers) => { const t = await lyricsPageText(url, headers); try { return t ? JSON.parse(t) : null; } catch (e) { return null; } };
 
 // the song's page on Genius, found by its cleaned-up title and artist; only a real title match counts
-async function fetchGeniusLyrics(title, artist) {
+async function fetchGeniusLyrics(/** @type {any} */ title, /** @type {any} */ artist) {
   const want = parseForLyrics(title, artist);
   const t0 = want.titles[0];
   const a0 = want.artists.find((a) => !/[,&]/.test(a)) || want.artists[0] || '';
   if (!t0) return null;
   const json = await lyricsPageJson(`https://genius.com/api/search/song?q=${encodeURIComponent(`${t0} ${a0}`.trim())}`);
   const sections = (json && json.response && json.response.sections) || [];
-  const hits = sections.flatMap((s) => (s && s.hits) || []);
+  const hits = sections.flatMap((/** @type {any} */ s) => (s && s.hits) || []);
   const url = lyricsSources.pickGeniusHit(hits, t0, want.artists.join(', '));
   if (!url) return null;
   const html = await lyricsPageText(url);
@@ -4072,7 +4137,7 @@ async function fetchGeniusLyrics(title, artist) {
 // NetEase's word-timed lyrics for karaoke: [{ start, end, text, words: [{ text, start, end }] }] or null
 const NETEASE_HEADERS = { Referer: 'https://music.163.com/' };
 const wordsCache = new Map();
-async function fetchNetEaseWords(title, artist, duration = 0) {
+async function fetchNetEaseWords(/** @type {any} */ title, /** @type {any} */ artist, duration = 0) {
   const want = parseForLyrics(title, artist);
   const t0 = want.titles[0];
   const a0 = want.artists.find((a) => !/[,&]/.test(a)) || want.artists[0] || '';
@@ -4142,15 +4207,15 @@ const TOKEN_PROTECTED_ROUTES = new Set([
 // Only the Spotify login redirect (it comes from the browser) and the CLI's lyrics feed go without; the feed
 // refuses any request a web page makes (those carry an Origin header).
 const PUBLIC_ROUTES = new Set(['/api/spotify-callback', '/api/lyrics-stream']);
-const routeNeedsToken = (pathname) => pathname.startsWith('/api/') && !PUBLIC_ROUTES.has(pathname);
+const routeNeedsToken = (/** @type {any} */ pathname) => pathname.startsWith('/api/') && !PUBLIC_ROUTES.has(pathname);
 // <audio>/<img> can't send headers, so the media URLs the server hands out carry the token as ?t=
-const withToken = (u) => `${u}${u.includes('?') ? '&' : '?'}t=${encodeURIComponent(SERVER_TOKEN)}`;
+const withToken = (/** @type {any} */ u) => `${u}${u.includes('?') ? '&' : '?'}t=${encodeURIComponent(SERVER_TOKEN)}`;
 
 function getServerToken() {
   return SERVER_TOKEN;
 }
 
-function tokenMatches(provided) {
+function tokenMatches(/** @type {any} */ provided) {
   if (typeof provided !== 'string') return false;
   const expected = Buffer.from(SERVER_TOKEN);
   const given = Buffer.from(provided);
@@ -4162,36 +4227,36 @@ function tokenMatches(provided) {
   }
 }
 
-function legacyCustomLyricsPath(title, artist) {
+function legacyCustomLyricsPath(/** @type {any} */ title, /** @type {any} */ artist) {
   const safeName = `${(artist || 'unknown').replace(/[^\w\s-]/g, '_')}_${(title || 'untitled').replace(/[^\w\s-]/g, '_')}.lrc`.toLowerCase().replace(/\s+/g, '_');
   return path.join(CUSTOM_LYRICS_DIR, safeName);
 }
 
-function legacyFetchedLyricsPath(title, artist) {
+function legacyFetchedLyricsPath(/** @type {any} */ title, /** @type {any} */ artist) {
   const cleanTitle = (title || '').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
   const cleanArtist = (artist || '').replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
   return path.join(LYRICS_DIR, `${cleanArtist}___${cleanTitle}.lrc`);
 }
 
-function lyricsKey(title, artist) {
+function lyricsKey(/** @type {any} */ title, /** @type {any} */ artist) {
   return crypto.createHash('sha1').update(`${(artist || '').trim().toLowerCase()}\u0000${(title || '').trim().toLowerCase()}`).digest('hex').slice(0, 16);
 }
 
-function getCustomLyricsPath(title, artist) {
+function getCustomLyricsPath(/** @type {any} */ title, /** @type {any} */ artist) {
   return path.join(CUSTOM_LYRICS_DIR, lyricsKey(title, artist) + '.lrc');
 }
 
-function getFetchedLyricsPath(title, artist, source = 'lrclib') {
+function getFetchedLyricsPath(/** @type {any} */ title, /** @type {any} */ artist, source = 'lrclib') {
   return path.join(LYRICS_DIR, lyricsKey(title, artist) + (source === 'genius' ? '_genius' : '') + '.lrc');
 }
 
-async function handleLyrics(req, res, title, artist, allowOnline = true, duration = 0, source = 'lrclib') {
+async function handleLyrics(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {any} */ title, /** @type {any} */ artist, allowOnline = true, duration = 0, source = 'lrclib') {
   // Settings → Lyrics source picks which site is asked first; the other one is the fallback
   const order = source === 'genius' ? ['genius', 'lrclib'] : ['lrclib', 'genius'];
   const cacheKey = order[0] === 'genius' ? `${artist}:${title}:genius` : `${artist}:${title}`;
   let cached = lyricsCache.get(cacheKey);
   // kept for another cut of the same song (the studio song, then its music video): look again for this one
-  const otherLength = (c) => !!c && !c.promise && duration > 0 && c.dur > 0 && Math.abs(c.dur - duration) > 6;
+  const otherLength = (/** @type {any} */ c) => !!c && !c.promise && duration > 0 && c.dur > 0 && Math.abs(c.dur - duration) > 6;
   if ((cached && cached.expires && Date.now() > cached.expires) || otherLength(cached)) {
     lyricsCache.delete(cacheKey);
     cached = undefined;
@@ -4208,12 +4273,14 @@ async function handleLyrics(req, res, title, artist, allowOnline = true, duratio
 
   /** @type {(value: any) => void} */
 
+  /** @type {any} */
+
   let resolveLyrics;
   const lyricsPromise = new Promise(resolve => { resolveLyrics = resolve; });
   const inFlightEntry = { promise: lyricsPromise };
   lyricsCache.set(cacheKey, inFlightEntry);
   let outcome = null;
-  const sendLyrics = (lyrics, isCustom = false) => {
+  const sendLyrics = (/** @type {any} */ lyrics, isCustom = false) => {
     outcome = { success: true, lyrics: dropLength(lyrics), isCustom };
     resolveLyrics(outcome);
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -4310,9 +4377,9 @@ async function handleLyrics(req, res, title, artist, allowOnline = true, duratio
   }
 }
 
-async function handleSaveCustomLyrics(req, res, title, artist) {
+async function handleSaveCustomLyrics(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {any} */ title, /** @type {any} */ artist) {
   let body = '';
-  req.on('data', chunk => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
+  req.on('data', (/** @type {Buffer} */ chunk) => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
   req.on('end', async () => {
     try {
       const { lyrics } = JSON.parse(body);
@@ -4330,7 +4397,7 @@ async function handleSaveCustomLyrics(req, res, title, artist) {
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: true }));
-    } catch (e) {
+    } catch (/** @type {any} */ e) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success: false, error: e.message }));
     }
@@ -4340,7 +4407,7 @@ async function handleSaveCustomLyrics(req, res, title, artist) {
 const SPOTIFY_PATHFINDER_URL = 'https://api-partner.spotify.com/pathfinder/v1/query';
 const SPOTIFY_FETCH_PLAYLIST_HASH = '8964e8eafb21aa992a7d951d256d83285c04be2105d209262901de70cb97584a';
 
-function pathfinderRequest(accessToken, variables) {
+function pathfinderRequest(/** @type {any} */ accessToken, /** @type {any} */ variables) {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify({
       variables,
@@ -4382,7 +4449,7 @@ function pathfinderRequest(accessToken, variables) {
   });
 }
 
-async function fetchFullSpotifyPlaylist(playlistId, accessToken) {
+async function fetchFullSpotifyPlaylist(/** @type {string} */ playlistId, /** @type {any} */ accessToken) {
   const uri = `spotify:playlist:${playlistId}`;
   const first = await pathfinderRequest(accessToken, { uri, offset: 0, limit: 100, enableWatchFeedEntrypoint: true });
   const content = first?.data?.playlistV2?.content;
@@ -4399,19 +4466,19 @@ async function fetchFullSpotifyPlaylist(playlistId, accessToken) {
     offset += pageItems.length;
   }
   if (offset < total) throw new Error('Incomplete Pathfinder playlist');
-  const tracks = items.map(it => {
+  const tracks = items.map((/** @type {any} */ it) => {
     const t = it?.itemV2?.data || it?.item?.data || {};
     // the song's own artists: on a soundtrack or compilation the album's artist is "Various Artists"
-    const own = (t.artists?.items || []).map(a => a.profile?.name).filter(Boolean);
-    const artists = own.length ? own : (t.albumOfTrack?.artists?.items || []).map(a => a.profile?.name).filter(Boolean);
+    const own = (t.artists?.items || []).map((/** @type {any} */ a) => a.profile?.name).filter(Boolean);
+    const artists = own.length ? own : (t.albumOfTrack?.artists?.items || []).map((/** @type {any} */ a) => a.profile?.name).filter(Boolean);
     const durationMs = t.trackDuration?.totalMilliseconds || t.duration?.totalMilliseconds || t.duration_ms;
     const duration = typeof durationMs === 'number' ? Math.round(durationMs / 1000) : 0;
     return { title: (t.name || '').trim(), artist: artists.join(', '), duration };
-  }).filter(t => t.title);
+  }).filter((/** @type {any} */ t) => t.title);
   return { tracks, total };
 }
 
-async function trySpotifyWebApi(playlistId) {
+async function trySpotifyWebApi(/** @type {string} */ playlistId) {
   loadSpotifyAuth();
   if (!spotifyAuth.token && !spotifyAuth.refreshToken) return null;
   try {
@@ -4434,21 +4501,21 @@ async function trySpotifyWebApi(playlistId) {
         nextUrl = nextData.next;
       }
       if (nextUrl || (Number.isInteger(playlistItems.total) && items.length < playlistItems.total)) return null;
-      const tracks = items.map(it => {
+      const tracks = items.map((/** @type {any} */ it) => {
         const t = it?.item || it?.track || it || {};
         return {
           title: t.name || '',
-          artist: Array.isArray(t.artists) ? t.artists.map(a => a.name).join(', ') : '',
+          artist: Array.isArray(t.artists) ? t.artists.map((/** @type {any} */ a) => a.name).join(', ') : '',
           duration: t.duration_ms ? Math.round(t.duration_ms / 1000) : undefined
         };
-      }).filter(t => t.title);
+      }).filter((/** @type {any} */ t) => t.title);
       return { success: true, name, cover, tracks, total: tracks.length };
     }
   } catch (e) {}
   return null;
 }
 
-function fetchSpotifyEmbed(playlistId, ua) {
+function fetchSpotifyEmbed(/** @type {string} */ playlistId, /** @type {any} */ ua) {
   return new Promise((resolve, reject) => {
     const embedUrl = `https://open.spotify.com/embed/playlist/${playlistId}`;
     const req = https.get(embedUrl, {
@@ -4478,7 +4545,7 @@ function fetchSpotifyEmbed(playlistId, ua) {
   });
 }
 
-async function handleSpotifyImport(req, res, inputUrl) {
+async function handleSpotifyImport(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {string} */ inputUrl) {
   const m = (inputUrl || '').match(/^(?:(?:https:\/\/)?open\.spotify\.com\/(?:embed\/)?playlist\/|spotify:playlist:)([a-zA-Z0-9]{22})(?:[/?#]|$)/);
   if (!m) {
     res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -4562,7 +4629,7 @@ async function handleSpotifyImport(req, res, inputUrl) {
           limited = true;
           try { logger.log('warn', 'Spotify pathfinder non-200 or empty, falling back to embed trackList'); } catch (_) {}
         }
-      } catch (e) {
+      } catch (/** @type {any} */ e) {
         limited = true;
         try { logger.log('warn', `Spotify pathfinder error: ${e.message}, falling back to embed trackList`); } catch (_) {}
       }
@@ -4572,23 +4639,23 @@ async function handleSpotifyImport(req, res, inputUrl) {
 
     if (!tracks.length) {
       if (Array.isArray(entity?.trackList) && entity.trackList.length > 0) {
-        tracks = entity.trackList.slice(0, 100).map(t => {
+        tracks = entity.trackList.slice(0, 100).map((/** @type {any} */ t) => {
           const duration = typeof t.duration === 'number' ? Math.round(t.duration / 1000) : (typeof t.duration_ms === 'number' ? Math.round(t.duration_ms / 1000) : 0);
           return {
             title: (t.title || t.name || '').trim(),
             artist: (t.subtitle || t.artist || '').trim(),
             duration
           };
-        }).filter(t => t.title);
+        }).filter((/** @type {any} */ t) => t.title);
       }
       if (!tracks.length) {
         const seen = new Set();
-        function walk(node) {
+        function walk(/** @type {any} */ node) {
           if (!node || typeof node !== 'object') return;
           if (Array.isArray(node)) { for (const item of node) walk(item); return; }
           const uri = typeof node.uri === 'string' ? node.uri : '';
           const title = node.title || node.name;
-          const subtitle = node.subtitle || node.artist || (Array.isArray(node.artists) ? node.artists.map(a => typeof a === 'string' ? a : (a.name || a.profile?.name)).filter(Boolean).join(', ') : (node.albumOfTrack?.artists?.items || []).map(a => a.profile?.name).filter(Boolean).join(', '));
+          const subtitle = node.subtitle || node.artist || (Array.isArray(node.artists) ? node.artists.map((/** @type {any} */ a) => typeof a === 'string' ? a : (a.name || a.profile?.name)).filter(Boolean).join(', ') : (node.albumOfTrack?.artists?.items || []).map((/** @type {any} */ a) => a.profile?.name).filter(Boolean).join(', '));
           const duration = node.duration?.totalMilliseconds || node.trackDuration?.totalMilliseconds || node.duration_ms || (typeof node.duration === 'number' ? node.duration : 0);
           if (title && typeof title === 'string' && (subtitle || uri.startsWith('spotify:track:')) && (uri.startsWith('spotify:track:') || node.entityType === 'track' || duration)) {
             const key = `${title}__${subtitle || ''}`;
@@ -4623,17 +4690,17 @@ async function handleSpotifyImport(req, res, inputUrl) {
     const hasMore = false;
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true, name, cover, tracks, hasMore, total, limited }));
-  } catch (err) {
+  } catch (/** @type {any} */ err) {
     try { logger.log('error', `Spotify import failed: ${err.message}`); } catch (_) {}
     res.writeHead(500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: false, code: 'spotify_error', error: 'Internal server error' }));
   }
 }
 
-function fetchHtmlWithRedirects(targetUrl, maxRedirects = 5, timeoutMs = 15000) {
+function fetchHtmlWithRedirects(/** @type {string} */ targetUrl, maxRedirects = 5, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
     let redirects = 0;
-    function fetchUrl(currentUrl) {
+    function fetchUrl(/** @type {any} */ currentUrl) {
       let parsed;
       try { parsed = new URL(currentUrl); } catch (e) { return reject(e); }
       const client = parsed.protocol === 'http:' ? http : https;
@@ -4644,7 +4711,7 @@ function fetchHtmlWithRedirects(targetUrl, maxRedirects = 5, timeoutMs = 15000) 
         },
         timeout: timeoutMs
       }, (res) => {
-        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        if (Number(res.statusCode) >= 300 && Number(res.statusCode) < 400 && res.headers.location) {
           res.resume(); // drain the redirect body so its socket is released
           if (++redirects > maxRedirects) {
             return reject(new Error('Too many redirects'));
@@ -4665,7 +4732,7 @@ function fetchHtmlWithRedirects(targetUrl, maxRedirects = 5, timeoutMs = 15000) 
   });
 }
 
-async function handleAppleImport(req, res, inputUrl) {
+async function handleAppleImport(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {string} */ inputUrl) {
   // only real Apple Music pages: the playlist branch fetches this URL, and a pattern that matched anywhere
   // in the string let a link like http://127.0.0.1/...music.apple.com/pl.x make Uriel fetch local addresses
   let host = '';
@@ -4684,11 +4751,11 @@ async function handleAppleImport(req, res, inputUrl) {
     try {
       const data = await fetchItunesJson(`https://itunes.apple.com/lookup?id=${albumMatch[1]}&entity=song`);
       const results = (data && Array.isArray(data.results)) ? data.results : [];
-      const albumItem = results.find(r => r && r.wrapperType === 'collection');
+      const albumItem = results.find((/** @type {any} */ r) => r && r.wrapperType === 'collection');
       if (albumItem) {
         const tracks = results
-          .filter(r => r && r.wrapperType === 'track')
-          .map(item => ({
+          .filter((/** @type {any} */ r) => r && r.wrapperType === 'track')
+          .map((/** @type {any} */ item) => ({
             title: item.trackName || '',
             artist: item.artistName || albumItem.artistName || '',
             duration: item.trackTimeMillis ? Math.round(item.trackTimeMillis / 1000) : 0
@@ -4747,13 +4814,14 @@ async function handleAppleImport(req, res, inputUrl) {
       return res.end(JSON.stringify({ success: false, error: isPriv ? 'private' : 'restricted', status: 403 }));
     }
 
+    /** @type {any[]} */
     const tracks = [];
     const seen = new Set();
     let plTitle = '';
     let plCover = '';
     let totalCount = 0;
 
-    function walk(node) {
+    function walk(/** @type {any} */ node) {
       if (!node || typeof node !== 'object') return;
       if (Array.isArray(node)) {
         for (const item of node) walk(item);
@@ -4827,7 +4895,7 @@ async function handleAppleImport(req, res, inputUrl) {
     const hasMore = total > tracks.length;
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ success: true, name: plTitle || 'Apple Music Playlist', cover: plCover, tracks, hasMore, total }));
-  } catch (err) {
+  } catch (/** @type {any} */ err) {
     try { logger.error('Apple import failed: ' + inputUrl, err); } catch (_) {}
     const isNet = err.message === 'timeout' || /fetch|network|dns|econnrefused|etimedout/i.test(err.message || '');
     res.writeHead(isNet ? 504 : 500, { 'Content-Type': 'application/json' });
@@ -4838,7 +4906,7 @@ async function handleAppleImport(req, res, inputUrl) {
 // A SoundCloud link as the api resolves it: share links (on.soundcloud.com/…) are followed, the mobile site's
 // m.soundcloud.com becomes soundcloud.com, and share tracking (?si=…&utm_…) is dropped. Secret links keep
 // their token, which is part of the path.
-async function soundcloudCanonicalUrl(link) {
+async function soundcloudCanonicalUrl(/** @type {any} */ link) {
   let u = new URL(String(link).trim());
   if (u.hostname === 'on.soundcloud.com') {
     const r = await fetchWithTimeout(u.href, { headers: { 'User-Agent': 'Mozilla/5.0' } }, 10000);
@@ -4849,7 +4917,7 @@ async function soundcloudCanonicalUrl(link) {
   return `https://soundcloud.com${u.pathname.replace(/\/+$/, '')}`;
 }
 
-async function soundcloudApi(pathAndQuery) {
+async function soundcloudApi(/** @type {any} */ pathAndQuery) {
   for (const fresh of [false, true]) {
     if (fresh) scClientIdCache = { id: '', at: 0 };
     const cid = await soundcloudClientId();
@@ -4862,17 +4930,17 @@ async function soundcloudApi(pathAndQuery) {
 }
 
 // A SoundCloud set or track link → { name, cover, tracks } in the order of the set
-async function soundcloudImport(link) {
+async function soundcloudImport(/** @type {any} */ link) {
   const obj = await soundcloudApi(`/resolve?url=${encodeURIComponent(await soundcloudCanonicalUrl(link))}`);
   const list = obj.kind === 'track' ? [obj] : (Array.isArray(obj.tracks) ? obj.tracks.slice(0, 5000) : []);
   // long sets only carry full data for their first few tracks; the rest is fetched by id
-  const full = new Map(list.filter((t) => t && t.title).map((t) => [t.id, t]));
-  const missing = list.filter((t) => t && !t.title).map((t) => t.id);
+  const full = new Map(list.filter((/** @type {any} */ t) => t && t.title).map((/** @type {any} */ t) => [t.id, t]));
+  const missing = list.filter((/** @type {any} */ t) => t && !t.title).map((/** @type {any} */ t) => t.id);
   for (let i = 0; i < missing.length; i += 50) {
     const items = await soundcloudApi(`/tracks?ids=${missing.slice(i, i + 50).join(',')}`).catch(() => []);
     if (Array.isArray(items)) items.forEach((t) => full.set(t.id, t));
   }
-  const tracks = list.map((t) => t && full.get(t.id)).filter(Boolean).map((t) => ({
+  const tracks = list.map((/** @type {any} */ t) => t && full.get(t.id)).filter(Boolean).map((/** @type {any} */ t) => ({
     id: String(t.id),
     title: t.title || 'untitled',
     artist: (t.user && (t.user.username || t.user.name)) || 'unknown artist',
@@ -4885,7 +4953,7 @@ async function soundcloudImport(link) {
   return { name: obj.title || 'SoundCloud Playlist', cover: obj.artwork_url || (tracks[0] && tracks[0].thumbnail) || '', tracks };
 }
 
-async function handlePlaylistImport(req, res, inputUrl) {
+async function handlePlaylistImport(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {string} */ inputUrl) {
   let parsed;
   try {
     parsed = new URL(inputUrl);
@@ -4914,7 +4982,7 @@ async function handlePlaylistImport(req, res, inputUrl) {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ success: true, ...pl }));
       }
-    } catch (e) {
+    } catch (/** @type {any} */ e) {
       try { logger.log('warn', `SoundCloud import via api failed, trying yt-dlp: ${e && e.message}`); } catch (_) {}
     }
   }
@@ -4974,7 +5042,7 @@ async function handlePlaylistImport(req, res, inputUrl) {
         thumbnail = `https://i.ytimg.com/vi/${item.id}/hqdefault.jpg`;
       } else {
         if (Array.isArray(item.thumbnails) && item.thumbnails.length > 0) {
-          const t = item.thumbnails.find(x => x.id === 't500x500' || x.id === 'large' || x.id === 'crop' || x.id === 'original') || item.thumbnails[item.thumbnails.length - 1];
+          const t = item.thumbnails.find((/** @type {any} */ x) => x.id === 't500x500' || x.id === 'large' || x.id === 'crop' || x.id === 'original') || item.thumbnails[item.thumbnails.length - 1];
           thumbnail = (t && t.url) ? t.url : '';
         }
         if (!thumbnail) thumbnail = item.thumbnail || item.artwork_url || item.avatar_url || '';
@@ -5012,7 +5080,7 @@ async function handlePlaylistImport(req, res, inputUrl) {
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ success: true, name: data.title || 'Imported playlist', cover, tracks }));
-  } catch (err) {
+  } catch (/** @type {any} */ err) {
     try { logger.error('Playlist import failed: ' + inputUrl, err); } catch (_) {}
     res.writeHead(500, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ success: false, error: err.message }));
@@ -5024,9 +5092,11 @@ let spotifyAuth = { verifier: '', state: '', clientId: '', token: '', refreshTok
 let spotifyAuthError = '';
 let spotifyAuthLoaded = false;
 // shortcut: refreshes are serialized per process; coordinate through shared storage if concurrent app instances need the same Spotify session.
+/** @type {Promise<any> | null} */
 let spotifyRefreshPromise = null;
 const spotifyAuthPath = path.join(DATA_DIR, 'spotify-auth.enc');
-const spotifySafeStorage = process.versions.electron ? require('electron').safeStorage : null;
+// only used where process.versions.electron is set, so it's there
+const spotifySafeStorage = /** @type {Electron.SafeStorage} */ (process.versions.electron ? require('electron').safeStorage : null);
 
 function canStoreSpotifyAuth() {
   return spotifySafeStorage?.isEncryptionAvailable() &&
@@ -5043,7 +5113,7 @@ function loadSpotifyAuth() {
     if (/^[a-f0-9]{32}$/i.test(saved.clientId) && typeof saved.refreshToken === 'string' && saved.refreshToken) {
       spotifyAuth = { ...spotifyAuth, clientId: saved.clientId, refreshToken: saved.refreshToken };
     }
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     if (e.code !== 'ENOENT') spotifyAuthError = 'Stored Spotify login could not be read. Please connect again.';
   }
 }
@@ -5078,7 +5148,7 @@ function getSpotifyRedirectUri() {
   return `${serverOrigin()}/api/spotify-callback`;
 }
 
-function requestSpotifyToken(params) {
+function requestSpotifyToken(/** @type {any} */ params) {
   return new Promise((resolve, reject) => {
     const postData = new URLSearchParams(params).toString();
 
@@ -5151,7 +5221,7 @@ async function getSpotifyAccessToken(forceRefresh = false) {
   return spotifyRefreshPromise;
 }
 
-function spotifyApiGet(requestUrl, token) {
+function spotifyApiGet(/** @type {any} */ requestUrl, /** @type {any} */ token) {
   return new Promise((resolve, reject) => {
     const u = new URL(requestUrl);
     if (u.protocol !== 'https:' || u.hostname !== 'api.spotify.com') return reject(new Error('Invalid Spotify API URL'));
@@ -5174,7 +5244,7 @@ function spotifyApiGet(requestUrl, token) {
   });
 }
 
-async function spotifyGetWithRetry(requestUrl) {
+async function spotifyGetWithRetry(/** @type {any} */ requestUrl) {
   let token = await getSpotifyAccessToken();
   let resp = await spotifyApiGet(requestUrl, token);
   if (resp.status === 401 && spotifyAuth.refreshToken) {
@@ -5190,7 +5260,7 @@ async function spotifyGetWithRetry(requestUrl) {
   return resp;
 }
 
-function spotifyRetryAfterSeconds(resp) {
+function spotifyRetryAfterSeconds(/** @type {any} */ resp) {
   const raw = resp.headers?.['retry-after'];
   const seconds = Number(raw);
   if (raw !== undefined && Number.isFinite(seconds) && seconds >= 0) return seconds;
@@ -5198,7 +5268,7 @@ function spotifyRetryAfterSeconds(resp) {
   return Number.isFinite(date) ? Math.max(0, (date - Date.now()) / 1000) : 1;
 }
 
-function spotifyApiFailure(resp, endpoint) {
+function spotifyApiFailure(/** @type {any} */ resp, /** @type {any} */ endpoint) {
   let detail = '';
   try {
     const error = JSON.parse(resp.body).error;
@@ -5210,7 +5280,7 @@ function spotifyApiFailure(resp, endpoint) {
   return Object.assign(failure, { status: resp.status });
 }
 
-async function handleSpotifyLibrary(req, res, query) {
+async function handleSpotifyLibrary(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {any} */ query) {
   loadSpotifyAuth();
   if (!spotifyAuth.token && !spotifyAuth.refreshToken) {
     res.writeHead(401, { 'Content-Type': 'application/json' });
@@ -5316,13 +5386,13 @@ async function handleSpotifyLibrary(req, res, query) {
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true, partial: skippedPlaylists.length > 0, likes, playlists, skippedPlaylists }));
-  } catch (err) {
+  } catch (/** @type {any} */ err) {
     res.writeHead(err.status === 403 ? 403 : err.status === 429 ? 429 : 500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: false, error: err.message }));
   }
 }
 
-function callTranslate(text, to) {
+function callTranslate(/** @type {string} */ text, /** @type {any} */ to) {
   return new Promise((resolve) => {
     const clients = ['dict-chrome-ex', 'gtx'];
     let idx = 0;
@@ -5357,7 +5427,7 @@ function callTranslate(text, to) {
   });
 }
 
-async function handleTranslate(req, res, lines, to = 'en') {
+async function handleTranslate(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {any} */ lines, to = 'en') {
   if (!Array.isArray(lines) || lines.length === 0) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ success: true, translations: [] }));
@@ -5421,7 +5491,7 @@ const I18N_MAX_ENTRIES = 20000; // per language
 const i18nDicts = new Map(); // lang -> { dict, size }
 const i18nInFlight = new Map(); // lang + '\n' + text -> Promise, so two requests never translate the same string twice
 
-function i18nDict(lang) {
+function i18nDict(/** @type {string} */ lang) {
   let d = i18nDicts.get(lang);
   if (d) return d;
   const dict = Object.create(null);
@@ -5437,11 +5507,11 @@ function i18nDict(lang) {
   return d;
 }
 
-function i18nSave(lang) {
+function i18nSave(/** @type {string} */ lang) {
   try {
     fs.mkdirSync(I18N_DIR, { recursive: true });
     fs.writeFileSync(path.join(I18N_DIR, `${lang}.json`), JSON.stringify(i18nDicts.get(lang).dict));
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     logger.warn(`[i18n] could not save ${lang}: ${e.message}`);
   }
 }
@@ -5449,29 +5519,32 @@ function i18nSave(lang) {
 // Many strings per request, joined by newlines like the lyrics. When the lines don't come back one for one, each
 // half is tried on its own (down to single strings), so one odd string doesn't cost a request per string.
 // Resolves { out: a translation or null per string, missed: the strings never tried because the service stopped answering }.
-async function i18nTranslate(texts, lang) {
+async function i18nTranslate(/** @type {any} */ texts, /** @type {string} */ lang) {
   const out = new Array(texts.length).fill(null);
   const tried = new Array(texts.length).fill(false);
   let reachable = true;
-  const clean = (s, src) => {
+  const clean = (/** @type {any} */ s, /** @type {any} */ src) => {
     const v = typeof s === 'string' ? s.replace(/\s+/g, ' ').trim() : '';
     return v && v.length <= src.length * 4 + 60 && !v.includes('\uFFFD') ? v : null;
   };
-  async function run(idx) {
+  async function run(/** @type {any} */ idx) {
     if (!reachable || !idx.length) return;
-    const lines = idx.map((i) => texts[i]);
+    const lines = idx.map((/** @type {number} */ i) => texts[i]);
     const got = await callTranslate(lines.join('\n'), lang);
     if (!got) { reachable = false; return; }
-    if (got.length === lines.length) { idx.forEach((i, k) => { out[i] = clean(got[k], texts[i]); tried[i] = true; }); return; }
+    if (got.length === lines.length) { idx.forEach((/** @type {number} */ i, /** @type {any} */ k) => { out[i] = clean(got[k], texts[i]); tried[i] = true; }); return; }
     if (idx.length === 1) { out[idx[0]] = clean(got.join(' '), texts[idx[0]]); tried[idx[0]] = true; return; }
     const mid = idx.length >> 1;
     await run(idx.slice(0, mid));
     await run(idx.slice(mid));
   }
   // the strings in groups of up to 1500 characters (as indexes), three groups at a time
+  /** @type {any[]} */
   const groups = [];
-  let cur = [], len = 0;
-  texts.forEach((s, i) => {
+  /** @type {number[]} */
+  let cur = [];
+  let len = 0;
+  texts.forEach((/** @type {any} */ s, /** @type {number} */ i) => {
     if (cur.length && len + s.length + 1 > 1500) { groups.push(cur); cur = []; len = 0; }
     cur.push(i);
     len += s.length + 1;
@@ -5480,13 +5553,13 @@ async function i18nTranslate(texts, lang) {
   let next = 0;
   const worker = async () => { while (reachable && next < groups.length) await run(groups[next++]); };
   await Promise.all([worker(), worker(), worker()]);
-  return { out, missed: new Set(texts.filter((_, i) => !tried[i])) };
+  return { out, missed: new Set(texts.filter((/** @type {any} */ _, /** @type {number} */ i) => !tried[i])) };
 }
 
 // { target, texts: [...] } -> { success, translations: [string|null], complete }; null: not translated, show the
 // English. complete is false when the service didn't answer for some of them (worth asking again later); a string it
 // answered with nothing usable stays null without that.
-async function handleI18nBatch(target, rawTexts) {
+async function handleI18nBatch(/** @type {any} */ target, /** @type {any} */ rawTexts) {
   const lang = String(target || '');
   if (!I18N_LANG_RE.test(lang)) return { status: 400, body: { success: false, error: 'bad language' } };
   const texts = (Array.isArray(rawTexts) ? rawTexts : []).slice(0, I18N_MAX_TEXTS)
@@ -5495,6 +5568,7 @@ async function handleI18nBatch(target, rawTexts) {
   if (lang === 'en') return { status: 200, body: { success: true, translations: texts.map((s) => s || null), complete: true } };
   const d = i18nDict(lang);
   const waits = new Set();
+  /** @type {any[]} */
   const need = [];
   for (const s of new Set(texts)) {
     if (!s || s in d.dict) continue;
@@ -5526,7 +5600,7 @@ async function handleI18nBatch(target, rawTexts) {
 }
 
 // everything this device translated into `target` before: the app loads it in one go at start
-function i18nAll(target) {
+function i18nAll(/** @type {any} */ target) {
   const lang = String(target || '');
   if (!I18N_LANG_RE.test(lang)) return { status: 400, body: { success: false, error: 'bad language' } };
   return { status: 200, body: { success: true, translations: lang === 'en' ? {} : i18nDict(lang).dict } };
@@ -5535,6 +5609,7 @@ function i18nAll(target) {
 // ---- Discover: genre + similar-artist recommendations from listening history ----
 // iTunes gives each artist's genre, Deezer gives related artists, their top tracks and per-genre charts.
 // Deezer tracks are played by YouTube search (searchQuery), same as the artist pages.
+/** @type {Record<string, number>} */
 const ITUNES_TO_DEEZER_GENRE = {
   'pop': 132, 'hip-hop/rap': 116, 'rap': 116, 'rock': 152, 'dance': 113, 'r&b/soul': 165, 'alternative': 85,
   'electronic': 106, 'metal': 464, 'hard rock': 464, 'singer/songwriter': 466, 'folk': 466, 'reggae': 144, 'jazz': 129,
@@ -5544,23 +5619,24 @@ const ITUNES_TO_DEEZER_GENRE = {
 const discoverCache = new Map();
 const discoverInFlight = new Map();
 
-function setDiscoverCache(key, data) {
+function setDiscoverCache(/** @type {string} */ key, /** @type {any} */ data) {
   discoverCache.delete(key);
   if (discoverCache.size >= 50) discoverCache.delete(discoverCache.keys().next().value);
   discoverCache.set(key, { at: Date.now(), data });
 }
 
-function httpsJson(target, timeout = 5000, userAgent = 'Mozilla/5.0') {
+function httpsJson(/** @type {any} */ target, timeout = 5000, userAgent = 'Mozilla/5.0') {
   return new Promise((resolve) => {
     https.get(target, { headers: { 'User-Agent': userAgent }, timeout }, (r) => {
       let d = '';
       r.on('data', (c) => { d += c; });
       r.on('end', () => { try { resolve(JSON.parse(d)); } catch (e) { resolve(null); } });
       r.on('error', () => resolve(null));
-    }).on('error', () => resolve(null)).on('timeout', function () { this.destroy(); resolve(null); });
+    }).on('error', () => resolve(null)).on('timeout', /** @this {import('http').ClientRequest} */ function () { this.destroy(); resolve(null); });
   });
 }
 
+/** @param {any} t @returns {Record<string, any>} */
 function deezerTrackToTrack(t) {
   const artist = (t.artist && t.artist.name) || '';
   return {
@@ -5571,16 +5647,16 @@ function deezerTrackToTrack(t) {
   };
 }
 
-async function buildDiscover(historyTracks, favoriteTracks) {
+async function buildDiscover(/** @type {any} */ historyTracks, /** @type {any} */ favoriteTracks) {
   const counts = new Map();
-  const add = (t, w) => {
+  const add = (/** @type {any} */ t, /** @type {any} */ w) => {
     const name = String((t && t.artist) || '').replace(/\s*-\s*Topic$/i, '').split(/,|&| feat\.| ft\./i)[0].trim();
     if (!name || /unknown artist/i.test(name)) return;
     const k = name.toLowerCase();
     counts.set(k, { name: (counts.get(k) || {}).name || name, score: ((counts.get(k) || {}).score || 0) + w });
   };
-  favoriteTracks.forEach((t) => add(t, 3));
-  historyTracks.slice(0, 60).forEach((t, i) => add(t, 1 + (60 - i) / 60));
+  favoriteTracks.forEach((/** @type {any} */ t) => add(t, 3));
+  historyTracks.slice(0, 60).forEach((/** @type {any} */ t, /** @type {number} */ i) => add(t, 1 + (60 - i) / 60));
   const topArtists = [...counts.values()].sort((a, b) => b.score - a.score).slice(0, 5);
   const known = new Set([...counts.keys()]);
 
@@ -5594,18 +5670,18 @@ async function buildDiscover(historyTracks, favoriteTracks) {
   return job;
 }
 
-async function fetchDiscover(key, topArtists, known) {
+async function fetchDiscover(/** @type {string} */ key, /** @type {any} */ topArtists, /** @type {any} */ known) {
   const sections = [];
   if (!topArtists.length) {
     const [chart, artists] = await Promise.all([httpsJson('https://api.deezer.com/chart/0/tracks?limit=20'), httpsJson('https://api.deezer.com/chart/0/artists?limit=12')]);
-    if (artists && artists.data) sections.push({ type: 'artists', title: 'Popular artists', items: artists.data.map((a) => ({ name: a.name, picture: a.picture_big || a.picture_medium })) });
+    if (artists && artists.data) sections.push({ type: 'artists', title: 'Popular artists', items: artists.data.map((/** @type {any} */ a) => ({ name: a.name, picture: a.picture_big || a.picture_medium })) });
     if (chart && chart.data) sections.push({ type: 'tracks', title: 'Top songs right now', tracks: chart.data.map(deezerTrackToTrack) });
     const data = { genres: [], sections };
     setDiscoverCache(key, data);
     return data;
   }
 
-  const lookups = await Promise.all(topArtists.map(async (a) => {
+  const lookups = await Promise.all(topArtists.map(async (/** @type {any} */ a) => {
     const [it, dz] = await Promise.all([
       httpsJson(`https://itunes.apple.com/search?term=${encodeURIComponent(a.name)}&entity=musicArtist&limit=1`),
       httpsJson(`https://api.deezer.com/search/artist?q=${encodeURIComponent(a.name)}&limit=1`),
@@ -5620,7 +5696,7 @@ async function fetchDiscover(key, topArtists, known) {
   const related = new Map();
   await Promise.all(lookups.slice(0, 3).filter((l) => l.dz).map(async (l) => {
     const r = await httpsJson(`https://api.deezer.com/artist/${l.dz.id}/related?limit=10`);
-    (r && r.data || []).forEach((a) => {
+    (r && r.data || []).forEach((/** @type {any} */ a) => {
       const k = a.name.toLowerCase();
       if (known.has(k) || related.has(k)) return;
       related.set(k, { name: a.name, picture: a.picture_big || a.picture_medium, id: a.id, because: l.name });
@@ -5629,10 +5705,11 @@ async function fetchDiscover(key, topArtists, known) {
   const similar = [...related.values()].slice(0, 14);
   if (similar.length) sections.push({ type: 'artists', title: `Because you listen to ${lookups[0].name}`, items: similar });
 
+  /** @type {any[]} */
   const picks = [];
   await Promise.all(similar.slice(0, 8).map(async (a) => {
     const top = await httpsJson(`https://api.deezer.com/artist/${a.id}/top?limit=2`);
-    (top && top.data || []).forEach((t) => picks.push(deezerTrackToTrack(t)));
+    (top && top.data || []).forEach((/** @type {any} */ t) => picks.push(deezerTrackToTrack(t)));
   }));
   if (picks.length) sections.push({ type: 'tracks', title: 'New for you', tracks: picks.sort(() => Math.random() - 0.5).slice(0, 14) });
 
@@ -5650,7 +5727,7 @@ async function fetchDiscover(key, topArtists, known) {
 
 const albumCache = new Map();
 
-function getAlbumCache(key) {
+function getAlbumCache(/** @type {string} */ key) {
   const entry = albumCache.get(key);
   if (!entry) return null;
   if (Date.now() > entry.expires) {
@@ -5660,7 +5737,7 @@ function getAlbumCache(key) {
   return entry.data;
 }
 
-function setAlbumCache(key, data) {
+function setAlbumCache(/** @type {string} */ key, /** @type {any} */ data) {
   if (albumCache.has(key)) {
     albumCache.delete(key);
   } else if (albumCache.size >= 100) {
@@ -5685,13 +5762,13 @@ function itunesCountryParam() {
   return code ? `&country=${code.toUpperCase()}` : '';
 }
 
-function fetchItunesJson(url) {
+function fetchItunesJson(/** @type {string} */ url) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
       timeout: 10000
     }, (res) => {
-      if (res.statusCode < 200 || res.statusCode >= 300) {
+      if (Number(res.statusCode) < 200 || Number(res.statusCode) >= 300) {
         res.resume();
         return reject(new Error(`HTTP ${res.statusCode}`));
       }
@@ -5714,7 +5791,7 @@ function fetchItunesJson(url) {
   });
 }
 
-async function handleAlbumSearch(req, res, parsedUrl) {
+async function handleAlbumSearch(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {Omit<import('url').UrlWithParsedQuery, 'query' | 'pathname'> & { pathname: string, query: Record<string, string> }} */ parsedUrl) {
   const q = (parsedUrl.query.q || '').trim();
 
   if (!q) {
@@ -5738,12 +5815,14 @@ async function handleAlbumSearch(req, res, parsedUrl) {
 
   /** @type {(value: any) => void} */
 
+  /** @type {any} */
+
   let resolveSearch;
   const searchPromise = new Promise(resolve => { resolveSearch = resolve; });
   const inFlightEntry = { promise: searchPromise };
   albumCache.set(cacheKey, inFlightEntry);
   let outcome = null;
-  const sendResponse = (status, body) => {
+  const sendResponse = (/** @type {number} */ status, /** @type {any} */ body) => {
     outcome = { status, body };
     resolveSearch(outcome);
     res.writeHead(status, { 'Content-Type': 'application/json' });
@@ -5755,7 +5834,7 @@ async function handleAlbumSearch(req, res, parsedUrl) {
     if (albumUrlMatch) {
       const data = await fetchItunesJson(`https://itunes.apple.com/lookup?id=${albumUrlMatch[1]}&entity=album${itunesCountryParam()}`);
       const results = (data && Array.isArray(data.results)) ? data.results : [];
-      const item = results.find(r => r && r.wrapperType === 'collection');
+      const item = results.find((/** @type {any} */ r) => r && r.wrapperType === 'collection');
       if (item) {
         const responseData = {
           success: true,
@@ -5797,7 +5876,7 @@ async function handleAlbumSearch(req, res, parsedUrl) {
 
     const albums = [];
     const seen = new Set();
-    const normalize = (s) => (s || '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+    const normalize = (/** @type {any} */ s) => (s || '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
 
     for (const item of results) {
       if (!item || item.collectionId == null) continue;
@@ -5820,8 +5899,8 @@ async function handleAlbumSearch(req, res, parsedUrl) {
       });
     }
 
-    const words = cleanQ.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(w => w.length > 1);
-    const scoreAlbum = (album) => {
+    const words = cleanQ.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter((/** @type {any} */ w) => w.length > 1);
+    const scoreAlbum = (/** @type {any} */ album) => {
       const title = (album.title || '').toLowerCase();
       const artist = (album.artist || '').toLowerCase();
       const full = title + ' ' + artist;
@@ -5852,7 +5931,7 @@ async function handleAlbumSearch(req, res, parsedUrl) {
   }
 }
 
-async function handleArtistAlbums(req, res, parsedUrl) {
+async function handleArtistAlbums(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {Omit<import('url').UrlWithParsedQuery, 'query' | 'pathname'> & { pathname: string, query: Record<string, string> }} */ parsedUrl) {
   const name = (parsedUrl.query.name || '').trim();
   if (!name) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -5866,11 +5945,11 @@ async function handleArtistAlbums(req, res, parsedUrl) {
     return res.end(JSON.stringify(cached));
   }
   try {
-    const normalize = (s) => (s || '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+    const normalize = (/** @type {any} */ s) => (s || '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
     const target = normalize(name);
     const artistSearch = await fetchItunesJson(`https://itunes.apple.com/search?term=${encodeURIComponent(name)}&entity=musicArtist&limit=10${itunesCountryParam()}`);
     const artists = (artistSearch && Array.isArray(artistSearch.results)) ? artistSearch.results : [];
-    const lookupAlbums = async (ids) => {
+    const lookupAlbums = async (/** @type {any} */ ids) => {
       const lookup = await fetchItunesJson(`https://itunes.apple.com/lookup?id=${ids.join(',')}&entity=album&limit=200${itunesCountryParam()}`);
       return (lookup && Array.isArray(lookup.results)) ? lookup.results : [];
     };
@@ -5878,26 +5957,27 @@ async function handleArtistAlbums(req, res, parsedUrl) {
     const page = artistId ? await fetchArtistInfo(name, artistId) : null;
     let releases = null;
     if (page && page.releases) {
-      const known = [...page.releases, ...page.tracks.map(t => t.title)];
-      const namesakes = known.length ? artists.filter(a => normalize(a.artistName) === target && a.artistId != null) : [];
+      const known = [...page.releases, ...page.tracks.map((/** @type {any} */ t) => t.title)];
+      const namesakes = known.length ? artists.filter((/** @type {any} */ a) => normalize(a.artistName) === target && a.artistId != null) : [];
       // one lookup for all of them: it lists each artist followed by its releases
       const byArtist = new Map();
       let current = null;
-      for (const r of namesakes.length ? await lookupAlbums(namesakes.map(a => a.artistId)) : []) {
+      for (const r of namesakes.length ? await lookupAlbums(namesakes.map((/** @type {any} */ a) => a.artistId)) : []) {
         if (r && r.wrapperType === 'artist') byArtist.set(current = r.artistId, []);
         else if (r && r.wrapperType === 'collection' && byArtist.has(current)) byArtist.get(current).push(r);
       }
       let bestShared = 0;
       for (const list of byArtist.values()) {
-        const shared = ytmArtist.sharedTitles(known, list.map(r => r.collectionName));
+        const shared = ytmArtist.sharedTitles(known, list.map((/** @type {any} */ r) => r.collectionName));
         if (shared > bestShared) { bestShared = shared; releases = list; }
       }
       // none of them: this artist isn't on iTunes, and a namesake's albums would be wrong
       releases = releases || [];
     }
+    /** @type {any[]} */
     const albums = [];
     const seen = new Set();
-    const addAlbum = (item) => {
+    const addAlbum = (/** @type {any} */ item) => {
       if (!item || item.collectionId == null) return;
       const title = item.collectionName || '';
       if (/\s-\s*Single$/i.test(title)) return;
@@ -5917,12 +5997,12 @@ async function handleArtistAlbums(req, res, parsedUrl) {
     if (releases) {
       releases.forEach(addAlbum);
     } else {
-      const best = artists.find(a => normalize(a.artistName) === target) || artists.find(a => normalize(a.artistName).includes(target) || target.includes(normalize(a.artistName))) || artists[0];
-      if (best && best.artistId != null) (await lookupAlbums([best.artistId])).filter(r => r && r.wrapperType === 'collection').forEach(addAlbum);
+      const best = artists.find((/** @type {any} */ a) => normalize(a.artistName) === target) || artists.find((/** @type {any} */ a) => normalize(a.artistName).includes(target) || target.includes(normalize(a.artistName))) || artists[0];
+      if (best && best.artistId != null) (await lookupAlbums([best.artistId])).filter((/** @type {any} */ r) => r && r.wrapperType === 'collection').forEach(addAlbum);
       if (albums.length === 0) {
         const fallback = await fetchItunesJson(`https://itunes.apple.com/search?term=${encodeURIComponent(name)}&entity=album&attribute=artistTerm&limit=200${itunesCountryParam()}`);
         const items = (fallback && Array.isArray(fallback.results)) ? fallback.results : [];
-        items.filter(r => r && normalize(r.artistName).includes(target)).forEach(addAlbum);
+        items.filter((/** @type {any} */ r) => r && normalize(r.artistName).includes(target)).forEach(addAlbum);
       }
     }
     albums.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
@@ -5939,10 +6019,11 @@ async function handleArtistAlbums(req, res, parsedUrl) {
 // An album's songs: by its iTunes id (Uriel's albums come from iTunes), by its Deezer id (source=deezer), and by
 // title and artist when the id finds nothing (a saved album synced from a phone in another country, where iTunes
 // gives the album another id). Also at /api/album and /api/album-tracks.
-function itunesAlbumTracks(results, albumItem) {
+function itunesAlbumTracks(/** @type {any} */ results, /** @type {any} */ albumItem) {
   return results
-    .filter(r => r && r.wrapperType === 'track' && (!albumItem || r.collectionId === albumItem.collectionId))
-    .map(item => {
+    .filter((/** @type {any} */ r) => r && r.wrapperType === 'track' && (!albumItem || r.collectionId === albumItem.collectionId))
+    .map((/** @type {any} */ item) => {
+      /** @type {Record<string, any>} */
       const t = {
         no: item.trackNumber || 1,
         disc: item.discNumber || 1,
@@ -5953,13 +6034,13 @@ function itunesAlbumTracks(results, albumItem) {
       if (item.trackExplicitness === 'explicit' || libraryPages.isExplicitText(item.trackName)) t.isExplicit = true;
       return t;
     })
-    .sort((a, b) => (a.disc - b.disc) || (a.no - b.no));
+    .sort((/** @type {any} */ a, /** @type {any} */ b) => (a.disc - b.disc) || (a.no - b.no));
 }
 
-async function lookupItunesAlbum(id) {
+async function lookupItunesAlbum(/** @type {string} */ id) {
   const data = await fetchItunesJson(`https://itunes.apple.com/lookup?id=${id}&entity=song${itunesCountryParam()}`);
   const results = (data && Array.isArray(data.results)) ? data.results : [];
-  const albumItem = results.find(r => r && r.wrapperType === 'collection');
+  const albumItem = results.find((/** @type {any} */ r) => r && r.wrapperType === 'collection');
   if (!albumItem) return null;
   const album = {
     id: String(albumItem.collectionId),
@@ -5972,7 +6053,7 @@ async function lookupItunesAlbum(id) {
   return { album, tracks: itunesAlbumTracks(results, albumItem) };
 }
 
-async function lookupDeezerAlbum(id) {
+async function lookupDeezerAlbum(/** @type {string} */ id) {
   const data = await httpsJson(`https://api.deezer.com/album/${id}`, 6000);
   const items = (data && data.tracks && Array.isArray(data.tracks.data)) ? data.tracks.data : [];
   if (!data || data.error || !items.length) return null;
@@ -5986,7 +6067,8 @@ async function lookupDeezerAlbum(id) {
     cover: data.cover_xl || data.cover_big || data.cover_medium || '',
     source: 'deezer'
   };
-  const tracks = items.map((item, idx) => {
+  const tracks = items.map((/** @type {any} */ item, /** @type {any} */ idx) => {
+    /** @type {Record<string, any>} */
     const t = {
       no: item.track_position || idx + 1,
       disc: item.disk_number || 1,
@@ -5996,19 +6078,19 @@ async function lookupDeezerAlbum(id) {
     };
     if (item.explicit_lyrics || item.explicit_content_lyrics === 1 || libraryPages.isExplicitText(item.title)) t.isExplicit = true;
     return t;
-  }).sort((a, b) => (a.disc - b.disc) || (a.no - b.no));
+  }).sort((/** @type {any} */ a, /** @type {any} */ b) => (a.disc - b.disc) || (a.no - b.no));
   return { album, tracks };
 }
 
-async function findItunesAlbum(title, artist) {
+async function findItunesAlbum(/** @type {any} */ title, /** @type {any} */ artist) {
   const data = await fetchItunesJson(`https://itunes.apple.com/search?term=${encodeURIComponent(`${artist} ${title}`.trim())}&entity=album&limit=25${itunesCountryParam()}`);
   const results = (data && Array.isArray(data.results)) ? data.results : [];
-  const hit = results.find(r => r && r.collectionId != null && ytmArtist.sharedTitles([title], [r.collectionName]) > 0
+  const hit = results.find((/** @type {any} */ r) => r && r.collectionId != null && ytmArtist.sharedTitles([title], [r.collectionName]) > 0
     && (!artist || ytmArtist.nameKey(r.artistName) === ytmArtist.nameKey(artist)));
   return hit ? lookupItunesAlbum(String(hit.collectionId)) : null;
 }
 
-async function handleAlbumTracks(req, res, parsedUrl) {
+async function handleAlbumTracks(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {Omit<import('url').UrlWithParsedQuery, 'query' | 'pathname'> & { pathname: string, query: Record<string, string> }} */ parsedUrl) {
   const id = (parsedUrl.query.id || '').trim();
   const title = (parsedUrl.query.title || '').trim();
   const artist = (parsedUrl.query.artist || '').trim();
@@ -6034,12 +6116,15 @@ async function handleAlbumTracks(req, res, parsedUrl) {
 
   /** @type {(value: any) => void} */
 
+  /** @type {any} */
+
   let resolveLookup;
   const lookupPromise = new Promise(resolve => { resolveLookup = resolve; });
+  /** @type {{ promise: Promise<any>, waiters?: number }} */
   const inFlightEntry = { promise: lookupPromise };
   albumCache.set(cacheKey, inFlightEntry);
   let outcome = null;
-  const sendResponse = (status, body) => {
+  const sendResponse = (/** @type {number} */ status, /** @type {any} */ body) => {
     outcome = { status, body };
     resolveLookup(outcome);
     res.writeHead(status, { 'Content-Type': 'application/json' });
@@ -6050,7 +6135,7 @@ async function handleAlbumTracks(req, res, parsedUrl) {
     /** @type {any} */
     let found = null;
     let failed = false;
-    const attempt = async (fn) => {
+    const attempt = async (/** @type {any} */ fn) => {
       if (found && found.tracks.length) return;
       try { found = (await fn()) || found; } catch (e) { failed = true; }
     };
@@ -6082,13 +6167,14 @@ async function handleAlbumTracks(req, res, parsedUrl) {
 let trendingCache = { at: 0, tracks: [] };
 const TRENDING_TTL = 2 * 3600 * 1000;
 
-function parseAppleTopSongs(json) {
+function parseAppleTopSongs(/** @type {any} */ json) {
   const results = (json && json.feed && Array.isArray(json.feed.results)) ? json.feed.results : [];
-  return results.map((r) => {
+  return results.map((/** @type {any} */ r) => {
     const title = (r && r.name) || '';
     const artist = (r && r.artistName) || '';
     if (!title || !artist) return null;
     const query = `${artist} - ${title} official audio`;
+    /** @type {Record<string, any>} */
     const t = {
       id: `am_${r.id || title}`, title, artist, duration: 0,
       thumbnail: String(r.artworkUrl100 || '').replace(/\/\d+x\d+bb\./i, '/600x600bb.'),
@@ -6101,7 +6187,7 @@ function parseAppleTopSongs(json) {
   }).filter(Boolean);
 }
 
-async function handleTrending(req, res) {
+async function handleTrending(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res) {
   if (trendingCache.tracks.length && Date.now() - trendingCache.at < TRENDING_TTL) {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ success: true, tracks: trendingCache.tracks }));
@@ -6112,7 +6198,7 @@ async function handleTrending(req, res) {
   let tracks = parseAppleTopSongs(await httpsJson(`https://rss.marketingtools.apple.com/api/v2/${region}/music/most-played/25/songs.json`, 6000));
   if (!tracks.length) {
     const chart = await httpsJson('https://api.deezer.com/chart/0/tracks?limit=24', 6000);
-    tracks = ((chart && Array.isArray(chart.data)) ? chart.data : []).filter(t => t && t.title && t.artist).map((t) => {
+    tracks = ((chart && Array.isArray(chart.data)) ? chart.data : []).filter((/** @type {any} */ t) => t && t.title && t.artist).map((/** @type {any} */ t) => {
       const track = deezerTrackToTrack(t);
       if (t.explicit_lyrics || t.explicit_content_lyrics === 1) track.isExplicit = true;
       return track;
@@ -6123,9 +6209,10 @@ async function handleTrending(req, res) {
   return res.end(JSON.stringify({ success: tracks.length > 0, tracks }));
 }
 
+/** @type {{ data: { title: string, tracks: any[] } | null, expires: number, promise?: Promise<any> }} */
 let hotPicksCache = { data: null, expires: 0 };
 
-async function handleHotPicks(req, res, parsedUrl) {
+async function handleHotPicks(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {Omit<import('url').UrlWithParsedQuery, 'query' | 'pathname'> & { pathname: string, query: Record<string, string> }} */ parsedUrl) {
   const limit = Math.max(1, Math.min(25, parseInt(parsedUrl.query.limit || '12', 10) || 12));
 
   if (hotPicksCache.promise) {
@@ -6149,11 +6236,13 @@ async function handleHotPicks(req, res, parsedUrl) {
 
   /** @type {(value: any) => void} */
 
+  /** @type {any} */
+
   let resolveLookup;
   const lookupPromise = new Promise(resolve => { resolveLookup = resolve; });
   hotPicksCache = { data: null, expires: 0, promise: lookupPromise };
   let outcome = null;
-  const sendResponse = (status, body) => {
+  const sendResponse = (/** @type {number} */ status, /** @type {any} */ body) => {
     outcome = { status, body };
     resolveLookup(outcome);
     res.writeHead(status, { 'Content-Type': 'application/json' });
@@ -6164,12 +6253,13 @@ async function handleHotPicks(req, res, parsedUrl) {
     const data = await fetchItunesJson('https://api.deezer.com/chart/0/tracks?limit=40');
     const rawItems = (data && Array.isArray(data.data)) ? data.data : [];
     const candidates = rawItems
-      .filter(item => item && item.title && item.artist && item.artist.name)
-      .map(item => ({ artist: item.artist.name, title: item.title, isExplicit: !!(item.explicit_lyrics || item.explicit_content_lyrics === 1) }));
+      .filter((/** @type {any} */ item) => item && item.title && item.artist && item.artist.name)
+      .map((/** @type {any} */ item) => ({ artist: item.artist.name, title: item.title, isExplicit: !!(item.explicit_lyrics || item.explicit_content_lyrics === 1) }));
     if (candidates.length === 0) {
       return sendResponse(200, { success: false });
     }
 
+    /** @type {any[]} */
     const resolvedTracks = [];
     const seenIds = new Set();
     let cIdx = 0;
@@ -6235,16 +6325,17 @@ const LASTFM_API_SECRET = '716cc0a784bb62835de5bd674e65eb57';
 const LASTFM_KEY_RE = /^[a-f0-9]{32}$/i;
 const LASTFM_PROFILE_RE = /^(?:default|[a-z0-9]{4,16})$/;
 const lastfmAuthPath = path.join(DATA_DIR, 'lastfm-auth.enc');
+/** @type {any} */
 let lastfmAccounts = null; // { [profileId]: { sk, user, key?, secret? } }
 let lastfmStoreError = '';
 const lastfmPending = new Map(); // profileId -> { token, pair, at }: a browser sign-in waiting for approval
 
 function lastfmVault() {
-  if (typeof globalThis.__urielVault === 'function') return globalThis.__urielVault('lastfm');
+  if (typeof /** @type {any} */ (globalThis).__urielVault === 'function') return /** @type {any} */ (globalThis).__urielVault('lastfm');
   if (!canStoreSpotifyAuth()) return null;
   return {
     read: () => JSON.parse(spotifySafeStorage.decryptString(fs.readFileSync(lastfmAuthPath))),
-    write: (value) => {
+    write: (/** @type {any} */ value) => {
       const tmp = `${lastfmAuthPath}.tmp`;
       fs.mkdirSync(DATA_DIR, { recursive: true });
       try {
@@ -6258,8 +6349,9 @@ function lastfmVault() {
   };
 }
 
-function lastfmCleanAccount(a) {
+function lastfmCleanAccount(/** @type {any} */ a) {
   if (!a || typeof a !== 'object' || typeof a.sk !== 'string' || !/^[A-Za-z0-9_-]{8,128}$/.test(a.sk)) return null;
+  /** @type {{ sk: string, user: string, key?: string, secret?: string }} */
   const out = { sk: a.sk, user: String(a.user || '').slice(0, 64) };
   if (LASTFM_KEY_RE.test(a.key || '') && LASTFM_KEY_RE.test(a.secret || '')) { out.key = a.key; out.secret = a.secret; }
   return out;
@@ -6272,7 +6364,7 @@ function lastfmLoad() {
   try {
     const vault = lastfmVault();
     saved = vault ? vault.read() : null;
-  } catch (e) {
+  } catch (/** @type {any} */ e) {
     if (e && e.code !== 'ENOENT') lastfmStoreError = 'The saved Last.fm login could not be read. Please connect again.';
   }
   if (saved && typeof saved === 'object') {
@@ -6298,14 +6390,14 @@ function lastfmSave() {
   }
 }
 
-function lastfmSign(params, secret) {
+function lastfmSign(/** @type {any} */ params, /** @type {any} */ secret) {
   let raw = '';
   for (const k of Object.keys(params).filter((k) => k !== 'format' && k !== 'callback').sort()) raw += k + String(params[k]);
   return crypto.createHash('md5').update(raw + secret, 'utf8').digest('hex');
 }
 
 // one signed call to the Last.fm API; resolves to its JSON answer, or { error, message } when it can't be reached
-function lastfmCall(params, pair, method = 'POST') {
+function lastfmCall(/** @type {any} */ params, /** @type {any} */ pair, method = 'POST') {
   const key = (pair && pair.key) || LASTFM_API_KEY;
   const secret = (pair && pair.secret) || LASTFM_API_SECRET;
   const full = { ...params, api_key: key };
@@ -6315,7 +6407,7 @@ function lastfmCall(params, pair, method = 'POST') {
   const isGet = method === 'GET';
   return new Promise((resolve) => {
     let settled = false;
-    const done = (v) => { if (!settled) { settled = true; resolve(v); } };
+    const done = (/** @type {any} */ v) => { if (!settled) { settled = true; resolve(v); } };
     const req = https.request({
       hostname: 'ws.audioscrobbler.com',
       path: isGet ? `/2.0/?${body}` : '/2.0/',
@@ -6335,7 +6427,7 @@ function lastfmCall(params, pair, method = 'POST') {
   });
 }
 
-function lastfmPairFrom(body) {
+function lastfmPairFrom(/** @type {any} */ body) {
   const key = String(body.apiKey || '').trim();
   const secret = String(body.apiSecret || '').trim();
   if (!key && !secret) return { pair: null };
@@ -6343,15 +6435,15 @@ function lastfmPairFrom(body) {
   return { pair: { key, secret } };
 }
 
-const lastfmText = (v, n = 512) => (typeof v === 'string' || typeof v === 'number' ? String(v) : '').replace(/\s+/g, ' ').trim().slice(0, n);
-const lastfmMessage = (r) => lastfmText(r && r.message, 200) || 'Last.fm refused the request';
+const lastfmText = (/** @type {any} */ v, n = 512) => (typeof v === 'string' || typeof v === 'number' ? String(v) : '').replace(/\s+/g, ' ').trim().slice(0, n);
+const lastfmMessage = (/** @type {any} */ r) => lastfmText(r && r.message, 200) || 'Last.fm refused the request';
 
-function lastfmStatus(profile) {
+function lastfmStatus(/** @type {string} */ profile) {
   const a = lastfmLoad()[profile];
   return { connected: !!a, username: a ? a.user : '', saved: !!a && !!lastfmVault(), error: lastfmStoreError };
 }
 
-function lastfmConnect(profile, session, pair) {
+function lastfmConnect(/** @type {string} */ profile, /** @type {any} */ session, /** @type {any} */ pair) {
   const account = lastfmCleanAccount({ sk: session && session.key, user: session && session.name, ...(pair || {}) });
   if (!account) return null;
   lastfmLoad()[profile] = account;
@@ -6360,7 +6452,7 @@ function lastfmConnect(profile, session, pair) {
 }
 
 // a scrobble or now-playing update: the song as the page cleaned it (lastfm-core.js), checked again here
-function lastfmSongParams(body, n) {
+function lastfmSongParams(/** @type {any} */ body, /** @type {any} */ n) {
   const artist = lastfmText(body.artist);
   const track = lastfmText(body.track);
   if (!artist || !track) return null;
@@ -6373,7 +6465,7 @@ function lastfmSongParams(body, n) {
   return p;
 }
 
-async function lastfmRoute(route, body) {
+async function lastfmRoute(/** @type {any} */ route, /** @type {any} */ body) {
   const profile = String(body.profile || '');
   if (!LASTFM_PROFILE_RE.test(profile)) return { status: 400, data: { success: false, error: 'Unknown profile' } };
 
@@ -6444,6 +6536,7 @@ async function lastfmRoute(route, body) {
     const isScrobble = route === 'scrobble';
     const song = lastfmSongParams(body, isScrobble ? 0 : undefined);
     if (!song) return { status: 400, data: { success: false, error: 'Missing artist or title' } };
+    /** @type {Record<string, any>} */
     const params = { method: isScrobble ? 'track.scrobble' : 'track.updateNowPlaying', sk: account.sk, ...song };
     if (isScrobble) {
       // Last.fm takes scrobbles up to two weeks old
@@ -6462,11 +6555,11 @@ async function lastfmRoute(route, body) {
   return { status: 404, data: { success: false, error: 'not found' } };
 }
 
-function handleLastFmRoute(req, res, pathname) {
-  const reply = (status, data) => { if (res.writableEnded) return; res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data)); };
+function handleLastFmRoute(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {any} */ pathname) {
+  const reply = (/** @type {number} */ status, /** @type {any} */ data) => { if (res.writableEnded) return; res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data)); };
   if (req.method !== 'POST') return reply(405, { success: false, error: 'POST only' });
   let raw = '';
-  req.on('data', (chunk) => {
+  req.on('data', (/** @type {Buffer} */ chunk) => {
     if (res.writableEnded) return;
     raw += chunk;
     if (raw.length > 64 * 1024) { raw = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); reply(413, { success: false, error: 'payload too large' }); req.resume(); }
@@ -6487,7 +6580,7 @@ function handleLastFmRoute(req, res, pathname) {
 // /album/<id>, /album/<id>/track/<id> or /track/<id>
 const YANDEX_HEADERS = { 'User-Agent': 'Yandex-Music-API', 'X-Yandex-Music-Client': 'YandexMusicAndroid/24023231', 'Accept': 'application/json' };
 
-function parseYandexLink(input) {
+function parseYandexLink(/** @type {any} */ input) {
   let u;
   try { u = new URL(String(input || '').trim()); } catch (e) { return null; }
   if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
@@ -6505,7 +6598,7 @@ function parseYandexLink(input) {
   return null;
 }
 
-function yandexCover(uri) {
+function yandexCover(/** @type {any} */ uri) {
   const s = String(uri || '').trim();
   if (!s) return '';
   const full = /^https:\/\//i.test(s) ? s : `https://${s.replace(/^\/+/, '')}`;
@@ -6515,20 +6608,20 @@ function yandexCover(uri) {
   } catch (e) { return ''; }
 }
 
-function yandexTrack(t) {
+function yandexTrack(/** @type {any} */ t) {
   if (!t || typeof t !== 'object') return null;
   let title = lastfmText(t.title, 300);
   if (!title) return null;
   // "Song (Live)", "Song (Remix)": Yandex keeps the version apart
   const version = lastfmText(t.version, 100);
   if (version && !title.toLowerCase().includes(version.toLowerCase())) title = `${title} (${version})`.slice(0, 300);
-  const artist = Array.isArray(t.artists) ? t.artists.map((a) => a && lastfmText(a.name, 120)).filter(Boolean).join(', ') : lastfmText(t.artist, 300);
+  const artist = Array.isArray(t.artists) ? t.artists.map((/** @type {any} */ a) => a && lastfmText(a.name, 120)).filter(Boolean).join(', ') : lastfmText(t.artist, 300);
   const ms = Number(t.durationMs);
   const duration = ms > 0 ? Math.round(ms / 1000) : Math.max(0, Math.round(Number(t.duration) || 0));
   return { title, artist: artist.slice(0, 300), duration: duration < 86400 ? duration : 0 };
 }
 
-function yandexTracks(result) {
+function yandexTracks(/** @type {any} */ result) {
   const list = Array.isArray(result && result.tracks) ? result.tracks : [];
   const out = [];
   for (const item of list.slice(0, 10000)) {
@@ -6539,7 +6632,7 @@ function yandexTracks(result) {
 }
 
 // A playlist's songs can come back as bare ids ({ id, albumId }); /tracks gives their details, 100 at a time
-function yandexMissingIds(result) {
+function yandexMissingIds(/** @type {any} */ result) {
   const list = Array.isArray(result && result.tracks) ? result.tracks : [];
   const ids = [];
   for (const item of list.slice(0, 10000)) {
@@ -6552,7 +6645,7 @@ function yandexMissingIds(result) {
   return ids;
 }
 
-async function fetchYandexTracksByIds(ids) {
+async function fetchYandexTracksByIds(/** @type {any} */ ids) {
   const out = [];
   for (let i = 0; i < ids.length && i < 3000; i += 100) {
     const response = await fetchWithTimeout('https://api.music.yandex.net/tracks', {
@@ -6575,7 +6668,7 @@ async function fetchYandexTracksByIds(ids) {
 // A shared link (/playlists/lk.<uuid>) is read by its uuid. Yandex's API may list such a playlist's songs only
 // as ids unless asked for whole tracks, and may know it with or without the "lk." prefix, so the forms are
 // tried in turn; each answer that isn't a playlist is logged, so a shared error log says what Yandex said.
-function yandexApiPaths(apiPath) {
+function yandexApiPaths(/** @type {any} */ apiPath) {
   const m = apiPath.match(/^\/playlist\/(.+)$/);
   if (!m) return [apiPath];
   const uuid = decodeURIComponent(m[1]);
@@ -6585,8 +6678,8 @@ function yandexApiPaths(apiPath) {
   return paths;
 }
 
-async function handleYandexImport(req, res, inputUrl) {
-  const reply = (status, data) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data)); };
+async function handleYandexImport(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {string} */ inputUrl) {
+  const reply = (/** @type {number} */ status, /** @type {any} */ data) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data)); };
   const link = parseYandexLink(inputUrl);
   if (!link) return reply(400, { success: false, error: 'unsupported link: not a Yandex Music playlist, album or song link', status: 404 });
   let lastStatus = 0;
@@ -6628,7 +6721,7 @@ async function handleYandexImport(req, res, inputUrl) {
     if (lastStatus === 401 || lastStatus === 403) return reply(403, { success: false, code: 'yandex_private', error: 'private', status: 403 });
     if (empty || lastStatus === 404 || !lastStatus) return reply(404, { success: false, error: 'not found: the playlist is empty or private', status: 404 });
     return reply(502, { success: false, code: 'yandex_failed', error: `Yandex Music answered ${lastStatus}`, status: lastStatus });
-  } catch (err) {
+  } catch (/** @type {any} */ err) {
     const msg = String((err && err.message) || '');
     const isNet = /timeout|abort|fetch|network|dns|econn|etimedout/i.test(msg) || (err && err.name === 'TimeoutError');
     return reply(isNet ? 504 : 500, { success: false, error: isNet ? 'network' : 'unknown', status: isNet ? 504 : 500 });
@@ -6636,7 +6729,7 @@ async function handleYandexImport(req, res, inputUrl) {
 }
 
 // a throw inside a route must not become an unhandled rejection that leaves the request hanging
-const guardHandler = (handler) => (req, res) => {
+const guardHandler = (/** @type {any} */ handler) => (/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res) => {
   Promise.resolve().then(() => handler(req, res)).catch((e) => {
     try { logger.error('Request handler error: ' + (req.url || '').split('?')[0], e); } catch (_) {}
     try {
@@ -6646,7 +6739,7 @@ const guardHandler = (handler) => (req, res) => {
   });
 };
 
-const server = http.createServer(guardHandler(async (req, res) => {
+const server = http.createServer(guardHandler(async (/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -6678,7 +6771,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
   }
 
   // (the query has single values only: see just below)
-  const parsedUrl = /** @type {Omit<import('url').UrlWithParsedQuery, 'query'> & { query: Record<string, string> }} */ (url.parse(req.url, true));
+  const parsedUrl = /** @type {Omit<import('url').UrlWithParsedQuery, 'query' | 'pathname'> & { pathname: string, query: Record<string, string> }} */ (url.parse(req.url || '', true));
   // a repeated parameter (?id=a&id=b) arrives as an array, which every route would choke on; keep the last
   // value like the phone build's url shim does
   for (const key of Object.keys(parsedUrl.query)) {
@@ -6703,7 +6796,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
 
   if (parsedUrl.pathname === '/api/translate' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
+    req.on('data', (/** @type {Buffer} */ chunk) => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
     req.on('end', () => {
       const payload = safeJsonParse(body, {});
       const raw = payload.texts || payload.lines || [];
@@ -6719,11 +6812,11 @@ const server = http.createServer(guardHandler(async (req, res) => {
   }
 
   if (parsedUrl.pathname === '/api/i18n-batch') {
-    const reply = (r) => { res.writeHead(r.status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(r.body)); };
+    const reply = (/** @type {any} */ r) => { res.writeHead(r.status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(r.body)); };
     if (req.method === 'GET') return reply(i18nAll(parsedUrl.query.target));
     if (req.method !== 'POST') { res.writeHead(405); return res.end(); }
     let body = '';
-    req.on('data', chunk => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
+    req.on('data', (/** @type {Buffer} */ chunk) => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
     req.on('end', () => {
       const payload = safeJsonParse(body, {}) || {};
       handleI18nBatch(payload.target || payload.targetLang || payload.to, payload.texts).then(reply, (e) => {
@@ -6736,7 +6829,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
 
   if (parsedUrl.pathname === '/api/state' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
+    req.on('data', (/** @type {Buffer} */ chunk) => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
     req.on('end', () => {
       try {
         const state = JSON.parse(body);
@@ -6893,7 +6986,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
         res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' });
         return res.end('<!DOCTYPE html><html><body><p>Spotify login failed. Return to Uriel for details.</p></body></html>');
       }
-    } catch (err) {
+    } catch (/** @type {any} */ err) {
       spotifyAuth.state = '';
       spotifyAuthError = `Could not reach Spotify: ${err.message}`;
       res.writeHead(500, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -6905,7 +6998,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
     loadSpotifyAuth();
     if (spotifyAuth.refreshToken) {
       try { await getSpotifyAccessToken(); }
-      catch (e) { spotifyAuthError = e.message; }
+      catch (/** @type {any} */ e) { spotifyAuthError = e.message; }
     }
     res.writeHead(200, { 'Content-Type': 'application/json' });
     return res.end(JSON.stringify({ connected: Boolean(spotifyAuth.token && (!spotifyAuth.expiresAt || Date.now() < spotifyAuth.expiresAt)), error: spotifyAuthError }));
@@ -6936,7 +7029,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
 
   if (parsedUrl.pathname === '/api/vibe' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
+    req.on('data', (/** @type {Buffer} */ chunk) => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
     req.on('end', () => {
       const payload = safeJsonParse(body, {});
       handleVibeRecommendations(req, res, payload);
@@ -6946,21 +7039,21 @@ const server = http.createServer(guardHandler(async (req, res) => {
 
   if (parsedUrl.pathname === '/api/radio' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
+    req.on('data', (/** @type {Buffer} */ chunk) => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
     req.on('end', () => handleSongRadio(req, res, safeJsonParse(body, {})));
     return;
   }
 
   if (parsedUrl.pathname === '/api/discover' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
+    req.on('data', (/** @type {Buffer} */ chunk) => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
     req.on('end', async () => {
       const payload = safeJsonParse(body, {});
       try {
         const data = await buildDiscover(Array.isArray(payload.history) ? payload.history : [], Array.isArray(payload.favorites) ? payload.favorites : []);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, ...data }));
-      } catch (e) {
+      } catch (/** @type {any} */ e) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: e.message }));
       }
@@ -6997,12 +7090,12 @@ const server = http.createServer(guardHandler(async (req, res) => {
   // page's Download button (#19) skips them and says so
   if (parsedUrl.pathname === '/api/downloaded-status' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
+    req.on('data', (/** @type {Buffer} */ chunk) => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
     req.on('end', async () => {
       const payload = safeJsonParse(body, {});
       const tracks = (Array.isArray(payload.tracks) ? payload.tracks : []).slice(0, 500);
       try {
-        const downloaded = await Promise.all(tracks.map(async (t) => {
+        const downloaded = await Promise.all(tracks.map(async (/** @type {any} */ t) => {
           if (!t || typeof t !== 'object') return false;
           const title = typeof t.title === 'string' ? t.title : '';
           const artist = typeof t.artist === 'string' ? t.artist : '';
@@ -7016,7 +7109,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
         }));
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, downloaded, localVersion: localSongsVersion }));
-      } catch (e) {
+      } catch (/** @type {any} */ e) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: e.message }));
       }
@@ -7070,7 +7163,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
 
   if (parsedUrl.pathname === '/api/library-add' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
+    req.on('data', (/** @type {Buffer} */ chunk) => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
     req.on('end', () => {
       try {
         const payload = JSON.parse(body || '{}');
@@ -7109,7 +7202,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
         saveLibraryIndex();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true, count: addedCount }));
-      } catch (err) {
+      } catch (/** @type {any} */ err) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: err.message }));
       }
@@ -7119,7 +7212,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
 
   if (parsedUrl.pathname === '/api/library-update' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
+    req.on('data', (/** @type {Buffer} */ chunk) => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
     req.on('end', () => {
       try {
         const payload = JSON.parse(body || '{}');
@@ -7135,7 +7228,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true }));
-      } catch (err) {
+      } catch (/** @type {any} */ err) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: err.message }));
       }
@@ -7159,7 +7252,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
     };
     if (req.method !== 'POST') return answer();
     let body = '';
-    req.on('data', (chunk) => { body += chunk; if (body.length > 4096) req.destroy(); });
+    req.on('data', (/** @type {Buffer} */ chunk) => { body += chunk; if (body.length > 4096) req.destroy(); });
     req.on('end', async () => {
       const payload = safeJsonParse(body, {});
       if (typeof payload.enabled === 'boolean') deviceMusic.enabled = payload.enabled;
@@ -7203,7 +7296,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
 
   if (parsedUrl.pathname === '/api/library-remove' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
+    req.on('data', (/** @type {Buffer} */ chunk) => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
     req.on('end', () => {
       try {
         const payload = JSON.parse(body || '{}');
@@ -7228,7 +7321,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: true }));
-      } catch (err) {
+      } catch (/** @type {any} */ err) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ success: false, error: err.message }));
       }
@@ -7276,9 +7369,10 @@ const server = http.createServer(guardHandler(async (req, res) => {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         return res.end(JSON.stringify({ success: false, error: 'bad day' }));
       }
+      /** @type {any[]} */
       const chunks = [];
       let size = 0;
-      req.on('data', (chunk) => {
+      req.on('data', (/** @type {Buffer} */ chunk) => {
         if (res.writableEnded) return;
         size += chunk.length;
         if (size > AUTO_BACKUP_MAX_BYTES) { res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'backup too large' })); req.resume(); return; }
@@ -7301,7 +7395,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
           for (const old of backupCore.autoBackupsToDrop(await names())) await fs.promises.unlink(path.join(dir, old)).catch(() => {});
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true, name, kept: (await names()).length }));
-        } catch (e) {
+        } catch (/** @type {any} */ e) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: false, error: e.message }));
         }
@@ -7358,7 +7452,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
   if (parsedUrl.pathname === '/api/track-analysis') {
     if (req.method === 'POST') {
       let body = '';
-      req.on('data', chunk => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
+      req.on('data', (/** @type {Buffer} */ chunk) => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
       req.on('end', () => {
         try {
           const payload = JSON.parse(body || '{}');
@@ -7368,7 +7462,7 @@ const server = http.createServer(guardHandler(async (req, res) => {
           }
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ success: true }));
-        } catch (e) {
+        } catch (/** @type {any} */ e) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: e.message }));
         }
@@ -7494,7 +7588,7 @@ function startServer(port = PORT) {
 
 function stopServer() {
   if (deviceStopWatching) { deviceStopWatching(); deviceStopWatching = null; }
-  return new Promise((resolve) => {
+  return new Promise((/** @type {(value?: void) => void} */ resolve) => {
     if (!server.listening) return resolve();
     server.close(() => resolve());
     if (typeof server.closeAllConnections === 'function') server.closeAllConnections();

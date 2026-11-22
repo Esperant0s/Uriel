@@ -5,7 +5,9 @@
 // LRC). Only text handling lives here: server.js does the fetching, app.js lines the word times up with the lyrics
 // it shows. test/lyrics-sources.test.js runs this in Node.
 (function () {
+  /** @type {Record<string, string>} */
   const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', '#039': "'", '#39': "'" };
+  /** @param {unknown} s */
   function decodeEntities(s) {
     return String(s || '').replace(/&(#x[0-9a-f]+|#\d+|\w+);/gi, (m, e) => {
       const k = e.toLowerCase();
@@ -17,6 +19,7 @@
   }
 
   // the lyrics on a genius.com song page: every <div data-lyrics-container="true"> block, as plain lines
+  /** @param {string} html */
   function extractGeniusLyrics(html) {
     html = String(html || '');
     const marker = 'data-lyrics-container="true"';
@@ -54,10 +57,11 @@
       .trim();
   }
 
-  const simple = (s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^\p{L}\p{N}]+/gu, '');
-  const overlaps = (a, b) => !!a && !!b && (a === b || a.includes(b) || b.includes(a));
+  const simple = (/** @type {unknown} */ s) => String(s || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^\p{L}\p{N}]+/gu, '');
+  const overlaps = (/** @type {string} */ a, /** @type {string} */ b) => !!a && !!b && (a === b || a.includes(b) || b.includes(a));
 
   // the Genius search hit for this song: the title has to match, the artist too when the hit names one
+  /** @param {any[]} hits @param {string} title @param {string} artist */
   function pickGeniusHit(hits, title, artist) {
     const t = simple(title);
     const artists = String(artist || '').split(/\s*(?:,|&|\/|\+|\bx\b|\band\b|\bfeat\.?|\bft\.?)\s*/i).map(simple).filter(Boolean);
@@ -79,9 +83,13 @@
   const CJK = /[぀-ヿ㐀-䶿一-鿿가-힯]/;
 
   // one yrc line's words: "(start,dur,0)text" pieces; Latin pieces are glued until a space, CJK ones stand alone
+  /** @typedef {{ text: string, start: number, end: number }} TimedWord */
+  /** @param {string} rest */
   function parseYrcWords(rest) {
     const re = /\((\d+),(\d+)(?:,\d+)?\)([^(]*)/g;
+    /** @type {TimedWord[]} */
     const words = [];
+    /** @type {TimedWord | null} */
     let cur = null;
     const flush = () => { if (cur) { cur.text = cur.text.trim(); if (cur.text) words.push(cur); cur = null; } };
     let m;
@@ -100,6 +108,7 @@
   }
 
   // NetEase "yrc": "[lineStartMs,lineDurMs](wordStartMs,wordDurMs,0)word ..." per line; credit lines are left out
+  /** @param {unknown} text */
   function parseYrc(text) {
     const lines = [];
     for (const raw of String(text || '').split('\n')) {
@@ -115,6 +124,7 @@
   }
 
   // the NetEase search result that is this song: length within 3 s (when known), title and an artist matching
+  /** @param {any[]} songs @param {string} title @param {string} artist @param {number} duration */
   function pickNetEaseSong(songs, title, artist, duration) {
     const t = simple(title);
     const artists = String(artist || '').split(/\s*(?:,|&|\/|\+|\bx\b|\band\b|\bfeat\.?|\bft\.?)\s*/i).map(simple).filter(Boolean);
@@ -123,19 +133,22 @@
       const len = (Number(s.duration || s.dt) || 0) / 1000;
       if (duration > 0 && len > 0 && Math.abs(len - duration) > 3) continue;
       if (!overlaps(simple(s.name), t)) continue;
-      const cand = (s.artists || s.ar || []).map(a => simple(a && a.name)).filter(Boolean);
-      if (artists.length && cand.length && !cand.some(c => artists.some(a => overlaps(a, c)))) continue;
+      const cand = (s.artists || s.ar || []).map((/** @type {any} */ a) => simple(a && a.name)).filter(Boolean);
+      if (artists.length && cand.length && !cand.some((/** @type {string} */ c) => artists.some((a) => overlaps(a, c)))) continue;
       return s.id;
     }
     return null;
   }
 
   // "<00:12.34>word <00:12.80>word" inside an LRC line -> [{ text, start, end }], or null without word tags
+  /** @param {string} lineStr @param {number} lineEnd */
   function parseEnhancedLrcWords(lineStr, lineEnd) {
     const re = /<(\d+):(\d+(?:\.\d+)?)>/g;
+    /** @type {{ time: number, from: number, to: number }[]} */
     const tags = [];
     let m;
     while ((m = re.exec(lineStr)) !== null) tags.push({ time: parseInt(m[1], 10) * 60 + parseFloat(m[2]), from: m.index, to: m.index + m[0].length });
+    /** @type {TimedWord[]} */
     const words = [];
     tags.forEach((tag, i) => {
       const next = tags[i + 1];
@@ -148,6 +161,7 @@
   }
 
   // 0..1: how alike two lines are, ignoring case, punctuation and spacing
+  /** @param {unknown} a @param {unknown} b */
   function lineSimilarity(a, b) {
     const x = simple(a);
     const y = simple(b);
@@ -169,6 +183,7 @@
   }
 
   // a line's words for karaoke: split at spaces, CJK text one character at a time
+  /** @param {unknown} text */
   function lineTokens(text) {
     const out = [];
     for (const w of String(text || '').replace(/<[^>]+>/g, '').trim().split(/\s+/)) {
@@ -177,18 +192,22 @@
     }
     return out;
   }
-  const sameWord = (a, b) => a === b || (a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a)));
+  const sameWord = (/** @type {string} */ a, /** @type {string} */ b) => a === b || (a.length >= 4 && b.length >= 4 && (a.startsWith(b) || b.startsWith(a)));
 
   // word times from `wordLines` (NetEase) for the synced lyrics on screen (`lines`, from lrclib/Genius). The two
   // sites split lines differently, so this goes word by word: each shown word takes the time of the same word
   // NetEase has around that line's time. Returns each line's words (or undefined for a line too few words of which
   // were found), or null when too little matched to be the same lyrics.
+  /** @param {any[]} lines @param {any[]} wordLines */
   function alignWordTimings(lines, wordLines) {
+    /** @type {number[]} */
     const shown = [];
-    (lines || []).forEach((l, i) => { if (l && l.text && !l.isGap && l.time >= 0) shown.push(i); });
+    (lines || []).forEach((/** @type {any} */ l, /** @type {number} */ i) => { if (l && l.text && !l.isGap && l.time >= 0) shown.push(i); });
+    /** @type {{ n: string, start: number, end: number }[]} */
     const pool = [];
     for (const wl of wordLines || []) for (const w of wl.words || []) { const n = simple(w.text); if (n) pool.push({ n, start: w.start, end: w.end }); }
     if (!shown.length || !pool.length) return null;
+    /** @type {{ i: number, next: number, toks: string[], hit: any[] }[]} */
     const matches = [];
     let p = 0;
     shown.forEach((i, k) => {
@@ -214,14 +233,15 @@
     if (matches.length / shown.length < 0.6) return null;
     // the two sites may have timed slightly different releases: move NetEase's words by the usual gap between a
     // line's start and its first word, so the words follow the line highlighting on screen
-    const gaps = matches.filter(m => m.hit[0]).map(m => lines[m.i].time - m.hit[0].start).sort((a, b) => a - b);
+    const gaps = matches.filter((m) => m.hit[0]).map((m) => lines[m.i].time - m.hit[0].start).sort((a, b) => a - b);
     const median = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 0;
     const shift = Math.abs(median) > 0.25 ? median : 0;
     const out = new Array(lines.length);
     for (const { i, next, toks, hit } of matches) {
       const line = lines[i];
       // words NetEase doesn't have get the time between their neighbours
-      const words = toks.map((tok, j) => (hit[j] ? { text: tok, start: hit[j].start + shift, end: hit[j].end + shift } : { text: tok, start: null, end: null }));
+      /** @type {any[]} */
+      const words = toks.map((/** @type {string} */ tok, /** @type {number} */ j) => (hit[j] ? { text: tok, start: hit[j].start + shift, end: hit[j].end + shift } : { text: tok, start: null, end: null }));
       for (let j = 0; j < words.length; j++) {
         if (words[j].start !== null) continue;
         let e = j;
@@ -232,12 +252,13 @@
         for (let m = j; m < e; m++) { words[m].start = from + step * (m - j); words[m].end = from + step * (m - j + 1); }
         j = e;
       }
-      out[i] = words.map(w => ({ text: w.text, start: Math.round(w.start * 1000) / 1000, end: Math.round(w.end * 1000) / 1000 }));
+      out[i] = words.map((w) => ({ text: w.text, start: Math.round(w.start * 1000) / 1000, end: Math.round(w.end * 1000) / 1000 }));
     }
     return out;
   }
 
   // the words to show for a line with timings: its own spelling when the word counts agree, else the timed words
+  /** @param {unknown} text @param {any} words */
   function timedWords(text, words) {
     if (!Array.isArray(words) || !words.length) return null;
     const own = String(text || '').replace(/<[^>]+>/g, '').trim().split(/\s+/).filter(Boolean);
@@ -246,6 +267,7 @@
   }
 
   // how far (0..1, by characters) the karaoke fill should be at time t for a line with word times
+  /** @param {any} words @param {number} t */
   function timedProgress(words, t) {
     if (!Array.isArray(words) || !words.length) return null;
     const total = words.reduce((n, w) => n + Math.max(1, w.text.length), 0);
@@ -262,6 +284,7 @@
   // Which lyric line is playing at time t: the line whose start has passed and whose next timed line hasn't begun.
   // startOf(i) is a line's start in seconds, below 0 for a line without a time. This runs every frame, so `last`
   // (the line from the previous frame) is checked first; nearly always it is still the one.
+  /** @param {number} count @param {(i: number) => number} startOf @param {number} t @param {number} [last] */
   function activeLineIndex(count, startOf, t, last = -1) {
     if (last >= 0 && last < count) {
       const start = startOf(last);

@@ -8,7 +8,7 @@
   const Core = window.UrielSyncCore;
   if (!Core || !window.localStorage) return;
   // UI language (i18n.js); without it everything stays English
-  const I18n = window.UrielI18n || (() => { const f = (s, ...a) => String(s).replace(/\{(\d)\}/g, (_, i) => (a[i] != null ? a[i] : '')); return { T: (s) => s, Tf: f, Tm: f, Th: f, text: (el, s, ...a) => { if (el) el.textContent = f(s, ...a); } }; })();
+  const I18n = window.UrielI18n || (() => { const f = (/** @type {any} */ s, /** @type {any[]} */ ...a) => String(s).replace(/\{(\d)\}/g, (_, i) => (a[i] != null ? a[i] : '')); return { T: (/** @type {any} */ s) => s, Tf: f, Tm: f, Th: f, text: (/** @type {HTMLElement} */ el, /** @type {any} */ s, /** @type {any[]} */ ...a) => { if (el) el.textContent = f(s, ...a); } }; })();
 
   const LINK_PAGE = 'https://cloverscripts.github.io/riff-muriel/link.html';
   const DAY = 864e5;
@@ -26,10 +26,10 @@
   let applying = false; // writes made by sync itself (not the user) don't count as local changes
   const rawSet = Storage.prototype.setItem;
   const rawRemove = Storage.prototype.removeItem;
-  const read = (k, fb = null) => { try { const v = localStorage.getItem(k); return v == null ? fb : JSON.parse(v); } catch (e) { return fb; } };
-  const write = (k, v) => { applying = true; try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} finally { applying = false; } };
-  const writeRaw = (k, v) => { applying = true; try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} finally { applying = false; } };
-  const hex = (n) => [...crypto.getRandomValues(new Uint8Array(n))].map((b) => b.toString(16).padStart(2, '0')).join('');
+  const read = (/** @type {string} */ k, /** @type {any} */ fb = null) => { try { const v = localStorage.getItem(k); return v == null ? fb : JSON.parse(v); } catch (e) { return fb; } };
+  const write = (/** @type {string} */ k, /** @type {any} */ v) => { applying = true; try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} finally { applying = false; } };
+  const writeRaw = (/** @type {string} */ k, /** @type {any} */ v) => { applying = true; try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} finally { applying = false; } };
+  const hex = (/** @type {number} */ n) => [...crypto.getRandomValues(new Uint8Array(n))].map((b) => b.toString(16).padStart(2, '0')).join('');
 
   const platform = (() => { try { return window.Capacitor && window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : 'web'; } catch (e) { return 'web'; } })();
   function defaultName() {
@@ -57,7 +57,7 @@
   const liveMembers = () => Object.entries(members).filter(([id, m]) => id !== device.id && m && !m.del);
 
   // ---------- what syncs ----------
-  const trackKey = (t) => {
+  const trackKey = (/** @type {any} */ t) => {
     if (!t) return '';
     const p = t.platform || 'youtube';
     if (t.id) return `${p}:${t.id}`;
@@ -65,13 +65,14 @@
     return `${p}:${(t.title || '').trim().toLowerCase()}|${(t.artist || '').trim().toLowerCase()}`;
   };
   // a followed artist is its YouTube Music channel when known (namesakes stay apart), otherwise its name
-  const artistKey = (a) => (!a ? '' : a.id ? `id:${a.id}` : a.name ? `name:${String(a.name).trim().toLowerCase()}` : '');
+  const artistKey = (/** @type {any} */ a) => (!a ? '' : a.id ? `id:${a.id}` : a.name ? `name:${String(a.name).trim().toLowerCase()}` : '');
+  /** @type {Record<string, { key: string, cat: string, id: (item: any) => string, sort?: (a: any, b: any) => number, cap?: number }>} */
   const LISTS = {
-    playlists: { key: 'devsize_playlists', cat: 'library', id: (p) => (p && p.id ? String(p.id) : '') },
+    playlists: { key: 'devsize_playlists', cat: 'library', id: (/** @type {any} */ p) => (p && p.id ? String(p.id) : '') },
     favorites: { key: 'devsize_favorites', cat: 'library', id: trackKey },
-    albums: { key: 'uriel_saved_albums', cat: 'library', id: (a) => (a && a.id ? String(a.id) : '') },
+    albums: { key: 'uriel_saved_albums', cat: 'library', id: (/** @type {any} */ a) => (a && a.id ? String(a.id) : '') },
     artists: { key: 'uriel_followed_artists', cat: 'library', id: artistKey },
-    history: { key: 'devsize_history', cat: 'history', id: (t) => (trackKey(t) ? `${trackKey(t)}@${t.playedAt || 0}` : ''), sort: (a, b) => (b.playedAt || 0) - (a.playedAt || 0), cap: 100 },
+    history: { key: 'devsize_history', cat: 'history', id: (/** @type {any} */ t) => (trackKey(t) ? `${trackKey(t)}@${t.playedAt || 0}` : ''), sort: (/** @type {any} */ a, /** @type {any} */ b) => (b.playedAt || 0) - (a.playedAt || 0), cap: 100 },
   };
   // the look of the app; sizes, volume, folders and anything else that belongs to one device stay local
   const SETTINGS = ['uriel_theme_mode', 'uriel_theme_accent', 'uriel_theme_intensity', 'uriel_theme_brightness', 'uriel_palette_style',
@@ -84,14 +85,14 @@
   const LISTENS_KEY = 'uriel_listens_v1';
   const WATCH = new Map(/** @type {[string, string][]} */ ([...Object.entries(LISTS).map(([n, l]) => [l.key, n]), ...SETTINGS.map((k) => [k, 'settings']), [LISTENS_KEY, 'listens']]));
 
-  const listItems = (name) => { const v = read(LISTS[name].key, []); return Array.isArray(v) ? v : []; };
+  const listItems = (/** @type {string} */ name) => { const v = read(LISTS[name].key, []); return Array.isArray(v) ? v : []; };
   const settingValues = () => Object.fromEntries(SETTINGS.map((k) => [k, localStorage.getItem(k)]));
   const lists = () => meta.lists || (meta.lists = {});
 
   // the lists couldn't be read (library-store.js): what looks missing isn't deleted, so nothing here may say it is
   const libraryUnavailable = () => { const L = window.UrielLibraryStore; return !!(L && L.store && L.store.mode() === 'unavailable'); };
 
-  function stamp(name) {
+  function stamp(/** @type {string} */ name) {
     if (libraryUnavailable()) return;
     const now = Date.now();
     if (name === 'settings') meta.settings = Core.stampMap(meta.settings || null, settingValues(), now);
@@ -106,9 +107,11 @@
   }
 
   // the part of this device's state the other side gets; `only` limits it to what just changed
+  /** @param {string[]} [only] */
   function snapshot(only) {
-    const want = (x) => !only || only.includes(x);
+    const want = (/** @type {string} */ x) => !only || only.includes(x);
     const cats = catsOn();
+    /** @type {Record<string, any>} */
     const s = { members };
     for (const [name, l] of Object.entries(LISTS)) {
       if (!cats[l.cat] || !want(name)) continue;
@@ -123,7 +126,7 @@
   }
 
   // ---------- applying what another device sent ----------
-  function applyRemote(r) {
+  function applyRemote(/** @type {any} */ r) {
     if (!r || typeof r !== 'object') return false;
     let any = false;
     const changedKeys = [];
@@ -142,7 +145,7 @@
       // history entries are per play, but the app keeps one per song: a song played on both devices would show twice
       if (name === 'history') {
         const seen = new Set();
-        res.items = res.items.filter((t) => { const k = trackKey(t); if (seen.has(k)) return false; seen.add(k); return true; });
+        res.items = res.items.filter((/** @type {any} */ t) => { const k = trackKey(t); if (seen.has(k)) return false; seen.add(k); return true; });
       }
       if (res.changed) { write(l.key, res.items); changedKeys.push(l.key); }
     }
@@ -150,6 +153,7 @@
       stamp('settings');
       // only the settings that sync, as strings: anything else a linked device sends (the sync server, custom
       // CSS, a background file path) would otherwise be written into this device's storage as it is
+      /** @type {{ values: Record<string, any>, meta: Record<string, any> }} */
       const theirs = { values: {}, meta: {} };
       for (const k of SETTINGS) {
         // a device still on Muriel or Mural sends the same settings as muriel_x
@@ -159,7 +163,7 @@
       }
       const res = Core.mergeMap({ values: settingValues(), meta: meta.settings }, theirs);
       meta.settings = res.meta;
-      res.changedKeys.forEach((k) => { writeRaw(k, res.values[k]); changedKeys.push(k); });
+      res.changedKeys.forEach((/** @type {string} */ k) => { writeRaw(k, res.values[k]); changedKeys.push(k); });
     }
     if (r.listens && cats.history) {
       const res = Core.mergeById(listens, r.listens, device.id);
@@ -185,8 +189,11 @@
 
   // ---------- noticing local changes ----------
   const dirty = new Set();
-  let flushTimer = null, listensTimer = null;
-  function noteLocal(key) {
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let flushTimer;
+  /** @type {ReturnType<typeof setTimeout> | null} */
+  let listensTimer = null;
+  function noteLocal(/** @type {string} */ key) {
     if (!group) return;
     const what = WATCH.get(key);
     if (what === 'listens') {
@@ -199,12 +206,12 @@
     clearTimeout(flushTimer);
     flushTimer = setTimeout(() => { const only = [...dirty]; dirty.clear(); broadcast(snapshot(only)); }, 400);
   }
-  Storage.prototype.setItem = function (key, value) {
+  Storage.prototype.setItem = function (/** @type {string} */ key, /** @type {string} */ value) {
     const r = rawSet.call(this, key, value);
     if (!applying && this === window.localStorage && WATCH.has(key)) noteLocal(key);
     return r;
   };
-  Storage.prototype.removeItem = function (key) {
+  Storage.prototype.removeItem = function (/** @type {string} */ key) {
     const r = rawRemove.call(this, key);
     if (!applying && this === window.localStorage && WATCH.has(key)) noteLocal(key);
     return r;
@@ -213,26 +220,32 @@
   // ---------- connections ----------
   // Peer ids on the public PeerJS server. Only the device with the smaller id dials, so two devices never
   // open two connections to each other.
-  const peerId = (id) => `uriel-${id}`;
+  const peerId = (/** @type {string} */ id) => `uriel-${id}`;
   // PeerJS's built-in TURN relays (eu-0 / us-0.turn.peerjs.com) no longer exist: their names don't resolve, and every
   // connection logged a burst of "Failed to resolve address" errors trying them. Google's STUN servers find the
   // route between two devices; a sync server set in uriel_sync_server (with its own config) still wins.
   const ICE_SERVERS = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
   const serverOpts = () => ({ debug: 0, config: { iceServers: ICE_SERVERS }, ...(read('uriel_sync_server') || {}) });
-  let peer = null, peerRetry = null, dialTimer = null;
+  /** @type {any} */
+  let peer = null;
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let peerRetry;
+  /** @type {ReturnType<typeof setInterval> | null} */
+  let dialTimer = null;
   const conns = new Map(); // deviceId -> { conn, ok }
 
   // PeerJS and the QR code maker load the first time sync needs them, not on every start of the app
+  /** @type {Record<string, Promise<void>>} */
   const libs = {};
-  const loadLib = (src) => libs[src] || (libs[src] = new Promise((resolve, reject) => {
+  const loadLib = (/** @type {string} */ src) => libs[src] || (libs[src] = new Promise((resolve, reject) => {
     const tag = document.createElement('script');
     tag.src = src;
-    tag.onload = resolve;
+    tag.onload = () => resolve();
     tag.onerror = () => { delete libs[src]; tag.remove(); reject(new Error(`${src} did not load`)); };
     document.head.appendChild(tag);
   }));
   // true when PeerJS is here; otherwise loads it and runs `then` once it is
-  const havePeer = (then) => {
+  const havePeer = (/** @type {() => void} */ then) => {
     if (typeof window.Peer === 'function') return true;
     loadLib('assets/peerjs.min.js').then(then, () => {});
     return false;
@@ -242,9 +255,9 @@
     if (peer || !active() || libraryUnavailable() || !havePeer(startPeer)) return;
     try { peer = new window.Peer(peerId(device.id), serverOpts()); } catch (e) { peer = null; return; }
     peer.on('open', () => { dialAll(); });
-    peer.on('connection', (conn) => accept(conn, false));
+    peer.on('connection', (/** @type {any} */ conn) => accept(conn, false));
     peer.on('disconnected', () => { setTimeout(() => { if (peer && !peer.destroyed && peer.disconnected) try { peer.reconnect(); } catch (e) {} }, 3000); });
-    peer.on('error', (err) => {
+    peer.on('error', (/** @type {any} */ err) => {
       const type = err && err.type;
       if (type === 'peer-unavailable') return; // that device just isn't open right now
       if (type === 'unavailable-id' || type === 'network' || type === 'server-error' || type === 'socket-error' || type === 'socket-closed') {
@@ -253,11 +266,11 @@
         peerRetry = setTimeout(startPeer, type === 'unavailable-id' ? 15000 : 30000);
       }
     });
-    clearInterval(dialTimer);
+    if (dialTimer) clearInterval(dialTimer);
     dialTimer = setInterval(dialAll, 12000);
   }
   function stopPeer() {
-    clearInterval(dialTimer);
+    if (dialTimer) clearInterval(dialTimer);
     dialTimer = null;
     for (const { conn } of conns.values()) try { conn.close(); } catch (e) {}
     conns.clear();
@@ -276,14 +289,16 @@
   }
 
   // Both sides prove they hold the group secret before anything else is exchanged.
+  /** @param {any} conn @param {boolean} outgoing @param {string} [expectId] */
   function accept(conn, outgoing, expectId) {
     if (!conn || !group) return;
     const nonce = hex(16);
+    /** @type {{ conn: any, ok: boolean, id: any, created: number }} */
     const st = { conn, ok: false, id: expectId || null, created: Date.now() };
     if (expectId) conns.set(expectId, st);
     const fail = () => { try { conn.close(); } catch (e) {} };
     conn.on('open', () => conn.send({ t: 'hi', id: device.id, nonce, v: 1 }));
-    conn.on('data', (msg) => {
+    conn.on('data', (/** @type {any} */ msg) => {
       if (!msg || typeof msg !== 'object') return;
       if (msg.t === 'hi') {
         const m = members[msg.id];
@@ -334,17 +349,19 @@
     conn.on('error', gone);
   }
 
+  /** @param {any} state @param {string} [exceptId] */
   function broadcast(state, exceptId) {
     if (!state) return;
     for (const [id, st] of conns) if (st.ok && id !== exceptId) try { st.conn.send({ t: 'state', s: state }); } catch (e) {}
   }
-  function sendTo(id, msg) { const st = conns.get(id); if (st && st.ok) try { st.conn.send(msg); } catch (e) {} }
+  function sendTo(/** @type {string} */ id, /** @type {any} */ msg) { const st = conns.get(id); if (st && st.ok) try { st.conn.send(msg); } catch (e) {} }
 
   // ---------- linking ----------
   const CODE_CHARS = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
   const newCode = () => [...crypto.getRandomValues(new Uint8Array(8))].map((b) => CODE_CHARS[b % CODE_CHARS.length]).join('');
-  const cleanCode = (c) => String(c || '').toUpperCase().replace(/[^0-9A-Z]/g, '').replace(/[O]/g, '0').slice(0, 8);
-  const showCode = (c) => `${c.slice(0, 4)}-${c.slice(4)}`;
+  const cleanCode = (/** @type {any} */ c) => String(c || '').toUpperCase().replace(/[^0-9A-Z]/g, '').replace(/[O]/g, '0').slice(0, 8);
+  const showCode = (/** @type {any} */ c) => `${c.slice(0, 4)}-${c.slice(4)}`;
+  /** @type {any} */
   let linking = null; // { code, peer, until, timer }
   // the devices found each other through the link service but couldn't open a direct connection: there is no
   // relay, so that needs both on the same network, and some networks (mobile data, guest Wi-Fi) still block it (#39)
@@ -366,19 +383,19 @@
     const code = newCode();
     const lp = new window.Peer(`uriel-link-${code.toLowerCase()}`, serverOpts());
     linking = { code, peer: lp, until: Date.now() + LINK_TTL, timer: setTimeout(stopLinking, LINK_TTL), error: '' };
-    lp.on('error', (err) => {
+    lp.on('error', (/** @type {any} */ err) => {
       if (!linking || linking.peer !== lp) return;
       if (err && err.type === 'unavailable-id') { startLinking(); return; }
       linking.error = "Couldn't reach the link service. Check your internet connection.";
       render();
     });
-    lp.on('connection', (conn) => {
+    lp.on('connection', (/** @type {any} */ conn) => {
       // shown right away, so this device doesn't sit there silent while the other one tries
       linking.knock = true;
       linking.error = '';
       render();
       const failed = setTimeout(() => { if (linking && linking.peer === lp) { linking.knock = false; linking.error = NO_DIRECT; render(); } }, 20000);
-      conn.on('data', (msg) => {
+      conn.on('data', (/** @type {any} */ msg) => {
         if (!msg || msg.t !== 'join' || !msg.id || msg.id === device.id) return;
         clearTimeout(failed);
         members = { ...members, [msg.id]: { name: String(msg.name || 'Device').slice(0, 40), kind: msg.kind === 'phone' ? 'phone' : 'computer', t: Date.now() } };
@@ -399,8 +416,9 @@
     render();
   }
 
+  /** @type {{ code?: string, busy?: boolean, error?: string } | null} */
   let joining = null;
-  function joinWithCode(raw) {
+  function joinWithCode(/** @type {unknown} */ raw) {
     if (libraryUnavailable()) return;
     const code = cleanCode(raw);
     if (code.length !== 8) { joining = { error: 'The code has 8 letters and numbers, like K7M2-9QXP.' }; render(); return; }
@@ -408,15 +426,15 @@
     joining = { code, busy: true };
     render();
     const tp = new window.Peer(`uriel-j-${hex(12)}`, serverOpts());
-    const done = (error) => { clearTimeout(timer); try { tp.destroy(); } catch (e) {} joining = error ? { code, error } : null; render(); };
+    const done = (/** @type {string} */ error) => { clearTimeout(timer); try { tp.destroy(); } catch (e) {} joining = error ? { code, error } : null; render(); };
     // a wrong code fails at once (peer-unavailable), so still waiting here means the device was found
     const timer = setTimeout(() => done(NO_DIRECT), 20000);
-    tp.on('error', (err) => done(err && err.type === 'peer-unavailable' ? 'No device is showing that code right now.' : "Couldn't reach the link service. Check your internet connection."));
+    tp.on('error', (/** @type {any} */ err) => done(err && err.type === 'peer-unavailable' ? 'No device is showing that code right now.' : "Couldn't reach the link service. Check your internet connection."));
     tp.on('open', () => {
       const conn = tp.connect(`uriel-link-${code.toLowerCase()}`, { reliable: true });
-      conn.on('iceStateChanged', (st) => { if (st === 'failed') done(NO_DIRECT); });
+      conn.on('iceStateChanged', (/** @type {any} */ st) => { if (st === 'failed') done(NO_DIRECT); });
       conn.on('open', () => conn.send({ t: 'join', id: device.id, name: device.name, kind, v: 1 }));
-      conn.on('data', (msg) => {
+      conn.on('data', (/** @type {any} */ msg) => {
         if (!msg || msg.t !== 'welcome' || !msg.group || !msg.group.secret) return;
         if (group && group.id !== msg.group.id) leaveLocally();
         group = msg.group;
@@ -435,7 +453,7 @@
     });
   }
 
-  function unlink(id) {
+  function unlink(/** @type {string} */ id) {
     if (!members[id]) return;
     sendTo(id, { t: 'bye' });
     members = { ...members, [id]: { ...members[id], del: 1, t: Date.now() } };
@@ -452,6 +470,7 @@
     setTimeout(() => leaveLocally('This device left sync'), 600);
   }
   // keeps the music, playlists and everything else on this device; only the link is gone
+  /** @param {string} [msg] */
   function leaveLocally(msg) {
     stopLinking();
     stopPeer();
@@ -464,9 +483,9 @@
   }
 
   // ---------- continue listening ----------
-  const trackInfo = (t) => (t ? { id: t.id, title: t.title, artist: t.artist, album: t.album, thumbnail: t.thumbnail, platform: t.platform, url: t.url, duration: t.duration } : null);
+  const trackInfo = (/** @type {any} */ t) => (t ? { id: t.id, title: t.title, artist: t.artist, album: t.album, thumbnail: t.thumbnail, platform: t.platform, url: t.url, duration: t.duration } : null);
   let npTimer = null, lastNpSent = 0;
-  function publishNp(force) {
+  function publishNp(/** @type {boolean} */ force) {
     const C = window.UrielCore;
     if (!group || !catsOn().continue || !C || !C.state.currentTrack) return;
     const now = Date.now();
@@ -478,13 +497,14 @@
     updateContinue();
   }
 
+  /** @type {HTMLElement | null} */
   let banner = null;
   // "Not now" quiets that device for half an hour, and for the song it was playing for good: a device that keeps
   // playing sends a fresh update every 15 s, so remembering only that update brought the banner straight back
   const DISMISS_FOR = 30 * 60e3;
-  const songKey = (t) => (t ? String(t.id || `${t.artist || ''} - ${t.title || ''}`) : '');
-  const isDismissed = (d, e) => !!d && (d === e.t || (typeof d === 'object' && (Date.now() < d.until || d.key === songKey(e.track))));
-  function dismiss(id, e) { write(K.dismissed, { ...read(K.dismissed, {}), [id]: { key: songKey(e.track), until: Date.now() + DISMISS_FOR } }); }
+  const songKey = (/** @type {any} */ t) => (t ? String(t.id || `${t.artist || ''} - ${t.title || ''}`) : '');
+  const isDismissed = (/** @type {any} */ d, /** @type {any} */ e) => !!d && (d === e.t || (typeof d === 'object' && (Date.now() < d.until || d.key === songKey(e.track))));
+  function dismiss(/** @type {string} */ id, /** @type {any} */ e) { write(K.dismissed, { ...read(K.dismissed, {}), [id]: { key: songKey(e.track), until: Date.now() + DISMISS_FOR } }); }
   function candidate() {
     const C = window.UrielCore;
     if (!group || !catsOn().continue || !C || C.state.isPlaying) return null;
@@ -501,7 +521,7 @@
   function updateContinue() {
     const c = candidate();
     if (!c) { if (banner) { const b = banner; banner = null; b.classList.remove('show'); setTimeout(() => b.remove(), 400); } return; }
-    const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+    const fmt = (/** @type {any} */ s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
     if (!banner) {
       banner = document.createElement('div');
       banner.className = 'update-banner sync-continue';
@@ -517,9 +537,9 @@
     const { id, e } = c;
     const live = e.playing && Date.now() - e.t < 60e3;
     I18n.text(banner.querySelector('b'), live ? 'Playing on {0}' : 'Continue from {0}', e.name);
-    banner.querySelector('span').textContent = `${e.track.title || I18n.T('Unknown')}${e.track.artist ? ` · ${e.track.artist}` : ''} · ${fmt(e.pos || 0)}`;
-    banner.querySelector('.update-banner-later').onclick = () => { dismiss(id, e); updateContinue(); };
-    banner.querySelector('.update-banner-go').onclick = () => {
+    /** @type {HTMLElement} */ (banner.querySelector('span')).textContent = `${e.track.title || I18n.T('Unknown')}${e.track.artist ? ` · ${e.track.artist}` : ''} · ${fmt(e.pos || 0)}`;
+    /** @type {HTMLElement} */ (banner.querySelector('.update-banner-later')).onclick = () => { dismiss(id, e); updateContinue(); };
+    /** @type {HTMLElement} */ (banner.querySelector('.update-banner-go')).onclick = () => {
       const C = window.UrielCore;
       const at = (e.pos || 0) + (live ? (Date.now() - e.t) / 1000 : 0);
       dismiss(id, e);
@@ -532,19 +552,19 @@
   }
 
   // ---------- Settings → Sync ----------
-  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const toast = (m) => { try { window.UrielCore && window.UrielCore.toast(m, 'info'); } catch (e) {} };
+  const esc = (/** @type {any} */ s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => /** @type {Record<string, string>} */ ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const toast = (/** @type {string} */ m) => { try { window.UrielCore && window.UrielCore.toast(m, 'info'); } catch (e) {} };
   // UI language (i18n.js): data-i18n marks Uriel's own words in the HTML below; names only ever go into {0} slots
   // phones hand outside links to the browser; the desktop app opens https links in the default browser
-  const openUrl = (u) => { if (platform === 'ios' || platform === 'android') location.href = u; else window.open(u, '_blank'); };
-  const qrSvg = (text) => {
+  const openUrl = (/** @type {string} */ u) => { if (platform === 'ios' || platform === 'android') location.href = u; else window.open(u, '_blank'); };
+  const qrSvg = (/** @type {string} */ text) => {
     if (typeof window.qrcode !== 'function') { loadLib('assets/qrcode.js').then(render, () => {}); return ''; }
     const q = window.qrcode(0, 'M');
     q.addData(text);
     q.make();
     return q.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
   };
-  const ago = (t) => {
+  const ago = (/** @type {any} */ t) => {
     if (!t) return 'Not synced yet';
     const m = Math.round((Date.now() - t) / 60e3);
     if (m < 1) return 'Synced just now';
@@ -553,10 +573,11 @@
     return h < 48 ? `Synced ${h} h ago` : `Synced ${Math.round(h / 24)} days ago`;
   };
   const ICON = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="12" height="9" rx="1.5"/><path d="M5 17h6"/><rect x="15" y="8" width="7" height="13" rx="1.5"/><path d="M18 18h1"/></svg>';
-  const deviceIcon = (k) => (k === 'phone'
+  const deviceIcon = (/** @type {string} */ k) => (k === 'phone'
     ? '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>'
     : '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>');
 
+  /** @type {HTMLElement | null} */
   let section = null;
   function mount() {
     const nav = document.getElementById('settings-nav');
@@ -570,7 +591,7 @@
     section = document.createElement('div');
     section.className = 'settings-section sync-section';
     section.dataset.cat = 'sync';
-    about.parentElement.insertBefore(section, about);
+    /** @type {HTMLElement} */ (about.parentElement).insertBefore(section, about);
     section.addEventListener('click', onClick);
     section.addEventListener('submit', onSubmit);
     render();
@@ -621,7 +642,7 @@
     }
     const pairing = linking ? linkPanel() : wantCode || (joining && (joining.busy || joining.error)) ? joinForm() : linkButtons();
     parts.push(`<div class="m3-group"><div class="setting-item sync-block">${group && !linking ? '<span class="setting-name" data-i18n>Link another device</span>' : ''}${pairing}</div></div>`);
-    const sw = (c, name, hint) => `<div class="setting-item"><div class="setting-item-top" style="align-items:center;"><div style="display:flex;flex-direction:column;gap:2px;"><span class="setting-name" data-i18n>${name}</span><span class="sync-note" data-i18n>${hint}</span></div><button class="effect-switch-btn${cats[c] ? ' active' : ''}" type="button" data-act="cat" data-cat-key="${c}" aria-label="${name}" data-i18n-attr="aria-label"><span class="thumb"></span></button></div></div>`;
+    const sw = (/** @type {any} */ c, /** @type {string} */ name, /** @type {string} */ hint) => `<div class="setting-item"><div class="setting-item-top" style="align-items:center;"><div style="display:flex;flex-direction:column;gap:2px;"><span class="setting-name" data-i18n>${name}</span><span class="sync-note" data-i18n>${hint}</span></div><button class="effect-switch-btn${cats[c] ? ' active' : ''}" type="button" data-act="cat" data-cat-key="${c}" aria-label="${name}" data-i18n-attr="aria-label"><span class="thumb"></span></button></div></div>`;
     parts.push(`<div class="m3-group">
       ${sw('library', 'Library', 'Playlists, favorites, saved albums and the artists you follow')}
       ${sw('history', 'History and stats', 'Recently played and Encore')}
@@ -633,10 +654,10 @@
   }
 
   // re-renders keep a half-typed code
-  function paint(el, html) {
+  function paint(/** @type {HTMLElement} */ el, /** @type {string} */ html) {
     const typing = document.activeElement && document.activeElement.classList.contains('sync-code-input') && el.contains(document.activeElement) ? /** @type {HTMLInputElement} */ (document.activeElement).value : null;
     el.innerHTML = html;
-    if (typing !== null) { const i = el.querySelector('.sync-code-input'); if (i) { i.value = typing; i.focus(); } }
+    if (typing !== null) { const i = /** @type {HTMLInputElement | null} */ (el.querySelector('.sync-code-input')); if (i) { i.value = typing; i.focus(); } }
   }
 
   // ---------- home screen: "Sync your devices?" ----------
@@ -672,12 +693,12 @@
     renderInvite();
   }
 
-  function onSubmit(e) {
+  function onSubmit(/** @type {any} */ e) {
     e.preventDefault();
     const i = e.target.querySelector('.sync-code-input');
     if (i) joinWithCode(i.value);
   }
-  function onClick(e) {
+  function onClick(/** @type {any} */ e) {
     const b = e.target.closest('[data-act]');
     if (!b) return;
     const act = b.dataset.act;
@@ -704,14 +725,14 @@
   }
 
   // ---------- links from the QR code (uriel://link?code=…) ----------
-  function handleLink(url) {
+  function handleLink(/** @type {string} */ url) {
     // muriel:// is the same link from before the rename (the Sync page still makes it)
     const m = /^(?:uriel|muriel):\/\/link\/?\?(?:.*&)?code=([0-9A-Za-z-]+)/i.exec(String(url || ''));
     if (!m) return;
     if (window.showSettingsCategory) { const nav = document.getElementById('nav-settings'); if (nav) nav.click(); window.showSettingsCategory('sync'); }
     joinWithCode(m[1]);
   }
-  window.addEventListener('uriel:deeplink', (/** @type {CustomEvent} */ e) => handleLink(e.detail));
+  window.addEventListener('uriel:deeplink', (e) => handleLink(/** @type {CustomEvent} */ (e).detail));
   // another language, or its words just came in: the sentences with names in them are built here
   window.addEventListener('uriel:i18n', () => { if (section || document.getElementById('section-sync-invite')) render(); });
 

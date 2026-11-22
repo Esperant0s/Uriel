@@ -5,10 +5,11 @@
 // A key that already has a value under its new name keeps that value. Nothing happens once everything has moved.
 // test/storage-migrate.test.js runs this in Node.
 (function (root) {
-  const renamed = (k) => k.replace(/(^|:)(?:muriel|mural)_/g, '$1uriel_');
+  const renamed = (/** @type {string} */ k) => k.replace(/(^|:)(?:muriel|mural)_/g, '$1uriel_');
   // values that named the app: the Home button icon and the home layout
   const VALUES = /(^|:)uriel_(?:app_icon|home_layout)$/;
 
+  /** @param {Storage} ls */
   function migrate(ls) {
     const keys = [];
     for (let i = 0; i < ls.length; i++) { const k = ls.key(i); if (k != null) keys.push(k); }

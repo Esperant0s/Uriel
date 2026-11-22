@@ -7,10 +7,13 @@
 // test/track-audio.test.js runs this.
 (function () {
   const KEYS = ['speed', 'speedPitch', 'pitch', 'volume'];
+  /** @type {Record<string, number>} */
   const DEFAULTS = { speed: 1.0, speedPitch: 1.0, pitch: 0, volume: 1.0 };
+  /** @type {Record<string, [number, number]>} */
   const RANGE = { speed: [0.5, 2.0], speedPitch: [0.5, 2.0], pitch: [-12, 12], volume: [0, 2.0] };
-  const round2 = (v) => Math.round(v * 100) / 100;
+  const round2 = (/** @type {number} */ v) => Math.round(v * 100) / 100;
 
+  /** @param {string} key @param {unknown} v */
   function clampValue(key, v) {
     const n = Number(v);
     if (!Number.isFinite(n) || !RANGE[key]) return null;
@@ -20,8 +23,10 @@
   }
 
   // the tempo values a saved entry (or anything shaped like one) holds, filled in from `base`
+  /** @param {any} entry @param {any} [base] @returns {Record<string, number>} */
   function normalizeEntry(entry, base) {
     const b = base || DEFAULTS;
+    /** @type {Record<string, number>} */
     const out = {};
     for (const k of KEYS) {
       const v = entry && entry[k] != null ? clampValue(k, entry[k]) : null;
@@ -31,6 +36,7 @@
   }
 
   // the settings to play with: the global settings, with the song's own tempo values over them unless ignored
+  /** @param {any} globalSettings @param {any} entry @param {boolean} ignore */
   function effectiveSettings(globalSettings, entry, ignore) {
     const g = globalSettings || {};
     if (!entry || ignore) return { ...g };
@@ -38,6 +44,7 @@
   }
 
   // the store with `values` saved for `key` (a new object; null values remove the song's entry)
+  /** @param {any} store @param {string} key @param {any} values @param {number} [now] */
   function setEntry(store, key, values, now) {
     const next = { ...(store || {}) };
     if (!key) return next;
@@ -47,10 +54,12 @@
   }
 
   // drop entries that are not objects; keep at most `max` (the most recently changed)
+  /** @param {any} store @param {number} [max] */
   function cleanStore(store, max = 5000) {
     if (!store || typeof store !== 'object' || Array.isArray(store)) return {};
-    const entries = Object.entries(store).filter(([k, v]) => k && v && typeof v === 'object');
+    const entries = Object.entries(store).filter((/** @type {[string, any]} */ [k, v]) => k && v && typeof v === 'object');
     entries.sort((a, b) => (b[1].updatedAt || 0) - (a[1].updatedAt || 0));
+    /** @type {Record<string, any>} */
     const out = {};
     for (const [k, v] of entries.slice(0, max)) out[k] = { ...normalizeEntry(v), updatedAt: v.updatedAt || 0 };
     return out;
@@ -67,11 +76,13 @@
   ];
   const PRESET_KEYS = ['speed', 'speedPitch', 'pitch'];
 
+  /** @param {any} settings */
   function presetValues(settings) {
     const n = normalizeEntry(settings);
     return { speed: n.speed, speedPitch: n.speedPitch, pitch: n.pitch };
   }
 
+  /** @param {unknown} name @param {any} settings @param {number} [now] */
   function makePreset(name, settings, now) {
     const clean = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
     if (!clean) return null;
@@ -79,13 +90,15 @@
     return { id: 'tpu_' + t.toString(36) + Math.floor(Math.random() * 1e4).toString(36), name: clean, values: presetValues(settings) };
   }
 
+  /** @param {unknown} list */
   function cleanPresets(list) {
     if (!Array.isArray(list)) return [];
-    return list.filter(p => p && typeof p.id === 'string' && typeof p.name === 'string' && p.name.trim())
-      .map(p => ({ id: p.id, name: p.name.trim().slice(0, 40), values: presetValues(p.values) }));
+    return list.filter((/** @type {any} */ p) => p && typeof p.id === 'string' && typeof p.name === 'string' && p.name.trim())
+      .map((/** @type {any} */ p) => ({ id: p.id, name: p.name.trim().slice(0, 40), values: presetValues(p.values) }));
   }
 
   // does `settings` match the preset's values?
+  /** @param {any} preset @param {any} settings */
   function presetMatches(preset, settings) {
     if (!preset || !settings) return false;
     const s = normalizeEntry(settings);

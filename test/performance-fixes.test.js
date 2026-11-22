@@ -62,7 +62,7 @@ test('the frame cap defaults to 60, and capped loops wait on a timer instead of 
 test('the karaoke word fill follows the cap: it restyled the lyrics on every screen refresh', () => {
   const start = fnBody(app, 'startGradientLoop');
   assert.match(start, /isPhoneApp \? 30 : userFpsCap/);
-  assert.match(start, /gradientTimer = setTimeout/);
+  assert.match(start, /gradientTimer = (window\.)?setTimeout/);
 });
 
 test('list rows are measured once per width, not on every chunk of a scroll', () => {

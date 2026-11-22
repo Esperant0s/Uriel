@@ -3,23 +3,29 @@
 // a setting) carries the time it last changed on any device, and when two devices meet the newer version
 // wins item by item. Removing something leaves a dated "tombstone" so the removal spreads too. No network,
 // no DOM: sync.js runs it in the app, test/sync-core.test.js in Node.
-(function (root) {
+(function (/** @type {any} */ root) {
   // FNV-1a: cheap content fingerprint to notice "this item changed"
+  /** @param {string} str */
   function hash(str) {
     let h = 0x811c9dc5;
     for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
     return (h >>> 0).toString(16).padStart(8, '0');
   }
-  const fingerprint = (v) => hash(typeof v === 'string' ? v : JSON.stringify(v));
+  const fingerprint = (/** @type {unknown} */ v) => hash(typeof v === 'string' ? v : JSON.stringify(v));
 
   // SHA-256 for the link handshake (WebCrypto isn't available in every WebView context)
-  const K = [], H0 = [];
+  /** @type {number[]} */
+  const K = [];
+  /** @type {number[]} */
+  const H0 = [];
   (() => {
+    /** @type {number[]} */
     const primes = [];
     for (let n = 2; primes.length < 64; n++) if (primes.every((p) => n % p)) primes.push(n);
-    const frac = (x) => ((x - Math.floor(x)) * 0x100000000) >>> 0;
+    const frac = (/** @type {number} */ x) => ((x - Math.floor(x)) * 0x100000000) >>> 0;
     primes.forEach((p, i) => { K[i] = frac(Math.cbrt(p)); if (i < 8) H0[i] = frac(Math.sqrt(p)); });
   })();
+  /** @param {string} str */
   function sha256(str) {
     const bytes = new TextEncoder().encode(str);
     const padded = new Uint8Array(((bytes.length + 9 + 63) >> 6) << 6);
@@ -31,7 +37,7 @@
     dv.setUint32(padded.length - 4, bits >>> 0);
     const h = H0.slice();
     const w = new Uint32Array(64);
-    const ror = (x, n) => (x >>> n) | (x << (32 - n));
+    const ror = (/** @type {number} */ x, /** @type {number} */ n) => (x >>> n) | (x << (32 - n));
     for (let off = 0; off < padded.length; off += 64) {
       for (let i = 0; i < 16; i++) w[i] = dv.getUint32(off + i * 4);
       for (let i = 16; i < 64; i++) {
@@ -50,12 +56,15 @@
     return h.map((x) => (x >>> 0).toString(16).padStart(8, '0')).join('');
   }
 
+  /** @typedef {[number, string] | [number, string, number]} Meta */
   // meta entry: [changedAt, fingerprint] or [changedAt, '', 1] for a removal
-  const isGone = (m) => !!(m && m[2]);
+  const isGone = (/** @type {Meta | null | undefined} */ m) => !!(m && m[2]);
 
   // Notes what changed in a list since the last look. The first look (prev === null) dates everything to `base`
   // (long ago), so data that was there before linking never overrides a real edit made elsewhere.
+  /** @param {Record<string, Meta> | null} prev @param {any[]} items @param {(item: any) => string} keyOf @param {number} now @param {number} [base] */
   function stampList(prev, items, keyOf, now, base = 1) {
+    /** @type {Record<string, Meta>} */
     const meta = {};
     const first = !prev;
     prev = prev || {};
@@ -76,6 +85,7 @@
   }
 
   // newer wins; on a tie the bigger fingerprint, so both devices pick the same one
+  /** @param {Meta | undefined} l @param {Meta | undefined} r */
   function remoteWins(l, r) {
     if (!r) return false;
     if (!l) return true;
@@ -84,20 +94,24 @@
   }
 
   // Merges a list item by item. Keeps this device's order; things only the other device has go at the end.
+  /** @param {{ items?: any[], meta?: Record<string, Meta> }} local @param {{ items?: any[], meta?: Record<string, Meta> }} remote @param {(item: any) => string} keyOf @param {{ sort?: (a: any, b: any) => number, cap?: number }} [opts] */
   function mergeList(local, remote, keyOf, opts = {}) {
     const lItems = new Map(), rItems = new Map();
     for (const it of local.items || []) { const k = keyOf(it); if (k && !lItems.has(k)) lItems.set(k, it); }
     for (const it of remote.items || []) { const k = keyOf(it); if (k && !rItems.has(k)) rItems.set(k, it); }
+    /** @type {Record<string, Meta>} */
     const meta = {};
+    /** @type {Record<string, 'l' | 'r'>} */
     const pick = {};
     for (const k of new Set([...Object.keys(local.meta || {}), ...Object.keys(remote.meta || {})])) {
       const l = (local.meta || {})[k], r = (remote.meta || {})[k];
       const useRemote = remoteWins(l, r) && (isGone(r) || rItems.has(k));
-      meta[k] = useRemote ? r : (l || r);
+      meta[k] = /** @type {Meta} */ (useRemote ? r : (l || r));
       pick[k] = useRemote ? 'r' : 'l';
     }
+    /** @type {any[]} */
     const out = [];
-    const take = (k) => {
+    const take = (/** @type {string} */ k) => {
       if (isGone(meta[k])) return;
       const it = pick[k] === 'r' ? rItems.get(k) : lItems.get(k);
       if (it !== undefined) out.push(it);
@@ -109,12 +123,14 @@
     if (opts.sort) items = items.slice().sort(opts.sort);
     if (opts.cap) items = items.slice(0, opts.cap);
     const changed = items.length !== (local.items || []).length
-      || items.some((it, i) => fingerprint(it) !== fingerprint(local.items[i]));
+      || items.some((it, i) => fingerprint(it) !== fingerprint((local.items || [])[i]));
     return { items, meta, changed };
   }
 
   // settings: one value per key (null = not set)
+  /** @param {Record<string, Meta> | null} prev @param {Record<string, unknown>} values @param {number} now @param {number} [base] */
   function stampMap(prev, values, now, base = 1) {
+    /** @type {Record<string, Meta>} */
     const meta = {};
     const first = !prev;
     prev = prev || {};
@@ -126,19 +142,22 @@
     return meta;
   }
 
+  /** @param {{ values: Record<string, unknown>, meta: Record<string, Meta> }} local @param {{ values?: Record<string, unknown>, meta?: Record<string, Meta> }} remote */
   function mergeMap(local, remote) {
     const values = { ...local.values }, meta = { ...local.meta };
     const changedKeys = [];
+    const remoteValues = remote.values || {};
     for (const [k, r] of Object.entries(remote.meta || {})) {
-      if (!(k in (remote.values || {}))) continue;
+      if (!(k in remoteValues)) continue;
       if (!remoteWins(meta[k], r)) continue;
       meta[k] = r;
-      if (values[k] !== remote.values[k]) { values[k] = remote.values[k]; changedKeys.push(k); }
+      if (values[k] !== remoteValues[k]) { values[k] = remoteValues[k]; changedKeys.push(k); }
     }
     return { values, meta, changedKeys };
   }
 
   // { id: { t, del?, ... } }: devices in the group, other devices' listening stats, what they're playing
+  /** @param {Record<string, any>} local @param {Record<string, any> | null | undefined} remote @param {string} [skipId] */
   function mergeById(local, remote, skipId) {
     const out = { ...local };
     let changed = false;
@@ -150,7 +169,9 @@
   }
 
   // tombstones only have to outlive the time a device can stay away; after that they're dropped
+  /** @param {Record<string, Meta> | null | undefined} meta @param {number} now @param {number} maxAge */
   function pruneMeta(meta, now, maxAge) {
+    /** @type {Record<string, Meta>} */
     const out = {};
     for (const [k, m] of Object.entries(meta || {})) if (!isGone(m) || now - m[0] < maxAge) out[k] = m;
     return out;

@@ -17,6 +17,30 @@ declare global {
     UrielAppIcon?: any;
     // the parts app.js is split into (shared/app/), each a function app.js calls once as it starts
     UrielApp?: any;
+    // set by app.js for the other scripts and the inline handlers in index.html
+    LiquidMotion?: any;
+    t?: (key: string, ...args: any[]) => string;
+    applyI18n?: (lang: string) => void;
+    audioEngine?: any;
+    bindHorizontalWheel?: (el: HTMLElement) => void;
+    createWavyProgress?: any;
+    openAlbum?: any;
+    openTrackArtModal?: any;
+    openTvKaraoke?: () => void;
+    closeTvKaraoke?: () => void;
+    playSmooth?: any;
+    pauseSmooth?: any;
+    setSiteTheme?: any;
+    toggleMiniWindow?: () => void;
+    toggleRepeat?: () => void;
+    toggleShuffle?: () => void;
+    updateFade?: any;
+    updateRowFade?: any;
+    urielArtNext?: (img: HTMLImageElement) => void;
+    // the phone layer (mobile/bridge.ts, mobile/device-music.ts)
+    UrielAudioElement?: (real: HTMLAudioElement) => any;
+    UrielDeviceMusic?: any;
+    UrielLog?: any;
     // shared/app/boot.js
     __riffFetchPatched?: boolean;
     __riffLogError?: (level: string, message: string, stack?: string | null) => void;
@@ -25,7 +49,7 @@ declare global {
     UrielSync?: any;
     UrielSyncCore?: any;
     UrielEncore?: any;
-    UrielProfiles?: any;
+    UrielProfiles?: UrielProfilesApi;
     UrielLibraryStore?: any;
     UrielI18n?: any;
     UrielLyricsMatch?: any;
@@ -41,14 +65,171 @@ declare global {
     UrielBackup?: any;
     UrielShare?: any;
     UrielImportCore?: any;
+    UrielAudioEngine?: any;
+    UrielLibrary?: any;
     RiffShapes?: any;
     trackMatch?: any;
     URIEL_BUILD?: { sha?: string; [key: string]: unknown };
 
     // libraries loaded when first needed (shared/assets)
     Peer?: any;
+    Hls?: any;
     monaco?: any;
     qrcode?: any;
     webkitAudioContext?: typeof AudioContext;
+    webkitOfflineAudioContext?: typeof OfflineAudioContext;
   }
+
+  // what app.js keeps on its own elements between calls
+  interface Element {
+    _wheelBound?: boolean;
+    _isDraggingReorder?: boolean;
+    _lastStartIndex?: number;
+    _lastEndIndex?: number;
+    _closeTimer?: ReturnType<typeof setTimeout> | null;
+    _glideRaf?: number;
+    _glideTo?: number;
+    _hasInitialRendered?: boolean;
+    _rowMeasuredFor?: number;
+    _ticking?: boolean;
+    _vScrollHandler?: ((e: Event) => void) | null;
+    __artRemember?: unknown;
+    _pendingMedia?: unknown;
+    _lyricDist?: number;
+    _fadeBound?: boolean;
+    _renderedQueue?: unknown[] | null;
+    _renderedLen?: number;
+    _rowHeight?: number;
+    _morphAnim?: Animation | null;
+    _m3cHoverBound?: boolean;
+    _focusedIndex?: number;
+    _targetIndex?: number;
+    _hasToggleListener?: boolean;
+    __artTrack?: unknown;
+    __artTried?: unknown;
+  }
+
+  // A song as the app keeps it (queue, favorites, history, playlists). Services add their own fields, so the rest
+  // stay loose; mobile/types.d.ts has the phone layer's view of the same thing.
+  interface UrielTrack {
+    id: string;
+    title?: string;
+    artist?: string;
+    album?: string;
+    duration?: number;
+    thumbnail?: string;
+    platform?: string;
+    url?: string;
+    isLocal?: boolean;
+    addedAt?: number;
+    playedAt?: number;
+    [field: string]: any;
+  }
+  interface UrielPlaylist {
+    id: string;
+    name: string;
+    tracks: UrielTrack[];
+    cover?: string;
+    description?: string;
+    [field: string]: any;
+  }
+  // an album, single, EP or Daily Mix card from a search, an artist page or home
+  interface UrielAlbum {
+    id: string;
+    title?: string;
+    artist?: string;
+    cover?: string;
+    year?: string | number;
+    type?: string;
+    trackCount?: number;
+    gridCovers?: string[];
+    tracks?: UrielTrack[];
+    source?: string;
+    [field: string]: any;
+  }
+  interface UrielPreset {
+    id: string;
+    name: string;
+    settings: Record<string, any>;
+    [field: string]: any;
+  }
+  // app.js's state: the fields most of the app reads are typed, the rest stay loose
+  interface UrielAppState {
+    platform: string;
+    currentView: string;
+    previousView: string;
+    currentPlaylistId: string | null;
+    queue: UrielTrack[];
+    queueIndex: number;
+    unshuffledQueue: UrielTrack[] | null;
+    currentTrack: UrielTrack | null;
+    isPlaying: boolean;
+    isMuted: boolean;
+    volume: number;
+    repeatMode: string;
+    isRepeat: boolean;
+    isShuffle: boolean;
+    favorites: UrielTrack[];
+    history: UrielTrack[];
+    playlists: UrielPlaylist[];
+    localTracks: UrielTrack[];
+    loadToken: number;
+    serverPort: number;
+    [field: string]: any;
+  }
+
+  // a profile and window.UrielProfiles (profiles-core.js)
+  interface UrielProfile { id: string; name: string; color: string; emoji: string; created: number; [field: string]: any }
+  interface UrielProfilesApi {
+    id: string;
+    current(): UrielProfile;
+    list(): UrielProfile[];
+    create(opts: { name?: unknown; color?: unknown; emoji?: unknown }): UrielProfile;
+    update(id: string, patch: { name?: unknown; color?: unknown; emoji?: unknown }): any;
+    remove(id: string): boolean;
+    open(id: string): any;
+    peek(id: string, key: string): string | null;
+    isDevice(key: string): boolean;
+    COLORS: string[];
+  }
+
+  // what app.js hands each of its parts (shared/app/*.js): the common ones typed, the rest as app.js has them
+  interface UrielAppDeps {
+    isPhoneApp: boolean;
+    state: UrielAppState;
+    el: any;
+    Tm: (key: string, ...args: any[]) => string;
+    showToast: (message: string, kind?: string) => void;
+    escapeHtml: (value: unknown) => string;
+    [name: string]: any;
+  }
+
+  // newer than the DOM types here, or only in some browsers
+  interface HTMLMediaElement {
+    webkitPreservesPitch?: boolean;
+    mozPreservesPitch?: boolean;
+  }
+  interface CSSStyleDeclaration {
+    objectViewBox: string;
+  }
+  // Chromium only, both checked before use
+  interface Navigator {
+    getBattery?: () => Promise<{ level: number; charging: boolean; addEventListener(type: string, fn: () => void): void }>;
+    connection?: { saveData?: boolean; type?: string; effectiveType?: string };
+  }
+
+  // helpers the page loads as plain scripts before app.js (each also exports itself for the tests)
+  const normalizeSearch: typeof import('./search-text').normalizeSearch;
+  const isRtlText: typeof import('./lyrics-rtl').isRtlText;
+  const dedupeTracks: typeof import('./library-tools').dedupeTracks;
+  const TRACK_SORT_MODES: typeof import('./track-sort').TRACK_SORT_MODES;
+  const sortTracks: typeof import('./track-sort').sortTracks;
+  const backfillAddedAt: typeof import('./track-sort').backfillAddedAt;
+  const librarySortMode: typeof import('./track-sort').librarySortMode;
+  const sortLibrary: typeof import('./track-sort').sortLibrary;
+  const isSameSong: typeof import('./track-sort').isSameSong;
+  const dedupeFavoriteTracks: typeof import('./track-sort').dedupeFavoriteTracks;
+  const favoriteIndex: typeof import('./track-sort').favoriteIndex;
+  // hls.js, loaded with the first HLS stream
+  const Hls: any;
 }

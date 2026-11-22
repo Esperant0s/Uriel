@@ -10,18 +10,23 @@
 // - a result can be remembered for a while (`cacheMs`)
 // - a background run that failed is not tried again until its backoff has passed (it doubles per failure)
 
+/** @type {Record<string, number>} */
 const PRIORITY = { play: 0, normal: 1, background: 2 };
 
+/** @typedef {{ key: string | null, priority: string, task: (o: { priority: string }) => Promise<any>, cacheMs: number, seq: number, promise: Promise<any>, resolve: (v: any) => void, reject: (e: any) => void }} Job */
 function createTaskQueue({ limit = 2, backgroundLimit = 1, now = () => Date.now(), backoffBaseMs = 60 * 1000, backoffMaxMs = 30 * 60 * 1000, maxEntries = 500, playExclusive = true } = {}) {
+  /** @type {Job[]} */
   const pending = [];
+  /** @type {Map<string, Job>} */
   const inflight = new Map(); // key -> job
   const cache = new Map(); // key -> { value, expires }
   const failures = new Map(); // key -> { count, until }
   const running = { total: 0, play: 0, background: 0 };
   let seq = 0;
 
-  const trim = (map) => { while (map.size > maxEntries) map.delete(map.keys().next().value); };
+  const trim = (/** @type {Map<any, any>} */ map) => { while (map.size > maxEntries) map.delete(map.keys().next().value); };
 
+  /** @param {Job} job @param {boolean} playWaiting */
   function canStart(job, playWaiting) {
     if (job.priority === 'play') return running.total < limit || running.play === 0;
     if (playExclusive && (running.play > 0 || playWaiting)) return false;
@@ -40,6 +45,7 @@ function createTaskQueue({ limit = 2, backgroundLimit = 1, now = () => Date.now(
     }
   }
 
+  /** @param {Job} job */
   function start(job) {
     const p = job.priority;
     running.total++;
@@ -74,9 +80,10 @@ function createTaskQueue({ limit = 2, backgroundLimit = 1, now = () => Date.now(
   }
 
   // task: () => Promise. opts: { key, priority: 'play' | 'normal' | 'background', cacheMs, noRetry }
+  /** @param {(o: { priority: string }) => Promise<any>} task @param {{ key?: string, priority?: string, cacheMs?: number, noRetry?: boolean }} [opts] @returns {Promise<any>} */
   function run(task, opts = {}) {
     const key = opts.key || null;
-    const priority = PRIORITY[opts.priority] !== undefined ? opts.priority : 'normal';
+    const priority = opts.priority && PRIORITY[opts.priority] !== undefined ? opts.priority : 'normal';
     if (key) {
       const hit = cache.get(key);
       if (hit && hit.expires > now()) return Promise.resolve(hit.value);
@@ -96,7 +103,7 @@ function createTaskQueue({ limit = 2, backgroundLimit = 1, now = () => Date.now(
         return Promise.reject(Object.assign(new Error('yt-dlp: backing off after a failure'), { code: 'BACKOFF' }));
       }
     }
-    const job = { key, priority, task, cacheMs: Number(opts.cacheMs) || 0, seq: seq++ };
+    const job = /** @type {Job} */ ({ key, priority, task, cacheMs: Number(opts.cacheMs) || 0, seq: seq++ });
     job.promise = new Promise((resolve, reject) => { job.resolve = resolve; job.reject = reject; });
     if (key) inflight.set(key, job);
     pending.push(job);
@@ -104,11 +111,13 @@ function createTaskQueue({ limit = 2, backgroundLimit = 1, now = () => Date.now(
     return job.promise;
   }
 
+  /** @param {string} key */
   function backingOff(key) {
     const f = key && failures.get(key);
     return !!(f && f.until > now());
   }
 
+  /** @param {string} key */
   function forget(key) { cache.delete(key); failures.delete(key); }
 
   function stats() { return { running: { ...running }, pending: pending.length, cached: cache.size, failing: failures.size }; }
@@ -117,6 +126,7 @@ function createTaskQueue({ limit = 2, backgroundLimit = 1, now = () => Date.now(
 }
 
 // yt-dlp (and the JS runtime it starts, which inherits it) runs below the app and the desktop
+/** @param {number | undefined} pid @param {typeof import('os')} [os] */
 function lowerPriority(pid, os = require('os')) {
   if (!pid) return false;
   try {

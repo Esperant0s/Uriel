@@ -10,13 +10,16 @@
   const $ = (id) => document.getElementById(id);
   const profileId = () => (window.UrielProfiles && window.UrielProfiles.id) || 'default';
   const isPhone = () => !!(window.electronAPI && window.electronAPI.isMobile);
+  /** @type {any} */
   let core = null;
   let account = { connected: false, username: '', error: '' };
   let enabled = (() => { try { return localStorage.getItem(ENABLED) !== 'false'; } catch (e) { return true; } })();
   const tracker = L.createTracker();
+  /** @type {ReturnType<typeof setInterval> | null} */
   let pollTimer = null;
   let pollUntil = 0;
 
+  /** @param {string} route @param {object} [body] */
   async function api(route, body = {}) {
     if (!core) return { success: false, error: 'Uriel is still starting' };
     try {
@@ -33,6 +36,7 @@
   }
 
   // ---------- Settings card and dialog ----------
+  /** @param {string} text @param {boolean} [isError] */
   function setStatus(text, isError) {
     const s = $('lastfm-modal-status');
     if (!s) return;
@@ -43,11 +47,13 @@
 
   // UI language (i18n.js); the Last.fm name is filled in after translating, so it's never sent
   const I18N = window.UrielI18n;
-  const T = (s) => (I18N ? I18N.T(s) : s);
-  const Tf = (s, ...a) => (I18N ? I18N.Tf(s, ...a) : s.replace(/\{(\d+)\}/g, (m, i) => a[i]));
+  const T = (/** @type {string} */ s) => (I18N ? I18N.T(s) : s);
+  /** @param {string} s @param {...unknown} a */
+  const Tf = (s, ...a) => (I18N ? I18N.Tf(s, ...a) : s.replace(/\{(\d+)\}/g, (m, i) => String(a[i])));
   // the card's line is drawn before the words of another language arrive: draw it again when they do
   window.addEventListener('uriel:i18n', () => render());
 
+  /** @param {string} text */
   function cardLine(text) {
     const label = $('lastfm-status-label');
     if (label) label.textContent = text;
@@ -75,6 +81,7 @@
   }
 
   async function refresh() {
+    /** @type {string[]} */
     let profiles = [];
     try { profiles = window.UrielProfiles ? window.UrielProfiles.list().map((p) => p.id) : []; } catch (e) {}
     const r = await api('status', profiles.length ? { profiles } : {});
@@ -111,6 +118,7 @@
     return key || secret ? { apiKey: key, apiSecret: secret } : {};
   }
 
+  /** @param {any} r */
   function connected(r) {
     stopPolling();
     account = { connected: true, username: String(r.username || ''), error: '' };
@@ -191,12 +199,14 @@
 
   const active = () => account.connected && enabled;
 
+  /** @param {any} meta */
   async function announce(meta) {
     const r = await api('now-playing', meta);
     if (r.success) cardLine(`Now playing: ${meta.artist} — ${meta.track}`);
     else if (r.code === 'reauth') { account = { connected: false, username: '', error: r.error || '' }; render(); }
   }
 
+  /** @param {any} meta @param {number} timestamp */
   async function scrobble(meta, timestamp) {
     const r = await api('scrobble', { ...meta, timestamp });
     if (r.success && r.accepted) cardLine(`Scrobbled: ${meta.artist} — ${meta.track}`);
@@ -234,7 +244,7 @@
     if (!core || !core.audio) return;
     ['timeupdate', 'play', 'playing', 'pause', 'seeked', 'emptied', 'ended'].forEach((ev) => core.audio.addEventListener(ev, tick));
 
-    const on = (id, fn) => { const b = $(id); if (b) b.addEventListener('click', fn); };
+    const on = (/** @type {string} */ id, /** @type {() => void} */ fn) => { const b = $(id); if (b) b.addEventListener('click', fn); };
     on('btn-lastfm-open-modal', openDialog);
     on('btn-close-lastfm-modal', closeDialog);
     on('btn-cancel-lastfm-modal', closeDialog);
@@ -249,9 +259,9 @@
       if (enabled) announceCurrent();
     });
     const pass = $('lastfm-input-pass');
-    if (pass) pass.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); directSignIn(); } });
+    if (pass) pass.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => { if (e.key === 'Enter') { e.preventDefault(); directSignIn(); } });
     const m = $('lastfm-modal');
-    if (m) m.addEventListener('click', (e) => { if (e.target === m) closeDialog(); });
+    if (m) m.addEventListener('click', (/** @type {MouseEvent} */ e) => { if (e.target === m) closeDialog(); });
     // back from the browser sign-in on a phone: ask right away instead of waiting for the next poll
     document.addEventListener('visibilitychange', () => { if (!document.hidden && pollTimer) api('session').then((s) => { if (s.success) connected(s); }); });
     render();

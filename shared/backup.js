@@ -8,16 +8,20 @@
   if (!B) return;
   /** @type {(id: string) => any} */
   const $ = (id) => document.getElementById(id);
+  /** @type {any} */
   let core = null;
+  /** @param {string} m @param {string} [kind] */
   const toast = (m, kind) => { try { core && core.toast(m, kind || 'info'); } catch (e) {} };
+  /** @type {() => any} */
   const P = () => window.UrielProfiles || null;
-  const isDevice = (k) => { const p = P(); return p && p.isDevice ? p.isDevice(k) : false; };
+  const isDevice = (/** @type {string} */ k) => { const p = P(); return p && p.isDevice ? p.isDevice(k) : false; };
 
   async function appVersion() {
     try { return (window.electronAPI && window.electronAPI.getAppVersion && (await window.electronAPI.getAppVersion())) || ''; } catch (e) { return ''; }
   }
 
   // desktop: save dialog (main.js); phones: share sheet (mobile/electron-api.ts); a plain browser: a download
+  /** @param {string} name @param {string} text @param {string} kind */
   async function saveFile(name, text, kind) {
     const api = window.electronAPI;
     if (api && typeof api.saveTextFile === 'function') {
@@ -36,18 +40,19 @@
   }
 
   // ---------- playlist files ----------
+  /** @param {any[]} list @param {string} name */
   async function exportPlaylists(list, name) {
-    const valid = (list || []).filter((p) => p && Array.isArray(p.tracks));
+    const valid = (list || []).filter((/** @type {any} */ p) => p && Array.isArray(p.tracks));
     if (!valid.length) { toast('No playlists to export', 'info'); return; }
     const text = JSON.stringify(B.playlistFile(valid, { appVersion: await appVersion() }), null, 2);
     try {
       if ((await saveFile(name, text, 'playlists')) === 'saved') toast(valid.length === 1 ? `Exported "${valid[0].name}"` : `Exported ${valid.length} playlists`, 'success');
-    } catch (e) { toast(e.message || "Couldn't export", 'error'); }
+    } catch (e) { toast((e instanceof Error && e.message) || "Couldn't export", 'error'); }
   }
 
   function exportCurrent() {
     const s = core && core.state;
-    const pl = s && s.playlists.find((p) => p.id === s.currentPlaylistId);
+    const pl = s && s.playlists.find((/** @type {any} */ p) => p.id === s.currentPlaylistId);
     if (pl) exportPlaylists([pl], B.fileName(pl.name || 'playlist', 'json'));
   }
 
@@ -64,6 +69,7 @@
     input.click();
   }
 
+  /** @param {File[]} files */
   async function importPlaylistFiles(files) {
     if (!files.length || !core) return;
     const found = [];
@@ -74,7 +80,7 @@
     const playlists = found.filter((p) => p.tracks.length);
     if (!playlists.length) { toast('No playlists with songs in that file', 'error'); return; }
     // songs known only by title and artist get looked up first
-    const unmatched = playlists.flatMap((p) => p.tracks.filter((t) => t.needsMatch)).slice(0, 2000);
+    const unmatched = playlists.flatMap((p) => p.tracks.filter((/** @type {any} */ t) => t.needsMatch)).slice(0, 2000);
     const matched = new Map();
     if (unmatched.length) {
       toast(`Finding ${unmatched.length} song${unmatched.length === 1 ? '' : 's'} on YouTube…`, 'info');
@@ -114,6 +120,7 @@
 
   // ---------- backups ----------
   function ownEntries() {
+    /** @type {[string, string | null][]} */
     const out = [];
     try {
       for (let i = 0; i < localStorage.length; i++) {
@@ -139,7 +146,7 @@
     const day = new Date().toISOString().slice(0, 10);
     try {
       if ((await saveFile(B.fileName(`uriel-backup-${me.name || 'profile'}-${day}`, 'json'), JSON.stringify(data), 'backup')) === 'saved') toast('Backup saved', 'success');
-    } catch (e) { toast(e.message || "Couldn't save the backup", 'error'); }
+    } catch (e) { toast((e instanceof Error && e.message) || "Couldn't save the backup", 'error'); }
   }
 
   function pickBackupFile() {
@@ -149,13 +156,14 @@
     input.click();
   }
 
+  /** @param {File} file */
   async function restoreBackup(file) {
     if (!file || !core || libraryUnavailable()) return;
     let backup;
     try {
       if (file.size > B.LIMITS.fileBytes) throw new Error('That file is too big');
       backup = B.readBackup(await B.parseBackupFile(new Uint8Array(await file.arrayBuffer())), { isDevice });
-    } catch (e) { toast(e.message || "Couldn't read that file", 'error'); return; }
+    } catch (e) { toast((e instanceof Error && e.message) || "Couldn't read that file", 'error'); return; }
     restoreFrom(backup);
   }
 
@@ -199,18 +207,19 @@
   // live in the page's own storage; when that is lost, the files are still there, and Uriel offers the newest one.
   const AUTO_DAY = 'uriel_autobackup_day';
   const AUTO_DISMISSED = 'uriel_autobackup_dismissed';
-  const niceDay = (day) => { try { return new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return day; } };
+  const niceDay = (/** @type {string} */ day) => { try { return new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return day; } };
   const profileId = () => { try { return (P() && P().current().id) || 'default'; } catch (e) { return 'default'; } };
-  const autoUrl = (route, more = '') => `${core.base()}/api/${route}?profile=${encodeURIComponent(profileId())}${more}`;
+  const autoUrl = (/** @type {string} */ route, more = '') => `${core.base()}/api/${route}?profile=${encodeURIComponent(profileId())}${more}`;
   const libraryCounts = () => {
     const s = core.state || {};
     return { playlists: (s.playlists || []).length, favorites: (s.favorites || []).length, history: (s.history || []).length };
   };
-  const stored = (k) => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+  const stored = (/** @type {string} */ k) => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
 
   async function listAutoBackups() {
     try { return (await (await fetch(autoUrl('auto-backups'))).json()).backups || []; } catch (e) { return []; }
   }
+  /** @param {string} name */
   async function readAutoBackup(name) {
     const r = await fetch(autoUrl('auto-backup', `&name=${encodeURIComponent(name)}`));
     if (!r.ok) throw new Error("Couldn't read that backup");
@@ -270,7 +279,7 @@
       btn.className = 'btn-outline-pill';
       btn.textContent = 'Restore';
       btn.addEventListener('click', async () => {
-        try { if (restoreFrom(await readAutoBackup(b.name), { autoDay: b.day })) core.closeModal(modal); } catch (e) { toast(e.message || "Couldn't read that backup", 'error'); }
+        try { if (restoreFrom(await readAutoBackup(b.name), { autoDay: b.day })) core.closeModal(modal); } catch (e) { toast((e instanceof Error && e.message) || "Couldn't read that backup", 'error'); }
       });
       row.append(day, btn);
       box.appendChild(row);
@@ -279,7 +288,7 @@
   }
 
   function startAutoBackups() {
-    const on = (id, fn) => { const b = $(id); if (b) b.addEventListener('click', fn); };
+    const on = (/** @type {string} */ id, /** @type {() => void} */ fn) => { const b = $(id); if (b) b.addEventListener('click', fn); };
     on('btn-auto-backups', openAutoBackups);
     on('btn-close-auto-backups', () => core.closeModal($('auto-backup-modal')));
     showAutoBackupState();
@@ -292,7 +301,7 @@
   function hook() {
     core = window.UrielCore;
     if (!core) return;
-    const on = (id, fn) => { const b = $(id); if (b) b.addEventListener('click', fn); };
+    const on = (/** @type {string} */ id, /** @type {() => void} */ fn) => { const b = $(id); if (b) b.addEventListener('click', fn); };
     on('btn-export-playlist', exportCurrent);
     on('btn-export-all-playlists', exportAll);
     on('btn-import-json-playlists', pickPlaylistFiles);

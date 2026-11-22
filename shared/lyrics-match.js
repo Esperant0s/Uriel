@@ -8,6 +8,7 @@
   const BRACKETS = /\s*[([{【「『](.*?)[)\]}】」』]/g;
   const DASH = /\s+[-–—|]\s+/;
 
+  /** @param {unknown} s */
   function norm(s) {
     return String(s || '')
       .normalize('NFKD')
@@ -19,6 +20,7 @@
   }
 
   // drops "(Official Video)", "[Lyrics]", "(feat. X)" but keeps "(Remix)", "(Pt. 2)"; `all` drops every bracket
+  /** @param {unknown} s @param {boolean} [all] */
   function cleanTitle(s, all = false) {
     let t = String(s || '').replace(/[’‘`]/g, "'").replace(BRACKETS, (m, inner) => (all || NOISE.test(inner) || FEAT.test(inner + ' ') ? '' : m));
     t = t.replace(/\s+(feat\.?|ft\.?|featuring)\s.*$/i, '');
@@ -26,6 +28,7 @@
     return t.replace(/\s+/g, ' ').replace(/^[\s\-–—:]+|[\s\-–—:]+$/g, '').trim();
   }
 
+  /** @param {unknown} s */
   function cleanArtist(s) {
     return String(s || '')
       .replace(BRACKETS, '')
@@ -36,15 +39,17 @@
       .trim();
   }
 
+  /** @param {unknown} s */
   function splitArtists(s) {
     return String(s || '').split(/\s*(?:,|&|\+|;|\/|×|\bx\b|\band\b|\bfeat\.?|\bft\.?|\bfeaturing\b|\bwith\b)\s*/i).map((a) => a.trim()).filter(Boolean);
   }
 
-  const uniq = (list) => {
+  const uniq = (/** @type {string[]} */ list) => {
     const seen = new Set();
-    return list.filter((v) => { const k = norm(v); if (!k || seen.has(k)) return false; seen.add(k); return true; });
+    return list.filter((/** @type {string} */ v) => { const k = norm(v); if (!k || seen.has(k)) return false; seen.add(k); return true; });
   };
 
+  /** @param {unknown} title @param {unknown} artist */
   function parseForLyrics(title, artist) {
     const channel = cleanArtist(artist);
     let song = String(title || '');
@@ -53,20 +58,22 @@
     if (parts.length >= 2) {
       const left = parts[0], right = parts.slice(1).join(' - ');
       const ch = norm(channel), l = norm(left);
-      const leftIsArtist = !ch || (l && (l.includes(norm(splitArtists(channel)[0] || channel)) || ch.includes(norm(splitArtists(left)[0] || left)))) || /topic|vevo|records|music/i.test(artist || '');
+      const leftIsArtist = !ch || (l && (l.includes(norm(splitArtists(channel)[0] || channel)) || ch.includes(norm(splitArtists(left)[0] || left)))) || /topic|vevo|records|music/i.test(String(artist || ''));
       if (leftIsArtist) { fromTitle = cleanArtist(left); song = right; } else if (NOISE.test(right)) song = left; // "Song - Remastered 2011"
     }
     const titles = uniq([cleanTitle(song), cleanTitle(song, true)]);
     const lead = fromTitle || channel;
     // channel names often drop the spaces ("TheWeeknd"); lrclib lists "The Weeknd"
-    const spaced = (n) => (n && !/\s/.test(n) ? n.replace(/([a-z])([A-Z])/g, '$1 $2') : '');
+    const spaced = (/** @type {string} */ n) => (n && !/\s/.test(n) ? n.replace(/([a-z])([A-Z])/g, '$1 $2') : '');
     const artists = uniq([lead, splitArtists(lead)[0], channel, splitArtists(channel)[0], spaced(lead), spaced(channel)].filter(Boolean));
     // a label or lyrics channel, not the artist: then a result by someone else may still be the song
     const unsure = !fromTitle && (!channel || /\b(records?|music|entertainment|lyrics?|channel|tv|studios?|productions?)\b/i.test(channel));
     return { titles, artists, unsure };
   }
 
+  /** @param {unknown} s */
   function tokens(s) { return new Set(norm(s).split(' ').filter(Boolean)); }
+  /** @param {unknown} a @param {unknown} b */
   function overlap(a, b) {
     const A = tokens(a), B = tokens(b);
     if (!A.size || !B.size) return 0;
@@ -76,6 +83,7 @@
 
   // How alike two song titles are as a whole: "Drip" isn't "My Drip" and "Love" isn't "Love Again" (#47), but
   // "(Official Video)", "(feat. X)" and "- Remastered 2011" on the result don't count against it
+  /** @param {string} want @param {unknown} name */
   function titleMatch(want, name) {
     let got = cleanTitle(name);
     const parts = got.split(DASH);
@@ -88,6 +96,7 @@
 
   // like overlap, but words lots of artist names have don't count: "The Weeknd" isn't "The Kid LAROI" (#47)
   const COMMON = new Set(['the', 'a', 'an', 'and', 'of', 'lil', 'dj', 'mc', 'big', 'young']);
+  /** @param {string} a @param {unknown} b */
   function artistOverlap(a, b) {
     const A = [...tokens(a)].filter((t) => !COMMON.has(t));
     const B = new Set([...tokens(b)].filter((t) => !COMMON.has(t)));
@@ -99,6 +108,7 @@
   // than the studio song lrclib lists, and its lyrics then ran ahead of the singing (#33). Further apart than
   // this, a result's words can still show, untimed.
   const SYNC_TOLERANCE_S = 6;
+  /** @param {any} item @param {number} duration */
   function syncedFits(item, duration) {
     const len = Number(item && item.duration) || 0;
     return !(duration > 0 && len > 0 && Math.abs(len - duration) > SYNC_TOLERANCE_S);
@@ -106,22 +116,25 @@
 
   // Saved lyrics carry the length they were timed on, in LRC's own [length: m:ss] tag, so a saved file can be checked
   // against the cut that plays now: lyrics fetched for the studio song were shown on its music video too (#33).
+  /** @param {string} lrc @param {unknown} len */
   function withLength(lrc, len) {
     const s = Math.round(Number(len) || 0);
     return s > 0 ? `[length: ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}]\n${lrc}` : lrc;
   }
-  const dropLength = (text) => (text ? String(text).replace(/^\[length:[^\]\n]*\]\s*\n?/m, '') : text);
+  const dropLength = (/** @type {any} */ text) => (text ? String(text).replace(/^\[length:[^\]\n]*\]\s*\n?/m, '') : text);
   // true or false; null for timed lyrics saved before their length was kept
+  /** @param {any} text @param {number} duration */
   function savedFits(text, duration) {
     if (!(duration > 0) || !/^\[\d+:\d/m.test(text || '')) return true;
     const m = /^\[length:\s*(\d+):(\d+(?:\.\d+)?)\]/m.exec(text);
     return m ? syncedFits({ duration: Number(m[1]) * 60 + Number(m[2]) }, duration) : null;
   }
   // the words without their timing, for lyrics timed on another cut when there's nothing better
-  const untimed = (text) => dropLength(text).replace(/^\[\d+:\d+(?:\.\d+)?\]\s*/gm, '').replace(/<\d+:\d+(?:\.\d+)?>\s*/g, '');
+  const untimed = (/** @type {any} */ text) => dropLength(text).replace(/^\[\d+:\d+(?:\.\d+)?\]\s*/gm, '').replace(/<\d+:\d+(?:\.\d+)?>\s*/g, '');
 
   // lrclib search results -> the best one for this song, or null when nothing really matches. A result whose
   // length is too far off for its timing comes back with its plain lyrics only.
+  /** @param {unknown} list @param {{ titles: string[], artists: string[], unsure?: boolean }} want @param {number} duration */
   function pickBest(list, want, duration) {
     if (!Array.isArray(list)) return null;
     let best = null, bestScore = 0;

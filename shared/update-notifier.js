@@ -11,8 +11,8 @@
   const CHECK_EVERY = 6 * 3600 * 1000;
   const SNOOZE = 3 * 24 * 3600 * 1000;
   const store = {
-    get(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } },
-    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+    get(/** @type {string} */ k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } },
+    set(/** @type {string} */ k, /** @type {unknown} */ v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
   };
 
   const channel = build.channel || (window.Capacitor && window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : '');
@@ -21,6 +21,7 @@
   const isAndroid = channel === 'android';
   // the in-app installer, when this build has one (null on iOS and in the browser)
   const installer = (window.electronAPI && window.electronAPI.updates) || window.UrielAppUpdater || null;
+  /** @type {boolean | null} */
   let canInstall = null;
   const installable = async () => {
     if (canInstall === null) canInstall = !!(installer && await installer.supported().catch(() => false));
@@ -41,12 +42,14 @@
     }
   }
 
+  /** @param {string} url */
   function open(url) {
     if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) location.href = url; // the native shell hands outside links to the browser
     else window.open(url, '_blank');
   }
 
   // "Uriel 1.2.4" when the new build is a new version, else its build number
+  /** @param {any} update */
   function label(update) {
     if (update.version && update.version !== build.version) return `Uriel ${update.version}`;
     if (update.run && build.run && update.run > build.run) return `Build ${update.run}`;
@@ -60,36 +63,42 @@
   const listeners = new Set();
   const changed = () => listeners.forEach((fn) => fn());
 
+  /** @param {any} update */
   async function startUpdate(update) {
     if (phase === 'downloading' || phase === 'ready') return;
     phase = 'downloading';
     percent = 0;
     changed();
-    const result = await installer.download(update, (p) => {
+    const result = await installer.download(update, (/** @type {any} */ p) => {
       if (!p || !p.total) return;
       const next = Math.min(100, Math.floor((p.received / p.total) * 100));
       if (next !== percent) { percent = next; changed(); }
-    }).catch((e) => ({ ok: false, error: e && e.message }));
+    }).catch((/** @type {any} */ e) => ({ ok: false, error: e && e.message }));
     if (result && result.ok) phase = 'ready';
     else { phase = 'failed'; failure = (result && result.error) || ''; }
     changed();
   }
 
   async function finishUpdate() {
-    const result = await installer.install().catch((e) => ({ ok: false, error: e && e.message }));
+    const result = await installer.install().catch((/** @type {any} */ e) => ({ ok: false, error: e && e.message }));
     // Android: the first install needs "Install unknown apps" allowed for Uriel; install() opened that setting
     if (result && result.error === 'permission') { failure = 'permission'; changed(); }
     else if (!result || !result.ok) { phase = 'failed'; failure = (result && result.error) || ''; changed(); }
   }
 
+  /** @type {HTMLElement | null} */
   let banner = null;
+  /** @type {(() => void) | null} */
+  let bannerRender = null;
   function hideBanner() {
     if (!banner) return;
     const b = banner; banner = null;
-    listeners.delete(b.render);
+    if (bannerRender) listeners.delete(bannerRender);
+    bannerRender = null;
     b.classList.remove('show');
     setTimeout(() => b.remove(), 400);
   }
+  /** @param {any} update */
   async function showBanner(update) {
     if (banner) return;
     const snooze = store.get('uriel_update_snooze');
@@ -105,10 +114,10 @@
       <button type="button" class="update-banner-later" data-i18n>Later</button>
       <button type="button" class="update-banner-go" data-i18n>Download</button>`;
     const b = banner;
-    const title = b.querySelector('b');
-    const sub = b.querySelector('span');
+    const title = /** @type {HTMLElement} */ (b.querySelector('b'));
+    const sub = /** @type {HTMLElement} */ (b.querySelector('span'));
     const bar = /** @type {HTMLElement} */ (b.querySelector('.update-banner-progress'));
-    const later = b.querySelector('.update-banner-later');
+    const later = /** @type {HTMLElement} */ (b.querySelector('.update-banner-later'));
     const go = /** @type {HTMLElement} */ (b.querySelector('.update-banner-go'));
     const render = () => {
       const inProgress = phase === 'downloading';
@@ -145,6 +154,7 @@
       if (phase === 'idle') store.set('uriel_update_snooze', { sha: update.sha, until: Date.now() + SNOOZE });
       hideBanner();
     });
+    bannerRender = render;
     listeners.add(render);
     render();
     document.body.appendChild(b);
@@ -154,9 +164,10 @@
   // Settings > About: status line and "Check now" (then "Update" / "Restart now", or "Download" without an installer)
   const statusEl = document.getElementById('update-status');
   const checkBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('btn-check-updates'));
+  /** @type {any} */
   let current = null;
   let found = '';
-  const setStatus = (text) => {
+  const setStatus = (/** @type {string} */ text) => {
     if (!statusEl) return;
     found = text;
     renderStatus();
@@ -177,6 +188,7 @@
   }
   listeners.add(renderStatus);
 
+  /** @param {boolean} [manual] */
   async function check(manual) {
     if (!enabled) { if (manual) setStatus('Update checks run in the official builds'); return; }
     const last = store.get('uriel_update_last') || 0;
