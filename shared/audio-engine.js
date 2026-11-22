@@ -669,7 +669,7 @@
     }
 
 
-    async renderOffline(/** @type {AudioBuffer} */ sourceBuffer, /** @type {any} */ settingsOverride, /** @type {any} */ hqOverride) {
+    async renderOffline(/** @type {AudioBuffer} */ sourceBuffer, /** @type {any} */ settingsOverride, /** @type {any} */ hqOverride = undefined) {
       const s = settingsOverride || { ...this.audioSettings };
       const hq = hqOverride || { ...this.hqSettings };
       const useHq = this.hqEnabled;
@@ -871,6 +871,7 @@
     }
   }
 
+  if (typeof module !== 'undefined') module.exports = UrielAudioEngine;
   global.UrielAudioEngine = UrielAudioEngine;
 
 })(typeof window !== 'undefined' ? window : globalThis);

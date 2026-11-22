@@ -10,14 +10,30 @@ declare global {
   }
   interface Window {
     // app.js
-    UrielCore: any;
+    // what app.js hands the other scripts at its end (the phone layer has its own view of it in mobile/types.d.ts)
+    UrielCore: {
+      state: UrielAppState;
+      audio: HTMLAudioElement;
+      thumb(t: UrielTrack): string;
+      playTrack(track: UrielTrack, list?: UrielTrack[] | null, index?: number): unknown;
+      toast(message: UrielText, kind?: string): void;
+      reloadFromStorage(keys: string[]): void;
+      togglePlay(): void;
+      seek(seconds: number): void;
+      [key: string]: unknown;
+    };
     showSettingsCategory?: (cat: string) => void;
     UrielSettingsBack?: () => boolean;
     // desktop/preload.js on computers, mobile/electron-api.ts on phones
     electronAPI: any;
     // the phone app
     Capacitor?: { getPlatform(): string; isNativePlatform?(): boolean; Plugins?: any };
-    UrielAppUpdater?: any;
+    // the phone app's own updater (mobile/app-updater.ts)
+    UrielAppUpdater?: {
+      supported(): Promise<boolean>;
+      download(update: unknown, onProgress?: (p: { received?: number; total?: number }) => void): Promise<{ ok: boolean; version?: string; error?: string }>;
+      install(): Promise<{ ok: boolean; error?: string }>;
+    };
     UrielAppIcon?: { set(style: string): Promise<boolean | 'custom'> };
     // the parts app.js is split into, loaded before it; their deps stay loose (each takes the few it needs)
     UrielApp: {
@@ -35,7 +51,7 @@ declare global {
     };
     t?: (key: string, ...args: any[]) => string;
     applyI18n?: (lang: string) => void;
-    audioEngine?: any;
+    audioEngine?: InstanceType<typeof import("./audio-engine")>;
     bindHorizontalWheel?: (el: HTMLElement) => void;
     createWavyProgress?: (container: HTMLElement) => { set(percent: number): void };
     openAlbum?: (album: UrielAlbum) => Promise<void>;
@@ -94,9 +110,20 @@ declare global {
     UrielBackup?: typeof import("./backup-core");
     UrielShare: typeof import("./share-link");
     UrielImportCore: typeof import("./import-core");
-    UrielAudioEngine?: any;
+    UrielAudioEngine: typeof import("./audio-engine");
     UrielLibrary: typeof import("./library-pages");
-    RiffShapes?: any;
+    // m3shapes.js: the shapes the play button morphs between
+    RiffShapes: {
+      K: number;
+      HOLD_MS: number;
+      MORPH_MS: number;
+      ease(t: number): number;
+      ready(): boolean;
+      profile(i: number): Float32Array;
+      count(): number;
+      next(current?: number): number;
+      rebuild?(): string;
+    };
     trackMatch: typeof import("./track-match");
     URIEL_BUILD?: { sha?: string; repo?: string; channel?: string; [key: string]: unknown };
 
@@ -392,6 +419,10 @@ declare global {
   }
 
   // newer than the DOM types here, or only in some browsers
+  interface AudioContext {
+    sinkId?: string;
+    setSinkId?(id: string): Promise<void>;
+  }
   interface HTMLMediaElement {
     webkitPreservesPitch?: boolean;
     mozPreservesPitch?: boolean;
