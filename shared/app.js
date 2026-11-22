@@ -7039,7 +7039,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const sleepAtEnd = state.sleepTimer && state.sleepTimer.mode === 'end';
         const step = !sleepAtEnd && canOverlap(el.nativeAudio) && !queueFinished() ? window.UrielTrim.crossfadeStep(cur, end, X, el.nativeAudio.playbackRate) : null;
         if (step && !xfade.prep) {
-          prepareCrossfade(window.UrielTrim.crossfadePoint(end, X), end);
+          const point = window.UrielTrim.crossfadePoint(end, X);
+          if (point !== null) prepareCrossfade(point, end);
         } else if (!step && !xfade.prep) {
           const fade = window.UrielTrim.endFadeSeconds(cur, end, X, el.nativeAudio.playbackRate);
           if (fade > 0) {
@@ -15221,7 +15222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const result = tracks.length ? await window.UrielDownloadBatch.runDownloadBatch(tracks, downloadOne, {
         concurrency: 2, signal: batchAbort.signal, onProgress: setProgress,
       }) : { done: [], failed: [], aborted: batchAbort.signal.aborted };
-      for (const f of result.failed) console.error('Download failed:', f.item.title || f.item.url || '', f.error && f.error.message);
+      for (const f of result.failed) console.error('Download failed:', f.item.title || f.item.url || '', f.error instanceof Error ? f.error.message : f.error);
       const done = result.done.length;
       const failedTracks = result.failed.map((/** @type {{ item: UrielTrack }} */ f) => f.item);
       if (shown()) { el.btnConfirmDownload.disabled = false; setDownloadRunning(false); setDownloadProgress(null); }

@@ -157,7 +157,7 @@
   }
 
   // { id: { t, del?, ... } }: devices in the group, other devices' listening stats, what they're playing
-  /** @param {Record<string, any>} local @param {Record<string, any> | null | undefined} remote @param {string} [skipId] */
+  /** @param {Record<string, any>} local @param {Record<string, any> | null | undefined} remote @param {string | null} [skipId] */
   function mergeById(local, remote, skipId) {
     const out = { ...local };
     let changed = false;

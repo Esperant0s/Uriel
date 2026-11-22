@@ -4,8 +4,8 @@
 // JSON button under "Create playlist". What goes in and what is let back in is in backup-core.js.
 // Files are saved with the desktop save dialog, or handed to the share sheet on phones (electronAPI.saveTextFile).
 (function () {
+  if (!window.UrielBackup) return;
   const B = window.UrielBackup;
-  if (!B) return;
   /** @type {(id: string) => any} */
   const $ = (id) => document.getElementById(id);
   /** @type {any} */

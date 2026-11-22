@@ -189,7 +189,7 @@
     return store;
   }
 
-  const api = { LISTS, MOVED, isLibraryKey, createStore, idbBackend, attach, ready: Promise.resolve('local'), store: null };
+  const api = { LISTS, MOVED, isLibraryKey, createStore, idbBackend, attach, ready: Promise.resolve('local'), store: /** @type {ReturnType<typeof createStore> | null} */ (null) };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.UrielLibraryStore = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -12,7 +12,7 @@ window.UrielApp.radio = function ({ Lib, state, getBlocks, isBlocked, Tm, showTo
 
   // ---- song radio (#28): a mix of songs like one song, or a few picked together; the queue grows as it plays ----
   // Settings > Tracks > Song radio shows or hides its buttons (on unless turned off).
-  /** @typedef {{ id: number, seeds: any[], label: string, ids: Set<string>, keys: Set<string>, loading: boolean, exhausted: boolean }} SongRadio */
+  /** @typedef {{ id: number, seeds: UrielTrack[], label: UrielText, ids: Set<string>, keys: Set<string>, loading: boolean, exhausted: boolean }} SongRadio */
   /** @type {{ current: SongRadio | null, nextId: number }} */
   const songRadio = { current: null, nextId: 1 };
   function songRadioEnabled() {

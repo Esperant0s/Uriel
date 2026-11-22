@@ -5,8 +5,8 @@
 // each other directly (WebRTC, encrypted) whenever they're open at the same time. A public PeerJS server only
 // introduces them to each other; it never sees the data. Merging (who wins when both changed) is in sync-core.js.
 (() => {
+  if (!window.UrielSyncCore || !window.localStorage) return;
   const Core = window.UrielSyncCore;
-  if (!Core || !window.localStorage) return;
   // UI language (i18n.js); without it everything stays English
   const I18n = window.UrielI18n || (() => { const f = (/** @type {any} */ s, /** @type {any[]} */ ...a) => String(s).replace(/\{(\d)\}/g, (_, i) => (a[i] != null ? a[i] : '')); return { T: (/** @type {any} */ s) => s, Tf: f, Tm: f, Th: f, text: (/** @type {HTMLElement} */ el, /** @type {any} */ s, /** @type {any[]} */ ...a) => { if (el) el.textContent = f(s, ...a); } }; })();
 
@@ -553,7 +553,7 @@
 
   // ---------- Settings → Sync ----------
   const esc = (/** @type {any} */ s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => /** @type {Record<string, string>} */ ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-  const toast = (/** @type {string} */ m) => { try { window.UrielCore && window.UrielCore.toast(m, 'info'); } catch (e) {} };
+  const toast = (/** @type {UrielText} */ m) => { try { window.UrielCore && window.UrielCore.toast(m, 'info'); } catch (e) {} };
   // UI language (i18n.js): data-i18n marks Uriel's own words in the HTML below; names only ever go into {0} slots
   // phones hand outside links to the browser; the desktop app opens https links in the default browser
   const openUrl = (/** @type {string} */ u) => { if (platform === 'ios' || platform === 'android') location.href = u; else window.open(u, '_blank'); };

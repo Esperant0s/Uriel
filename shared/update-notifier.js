@@ -29,6 +29,7 @@
   };
 
   async function latestRelease() {
+    if (!api) return null;
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 10000);
     try {

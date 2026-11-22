@@ -18,62 +18,87 @@ declare global {
     // the phone app
     Capacitor?: { getPlatform(): string; isNativePlatform?(): boolean; Plugins?: any };
     UrielAppUpdater?: any;
-    UrielAppIcon?: any;
-    // the parts app.js is split into (shared/app/), each a function app.js calls once as it starts
-    UrielApp?: any;
+    UrielAppIcon?: { set(style: string): Promise<boolean | 'custom'> };
+    // the parts app.js is split into, loaded before it; their deps stay loose (each takes the few it needs)
+    UrielApp: {
+      plugins(deps: Record<string, unknown>, out: UrielPluginsPart): void;
+      imports(deps: Record<string, unknown>, out: UrielImportsPart): void;
+      radio(deps: Record<string, unknown>, out: UrielRadioPart): void;
+      lyrics(deps: Record<string, unknown>, out: UrielLyricsPart): void;
+      home(deps: Record<string, unknown>, out: UrielHomePart): void;
+      look(deps: Record<string, unknown>): { applyIconPack(pack: string): void };
+    };
     // set by app.js for the other scripts and the inline handlers in index.html
-    LiquidMotion?: any;
+    LiquidMotion?: {
+      open(element: HTMLElement, triggerEl: HTMLElement | null, axis?: string, onDone?: () => void): void;
+      close(element: HTMLElement, onDone?: () => void): void;
+    };
     t?: (key: string, ...args: any[]) => string;
     applyI18n?: (lang: string) => void;
     audioEngine?: any;
     bindHorizontalWheel?: (el: HTMLElement) => void;
-    createWavyProgress?: any;
-    openAlbum?: any;
-    openTrackArtModal?: any;
+    createWavyProgress?: (container: HTMLElement) => { set(percent: number): void };
+    openAlbum?: (album: UrielAlbum) => Promise<void>;
+    openTrackArtModal?: (track: UrielTrack, triggerEl?: HTMLElement | null) => void;
     openTvKaraoke?: () => void;
     closeTvKaraoke?: () => void;
-    playSmooth?: any;
-    pauseSmooth?: any;
-    setSiteTheme?: any;
+    playSmooth?: () => Promise<void>;
+    pauseSmooth?: () => void;
+    setSiteTheme?: (id: string, apply?: boolean) => void;
     toggleMiniWindow?: () => void;
     toggleRepeat?: () => void;
     toggleShuffle?: () => void;
-    updateFade?: any;
-    updateRowFade?: any;
+    updateFade?: (el: Element | null) => void;
+    updateRowFade?: (row: HTMLElement | null) => void;
     urielArtNext?: (img: HTMLImageElement) => void;
     // the phone layer (mobile/bridge.ts, mobile/device-music.ts)
     UrielAudioElement?: (real: HTMLAudioElement) => any;
-    UrielDeviceMusic?: any;
-    UrielLog?: any;
+    UrielDeviceMusic?: { rescan(ask?: boolean): Promise<number> };
+    UrielLog?: { add(level: string, message: unknown): void; text(): string; clear(): void };
     // shared/app/boot.js
     __riffFetchPatched?: boolean;
     __riffLogError?: (level: string, message: string, stack?: string | null) => void;
 
     // shared/*.js, each under its own name
-    UrielSync?: any;
-    UrielSyncCore?: any;
-    UrielEncore?: any;
+    // sync.js; encore.js and profiles.js use it
+    UrielSync?: {
+      listenDbs(): unknown[];
+      status(): unknown;
+      link(...args: never[]): unknown;
+      join(...args: never[]): unknown;
+      handleLink(...args: never[]): unknown;
+      stop(): void;
+    };
+    UrielSyncCore?: typeof import("./sync-core");
+    UrielEncore?: {
+      open(period?: string): void;
+      stats(period: string): unknown;
+      close(): void;
+      compact(keepDays?: number): unknown;
+      own(): unknown;
+      refresh(): void;
+    };
     UrielProfiles?: UrielProfilesApi;
-    UrielLibraryStore?: any;
-    UrielI18n?: any;
-    UrielLyricsMatch?: any;
-    UrielLyricsSources?: any;
-    UrielUpdates?: any;
-    UrielUpdateCore?: any;
-    UrielTrim?: any;
-    UrielTrackAudio?: any;
-    UrielPlaybackRecovery?: any;
-    UrielNowPlaying?: any;
-    UrielLastfm?: any;
-    UrielDownloadBatch?: any;
-    UrielBackup?: any;
-    UrielShare?: any;
-    UrielImportCore?: any;
+    UrielLibraryStore: typeof import("./library-store");
+    UrielI18n: typeof import("./i18n") & UrielI18nPage;
+    UrielLyricsMatch?: typeof import("./lyrics-match");
+    UrielLyricsSources: typeof import("./lyrics-sources");
+    UrielUpdates?: { check(): unknown };
+    UrielUpdateCore?: typeof import("./update-core");
+    UrielTrim: typeof import("./track-trim");
+    UrielTrackAudio: typeof import("./track-audio");
+    UrielPlaybackRecovery: typeof import("./playback-recovery");
+    UrielNowPlaying: typeof import("./now-playing");
+    UrielLastfm?: typeof import("./lastfm-core");
+    UrielDownloadBatch: typeof import("./download-batch");
+    UrielBackup?: typeof import("./backup-core");
+    UrielShare: typeof import("./share-link");
+    UrielImportCore: typeof import("./import-core");
     UrielAudioEngine?: any;
-    UrielLibrary?: any;
+    UrielLibrary: typeof import("./library-pages");
     RiffShapes?: any;
-    trackMatch?: any;
-    URIEL_BUILD?: { sha?: string; [key: string]: unknown };
+    trackMatch: typeof import("./track-match");
+    URIEL_BUILD?: { sha?: string; repo?: string; channel?: string; [key: string]: unknown };
 
     // libraries loaded when first needed (shared/assets)
     Peer?: any;
@@ -144,6 +169,21 @@ declare global {
     toString(): string;
   }
   type UrielText = string | UrielI18nMessage;
+  // what i18n.js adds for the page on top of its pure part (module.exports)
+  interface UrielI18nPage {
+    readonly lang: string;
+    T(s: string): string;
+    Tf(template: string, ...args: unknown[]): string;
+    Tm(template: string, ...args: unknown[]): UrielI18nMessage;
+    Th(template: string, ...argsHtml: unknown[]): string;
+    text(el: Element | null, template: UrielText, ...args: unknown[]): void;
+    setLang(wanted: unknown): Promise<boolean>;
+    connect(url: string): Promise<void>;
+    ready(template?: unknown, ms?: number): Promise<void>;
+    known(list: unknown[]): void;
+    refresh(): void;
+    strings(): string[];
+  }
   // an album, single, EP or Daily Mix card from a search, an artist page or home
   interface UrielAlbum {
     id: string;
@@ -345,8 +385,8 @@ declare global {
     isPhoneApp: boolean;
     state: UrielAppState;
     el: any;
-    Tm: (key: string, ...args: any[]) => string;
-    showToast: (message: string, kind?: string) => void;
+    Tm: (key: string, ...args: unknown[]) => UrielI18nMessage;
+    showToast: (message: UrielText, kind?: string) => void;
     escapeHtml: (value: unknown) => string;
     [name: string]: any;
   }

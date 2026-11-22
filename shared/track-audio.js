@@ -90,7 +90,7 @@
     return { id: 'tpu_' + t.toString(36) + Math.floor(Math.random() * 1e4).toString(36), name: clean, values: presetValues(settings) };
   }
 
-  /** @param {unknown} list */
+  /** @param {unknown} list @returns {{ id: string, name: string, builtin?: boolean, values: ReturnType<typeof presetValues> }[]} */
   function cleanPresets(list) {
     if (!Array.isArray(list)) return [];
     return list.filter((/** @type {any} */ p) => p && typeof p.id === 'string' && typeof p.name === 'string' && p.name.trim())

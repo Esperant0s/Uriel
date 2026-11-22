@@ -3,8 +3,8 @@
 // lastfm-core.js decides when (the scrobbling rules); the in-app server (server.js, /api/lastfm/*) talks to Last.fm
 // and keeps the login, so this page never sees the session key. Works the same on phones.
 (function () {
+  if (!window.UrielLastfm) return;
   const L = window.UrielLastfm;
-  if (!L) return;
   const ENABLED = 'uriel_lastfm_enabled';
   /** @type {(id: string) => any} */
   const $ = (id) => document.getElementById(id);

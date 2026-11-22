@@ -138,7 +138,7 @@
     const tr = lookup(norm(s));
     return tr === undefined ? s : keepSpace(s, tr);
   }
-  const T = (/** @type {unknown} */ s) => (typeof s === 'string' && lang !== 'en' ? plain(s) : s);
+  const T = (/** @type {string} */ s) => (typeof s === 'string' && lang !== 'en' ? plain(s) : s);
   const Tf = (/** @type {any} */ template, /** @type {any[]} */ ...args) => fill(T(template), args);
   // a message that remembers what it was made of: showToast and text() translate it when it is shown and again
   // when a missing translation comes in; as a string it is Tf's result
@@ -444,12 +444,14 @@
 
   // the getter is defined, not copied: Object.assign would read it once and freeze the language at startup, so
   // the language picker thought English was still on and ignored picking it again (#20)
-  root.UrielI18n = Object.defineProperty(Object.assign({}, core, {
+  /** @type {Omit<UrielI18nPage, 'lang'>} */
+  const page = {
     T, Tf, Tm, Th, text, setLang, connect, ready,
     known: (/** @type {any} */ list) => { for (const k of list || []) if (typeof k === 'string') known.add(k); },
     refresh: () => refresh(false),
     // the page's own words as index.html has them (what a switch asks for), for checking what is sent
     strings: () => [...new Set(statics.filter(Boolean).map((r) => norm(r.src)).concat(staticAttrs.filter(Boolean).map((r) => norm(r.src)))
       .map((s) => { const n = numbered(s); return n ? n.template : s; }))].filter(translatable),
-  }), 'lang', { get: () => lang, enumerable: true });
+  };
+  root.UrielI18n = Object.defineProperty(Object.assign({}, core, page), 'lang', { get: () => lang, enumerable: true });
 })(typeof window !== 'undefined' ? window : globalThis);

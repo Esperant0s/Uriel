@@ -342,7 +342,7 @@
   }
   // The library is empty and a backup isn't: the newest such backup, to offer once. `backups` is newest first,
   // each { name, counts }; `dismissed` is the one the user said no to.
-  /** @param {{ counts?: object, backups?: { name: string, counts?: object }[], dismissed?: string }} o */
+  /** @template {{ name: string, counts?: object }} B @param {{ counts?: object, backups?: B[], dismissed?: string }} o @returns {B | null} */
   function restoreOffer({ counts, backups, dismissed }) {
     if (!libraryIsEmpty(counts)) return null;
     const best = (backups || []).find((b) => b && AUTO_NAME.test(b.name) && !libraryIsEmpty(b.counts));
