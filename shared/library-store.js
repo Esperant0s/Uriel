@@ -15,7 +15,7 @@
 //    'unavailable': changes stay in memory only, because anything saved to localStorage would win over the real
 //    lists at the next start. app.js tells the user and sync.js stays off (it would read the gaps as deletions).
 // No DOM: test/library-store.test.js runs this in Node with a fake database.
-(function (/** @type {any} */ root) {
+(function (/** @type {{ UrielLibraryStore?: { store?: unknown, ready?: Promise<string> }, indexedDB?: IDBFactory, addEventListener?: Window['addEventListener'] }} */ root) {
   const LISTS = ['devsize_playlists', 'devsize_favorites', 'devsize_history'];
   // every profile's copy too ("uriel_p:<id>:devsize_playlists", profiles-core.js)
   const isLibraryKey = (/** @type {string} */ k) => LISTS.some((l) => k === l || (k.startsWith('uriel_p:') && k.endsWith(':' + l)));
@@ -27,8 +27,11 @@
   const RETRY_MS = [300, 1200];
 
   // base: the real localStorage ({ get, set, remove, keys }); db: { loadAll() -> Map, put(k, v), del(k) }
-  /** @param {any} base @param {any} db @param {{ onError?: (e: any, key?: string) => void, timeoutMs?: number, movedTimeoutMs?: number, retryMs?: number[] }} [o] */
+  /** @typedef {{ get(k: string): string | null, set(k: string, v: string): void, remove(k: string): void, keys(): string[] }} KvBase */
+  /** @typedef {{ loadAll(): Promise<Map<string, unknown>>, put(k: string, v: string): unknown, del(k: string): unknown }} KvDb */
+  /** @param {KvBase} base @param {KvDb} db @param {{ onError?: (e: unknown, key?: string) => void, timeoutMs?: number, movedTimeoutMs?: number, retryMs?: number[] }} [o] */
   function createStore(base, db, { onError = () => {}, timeoutMs = FIRST_OPEN_MS, movedTimeoutMs = MOVED_OPEN_MS, retryMs = RETRY_MS } = {}) {
+    /** @type {Map<string, string | null>} */
     const mem = new Map();
     const seq = new Map(); // a write's number per key, so an older write finishing late can't undo a newer one
     const pending = new Set(); // keys IndexedDB doesn't have yet
@@ -54,14 +57,15 @@
       });
     }
 
-    /** @type {{ get: (k: string) => any, set: (k: string, v: any) => void, remove: (k: string) => void, keys: () => string[], closing: (on?: boolean) => void, ready: Promise<string>, mode: () => string }} */
-    const store = /** @type {any} */ ({
+    // closing, ready and mode are added below, once what they use exists
+    /** @type {KvBase & { closing: (on?: boolean) => void, ready: Promise<string>, mode: () => string }} */
+    const store = /** @type {never} */ ({
       get: (/** @type {string} */ k) => {
         if (!isLibraryKey(k)) return base.get(k);
         if (mode === 'idb') return mem.has(k) ? mem.get(k) : null;
         return mode === 'unavailable' && mem.has(k) ? mem.get(k) : base.get(k);
       },
-      set: (/** @type {string} */ k, /** @type {any} */ v) => {
+      set: (/** @type {string} */ k, /** @type {string} */ v) => {
         if (mode === 'unavailable' && isLibraryKey(k)) { mem.set(k, String(v)); return; }
         if (mode !== 'idb' || !isLibraryKey(k)) return base.set(k, v);
         mem.set(k, String(v));
@@ -86,7 +90,7 @@
     // localStorage too, which wins at the next start
     store.closing = (on = true) => {
       closing = on;
-      if (on) for (const k of pending) if (mem.has(k)) keep(k, mem.get(k));
+      if (on) for (const k of pending) { const v = mem.get(k); if (v != null) keep(k, v); }
     };
 
     const loadWithin = (/** @type {number} */ ms) => {
@@ -152,7 +156,7 @@
       req.onerror = () => reject(req.error);
       req.onblocked = () => reject(new Error('IndexedDB is blocked'));
     }).catch((e) => { opening = null; throw e; })); // a retry opens it again rather than repeating this failure
-    const tx = (/** @type {IDBTransactionMode} */ mode, /** @type {(s: IDBObjectStore) => any} */ fn) => open().then((db) => new Promise((resolve, reject) => {
+    const tx = (/** @type {IDBTransactionMode} */ mode, /** @type {(s: IDBObjectStore) => IDBRequest} */ fn) => open().then((db) => new Promise((resolve, reject) => {
       const t = db.transaction('kv', mode);
       const out = fn(t.objectStore('kv'));
       t.oncomplete = () => resolve(out && 'result' in out ? out.result : undefined);
@@ -172,15 +176,17 @@
   }
 
   // for profiles-core.js: wrap the raw store it built, once
-  /** @param {any} base */
+  /** @param {KvBase} base */
   function attach(base) {
     if (root.UrielLibraryStore && root.UrielLibraryStore.store) return root.UrielLibraryStore.store;
     let idb = null;
     try { idb = root.indexedDB || null; } catch (e) {}
     if (!idb) return null;
     const store = createStore(base, idbBackend(idb), { onError: (e, k) => { try { console.warn('library storage', k || '', e); } catch (_) {} } });
-    root.UrielLibraryStore.store = store;
-    root.UrielLibraryStore.ready = store.ready;
+    // only the page calls this, where this file has put itself on window
+    const own = /** @type {NonNullable<typeof root.UrielLibraryStore>} */ (root.UrielLibraryStore);
+    own.store = store;
+    own.ready = store.ready;
     if (root.addEventListener) {
       root.addEventListener('pagehide', () => store.closing(true));
       root.addEventListener('beforeunload', () => store.closing(true));
