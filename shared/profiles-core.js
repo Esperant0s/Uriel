@@ -31,7 +31,7 @@
   // how a song sounds, worked out once per device; logins the in-app server keeps for every profile (bridge.ts)
   const DEVICE_PREFIXES = ['uriel_audio_analysis_', 'uriel_secret_'];
   /** @typedef {{ get: (k: string) => string | null, set: (k: string, v: string) => void, remove: (k: string) => void, keys: () => string[] }} RawStore */
-  /** @typedef {{ id: string, name: string, color: string, emoji: string, created: number, [field: string]: any }} Profile */
+  /** @typedef {{ id: string, name: string, color: string, emoji: string, created: number, [field: string]: unknown }} Profile */
   const isDevice = (/** @type {string} */ k) => DEVICE.has(k) || DEVICE_PREFIXES.some((p) => k.startsWith(p));
 
   const COLORS = ['#D0BCFF', '#A8C7FA', '#7FD8C0', '#C5E1A5', '#FDD663', '#FFB59A', '#F4A7C6', '#B8C4D0'];
@@ -71,7 +71,7 @@
   }
 
   // ---------- the profiles on this device ----------
-  const parse = (/** @type {any} */ s) => { try { return JSON.parse(s); } catch (e) { return null; } };
+  const parse = (/** @type {string | null} */ s) => { try { return JSON.parse(String(s)); } catch (e) { return null; } };
   const cleanName = (/** @type {unknown} */ s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, 24);
   const cleanEmoji = (/** @type {unknown} */ s) => String(s == null ? '' : s).trim().slice(0, 16);
   const cleanColor = (/** @type {unknown} */ c) => (/^#[0-9a-f]{6}$/i.test(String(c || '')) ? String(c).toUpperCase() : '');
@@ -171,7 +171,7 @@
   // clear/length, and window.localStorage itself for Object.keys(localStorage), localStorage.foo and `for in`.
   // Later patches of Storage.prototype (app.js for a full storage, sync.js to notice changes) wrap these, so they
   // see the keys as the app writes them.
-  /** @param {any} win */
+  /** @param {Window & typeof globalThis} win */
   function install(win) {
     if (win.UrielProfiles) return win.UrielProfiles;
     let ls;
@@ -184,7 +184,7 @@
       get: (/** @type {string} */ k) => native.getItem.call(ls, k),
       set: (/** @type {string} */ k, /** @type {string} */ v) => native.setItem.call(ls, k, v),
       remove: (/** @type {string} */ k) => native.removeItem.call(ls, k),
-      keys: () => { const out = []; for (let i = 0, n = native.length.call(ls); i < n; i++) out.push(native.key.call(ls, i)); return out; },
+      keys: () => { const out = []; for (let i = 0, n = native.length.call(ls); i < n; i++) out.push(/** @type {string} */ (native.key.call(ls, i))); return out; },
     };
     // playlists, favorites and history live in IndexedDB (library-store.js, loaded just before this file)
     const lib = win.UrielLibraryStore;
@@ -192,14 +192,14 @@
     // fixed for the life of the page: what is saved on the way out (the queue, Encore) still lands in this profile
     const id = activeId(store);
     const v = view(store, id);
-    /** @type {any} */
+    /** @type {Storage | null} */
     let proxy = null;
     const ours = (/** @type {unknown} */ s) => s === ls || (s != null && s === proxy);
-    P.getItem = function getItem(/** @type {string} */ k) { return ours(this) ? v.getItem(String(k)) : native.getItem.apply(this, arguments); };
-    P.setItem = function setItem(/** @type {string} */ k, /** @type {string} */ val) { return ours(this) ? v.setItem(String(k), String(val)) : native.setItem.apply(this, arguments); };
-    P.removeItem = function removeItem(/** @type {string} */ k) { return ours(this) ? v.removeItem(String(k)) : native.removeItem.apply(this, arguments); };
-    P.key = function key(/** @type {number} */ i) { return ours(this) ? v.key(i) : native.key.apply(this, arguments); };
-    P.clear = function clear() { return ours(this) ? v.clear() : native.clear.apply(this, arguments); };
+    P.getItem = function getItem(/** @type {string} */ k) { return ours(this) ? v.getItem(String(k)) : native.getItem.call(this, k); };
+    P.setItem = function setItem(/** @type {string} */ k, /** @type {string} */ val) { return ours(this) ? v.setItem(String(k), String(val)) : native.setItem.call(this, k, val); };
+    P.removeItem = function removeItem(/** @type {string} */ k) { return ours(this) ? v.removeItem(String(k)) : native.removeItem.call(this, k); };
+    P.key = function key(/** @type {number} */ i) { return ours(this) ? v.key(i) : native.key.call(this, i); };
+    P.clear = function clear() { return ours(this) ? v.clear() : native.clear.call(this); };
     Object.defineProperty(P, 'length', { configurable: true, enumerable: true, get() { return ours(this) ? v.length : native.length.call(this); } });
 
     try {
@@ -224,8 +224,8 @@
       id,
       current: () => list(store).find((p) => p.id === id) || firstProfile(),
       list: () => list(store),
-      create: (/** @type {any} */ opts) => create(store, opts),
-      update: (/** @type {string} */ pid, /** @type {any} */ patch) => update(store, pid, patch),
+      create: (/** @type {Parameters<typeof create>[1]} */ opts) => create(store, opts),
+      update: (/** @type {string} */ pid, /** @type {Parameters<typeof update>[2]} */ patch) => update(store, pid, patch),
       remove: (/** @type {string} */ pid) => remove(store, pid, id),
       // opens with the next load; profiles.js stops the music and reloads
       open: (/** @type {string} */ pid) => setActive(store, pid),
@@ -240,5 +240,5 @@
 
   const api = { PREFIX, FIRST, LIST, ACTIVE, DEVICE, COLORS, isDevice, rawKey, ownKey, view, list, activeId, create, update, remove, setActive, install };
   if (typeof module === 'object' && module.exports) module.exports = api;
-  else install(root);
+  else install(/** @type {Window & typeof globalThis} */ (root));
 })(typeof window !== 'undefined' ? window : globalThis);

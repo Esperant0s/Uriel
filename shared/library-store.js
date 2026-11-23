@@ -15,7 +15,7 @@
 //    'unavailable': changes stay in memory only, because anything saved to localStorage would win over the real
 //    lists at the next start. app.js tells the user and sync.js stays off (it would read the gaps as deletions).
 // No DOM: test/library-store.test.js runs this in Node with a fake database.
-(function (/** @type {{ UrielLibraryStore?: { store?: unknown, ready?: Promise<string> }, indexedDB?: IDBFactory, addEventListener?: Window['addEventListener'] }} */ root) {
+(function (/** @type {{ UrielLibraryStore?: { store?: ReturnType<typeof createStore> | null, ready?: Promise<string> }, indexedDB?: IDBFactory, addEventListener?: Window['addEventListener'] }} */ root) {
   const LISTS = ['devsize_playlists', 'devsize_favorites', 'devsize_history'];
   // every profile's copy too ("uriel_p:<id>:devsize_playlists", profiles-core.js)
   const isLibraryKey = (/** @type {string} */ k) => LISTS.some((l) => k === l || (k.startsWith('uriel_p:') && k.endsWith(':' + l)));

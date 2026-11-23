@@ -520,15 +520,15 @@ declare global {
   }
 
   // a profile and window.UrielProfiles (profiles-core.js)
-  interface UrielProfile { id: string; name: string; color: string; emoji: string; created: number; [field: string]: any }
+  interface UrielProfile { id: string; name: string; color: string; emoji: string; created: number; [field: string]: unknown }
   interface UrielProfilesApi {
     id: string;
     current(): UrielProfile;
     list(): UrielProfile[];
     create(opts: { name?: unknown; color?: unknown; emoji?: unknown }): UrielProfile;
-    update(id: string, patch: { name?: unknown; color?: unknown; emoji?: unknown }): any;
+    update(id: string, patch: { name?: unknown; color?: unknown; emoji?: unknown }): UrielProfile | null;
     remove(id: string): boolean;
-    open(id: string): any;
+    open(id: string): boolean;
     peek(id: string, key: string): string | null;
     isDevice(key: string): boolean;
     COLORS: string[];
