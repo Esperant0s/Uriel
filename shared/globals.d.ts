@@ -46,6 +46,7 @@ declare global {
       imports(deps: Record<string, unknown>, out: UrielImportsPart): void;
       radio(deps: Record<string, unknown>, out: UrielRadioPart): void;
       artist(deps: Record<string, unknown>, out: UrielArtistPart): void;
+      themes(deps: Record<string, unknown>, out: UrielThemesPart): void;
       lyrics(deps: Record<string, unknown>, out: UrielLyricsPart): void;
       home(deps: Record<string, unknown>, out: UrielHomePart): void;
       look(deps: Record<string, unknown>): { applyIconPack(pack: string): void };
@@ -431,6 +432,11 @@ declare global {
     end: number;
   }
   // what each part of app.js (shared/app/) hands back to it
+  interface UrielThemesPart {
+    applyCustomStyles(): void;
+    loadCustomThemes(): Promise<void>;
+    renderThemeCards(): void;
+  }
   interface UrielArtistPart {
     compactCount(n: number): string;
     getFollowedArtists(): { name: string; id?: string; avatar?: string; fans?: number; [field: string]: unknown }[];
