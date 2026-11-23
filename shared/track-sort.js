@@ -1,10 +1,15 @@
 // @ts-check
 const TRACK_SORT_MODES = ['manual', 'added-desc', 'added-asc', 'title-asc', 'title-desc', 'artist-asc', 'album-asc', 'duration-asc'];
 
-/** @param {any} a @param {any} b @param {string} key */
+// a song, album, playlist or artist: anything with the fields being sorted on
+/** @typedef {{ id?: string | number, videoId?: string, url?: string, platform?: string, title?: string, artist?: string, duration?: number, addedAt?: number }} TsSong */
+const field = (/** @type {unknown} */ o, /** @type {string} */ key) => (o && typeof o === 'object' ? /** @type {Record<string, unknown>} */ (o)[key] : undefined);
+const textField = (/** @type {unknown} */ o, /** @type {string} */ key) => { const v = field(o, key); return typeof v === 'string' ? v.trim() : ''; };
+
+/** @param {unknown} a @param {unknown} b @param {string} key */
 function compareText(a, b, key) {
-  const av = a && typeof a[key] === 'string' ? a[key].trim() : '';
-  const bv = b && typeof b[key] === 'string' ? b[key].trim() : '';
+  const av = textField(a, key);
+  const bv = textField(b, key);
   if (!av && !bv) return 0;
   if (!av) return 1;
   if (!bv) return -1;
@@ -12,25 +17,26 @@ function compareText(a, b, key) {
 }
 
 // Z to A, still with the songs that have no title at the end
-/** @param {any} a @param {any} b @param {string} key */
+/** @param {unknown} a @param {unknown} b @param {string} key */
 function compareTextDesc(a, b, key) {
-  const av = a && typeof a[key] === 'string' ? a[key].trim() : '';
-  const bv = b && typeof b[key] === 'string' ? b[key].trim() : '';
+  const av = textField(a, key);
+  const bv = textField(b, key);
   if (!av || !bv) return compareText(a, b, key);
   return bv.localeCompare(av, undefined, { sensitivity: 'base', numeric: true });
 }
 
-const addedTime = (/** @type {any} */ t) => (t && typeof t.addedAt === 'number' ? t.addedAt : 0);
+const addedTime = (/** @type {TsSong | null | undefined} */ t) => (t && typeof t.addedAt === 'number' ? t.addedAt : 0);
 
-/** @param {any} a @param {any} b @param {string} key */
+/** @param {unknown} a @param {unknown} b @param {string} key */
 function compareNumber(a, b, key) {
-  const av = a && Number.isFinite(a[key]) && a[key] > 0 ? a[key] : Infinity;
-  const bv = b && Number.isFinite(b[key]) && b[key] > 0 ? b[key] : Infinity;
+  const an = field(a, key), bn = field(b, key);
+  const av = typeof an === 'number' && Number.isFinite(an) && an > 0 ? an : Infinity;
+  const bv = typeof bn === 'number' && Number.isFinite(bn) && bn > 0 ? bn : Infinity;
   if (av === bv) return 0;
   return av < bv ? -1 : 1;
 }
 
-/** @param {any} tracks @param {string} mode */
+/** @template {TsSong} T @param {T[] | null | undefined} tracks @param {string} mode @returns {T[]} */
 function sortTracks(tracks, mode) {
   const list = Array.isArray(tracks) ? tracks.slice() : [];
   if (mode === 'title-asc') return list.sort((a, b) => compareText(a, b, 'title'));
@@ -52,7 +58,7 @@ function sortTracks(tracks, mode) {
   });
 }
 
-/** @param {any} tracks @param {boolean} newestFirst */
+/** @template {TsSong} T @param {T[]} tracks @param {boolean} newestFirst @returns {T[]} */
 function backfillAddedAt(tracks, newestFirst) {
   if (!Array.isArray(tracks)) return tracks;
   const now = Date.now();
@@ -81,24 +87,24 @@ function librarySortMode(kind, mode) {
 }
 
 // plays: (item) => number, for 'plays-desc' (the app counts them from the listening history)
-/** @param {string} kind @param {any[]} items @param {string} mode @param {{ plays?: (item: any) => number }} [o] */
+/** @template I @param {string} kind @param {I[]} items @param {string} mode @param {{ plays?: (item: I) => number }} [o] @returns {I[]} */
 function sortLibrary(kind, items, mode, { plays } = {}) {
   const list = Array.isArray(items) ? items.filter(Boolean) : [];
   const m = librarySortMode(kind, mode);
   if (m === 'custom') return list;
   const indexed = list.map((item, i) => ({ item, i }));
-  /** @typedef {{ item: any, i: number }} Indexed */
+  /** @typedef {{ item: I, i: number }} Indexed */
   const tie = (/** @type {Indexed} */ a, /** @type {Indexed} */ b) => a.i - b.i;
   let cmp = tie;
   if (m === 'title-asc') cmp = (a, b) => compareText(a.item, b.item, 'title') || compareText(a.item, b.item, 'artist');
   else if (m === 'artist-asc') cmp = (a, b) => compareText(a.item, b.item, 'artist') || compareText(a.item, b.item, 'title');
   else if (m === 'year-desc') {
-    const year = (/** @type {any} */ x) => { const y = parseInt(String((x && x.year) || ''), 10); return Number.isFinite(y) ? y : -Infinity; };
+    const year = (/** @type {unknown} */ x) => { const y = parseInt(String(field(x, 'year') || ''), 10); return Number.isFinite(y) ? y : -Infinity; };
     cmp = (a, b) => year(b.item) - year(a.item) || compareText(a.item, b.item, 'title');
   } else if (m === 'name-asc') cmp = (a, b) => compareText(a.item, b.item, 'name');
   else if (m === 'name-desc') cmp = (a, b) => compareTextDesc(a.item, b.item, 'name');
   else if (m === 'size-desc') {
-    const size = (/** @type {any} */ x) => (x && Array.isArray(x.tracks) ? x.tracks.length : 0);
+    const size = (/** @type {unknown} */ x) => { const t = field(x, 'tracks'); return Array.isArray(t) ? t.length : 0; };
     cmp = (a, b) => size(b.item) - size(a.item) || compareText(a.item, b.item, 'name');
   } else if (m === 'plays-desc') {
     const count = typeof plays === 'function' ? plays : () => 0;
@@ -114,7 +120,7 @@ function sortLibrary(kind, items, mode, { plays } = {}) {
 // matches the same title and artist (and a close length) across sources.
 const TS_YT_VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
 
-/** @param {any} t */
+/** @param {TsSong | null | undefined} t */
 function tsYoutubeIdOf(t) {
   if (!t) return '';
   const id = String(t.id || t.videoId || '').replace(/^(?:yt|youtube|ytm|ytmusic):/i, '');
@@ -124,7 +130,7 @@ function tsYoutubeIdOf(t) {
   return m ? m[1] : '';
 }
 
-/** @param {any} t */
+/** @param {TsSong | null | undefined} t */
 function favoriteTrackKey(t) {
   if (!t) return '';
   const platform = String(t.platform || '').toLowerCase();
@@ -149,10 +155,10 @@ function tsNormArtist(s) {
   const first = String(s || '').replace(/\s*-\s*topic$/i, '').split(/\s*(?:,|&|\bfeat\.?|\bft\.?|\bx\b|\band\b|;)\s*/i)[0];
   return tsNormTitle(first);
 }
-/** @param {any} t */
+/** @param {TsSong | null | undefined} t */
 function tsSongKey(t) { return t ? `${tsNormTitle(t.title)}|${tsNormArtist(t.artist)}` : ''; }
 
-/** @param {any} a @param {any} b */
+/** @param {TsSong | null | undefined} a @param {TsSong | null | undefined} b */
 function isSameSong(a, b) {
   if (!a || !b) return false;
   if (favoriteTrackKey(a) === favoriteTrackKey(b)) return true;
@@ -165,12 +171,12 @@ function isSameSong(a, b) {
 }
 
 // keeps the first copy of every song (favourites are newest first, so the newest heart wins)
-/** @param {any} tracks */
+/** @template {TsSong} T @param {T[]} tracks @returns {T[]} */
 function dedupeFavoriteTracks(tracks) {
   if (!Array.isArray(tracks)) return tracks;
   const out = [];
   const keys = new Set();
-  /** @type {Map<string, any[]>} */
+  /** @type {Map<string, T[]>} */
   const bySong = new Map();
   for (const t of tracks) {
     if (!t) continue;
@@ -188,9 +194,10 @@ function dedupeFavoriteTracks(tracks) {
 
 // "Is this a favourite?" for every row drawn: comparing each row with every favourite (normalising both titles each
 // time) cost ~a second for a long Favourites list. Built once per list: same answers as list.some(isSameSong).
-/** @param {any[] | null | undefined} list */
+/** @param {TsSong[] | null | undefined} list */
 function favoriteIndex(list) {
   const keys = new Set();
+  /** @type {Map<string, TsSong[]>} */
   const bySong = new Map();
   for (const f of list || []) {
     if (!f) continue;
@@ -201,12 +208,12 @@ function favoriteIndex(list) {
     if (same) same.push(f); else bySong.set(k, [f]);
   }
   return {
-    has(/** @type {any} */ t) {
+    has(/** @type {TsSong | null | undefined} */ t) {
       if (!t) return false;
       if (keys.has(favoriteTrackKey(t))) return true;
       if (String(t.platform || '').toLowerCase() === 'local') return false;
       const same = bySong.get(tsSongKey(t));
-      return !!same && same.some((/** @type {any} */ f) => isSameSong(f, t));
+      return !!same && same.some((/** @type {TsSong} */ f) => isSameSong(f, t));
     },
   };
 }

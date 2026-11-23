@@ -755,7 +755,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.documentElement.classList.toggle('force-reduced-motion', reduced);
   }
 
-  /** @type {Record<string, any>} */
+  /** @type {Record<string, { label: string, secHueShift: number, tertHueShift: number, priSatScale: number, surfSatScale: number, contSatScale: number }>} */
   const PALETTE_STYLES = {
     classic: {
       label: 'Classic',
@@ -1093,7 +1093,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const coverAnalysisCache = new Map();
   // drop the oldest entries of an in-memory cache past n, so long sessions don't grow without end
-  function capMap(/** @type {Map<any, any>} */ m, /** @type {number} */ n) { while (m.size > n) m.delete(m.keys().next().value); }
+  function capMap(/** @type {Map<unknown, unknown>} */ m, /** @type {number} */ n) { while (m.size > n) m.delete(m.keys().next().value); }
   // Interface opacity when it was never set: panels mostly solid, so text stays readable over busy backgrounds and
   // album colours (Riff's 20% made every panel 80% see-through). Menus and dialogs are solid whatever it is (styles.css).
   const DEFAULT_UI_ALPHA = '85';
@@ -1273,7 +1273,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let activeMeshLayer = 'a';
   let lastMeshKey = '';
-  /** @type {[string, any, any] | null} */
+  /** @type {[string, string, string] | null} */
   let lastMeshArgs = null;
   /** @type {string[] | null} */
   let meshCoverColors = null;
@@ -1589,7 +1589,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (themeBootTimer) clearTimeout(themeBootTimer);
     themeBootTimer = null;
     try {
-      /** @type {Record<string, any>} */
+      /** @type {Record<string, string>} */
       const mesh = {};
       for (const id of ['bg-mesh-a', 'bg-mesh-b']) { const m = document.getElementById(id); if (m) mesh[id] = m.style.cssText; }
       localStorage.setItem('uriel_theme_boot', JSON.stringify({
@@ -1646,7 +1646,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  /** @type {Record<string, any>} */
   const el = {
     btnMinimize: /** @type {HTMLButtonElement} */ (document.getElementById('btn-minimize')),
                           btnMaximize: /** @type {HTMLButtonElement} */ (document.getElementById('btn-maximize')),
@@ -1924,11 +1923,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                           btnRefreshVibe: /** @type {HTMLButtonElement} */ (document.getElementById('btn-refresh-vibe'))
   };
 
-  ['Vocal', 'Air', 'Bass'].forEach(type => {
-    const slider = el[`sliderHq${type}`];
+  /** @type {const} */ (['Vocal', 'Air', 'Bass']).forEach(type => {
+    const slider = el[/** @type {const} */ (`sliderHq${type}`)];
     if (slider) {
-      slider.min = -50;
-      slider.max = 50;
+      slider.min = '-50';
+      slider.max = '50';
       slider.value = state.hqSettings[type.toLowerCase()];
     }
   });
@@ -2746,8 +2745,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       el.visualizerCanvas.style.width = '60px';
       el.visualizerCanvas.style.height = '24px';
       const ctx = el.visualizerCanvas.getContext('2d');
-      ctx.resetTransform();
-      ctx.scale(dpr, dpr);
+      if (ctx) {
+        ctx.resetTransform();
+        ctx.scale(dpr, dpr);
+      }
     }
     const tvkCanvas = /** @type {HTMLCanvasElement} */ (document.getElementById('tvk-visualizer-canvas'));
     if (tvkCanvas) {
@@ -3637,8 +3638,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     return normalizeSearch(track && track.title).includes(query) || normalizeSearch(track && track.artist).includes(query);
   }
 
-  /** @type {{ raw: string, parsed: Record<string, any> }} */
+  // a song's own pictures and banner effects (Track art dialog), kept in uriel_track_art by song id
+  /** @typedef {{ blur: number, opacity: number, fade: number }} BannerFxValues */
+  /** @typedef {{ cover?: string, banner?: string, bannerFx?: BannerFxValues & { enabled?: boolean } }} TrackArt */
+  /** @type {{ raw: string, parsed: Record<string, TrackArt> }} */
   const trackArtCache = { raw: '', parsed: {} };
+  /** @returns {TrackArt} */
   function getTrackArt(/** @type {UrielTrack} */ t) {
     try {
       // every list row asks while it is built: parse only when the saved text changed (Sync and backups write it too)
@@ -3653,14 +3658,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  function setTrackArt(/** @type {UrielTrack} */ t, /** @type {Record<string, unknown> | null} */ patch) {
-    /** @type {Record<string, any>} */
+  function setTrackArt(/** @type {UrielTrack} */ t, /** @type {TrackArt | null} */ patch) {
+    /** @type {Record<string, TrackArt>} */
     let all = {};
     try {
       all = JSON.parse(localStorage.getItem('uriel_track_art') || '{}');
     } catch (e) {}
     const id = getTrackCanonicalId(t);
     if (!id) return;
+    /** @type {Record<string, unknown>} */
     const cur = { ...(all[id] || {}), ...patch };
     for (const k in cur) if (!cur[k]) delete cur[k];
     if (Object.keys(cur).length) all[id] = cur; else delete all[id];
@@ -3687,7 +3693,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // in. Everything else (queue, now playing, scrobbling, media session) follows the main player as for any
   // next song. Falls back to the plain fade-out when the song can't be opened twice (hls.js / blob sources),
   // and on iPhones, where a player's volume can't be changed (so neither song could fade).
-  /** @type {{ prep: any, tail: any, handingOver: boolean, fadeInTimer: number }} */
+  // prep: the second player, opened at the crossfade point and waiting; tail: the old song fading out on it
+  /** @typedef {{ el: HTMLAudioElement, token: number, point: number, end: number, ready: boolean, timer: number, started?: boolean, matchRate?: () => void }} CrossfadePrep */
+  /** @typedef {{ el: HTMLAudioElement, end: number, point: number, level: number, loop: number }} CrossfadeTail */
+  /** @type {{ prep: CrossfadePrep | null, tail: CrossfadeTail | null, handingOver: boolean, fadeInTimer: number }} */
   const xfade = { prep: null, tail: null, handingOver: false, fadeInTimer: 0 };
   const crossfadeSeconds = () => parseInt(localStorage.getItem('uriel_crossfade') || '0', 10) || 0;
   /** @type {boolean | null} */
@@ -3753,7 +3762,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     dropCrossfadePrep();
     // Android: a second native player (mobile/native-audio.ts), since the song doesn't play in the page there
     const t = a.createTail ? a.createTail() : new Audio();
-    /** @type {Record<string, any>} */
+    /** @type {CrossfadePrep} */
     const p = { el: t, token: state.loadToken, point, end, ready: false, timer: 0 };
     xfade.prep = p;
     try {
@@ -3818,7 +3827,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       xfade.prep = null;
       stopCrossfadeTail(0);
       t.volume = level;
-      /** @type {{ el: any, end: number, point: number, level: number, loop: number, [k: string]: any }} */
+      /** @type {CrossfadeTail} */
       const tail = { el: t, end: p.end, point: p.point, level, loop: 0 };
       xfade.tail = tail;
       // fade out along the song's own time, so a pause holds the fade where it is
@@ -3961,8 +3970,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   function showPlayFailure(message, type = 'error') {
     showToast(message, type, 8000);
     if (!el.playbarArtist) return;
-    el.playbarArtist.textContent = Tm("Couldn't play");
-    el.playbarArtist.title = message;
+    el.playbarArtist.textContent = String(Tm("Couldn't play"));
+    el.playbarArtist.title = String(message);
     el.playbarArtist.classList.add('play-failed');
   }
   // every failure path asks this; a false answer means nothing else will be loaded, so loading is over
@@ -4947,7 +4956,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return 1.0;
   }
 
-  /** @type {{ lineEl: any, lineIdx: number, text: string, N: number, cumWeights: Float64Array | null, totalWeight: number }} */
+  /** @type {{ lineEl: Element | null, lineIdx: number, text: string, N: number, cumWeights: Float64Array | null, totalWeight: number }} */
   let gradientLineCache = {
     lineEl: null,
     lineIdx: -1,
@@ -6327,7 +6336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  /** @type {{ active: boolean, lines: any[], currentIndex: number, song?: { title: string, artist: string } }} */
+  /** @type {{ active: boolean, lines: { text: string, time: number | null }[], currentIndex: number, song?: { title: string, artist: string } }} */
   let syncState = {
     active: false,
     lines: [],
@@ -8674,7 +8683,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!tracks || tracks.length === 0) {
       container.style.paddingTop = '0px';
       container.style.paddingBottom = '0px';
-      /** @type {Record<string, any>} */
+      /** @type {Record<string, string>} */
       const emptyMessages = {
         search: 'No matching songs. Try a different search',
         favorites: 'No favourites yet. Use the heart on a song to save it',
@@ -9243,7 +9252,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (el.favoritesCount) { el.favoritesCount.textContent = String(state.favorites.length); el.favoritesCount.hidden = !state.favorites.length; }
   }
 
-  /** @type {Record<string, any>} */
+  /** @type {Record<string, string>} */
   const TRACK_SORT_KEYS = { favorites: 'uriel_favorites_sort', playlist: 'uriel_playlist_sort' };
 
   function getTrackSortMode(/** @type {string} */ kind) {
@@ -9282,12 +9291,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Sort menus of Favorites and playlists: a Material dropdown in front of the <select> (still the value), with
   // the select's options, so the list of orders stays in one place (track-sort.js does the sorting)
   // (var: a view can render before this line has run)
-  /** @type {Record<string, any>} */
+  /** @type {Record<string, { dropdown: HTMLElement, menu: HTMLElement, select: HTMLSelectElement, label: HTMLElement | null }>} */
   var sortDropdowns = {};
   function syncSortDropdown(/** @type {string} */ kind) {
     const d = sortDropdowns && sortDropdowns[kind];
     if (!d) return;
-    d.menu.querySelectorAll('.m3-dropdown-option').forEach((/** @type {HTMLElement} */ opt) => {
+    /** @type {NodeListOf<HTMLElement>} */ (d.menu.querySelectorAll('.m3-dropdown-option')).forEach((opt) => {
       const on = opt.dataset.value === d.select.value;
       opt.classList.toggle('selected', on);
       opt.setAttribute('aria-selected', on ? 'true' : 'false');
@@ -9340,14 +9349,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Sorting the Albums tab, the playlists list and the Artists tab (#19); track-sort.js does the sorting.
   // Kept per view in localStorage. (var and function declarations: the lists can render before this line runs)
-  /** @type {Record<string, any>} */
+  /** @type {Record<string, string>} */
   var LIBRARY_SORT_KEYS = { albums: 'uriel_albums_sort', playlists: 'uriel_playlists_sort', artists: 'uriel_artists_sort' };
   function getLibrarySort(/** @type {string} */ kind) {
     let v = null;
     try { v = localStorage.getItem((LIBRARY_SORT_KEYS || {})[kind] || ''); } catch (e) {}
     return librarySortMode(kind, v || '');
   }
-  function sortedLibrary(/** @type {string} */ kind, /** @type {{ name: string, [field: string]: any }[]} */ items) {
+  /** @template {{ name: string }} I @param {string} kind @param {I[]} items */
+  function sortedLibrary(kind, items) {
     return sortLibrary(kind, items, getLibrarySort(kind), kind === 'artists' ? { plays: (a) => artistPlays(a.name) } : {});
   }
   ['albums', 'playlists', 'artists'].forEach((kind) => {
@@ -9459,7 +9469,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             </button>
           </div>`;
         const emptyBtn = el.localTracksList.querySelector('#btn-add-local-files-empty');
-        if (emptyBtn) emptyBtn.addEventListener('click', importLocalFiles);
+        if (emptyBtn) emptyBtn.addEventListener('click', () => importLocalFiles());
       } else {
         renderTracks(el.localTracksList, filtered, 'local');
       }
@@ -10679,7 +10689,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // tracks waiting for the playlist that "New playlist" in the add dialog is about to create
   /** @type {UrielTrack[] | null} */
   let tracksForNewPlaylist = null;
-  function openAddToPlaylistModal(/** @type {UrielTrack | null} */ track, /** @type {any[] | null} */ many = null) {
+  function openAddToPlaylistModal(/** @type {UrielTrack | null} */ track, /** @type {UrielTrack[] | null} */ many = null) {
     trackToAddToPlaylist = track;
     manyToAddToPlaylist = many;
     if (!el.playlistPickList) return;
@@ -11171,12 +11181,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   if (el.btnAddLocalFilesEmpty) el.btnAddLocalFilesEmpty.addEventListener('click', () => importLocalFiles());
 
-  if (el.btnAutoRemix) {
-    el.btnAutoRemix.addEventListener('click', () => {
-      state.isAutoRemix = !state.isAutoRemix;
-      el.btnAutoRemix.classList.toggle('active', state.isAutoRemix);
-    });
-  }
 
   if (el.btnSavePresetDialog) {
     el.btnSavePresetDialog.addEventListener('click', () => {
@@ -11440,7 +11444,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const select = /** @type {HTMLSelectElement} */ (document.getElementById('select-engine-api'));
     if (select) select.value = platform;
     const label = document.getElementById('engine-api-label');
-    /** @type {Record<string, any>} */
+    /** @type {Record<string, string>} */
     const nameMap = { youtube: 'YouTube', ytmusic: 'YouTube Music', soundcloud: 'SoundCloud' };
     if (label) label.textContent = nameMap[platform] || 'YouTube';
     const menu = document.getElementById('engine-api-menu');
@@ -11865,9 +11869,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  ['Vocal', 'Air', 'Bass'].forEach(type => {
-    const slider = el[`sliderHq${type}`];
-    const valDisplay = el[`valHq${type}`];
+  /** @type {const} */ (['Vocal', 'Air', 'Bass']).forEach(type => {
+    const slider = el[/** @type {const} */ (`sliderHq${type}`)];
+    const valDisplay = el[/** @type {const} */ (`valHq${type}`)];
     if (slider) {
       slider.addEventListener('input', (/** @type {Event} */ e) => {
         const val = parseInt(/** @type {HTMLInputElement} */ (e.target).value, 10);
@@ -11900,7 +11904,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     /** @type {NodeListOf<HTMLElement>} */ (hqMenu.querySelectorAll('.m3-dropdown-option')).forEach((opt) => {
       opt.addEventListener('click', (e) => {
         e.stopPropagation();
-        const val = opt.dataset.value;
+        const val = opt.dataset.value || '';
         if (hqLabel) hqLabel.textContent = opt.textContent;
         hqMenu.querySelectorAll('.m3-dropdown-option').forEach(o => o.classList.remove('selected'));
         opt.classList.add('selected');
@@ -12004,10 +12008,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  ['low', 'mid', 'high'].forEach(band => {
-    const cap = band.charAt(0).toUpperCase() + band.slice(1);
-    const slider = el[`sliderEq${cap}`];
-    const valEl = el[`valEq${cap}`];
+  /** @type {const} */ ([['low', 'Low'], ['mid', 'Mid'], ['high', 'High']]).forEach(([band, cap]) => {
+    const slider = el[/** @type {const} */ (`sliderEq${cap}`)];
+    const valEl = el[/** @type {const} */ (`valEq${cap}`)];
     if (slider) {
       slider.addEventListener('input', (/** @type {Event} */ e) => {
         initAudioContext();
@@ -12021,7 +12024,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       slider.addEventListener('dblclick', () => {
         initAudioContext();
-        slider.value = 0;
+        slider.value = '0';
         if (!state.audioSettings.eq) state.audioSettings.eq = { low: 0, mid: 0, high: 0 };
         state.audioSettings.eq[band] = 0;
         if (valEl) valEl.textContent = '0 dB';
@@ -12863,7 +12866,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     blur: 0
   };
 
-  /** @type {Record<string, any>} */
+  /** @type {typeof DEFAULT_MESH_CFG} */
   let meshCfg = { ...DEFAULT_MESH_CFG };
   // 0–100, or the default when missing: Number(undefined) is NaN, which `?? default` never caught
   const meshCoord = (/** @type {unknown} */ v, /** @type {number} */ fallback) => (v != null && v !== '' && Number.isFinite(Number(v)) ? Math.max(0, Math.min(100, Number(v))) : fallback);
@@ -12906,12 +12909,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const slSpeed = /** @type {HTMLInputElement} */ (document.getElementById('slider-mesh-speed'));
     const vlSpeed = document.getElementById('val-mesh-speed');
-    if (slSpeed) slSpeed.value = cfg.speed;
+    if (slSpeed) slSpeed.value = String(cfg.speed);
     if (vlSpeed) vlSpeed.textContent = cfg.speed === 0 ? '0 (static)' : `${cfg.speed}`;
 
     const slBlur = /** @type {HTMLInputElement} */ (document.getElementById('slider-mesh-blur'));
     const vlBlur = document.getElementById('val-mesh-blur');
-    if (slBlur) slBlur.value = cfg.blur;
+    if (slBlur) slBlur.value = String(cfg.blur);
     if (vlBlur) vlBlur.textContent = `${cfg.blur}px`;
 
     if (save) {
@@ -12997,7 +13000,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const dot1 = document.getElementById('mesh-dot-1');
   const dot2 = document.getElementById('mesh-dot-2');
 
-  function attachDotDrag(/** @type {HTMLElement | null} */ dotEl, /** @type {string} */ key) {
+  function attachDotDrag(/** @type {HTMLElement | null} */ dotEl, /** @type {'p1' | 'p2'} */ key) {
     if (!dotEl || !previewBox) return;
     let isDragging = false;
 
@@ -13412,7 +13415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const RING_GAP = 5;
   const RING_W = 2.4;
 
-  /** @type {{ canvas: HTMLCanvasElement | null, ctx: CanvasRenderingContext2D | null, [k: string]: any }} */
+  /** @type {{ canvas: HTMLCanvasElement | null, ctx: CanvasRenderingContext2D | null, img: HTMLImageElement, imgReady: boolean, from: number, to: number, start: number, raf: number, last: number, phase: number, hoverProgress: number, isHovered: boolean }} */
   const m3c = { canvas: null, ctx: null, img: new Image(), imgReady: false, from: 0, to: 0, start: 0, raf: 0, last: 0, phase: 0, hoverProgress: 0, isHovered: false };
   // phones keep the plain cover: the animated ring doesn't fit the mini player and its loop costs battery
   function m3cEnabled() { return !isPhoneApp && localStorage.getItem('uriel_m3_cover') !== '0' && !document.body.classList.contains('perf'); }
@@ -14069,7 +14072,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const spans = hints ? [...hints.querySelectorAll('span')].map(s => s.textContent) : [];
     const min = +input.min, max = +input.max, step = +input.step || 1;
     const def = Number(input.getAttribute('value'));
-    /** @type {Record<string, any>} */
+    /** @type {Record<number, string | null>} */
     const labels = {};
     if (spans.length === 3) { labels[min] = spans[0]; labels[def] = spans[1]; labels[max] = spans[2]; }
     else if (spans.length === 2) { labels[min] = spans[0]; labels[max] = spans[1]; }
@@ -15608,9 +15611,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   function getWaveAvoid() {
     const skips = getWaveSkips();
     const keys = [];
-    /** @type {Record<string, any>} */
+    /** @type {Record<string, number>} */
     const artistCounts = {};
-    /** @type {Record<string, any>} */
+    /** @type {Record<string, string>} */
     const artistDisplay = {};
 
     for (const s of skips) {
@@ -16739,7 +16742,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     try {
       const profile = await computeTasteProfile();
-      /** @type {Record<string, any>} */
+      /** @type {{ history: UrielTrack[], favorites: UrielTrack[], platform: string, limit: number, clientProfile: unknown, seeds: unknown, avoid: unknown, refresh?: boolean }} */
       const vibePayload = {
         history: (state.history || []).slice(0, 30),
         favorites: (state.favorites || []).slice(0, 25),
@@ -16890,10 +16893,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const CACHE_BAR_DANGER_STOP = 0.75;
   const CACHE_BAR_MIN_VISIBLE_PX = 4;
 
-  /** @type {Record<string, any>} */
+  /** @type {Record<string, { canvas: HTMLCanvasElement | null, current: number, from: number, to: number, t0: number, dur: number }>} */
   const cacheBars = {
-    audio: { canvas: document.getElementById('cache-audio-bar'), current: 0, from: 0, to: 0, t0: 0, dur: 0 },
-    web: { canvas: document.getElementById('cache-web-bar'), current: 0, from: 0, to: 0, t0: 0, dur: 0 }
+    audio: { canvas: /** @type {HTMLCanvasElement | null} */ (document.getElementById('cache-audio-bar')), current: 0, from: 0, to: 0, t0: 0, dur: 0 },
+    web: { canvas: /** @type {HTMLCanvasElement | null} */ (document.getElementById('cache-web-bar')), current: 0, from: 0, to: 0, t0: 0, dur: 0 }
   };
   let cacheRafId = 0;
   let cachePhase = 0;
@@ -17458,7 +17461,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   /** @type {ReturnType<typeof createWavyProgress> | null} */
   let toolsWavyFf = null;
 
-  /** @type {Record<string, any>} */
+  /** @type {Record<string, string>} */
   const STATUS_ICONS = {
     pending: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--md-sys-color-outline);"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
     downloading: '<svg class="g-spinner" style="width: 18px; height: 18px;" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20"/></svg>',
@@ -18403,8 +18406,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const rows = state.paletteRows || [];
     if (!rows.length) return;
     state.paletteIndex = Math.max(0, Math.min(rows.length - 1, index));
-    const buttons = el.commandPaletteResults.querySelectorAll('.command-palette-row');
-    buttons.forEach((/** @type {HTMLElement} */ btn, /** @type {number} */ i) => btn.classList.toggle('active', i === state.paletteIndex));
+    const buttons = /** @type {NodeListOf<HTMLElement>} */ (el.commandPaletteResults.querySelectorAll('.command-palette-row'));
+    buttons.forEach((btn, i) => btn.classList.toggle('active', i === state.paletteIndex));
     const active = buttons[state.paletteIndex];
     if (active) active.scrollIntoView({ block: 'nearest' });
   }
@@ -18666,11 +18669,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   })();
 
   // ---- banner effects for one song (Track art dialog): its own blur, opacity and fade ----
-  function trackBannerFx(/** @type {Record<string, any> | null} */ art) {
+  function trackBannerFx(/** @type {TrackArt | null} */ art) {
     const fx = art && art.bannerFx;
     return fx && fx.enabled ? fx : null;
   }
-  function applyTrackBannerFx(/** @type {Record<string, any> | null} */ art) {
+  function applyTrackBannerFx(/** @type {TrackArt | null} */ art) {
     const fx = trackBannerFx(art);
     for (const node of [document.getElementById('right-panel-banner'), document.getElementById('tv-bg')]) {
       if (!node) continue;
@@ -18686,12 +18689,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
   }
-  function renderTrackBannerFxControls(/** @type {UrielTrack} */ track, /** @type {Record<string, any> | null} */ art) {
+  function renderTrackBannerFxControls(/** @type {UrielTrack} */ track, /** @type {TrackArt | null} */ art) {
     const toggle = document.getElementById('btn-track-banner-custom-fx');
     const box = document.getElementById('track-banner-fx-controls');
-    /** @type {Record<string, any>} */
-    const sliders = { blur: document.getElementById('slider-track-banner-blur'), opacity: document.getElementById('slider-track-banner-opacity'), fade: document.getElementById('slider-track-banner-fade') };
-    /** @type {Record<string, any>} */
+    /** @type {Record<keyof BannerFxValues, HTMLInputElement | null>} */
+    const sliders = { blur: /** @type {HTMLInputElement | null} */ (document.getElementById('slider-track-banner-blur')), opacity: /** @type {HTMLInputElement | null} */ (document.getElementById('slider-track-banner-opacity')), fade: /** @type {HTMLInputElement | null} */ (document.getElementById('slider-track-banner-fade')) };
     const vals = { blur: document.getElementById('val-track-banner-blur'), opacity: document.getElementById('val-track-banner-opacity'), fade: document.getElementById('val-track-banner-fade') };
     if (!toggle || !box) return;
     // a song without its own effects starts from the ones in Settings
@@ -18700,22 +18702,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       opacity: parseInt(localStorage.getItem('uriel_banner_opacity') || '100', 10),
       fade: parseInt(localStorage.getItem('uriel_banner_fade') || '100', 10),
     };
+    /** @type {Partial<NonNullable<TrackArt['bannerFx']>>} */
     const fx = (art && art.bannerFx) || {};
-    /** @type {Record<string, any>} */
+    /** @type {BannerFxValues} */
     const cur = { blur: fx.blur !== undefined ? fx.blur : global.blur, opacity: fx.opacity !== undefined ? fx.opacity : global.opacity, fade: fx.fade !== undefined ? fx.fade : global.fade };
     const on = !!fx.enabled;
-    /** @type {Record<string, any>} */
     const unit = { blur: 'px', opacity: '%', fade: '%' };
+    /** @type {(keyof BannerFxValues)[]} */
+    const keys = ['blur', 'opacity', 'fade'];
     toggle.classList.toggle('active', on);
     box.style.display = on ? 'flex' : 'none';
-    for (const k of Object.keys(sliders)) {
-      if (sliders[k]) sliders[k].value = cur[k];
-      if (vals[k]) vals[k].textContent = `${cur[k]}${unit[k]}`;
+    for (const k of keys) {
+      const slider = sliders[k], val = vals[k];
+      if (slider) slider.value = String(cur[k]);
+      if (val) val.textContent = `${cur[k]}${unit[k]}`;
     }
     const save = () => {
-      /** @type {Record<string, any>} */
-      const next = { enabled: toggle.classList.contains('active') };
-      for (const k of Object.keys(sliders)) next[k] = sliders[k] ? parseInt(sliders[k].value, 10) : cur[k];
+      const next = { enabled: toggle.classList.contains('active'), ...cur };
+      for (const k of keys) { const slider = sliders[k]; if (slider) next[k] = parseInt(slider.value, 10); }
       setTrackArt(track, { bannerFx: next });
       if (state.currentTrack && isSameTrack(state.currentTrack, track)) applyTrackBannerFx(getTrackArt(track));
       if (state.isTvKaraokeOpen) syncTvBanner();
@@ -18726,9 +18730,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       box.style.display = next ? 'flex' : 'none';
       save();
     };
-    for (const k of Object.keys(sliders)) {
-      if (!sliders[k]) continue;
-      sliders[k].oninput = () => { if (vals[k]) vals[k].textContent = `${sliders[k].value}${unit[k]}`; save(); };
+    for (const k of keys) {
+      const slider = sliders[k], val = vals[k];
+      if (!slider) continue;
+      slider.oninput = () => { if (val) val.textContent = `${slider.value}${unit[k]}`; save(); };
     }
   }
 
