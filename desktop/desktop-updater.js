@@ -31,7 +31,7 @@ function writable(dir) {
 }
 
 // how this copy of Uriel was installed, or null when it can't replace itself
-/** @param {{ build: any, platform?: string, env?: NodeJS.ProcessEnv, exePath?: string, packaged?: boolean }} o */
+/** @param {{ build: { sha?: string, channel?: string } | null | undefined, platform?: string, env?: NodeJS.ProcessEnv, exePath?: string, packaged?: boolean }} o */
 function installKind({ build, platform = process.platform, env = process.env, exePath = '', packaged = true }) {
   if (!build || !build.sha || build.sha === 'dev' || !packaged) return null;
   if (platform === 'win32' && build.channel === 'windows' && env.PORTABLE_EXECUTABLE_FILE) return 'portable';
@@ -53,7 +53,7 @@ function macBundle(exePath) {
 }
 
 // Streams url to dest, checking the size and SHA-256 on the way; dest only appears once both match.
-/** @param {{ fetch: (url: string, init?: any) => Promise<Response>, url: string, sha256?: string, size?: number, dest: string, onProgress?: (p: { received: number, total: number }) => void, signal?: AbortSignal }} o */
+/** @param {{ fetch: (url: string, init?: RequestInit) => Promise<Response>, url: string, sha256?: string, size?: number, dest: string, onProgress?: (p: { received: number, total: number }) => void, signal?: AbortSignal }} o */
 async function download({ fetch, url, sha256, size, dest, onProgress = () => {}, signal }) {
   if (!updateCore.isGithubUrl(url)) throw new Error('not a GitHub download');
   const res = await fetch(url, { redirect: 'follow', signal });

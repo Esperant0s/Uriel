@@ -13,7 +13,8 @@
 /** @type {Record<string, number>} */
 const PRIORITY = { play: 0, normal: 1, background: 2 };
 
-/** @typedef {{ key: string | null, priority: string, task: (o: { priority: string }) => Promise<any>, cacheMs: number, seq: number, promise: Promise<any>, resolve: (v: any) => void, reject: (e: any) => void }} Job */
+// a run's result is whatever its task resolves to; run() hands it back with the caller's own type
+/** @typedef {{ key: string | null, priority: string, task: (o: { priority: string }) => Promise<unknown>, cacheMs: number, seq: number, promise: Promise<unknown>, resolve: (v: unknown) => void, reject: (e: unknown) => void }} Job */
 function createTaskQueue({ limit = 2, backgroundLimit = 1, now = () => Date.now(), backoffBaseMs = 60 * 1000, backoffMaxMs = 30 * 60 * 1000, maxEntries = 500, playExclusive = true } = {}) {
   /** @type {Job[]} */
   const pending = [];
@@ -24,7 +25,7 @@ function createTaskQueue({ limit = 2, backgroundLimit = 1, now = () => Date.now(
   const running = { total: 0, play: 0, background: 0 };
   let seq = 0;
 
-  const trim = (/** @type {Map<any, any>} */ map) => { while (map.size > maxEntries) map.delete(map.keys().next().value); };
+  const trim = (/** @type {Map<unknown, unknown>} */ map) => { while (map.size > maxEntries) map.delete(map.keys().next().value); };
 
   /** @param {Job} job @param {boolean} playWaiting */
   function canStart(job, playWaiting) {
@@ -95,9 +96,9 @@ function createTaskQueue({ limit = 2, backgroundLimit = 1, now = () => Date.now(
         // a song the listener pressed play on never inherits a failure from someone else's run (a next-song
         // prefetch, a cache download, another caller): it gets one fresh run of its own, as Retry would
         if (priority === 'play' && !opts.noRetry) {
-          return same.promise.catch(() => run(task, { ...opts, noRetry: true }));
+          return /** @type {Promise<T>} */ (same.promise.catch(() => run(task, { ...opts, noRetry: true })));
         }
-        return same.promise;
+        return /** @type {Promise<T>} */ (same.promise);
       }
       if (priority === 'background' && backingOff(key)) {
         return Promise.reject(Object.assign(new Error('yt-dlp: backing off after a failure'), { code: 'BACKOFF' }));
@@ -108,7 +109,7 @@ function createTaskQueue({ limit = 2, backgroundLimit = 1, now = () => Date.now(
     if (key) inflight.set(key, job);
     pending.push(job);
     pump();
-    return job.promise;
+    return /** @type {Promise<T>} */ (job.promise);
   }
 
   /** @param {string} key */

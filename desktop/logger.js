@@ -27,7 +27,7 @@ function tail(lines) {
   try { return fs.readFileSync(LOG_PATH, 'utf8').split('\n').filter(Boolean).slice(-lines); } catch (e) { return []; }
 }
 
-const describe = (/** @type {string} */ message, /** @type {any} */ err) => (err ? `${message}: ${(err && (err.stack || err.message)) || err}` : message);
+const describe = (/** @type {string} */ message, /** @type {unknown} */ err) => (err ? `${message}: ${(err instanceof Error && (err.stack || err.message)) || /** @type {{ message?: string }} */ (err).message || err}` : message);
 /** @param {string} message @param {unknown} [err] */
 const error = (message, err) => log('error', describe(message, err));
 /** @param {string} message @param {unknown} [err] */

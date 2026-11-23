@@ -40,5 +40,5 @@
 
   const api = { positionState, wasPlayingAtInterruption, resumeAfterInterruption, INTERRUPT_GRACE_MS };
   if (typeof module !== 'undefined') module.exports = api;
-  else /** @type {any} */ (window).UrielNowPlaying = api;
+  else /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (window)).UrielNowPlaying = api;
 })();

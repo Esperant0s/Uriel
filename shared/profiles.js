@@ -13,7 +13,7 @@
   /** @param {UrielText} m @param {string} [kind] */
   const toast = (m, kind) => { try { window.UrielCore && window.UrielCore.toast(m, kind || 'info'); } catch (e) {} };
   // UI language (i18n.js): data-i18n marks Uriel's own words in the HTML below; profile names only go into {0} slots
-  const I18n = window.UrielI18n || (() => { const f = (/** @type {string} */ s, /** @type {any[]} */ ...a) => String(s).replace(/\{(\d)\}/g, (_, i) => (a[i] != null ? a[i] : '')); return { T: (/** @type {string} */ s) => s, Tf: f, Tm: f, Th: f, text: (/** @type {HTMLElement | null} */ el, /** @type {string} */ s, /** @type {any[]} */ ...a) => { if (el) el.textContent = f(s, ...a); } }; })();
+  const I18n = window.UrielI18n || (() => { const f = (/** @type {string} */ s, /** @type {unknown[]} */ ...a) => String(s).replace(/\{(\d)\}/g, (_, i) => (a[i] != null ? String(a[i]) : '')); return { T: (/** @type {string} */ s) => s, Tf: f, Tm: f, Th: f, text: (/** @type {HTMLElement | null} */ el, /** @type {string} */ s, /** @type {any[]} */ ...a) => { if (el) el.textContent = f(s, ...a); } }; })();
   const initial = (/** @type {unknown} */ name) => (Array.from(String(name || '').trim())[0] || '?').toUpperCase();
   // dark letters on light colors, white on dark ones
   const inkOn = (/** @type {string} */ hex) => {

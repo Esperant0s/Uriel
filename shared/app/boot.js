@@ -13,12 +13,14 @@
     const origFetch = window.fetch ? window.fetch.bind(window) : null;
     if (!origFetch) return;
     window.__riffFetchPatched = true;
-    window.fetch = function (/** @type {any} */ input, init) {
+    window.fetch = function (/** @type {RequestInfo | URL} */ input, init) {
       try {
-        const raw = typeof input === 'string' ? input : (input && input.url) || '';
+        // a Request carries its own url and headers; a URL object goes through as it is
+        const req = typeof input === 'object' && 'headers' in input ? input : null;
+        const raw = typeof input === 'string' ? input : (req && req.url) || '';
         if (raw.startsWith('http://127.0.0.1:') && new URL(raw).pathname.startsWith('/api/')) {
           const opts = Object.assign({}, init || {});
-          const headers = new Headers(opts.headers || (input && input.headers) || undefined);
+          const headers = new Headers(opts.headers || (req && req.headers) || undefined);
           headers.set('X-Uriel-Token', token);
           opts.headers = headers;
           return origFetch(input, opts);

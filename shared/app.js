@@ -298,8 +298,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function normalizePreset(/** @type {UrielPreset} */ p) {
     if (!p) return null;
-    const s = p.settings || p.values || {};
-    const eq = s.eq || {};
+    // a preset file can have it all wrong: every value is checked below
+    const s = /** @type {Record<string, unknown>} */ (p.settings || p.values || {});
+    const eq = /** @type {{ low?: unknown, mid?: unknown, high?: unknown }} */ (s.eq || {});
     return {
       id: p.id,
       name: p.name || 'preset',

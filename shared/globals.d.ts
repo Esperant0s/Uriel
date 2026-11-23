@@ -32,7 +32,7 @@ declare global {
     // desktop/preload.js on computers, mobile/electron-api.ts on phones
     electronAPI: UrielElectronApi;
     // the phone app
-    Capacitor?: { getPlatform(): string; isNativePlatform?(): boolean; Plugins?: any };
+    Capacitor?: { getPlatform(): string; isNativePlatform?(): boolean; Plugins?: { App?: { addListener?(event: string, fn: (state: { isActive?: boolean }) => void): unknown } } };
     // the phone app's own updater (mobile/app-updater.ts)
     UrielAppUpdater?: {
       supported(): Promise<boolean>;
@@ -54,7 +54,7 @@ declare global {
       open(element: HTMLElement, triggerEl: HTMLElement | null, axis?: string, onDone?: () => void): void;
       close(element: HTMLElement, onDone?: () => void): void;
     };
-    t?: (key: string, ...args: any[]) => string;
+    t?: (key: string, ...args: unknown[]) => string;
     applyI18n?: (lang: string) => void;
     audioEngine?: InstanceType<typeof import("./audio-engine")>;
     bindHorizontalWheel?: (el: HTMLElement) => void;
@@ -136,7 +136,8 @@ declare global {
     Peer?: new (id: string, opts?: object) => UrielPeer;
     Hls?: any;
     monaco?: any;
-    qrcode?: any;
+    // assets/qrcode.js
+    qrcode?: (typeNumber: number, level: string) => { addData(text: string): void; make(): void; createSvgTag(o: { cellSize?: number; margin?: number; scalable?: boolean }): string };
     webkitAudioContext?: typeof AudioContext;
     webkitOfflineAudioContext?: typeof OfflineAudioContext;
   }
@@ -490,8 +491,8 @@ declare global {
   interface UrielPreset {
     id: string;
     name: string;
-    settings: Record<string, any>;
-    [field: string]: any;
+    settings: Record<string, unknown>;
+    [field: string]: unknown;
   }
   // app.js's state: the fields most of the app reads are typed, the rest stay loose
   interface UrielAppState {
