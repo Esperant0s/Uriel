@@ -66,7 +66,7 @@
 
   /** @param {any} update */
   async function startUpdate(update) {
-    if (phase === 'downloading' || phase === 'ready') return;
+    if (!installer || phase === 'downloading' || phase === 'ready') return;
     phase = 'downloading';
     percent = 0;
     changed();
@@ -81,6 +81,7 @@
   }
 
   async function finishUpdate() {
+    if (!installer) return;
     const result = await installer.install().catch((/** @type {any} */ e) => ({ ok: false, error: e && e.message }));
     // Android: the first install needs "Install unknown apps" allowed for Uriel; install() opened that setting
     if (result && result.error === 'permission') { failure = 'permission'; changed(); }

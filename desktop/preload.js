@@ -2,7 +2,8 @@
 const { contextBridge, ipcRenderer, webFrame } = require('electron');
 
 
-contextBridge.exposeInMainWorld('electronAPI', {
+/** @type {UrielDesktopApi} */
+const api = {
   // only Uriel's own pages get the token (main.js also stops the window from navigating anywhere else)
   serverToken: (() => {
     if (location.protocol !== 'file:') return '';
@@ -91,7 +92,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setAppIcon: (/** @type {string} */ src) => ipcRenderer.invoke('set-app-icon', src),
   googleImportLibrary: (/** @type {any} */ opts) => ipcRenderer.invoke('google-import-library', opts),
   saveTextFile: (/** @type {any} */ payload) => ipcRenderer.invoke('save-text-file', payload),
-});
+};
+contextBridge.exposeInMainWorld('electronAPI', api);
 
 // which computer this is, for controls that belong to one only (.windows-only in styles.css)
 window.addEventListener('DOMContentLoaded', () => document.documentElement.classList.add(`platform-${process.platform}`));

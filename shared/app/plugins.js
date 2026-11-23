@@ -94,12 +94,12 @@ window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomSt
       toggle.addEventListener('click', () => {
         p.enabled = !p.enabled;
         toggle.classList.toggle('active', p.enabled);
-        window.electronAPI.setPluginEnabled(p.file, p.enabled);
+        pluginsApi.setPluginEnabled(p.file, p.enabled);
         if (p.enabled) runPlugin(p); else stopPlugin(p, false);
       });
       (/** @type {HTMLElement} */ (card.querySelector('.ct-remove'))).addEventListener('click', () => {
         stopPlugin(p, true);
-        window.electronAPI.removePlugin(p.file);
+        pluginsApi.removePlugin(p.file);
         pluginsCache = pluginsCache.filter((x) => x.file !== p.file);
         renderPluginCards();
         showToast(Tm('Plugin file deleted'), 'info');
@@ -113,7 +113,8 @@ window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomSt
     pluginsCache.filter((/** @type {any} */ p) => p.enabled).forEach(runPlugin);
     renderPluginCards();
   }
-  const pluginsApi = window.electronAPI;
+  // the plugin calls are only on computers; the plugin cards and buttons only show when listPlugins is there
+  const pluginsApi = /** @type {UrielDesktopApi} */ (window.electronAPI);
   async function reloadPluginsList() {
     if (pluginsApi && pluginsApi.listPlugins) {
       pluginsCache = await pluginsApi.listPlugins();

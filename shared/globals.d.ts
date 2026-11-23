@@ -25,7 +25,7 @@ declare global {
     showSettingsCategory?: (cat: string) => void;
     UrielSettingsBack?: () => boolean;
     // desktop/preload.js on computers, mobile/electron-api.ts on phones
-    electronAPI: any;
+    electronAPI: UrielElectronApi;
     // the phone app
     Capacitor?: { getPlatform(): string; isNativePlatform?(): boolean; Plugins?: any };
     // the phone app's own updater (mobile/app-updater.ts)
@@ -211,6 +211,83 @@ declare global {
     refresh(): void;
     strings(): string[];
   }
+  type UrielDirResult = { ok?: boolean; success?: boolean; error?: string; dir?: string; reset?: boolean };
+  // window.electronAPI: desktop/preload.js on computers, mobile/electron-api.ts on phones. What both give is
+  // required; the rest is optional and checked for first. IPC answers are typed as main.js sends them.
+  interface UrielElectronApi {
+    isWindows: boolean;
+    isMobile?: boolean;
+    serverToken?: string;
+    minimizeWindow(): void;
+    maximizeWindow(): void;
+    closeWindow(): void;
+    getServerPort(): Promise<number>;
+    getGpuCompositing(): Promise<string>;
+    pickMedia(): Promise<string | null>;
+    importAudioFiles(opts?: { folder?: boolean }): Promise<{ id: string; file: string; ext: string; name: string }[]>;
+    onWindowVisibility(cb: (visible: boolean) => void): void;
+    setZoomFactor(factor: number): void;
+    getCacheSize(): Promise<{ audio: number; web: number; total: number }>;
+    clearCache(): Promise<unknown>;
+    getDataDir(): Promise<{ dir: string; defaultDir?: string; isCustom?: boolean }>;
+    pickDataDir(): Promise<string | null>;
+    setDataDir(dir: string, move: boolean): Promise<UrielDirResult>;
+    getDownloadDir(): Promise<{ dir: string; isCustom?: boolean }>;
+    pickDownloadDir(): Promise<string | null>;
+    setDownloadDir(dir: string): Promise<UrielDirResult>;
+    resetDownloadDir(): Promise<UrielDirResult>;
+    restartApp(): void;
+    setTrayOnClose(enabled: boolean): void;
+    getAppVersion(): Promise<string>;
+    getHwAccel(): Promise<boolean>;
+    setHwAccel(on: boolean): void;
+    trimMemory(): void;
+    onMediaCommand(cb: (cmd: string) => void): void;
+    toggleMiniWindow(): Promise<boolean>;
+    setMiniLyrics?(enabled: boolean): Promise<unknown>;
+    setMediaKeys(on: boolean): void;
+    mediaKeysActive(): void;
+    onWelcomeResult(cb: (d: UrielWelcomeResult | null) => void): void;
+    saveTextFile(payload: { defaultName?: string; content?: string; kind?: string }): Promise<{ success?: boolean; canceled?: boolean; error?: string; [field: string]: unknown }>;
+    shareText?(title: string, text: string): Promise<unknown>;
+    copyText?(text: string): Promise<boolean>;
+    getDiagnostics?(): Promise<string>;
+    openExternal?(url: string): void;
+    logError?(level: string, message: string, stack?: string | null): void;
+    getAudioOutputInfo?(): Promise<{ name?: string; battery?: number } | null>;
+    discordPresenceUpdate?(trackInfo: unknown): void;
+    discordPresenceClear?(): void;
+    updates?: NonNullable<Window['UrielAppUpdater']>;
+    listPlugins?(): Promise<{ file: string; name?: string; enabled?: boolean; code?: string; wrongExt?: boolean; [field: string]: unknown }[]>;
+    setPluginEnabled?(file: string, on: boolean): void;
+    disableAllPlugins?(): void;
+    removePlugin?(file: string): void;
+    googleLogin?(profile: string): Promise<{ loggedIn?: boolean; [field: string]: unknown }>;
+    googleImportLibrary?(opts: Record<string, unknown>): Promise<{ success?: boolean; error?: string; [field: string]: unknown }>;
+    ytSigninSet?(opts: { enabled: boolean; profile: string }): Promise<{ [field: string]: unknown }>;
+    getSystemColors?(): Promise<{ dark?: boolean; accent?: string }>;
+    getZoomFactor?(): number;
+    welcomeFinish?(detail: unknown): void;
+    getLauncherInfo?(): Promise<unknown>;
+    openLogsFolder?(): void;
+    openPluginsFolder?(): void;
+    importPlugins?(): Promise<number>;
+    setAppIcon?(src: string | null): Promise<unknown>;
+    googleLogout?(profile: string): Promise<{ success?: boolean; error?: string }>;
+    googleAuthStatus?(profile: string): Promise<{ loggedIn?: boolean; [field: string]: unknown }>;
+    ytSigninStatus?(profile: string): Promise<{ [field: string]: unknown }>;
+    // custom theme files: nothing provides these yet, app.js checks for them first
+    getAppCss?(): Promise<string>;
+    listThemes?(): Promise<{ id: string; name: string; css: string; enabled?: boolean; author?: string; description?: string }[]>;
+    importThemes?(): Promise<{ id: string; name: string; css: string; enabled?: boolean; author?: string; description?: string }[]>;
+    removeTheme?(id: string): Promise<unknown>;
+    setThemeEnabled?(id: string, on: boolean): void;
+    disableAllThemes?(): void;
+  }
+  // the computer app's electronAPI: code that has made sure it is on a computer (it found one of these) uses this
+  type UrielDesktopApi = UrielElectronApi & Required<Pick<UrielElectronApi, 'logError' | 'listPlugins' | 'setPluginEnabled' |
+    'disableAllPlugins' | 'removePlugin' | 'openPluginsFolder' | 'importPlugins' | 'googleLogin' | 'googleLogout' |
+    'googleAuthStatus' | 'googleImportLibrary' | 'ytSigninStatus' | 'ytSigninSet'>>;
   // an album, single, EP or Daily Mix card from a search, an artist page or home
   interface UrielAlbum {
     id: string;

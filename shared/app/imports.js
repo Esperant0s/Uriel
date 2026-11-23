@@ -1287,7 +1287,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   let googleConnected = false;
   // YouTube / YouTube Music "Log in" (desktop): the Google login lives in its own browser storage in main.js
   // (google-library.js), one per profile; this page only learns whether it is logged in and gets the songs back
-  const googleApi = () => (window.electronAPI && typeof window.electronAPI.googleImportLibrary === 'function' && !window.electronAPI.isMobile ? window.electronAPI : null);
+  const googleApi = () => (window.electronAPI && typeof window.electronAPI.googleImportLibrary === 'function' && !window.electronAPI.isMobile ? /** @type {UrielDesktopApi} */ (window.electronAPI) : null);
   const googleProfile = () => (window.UrielProfiles && window.UrielProfiles.id) || 'default';
 
   // Settings → Integrations → YouTube → "Play with my YouTube sign-in" (computers: yt-dlp uses the Google login of
@@ -1311,7 +1311,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   }
   if (ytSigninToggle && window.electronAPI && window.electronAPI.ytSigninSet) {
     ytSigninToggle.addEventListener('click', async () => {
-      const api = window.electronAPI;
+      const api = /** @type {UrielDesktopApi} */ (window.electronAPI);
       const enabled = !ytSigninToggle.classList.contains('active');
       // turning it on without a sign-in: sign in first (the same Google window as the library import)
       if (enabled) {
@@ -1328,7 +1328,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       } catch (e) { refreshYtSignin(); }
     });
     if (ytSigninBtn) ytSigninBtn.addEventListener('click', async () => {
-      await window.electronAPI.googleLogin(googleProfile()).catch(() => null);
+      await /** @type {UrielDesktopApi} */ (window.electronAPI).googleLogin(googleProfile()).catch(() => null);
       refreshYtSignin();
     });
     refreshYtSignin();

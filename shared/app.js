@@ -11165,7 +11165,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // a whole folder (and its subfolders) at once: computers and Android, iPhones pick files
   const btnAddLocalFolder = document.getElementById('btn-add-local-folder');
   const canAddFolder = !isPhoneApp || (window.Capacitor && window.Capacitor.getPlatform() === 'android');
-  if (btnAddLocalFolder && canAddFolder && window.electronAPI && window.electronAPI.importAudioFiles) {
+  if (btnAddLocalFolder && canAddFolder && window.electronAPI) {
     btnAddLocalFolder.hidden = false;
     btnAddLocalFolder.addEventListener('click', () => importLocalFiles({ folder: true }));
   }
@@ -14016,11 +14016,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       toggle.addEventListener('click', () => {
         t.enabled = !t.enabled;
         toggle.classList.toggle('active', t.enabled);
-        window.electronAPI.setThemeEnabled(t.id, t.enabled);
+        window.electronAPI.setThemeEnabled?.(t.id, t.enabled);
         applyCustomStyles();
       });
       /** @type {HTMLElement} */ (card.querySelector('.ct-remove')).addEventListener('click', () => {
-        window.electronAPI.removeTheme(t.id);
+        window.electronAPI.removeTheme?.(t.id);
         customThemes = customThemes.filter((x) => x.id !== t.id);
         applyCustomStyles();
         renderThemeCards();
@@ -14042,9 +14042,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const btnAddTheme = document.getElementById('btn-add-theme');
-  if (btnAddTheme && window.electronAPI && window.electronAPI.importThemes) {
+  const importThemes = window.electronAPI && window.electronAPI.importThemes;
+  if (btnAddTheme && importThemes) {
     btnAddTheme.addEventListener('click', async () => {
-      const added = await window.electronAPI.importThemes();
+      const added = await importThemes();
       if (!added.length) return;
       customThemes.push(...added);
       renderThemeCards();
