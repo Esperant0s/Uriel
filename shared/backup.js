@@ -6,14 +6,14 @@
 (function () {
   if (!window.UrielBackup) return;
   const B = window.UrielBackup;
-  /** @type {(id: string) => any} */
-  const $ = (id) => document.getElementById(id);
-  /** @type {any} */
-  let core = null;
+  const $ = (/** @type {string} */ id) => document.getElementById(id);
+  // set by hook() below, before anything here can run
+  /** @type {Window['UrielCore']} */
+  let core = /** @type {never} */ (null);
   /** @param {string} m @param {string} [kind] */
   const toast = (m, kind) => { try { core && core.toast(m, kind || 'info'); } catch (e) {} };
-  /** @type {() => any} */
   const P = () => window.UrielProfiles || null;
+  const input = (/** @type {string} */ id) => /** @type {HTMLInputElement | null} */ (document.getElementById(id));
   const isDevice = (/** @type {string} */ k) => { const p = P(); return p && p.isDevice ? p.isDevice(k) : false; };
 
   async function appVersion() {
@@ -40,9 +40,9 @@
   }
 
   // ---------- playlist files ----------
-  /** @param {any[]} list @param {string} name */
+  /** @param {UrielPlaylist[]} list @param {string} name */
   async function exportPlaylists(list, name) {
-    const valid = (list || []).filter((/** @type {any} */ p) => p && Array.isArray(p.tracks));
+    const valid = (list || []).filter((p) => p && Array.isArray(p.tracks));
     if (!valid.length) { toast('No playlists to export', 'info'); return; }
     const text = JSON.stringify(B.playlistFile(valid, { appVersion: await appVersion() }), null, 2);
     try {
@@ -52,21 +52,22 @@
 
   function exportCurrent() {
     const s = core && core.state;
-    const pl = s && s.playlists.find((/** @type {any} */ p) => p.id === s.currentPlaylistId);
+    const pl = s && s.playlists.find((p) => p.id === s.currentPlaylistId);
     if (pl) exportPlaylists([pl], B.fileName(pl.name || 'playlist', 'json'));
   }
 
   function exportAll() {
     const s = core && core.state;
-    const me = P() ? P().current().name : '';
-    exportPlaylists(s ? s.playlists : [], B.fileName(me && P().list().length > 1 ? `uriel-playlists-${me}` : 'uriel-playlists', 'json'));
+    const prof = P();
+    const me = prof ? prof.current().name : '';
+    exportPlaylists(s ? s.playlists : [], B.fileName(me && prof && prof.list().length > 1 ? `uriel-playlists-${me}` : 'uriel-playlists', 'json'));
   }
 
   function pickPlaylistFiles() {
-    const input = $('json-playlist-file-input');
-    if (!input) return;
-    input.value = '';
-    input.click();
+    const el = input('json-playlist-file-input');
+    if (!el) return;
+    el.value = '';
+    el.click();
   }
 
   /** @param {File[]} files */
@@ -80,7 +81,7 @@
     const playlists = found.filter((p) => p.tracks.length);
     if (!playlists.length) { toast('No playlists with songs in that file', 'error'); return; }
     // songs known only by title and artist get looked up first
-    const unmatched = playlists.flatMap((p) => p.tracks.filter((/** @type {any} */ t) => t.needsMatch)).slice(0, 2000);
+    const unmatched = playlists.flatMap((p) => p.tracks.filter((t) => t.needsMatch)).slice(0, 2000);
     const matched = new Map();
     if (unmatched.length) {
       toast(`Finding ${unmatched.length} song${unmatched.length === 1 ? '' : 's'} on YouTube…`, 'info');
@@ -141,7 +142,8 @@
 
   async function exportBackup() {
     if (!core || libraryUnavailable()) return;
-    const me = P() ? P().current() : { name: '' };
+    const prof = P();
+    const me = prof ? prof.current() : { name: '' };
     const data = B.makeBackup(ownEntries(), { profileName: me.name, appVersion: await appVersion(), isDevice });
     const day = new Date().toISOString().slice(0, 10);
     try {
@@ -150,13 +152,13 @@
   }
 
   function pickBackupFile() {
-    const input = $('account-file-input');
-    if (!input) return;
-    input.value = '';
-    input.click();
+    const el = input('account-file-input');
+    if (!el) return;
+    el.value = '';
+    el.click();
   }
 
-  /** @param {File} file */
+  /** @param {File | null | undefined} file */
   async function restoreBackup(file) {
     if (!file || !core || libraryUnavailable()) return;
     let backup;
@@ -169,12 +171,13 @@
 
   // asks, then replaces this profile with the backup and restarts. `autoDay`: one of the automatic backups, by its
   // day. Answers whether the restore went ahead.
-  /** @param {any} backup @param {{ autoDay?: string, lead?: string }} [o] */
+  /** @param {ReturnType<typeof B.readBackup>} backup @param {{ autoDay?: string, lead?: string }} [o] */
   function restoreFrom(backup, { autoDay = '', lead = '' } = {}) {
     if (!core || libraryUnavailable()) return false;
     const c = backup.counts;
     if (!c.keys) { toast('That backup has nothing Uriel can restore', 'error'); return false; }
-    const me = P() ? P().current().name : '';
+    const prof = P();
+    const me = prof ? prof.current().name : '';
     const what = [`${c.playlists} playlist${c.playlists === 1 ? '' : 's'}`, `${c.favorites} favorite${c.favorites === 1 ? '' : 's'}`];
     const from = autoDay ? `the automatic backup of ${niceDay(autoDay)}`
       : backup.source === 'riff' ? 'this Riff account' : (backup.profileName ? `the backup of "${backup.profileName}"` : 'this backup');
@@ -208,7 +211,7 @@
   const AUTO_DAY = 'uriel_autobackup_day';
   const AUTO_DISMISSED = 'uriel_autobackup_dismissed';
   const niceDay = (/** @type {string} */ day) => { try { return new Date(`${day}T12:00:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { return day; } };
-  const profileId = () => { try { return (P() && P().current().id) || 'default'; } catch (e) { return 'default'; } };
+  const profileId = () => { try { const prof = P(); return (prof && prof.current().id) || 'default'; } catch (e) { return 'default'; } };
   const autoUrl = (/** @type {string} */ route, more = '') => `${core.base()}/api/${route}?profile=${encodeURIComponent(profileId())}${more}`;
   const libraryCounts = () => {
     const s = core.state || {};
@@ -231,7 +234,8 @@
     if (!core || (L && L.store && L.store.mode() === 'unavailable')) return;
     const today = B.dayOf(new Date());
     if (!B.autoBackupDue({ lastDay: stored(AUTO_DAY), today, counts: libraryCounts() })) return;
-    const me = P() ? P().current() : { name: '' };
+    const prof = P();
+    const me = prof ? prof.current() : { name: '' };
     const data = B.makeBackup(ownEntries(), { profileName: me.name, appVersion: await appVersion(), isDevice });
     try {
       const r = await fetch(autoUrl('auto-backup', `&day=${today}`), { method: 'POST', body: JSON.stringify(data) });
@@ -261,7 +265,7 @@
     hint.textContent = list.length
       ? `Saved on this device once a day. Newest: ${niceDay(list[0].day)} (${list.length} kept)`
       : 'Saved on this device once a day, once there is something to save';
-    const btn = $('btn-auto-backups');
+    const btn = /** @type {HTMLButtonElement | null} */ ($('btn-auto-backups'));
     if (btn) btn.disabled = !list.length;
   }
 
@@ -309,13 +313,14 @@
     on('btn-cpm-json', pickPlaylistFiles);
     on('btn-export-account', exportBackup);
     on('btn-import-account', pickBackupFile);
-    const files = $('json-playlist-file-input');
+    const files = input('json-playlist-file-input');
     if (files) files.addEventListener('change', () => { const list = [...(files.files || [])]; files.value = ''; importPlaylistFiles(list); });
-    const acc = $('account-file-input');
+    const acc = input('account-file-input');
     if (acc) acc.addEventListener('change', () => { const f = acc.files && acc.files[0]; acc.value = ''; restoreBackup(f); });
     // with several profiles, say whose backup this is
     const hint = $('export-account-hint');
-    if (hint && P() && P().list().length > 1) hint.textContent = `${P().current().name}: playlists, favorites, history, Encore and settings in one file`;
+    const prof = P();
+    if (hint && prof && prof.list().length > 1) hint.textContent = `${prof.current().name}: playlists, favorites, history, Encore and settings in one file`;
     startAutoBackups();
   }
 

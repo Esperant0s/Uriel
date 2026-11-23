@@ -9,20 +9,21 @@
 // JSON: { v: 1, n: name, t: [[kind, ref, title, artist, seconds], ...] }; kind "y" = YouTube / YouTube Music
 // (ref = video id), "s" = SoundCloud (ref = track URL), "u" = anything else with a URL. Songs from files on
 // the device can't be shared and are left out. Used by the app (app.js), the website (site/play) and tests.
-(function (/** @type {any} */ root) {
+(function (/** @type {Record<string, unknown>} */ root) {
   const WEB = 'https://cloverscripts.github.io/riff-muriel/play/';
   const MAX_TRACKS = 500;
   const clip = (/** @type {unknown} */ s, /** @type {number} */ n) => String(s == null ? '' : s).slice(0, n);
   const YT_ID = /^[A-Za-z0-9_-]{11}$/;
 
-  const ytId = (/** @type {any} */ t) => {
+  /** @typedef {{ id?: string | number, url?: string, title?: string, artist?: string, duration?: number, platform?: string, isLocal?: boolean }} ShareSong */
+  const ytId = (/** @type {ShareSong | null | undefined} */ t) => {
     if (t && YT_ID.test(String(t.id || ''))) return String(t.id);
     const m = /(?:v=|youtu\.be\/|\/shorts\/|\/embed\/)([A-Za-z0-9_-]{11})/.exec(String((t && t.url) || ''));
     return m ? m[1] : '';
   };
 
   // a Uriel track -> a compact row, or null when it can't be shared
-  /** @param {any} t @returns {(string | number)[] | null} */
+  /** @param {ShareSong | null | undefined} t @returns {(string | number)[] | null} */
   function packTrack(t) {
     if (!t || t.platform === 'local' || t.isLocal) return null;
     const meta = [clip(t.title, 140), clip(t.artist, 80), Math.max(0, Math.round(Number(t.duration) || 0))];
@@ -36,7 +37,7 @@
   }
 
   // a compact row -> a track the app and the web player both understand
-  /** @param {any} r */
+  /** @param {unknown} r */
   function unpackTrack(r) {
     if (!Array.isArray(r) || typeof r[1] !== 'string') return null;
     const [kind, ref, title, artist, duration] = r;
@@ -52,7 +53,7 @@
   const b64url = {
     enc(/** @type {Uint8Array} */ bytes) {
       let s = '';
-      for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, /** @type {any} */ (bytes.subarray(i, i + 0x8000)));
+      for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, /** @type {number[]} */ (/** @type {unknown} */ (bytes.subarray(i, i + 0x8000))));
       return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
     },
     dec(/** @type {unknown} */ str) {
@@ -73,10 +74,10 @@
   const idBytes = (/** @type {string} */ id) => { const b = b64url.dec(id); return b.length === 8 && b64url.enc(b) === id ? b : null; };
 
   // name + ids only; null when a song isn't a plain YouTube video
-  /** @param {string} name @param {any[]} rows */
+  /** @param {string} name @param {(string | number)[][]} rows */
   function packIds(name, rows) {
     if (!rows.length || rows.some((r) => r[0] !== 'y')) return null;
-    const ids = rows.map((r) => idBytes(r[1]));
+    const ids = rows.map((r) => idBytes(String(r[1])));
     if (ids.some((b) => !b)) return null;
     let nameBytes = new TextEncoder().encode(name);
     for (let n = name.length; nameBytes.length > 255; n--) nameBytes = new TextEncoder().encode(name.slice(0, n));
@@ -88,9 +89,9 @@
   }
 
   // { name, tracks } -> payload string (and how many songs made it in)
-  /** @param {any} playlist */
+  /** @param {{ name?: string, tracks?: ShareSong[] } | null | undefined} playlist */
   async function encode(playlist) {
-    const rows = (playlist && Array.isArray(playlist.tracks) ? playlist.tracks : []).map(packTrack).filter(Boolean).slice(0, MAX_TRACKS);
+    const rows = (playlist && Array.isArray(playlist.tracks) ? playlist.tracks : []).map(packTrack).filter((r) => r !== null).slice(0, MAX_TRACKS);
     const name = clip((playlist && playlist.name) || 'Playlist', 100);
     const short = packIds(name, rows);
     if (short) return { payload: short, count: rows.length };
@@ -153,7 +154,7 @@
 
   // Looks up the title and artist of songs from a short link (YouTube's oEmbed, open to any page).
   // Songs it can't find keep "YouTube video". opts.fetch for tests, opts.onUpdate(track) as each one lands.
-  /** @param {any[]} tracks @param {{ fetch?: (url: string, init?: RequestInit) => Promise<Response>, onUpdate?: (t: any) => void }} [opts] */
+  /** @template {{ id?: string, needsInfo?: boolean, title?: string, artist?: string }} T @param {T[]} tracks @param {{ fetch?: (url: string, init?: RequestInit) => Promise<Response>, onUpdate?: (t: T) => void }} [opts] */
   async function fillInfo(tracks, opts = {}) {
     const get = opts.fetch || ((/** @type {string} */ u, /** @type {RequestInit} */ o) => fetch(u, o));
     const todo = (tracks || []).filter((t) => t && t.needsInfo);

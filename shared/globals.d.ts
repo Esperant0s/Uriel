@@ -20,6 +20,11 @@ declare global {
       reloadFromStorage(keys: string[]): void;
       togglePlay(): void;
       seek(seconds: number): void;
+      base(): string;
+      openModal(m: HTMLElement | null): void;
+      closeModal(m: HTMLElement | null): void;
+      importPlaylist(name: string, tracks: UrielTrack[], o?: { cover?: string; description?: string }): UrielPlaylist | null | undefined;
+      matchTracks(list: Partial<UrielImportSong>[], onProgress?: (done: number, total: number) => void): Promise<UrielTrack[] & { failStats?: unknown }>;
       [key: string]: unknown;
     };
     showSettingsCategory?: (cat: string) => void;
@@ -434,7 +439,7 @@ declare global {
   }
   interface UrielImportsPart {
     refreshYtSignin(): Promise<void>;
-    matchSpotifyTracks(list: Partial<UrielImportSong>[], onProgress: (done: number, total: number) => void): Promise<UrielTrack[] & { failStats?: unknown }>;
+    matchSpotifyTracks(list: Partial<UrielImportSong>[], onProgress?: (done: number, total: number) => void): Promise<UrielTrack[] & { failStats?: unknown }>;
   }
   interface UrielRadioPart {
     songRadioEnabled(): boolean;

@@ -17,7 +17,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   // the artist has to match as well as the title, covers / live / sped-up uploads lose (#18; track-match.js)
   const pickBestMatch = (/** @type {Partial<UrielImportSong>} */ sp, /** @type {UrielTrack[]} */ results) => window.trackMatch.pickBestMatch(sp, results);
 
-  async function matchSpotifyTracks(/** @type {Partial<UrielImportSong>[]} */ list, /** @type {(done: number, total: number) => void} */ onProgress) {
+  async function matchSpotifyTracks(/** @type {Partial<UrielImportSong>[]} */ list, /** @type {((done: number, total: number) => void) | undefined} */ onProgress) {
     const total = Array.isArray(list) ? list.length : 0;
     let completed = 0;
     let errorCount = 0;
@@ -193,7 +193,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     unknown: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
   };
   // what went wrong, with its picture (import-core.js decides which)
-  function classifyImportError(/** @type {string} */ provider, /** @type {unknown} */ statusOrError, /** @type {unknown} */ body) {
+  function classifyImportError(/** @type {string} */ provider, /** @type {unknown} */ statusOrError, /** @type {Parameters<typeof Core.classifyImportError>[2]} */ body) {
     const info = Core.classifyImportError(provider, statusOrError, body, navigator.onLine);
     return { ...info, icon: IMPORT_ICONS[info.icon] };
   }

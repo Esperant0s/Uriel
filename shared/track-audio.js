@@ -23,7 +23,8 @@
   }
 
   // the tempo values a saved entry (or anything shaped like one) holds, filled in from `base`
-  /** @param {any} entry @param {any} [base] @returns {Record<string, number>} */
+  // a saved entry is { speed, speedPitch, pitch, volume, updatedAt }, but anything with those fields will do
+  /** @param {Record<string, unknown> | null | undefined} entry @param {Record<string, number>} [base] @returns {Record<string, number>} */
   function normalizeEntry(entry, base) {
     const b = base || DEFAULTS;
     /** @type {Record<string, number>} */
@@ -36,15 +37,15 @@
   }
 
   // the settings to play with: the global settings, with the song's own tempo values over them unless ignored
-  /** @param {any} globalSettings @param {any} entry @param {boolean} ignore */
+  /** @template {object} G @param {G | null | undefined} globalSettings @param {Record<string, unknown> | null | undefined} entry @param {boolean} ignore */
   function effectiveSettings(globalSettings, entry, ignore) {
-    const g = globalSettings || {};
+    const g = globalSettings || /** @type {G} */ ({});
     if (!entry || ignore) return { ...g };
-    return { ...g, ...normalizeEntry(entry, normalizeEntry(g)) };
+    return { ...g, ...normalizeEntry(entry, normalizeEntry(/** @type {Record<string, unknown>} */ (g))) };
   }
 
   // the store with `values` saved for `key` (a new object; null values remove the song's entry)
-  /** @param {any} store @param {string} key @param {any} values @param {number} [now] */
+  /** @param {Record<string, Record<string, number>> | null | undefined} store @param {string} key @param {Record<string, unknown> | null | undefined} values @param {number} [now] */
   function setEntry(store, key, values, now) {
     const next = { ...(store || {}) };
     if (!key) return next;
@@ -54,14 +55,15 @@
   }
 
   // drop entries that are not objects; keep at most `max` (the most recently changed)
-  /** @param {any} store @param {number} [max] */
+  /** @param {unknown} store @param {number} [max] */
   function cleanStore(store, max = 5000) {
     if (!store || typeof store !== 'object' || Array.isArray(store)) return {};
-    const entries = Object.entries(store).filter((/** @type {[string, any]} */ [k, v]) => k && v && typeof v === 'object');
-    entries.sort((a, b) => (b[1].updatedAt || 0) - (a[1].updatedAt || 0));
-    /** @type {Record<string, any>} */
+    const entries = /** @type {[string, Record<string, unknown>][]} */ (Object.entries(store).filter(([k, v]) => k && v && typeof v === 'object'));
+    const updated = (/** @type {Record<string, unknown>} */ e) => Number(e.updatedAt) || 0;
+    entries.sort((a, b) => updated(b[1]) - updated(a[1]));
+    /** @type {Record<string, Record<string, number>>} */
     const out = {};
-    for (const [k, v] of entries.slice(0, max)) out[k] = { ...normalizeEntry(v), updatedAt: v.updatedAt || 0 };
+    for (const [k, v] of entries.slice(0, max)) out[k] = { ...normalizeEntry(v), updatedAt: updated(v) };
     return out;
   }
 
@@ -76,13 +78,13 @@
   ];
   const PRESET_KEYS = ['speed', 'speedPitch', 'pitch'];
 
-  /** @param {any} settings */
+  /** @param {Record<string, unknown> | null | undefined} settings */
   function presetValues(settings) {
     const n = normalizeEntry(settings);
     return { speed: n.speed, speedPitch: n.speedPitch, pitch: n.pitch };
   }
 
-  /** @param {unknown} name @param {any} settings @param {number} [now] */
+  /** @param {unknown} name @param {Record<string, unknown> | null | undefined} settings @param {number} [now] */
   function makePreset(name, settings, now) {
     const clean = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
     if (!clean) return null;
@@ -93,12 +95,12 @@
   /** @param {unknown} list @returns {{ id: string, name: string, builtin?: boolean, values: ReturnType<typeof presetValues> }[]} */
   function cleanPresets(list) {
     if (!Array.isArray(list)) return [];
-    return list.filter((/** @type {any} */ p) => p && typeof p.id === 'string' && typeof p.name === 'string' && p.name.trim())
-      .map((/** @type {any} */ p) => ({ id: p.id, name: p.name.trim().slice(0, 40), values: presetValues(p.values) }));
+    return list.filter((/** @type {{ id?: unknown, name?: unknown } | null} */ p) => p && typeof p.id === 'string' && typeof p.name === 'string' && p.name.trim())
+      .map((/** @type {{ id: string, name: string, values?: Record<string, unknown> }} */ p) => ({ id: p.id, name: p.name.trim().slice(0, 40), values: presetValues(p.values) }));
   }
 
   // does `settings` match the preset's values?
-  /** @param {any} preset @param {any} settings */
+  /** @param {{ values: Record<string, number> } | null | undefined} preset @param {Record<string, unknown> | null | undefined} settings */
   function presetMatches(preset, settings) {
     if (!preset || !settings) return false;
     const s = normalizeEntry(settings);

@@ -14766,7 +14766,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- importing from Spotify, Apple Music, YouTube Music and links (app/imports.js) ----
   const importsPart = /** @type {UrielImportsPart} */ ({});
   function refreshYtSignin() { return importsPart.refreshYtSignin(); }
-  function matchSpotifyTracks(/** @type {UrielTrack[]} */ list, /** @type {(done: number, total: number) => void} */ onProgress) { return importsPart.matchSpotifyTracks(list, onProgress); }
+  function matchSpotifyTracks(/** @type {Partial<UrielImportSong>[]} */ list, /** @type {((done: number, total: number) => void) | undefined} */ onProgress) { return importsPart.matchSpotifyTracks(list, onProgress); }
   window.UrielApp.imports({ normalizeImportText, state, pool, escapeHtml, T, openModal, closeModal, getTrackCanonicalId, stampAddedAt, createWavyProgress, updateFavoritesBadge, updateFavoriteIcon, renderFavoritesView, createPlaylist, showToast, renderPlaylistsList, I18N, Tm, isSameTrack, openPlaylistDetail, isFavoriteSong, importSharedPlaylist, setPlatform, el }, importsPart);
 
   /** @type {UrielTrack | null} */
@@ -19037,7 +19037,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     },
     openPlaylist: (/** @type {string} */ id) => openPlaylistDetail(id),
     // songs known only by title and artist, found on YouTube like a Spotify import
-    matchTracks: (/** @type {UrielTrack[]} */ list, /** @type {(done: number, total: number) => void} */ onProgress) => matchSpotifyTracks(list, onProgress),
+    matchTracks: (/** @type {Partial<UrielImportSong>[]} */ list, /** @type {((done: number, total: number) => void) | undefined} */ onProgress) => matchSpotifyTracks(list, onProgress),
     // sync.js wrote these keys with what another device had; show it without a restart
     reloadFromStorage(/** @type {string[]} */ keys) {
       const has = (/** @type {string} */ k) => keys.includes(k);

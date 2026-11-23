@@ -2,11 +2,14 @@
 // Importing music from elsewhere, the part with no page in it: reading Spotify's and Apple Music's export files,
 // lengths given in seconds, milliseconds or m:ss, names tidied for matching, and what an import error means.
 // app.js and app/imports.js run it in the app, test/import-core.test.js in Node.
-(function (/** @type {any} */ root) {
-  /** @param {any} str */
+(function (/** @type {Record<string, unknown>} */ root) {
+  // Spotify's and Apple's export files aren't documented and change between exports, so they aren't typed;
+  // every field is checked before it is used
+  /** @typedef {any} ExportJson */
+  /** @param {unknown} str */
   function normalizeImportText(str) {
     if (!str) return '';
-    return str
+    return String(str)
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
@@ -55,7 +58,7 @@
   // One of Spotify's export files, already parsed (YourLibrary.json, Playlist1.json, or a streaming history): the
   // songs it lists as { likes, playlists: [{ name, tracks }] }. msPlayed (streaming history) is how long a song was
   // listened to, not how long it is, so it is never taken as the length.
-  /** @param {any} json */
+  /** @param {ExportJson} json */
   function parseSpotifyExport(json) {
     const likes = [];
     const playlists = [];
@@ -181,13 +184,14 @@
     return { likes, playlists };
   }
 
-  /** @param {any} json */
+  /** @param {ExportJson} json */
   function parseAppleExportJSON(json) {
-    /** @type {any[]} */
+    /** @type {UrielImportSong[]} */
     const likes = [];
+    /** @type {Map<string, UrielImportSong[]>} */
     const playlistsMap = new Map();
 
-    /** @param {any} node @param {string} [currentPl] */
+    /** @param {ExportJson} node @param {string} [currentPl] */
     function walk(node, currentPl = '') {
       if (!node || typeof node !== 'object') return;
       if (Array.isArray(node)) {
@@ -195,7 +199,7 @@
         return;
       }
       // Apple's own export writes "Title", "Artist", "Track Duration": also look keys up in lower case, like the CSV path
-      /** @type {Record<string, any>} */
+      /** @type {ExportJson} */
       const lowered = {};
       for (const [k, v] of Object.entries(node)) { lowered[k] = v; const lk = k.toLowerCase(); if (!(lk in lowered)) lowered[lk] = v; }
       node = lowered;
@@ -224,8 +228,9 @@
       if (title && artist && (node.type === 'song' || node.type === 'songs' || duration || pl || node.contentDescriptor)) {
         const track = { title, artist, duration };
         if (pl) {
-          if (!playlistsMap.has(pl)) playlistsMap.set(pl, []);
-          playlistsMap.get(pl).push(track);
+          let list = playlistsMap.get(pl);
+          if (!list) playlistsMap.set(pl, list = []);
+          list.push(track);
         } else {
           likes.push(track);
         }
@@ -245,7 +250,7 @@
 
   // What went wrong with an import, for people: { code, title, hint, icon } (icon is a name; app/imports.js has the
   // pictures). `online`: whether the device has a connection.
-  /** @param {string} provider @param {unknown} statusOrError @param {any} [body] @param {boolean} [online] */
+  /** @param {string} provider @param {unknown} statusOrError @param {string | { status?: unknown, error?: unknown, code?: unknown } | null} [body] @param {boolean} [online] */
   function classifyImportError(provider, statusOrError, body, online = true) {
     let status = typeof statusOrError === 'number' ? statusOrError : 0;
     let rawMsg = '';
