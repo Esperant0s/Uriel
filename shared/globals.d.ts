@@ -47,6 +47,7 @@ declare global {
       radio(deps: Record<string, unknown>, out: UrielRadioPart): void;
       artist(deps: Record<string, unknown>, out: UrielArtistPart): void;
       themes(deps: Record<string, unknown>, out: UrielThemesPart): void;
+      settings(deps: Record<string, unknown>, out: UrielSettingsPart): void;
       lyrics(deps: Record<string, unknown>, out: UrielLyricsPart): void;
       home(deps: Record<string, unknown>, out: UrielHomePart): void;
       look(deps: Record<string, unknown>): { applyIconPack(pack: string): void };
@@ -432,6 +433,9 @@ declare global {
     end: number;
   }
   // what each part of app.js (shared/app/) hands back to it
+  interface UrielSettingsPart {
+    enterSettings(): void;
+  }
   interface UrielThemesPart {
     applyCustomStyles(): void;
     loadCustomThemes(): Promise<void>;
