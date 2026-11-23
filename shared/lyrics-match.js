@@ -108,7 +108,7 @@
   // than the studio song lrclib lists, and its lyrics then ran ahead of the singing (#33). Further apart than
   // this, a result's words can still show, untimed.
   const SYNC_TOLERANCE_S = 6;
-  /** @param {any} item @param {number} duration */
+  /** @param {{ duration?: unknown } | null | undefined} item @param {number} duration */
   function syncedFits(item, duration) {
     const len = Number(item && item.duration) || 0;
     return !(duration > 0 && len > 0 && Math.abs(len - duration) > SYNC_TOLERANCE_S);
@@ -121,16 +121,17 @@
     const s = Math.round(Number(len) || 0);
     return s > 0 ? `[length: ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}]\n${lrc}` : lrc;
   }
-  const dropLength = (/** @type {any} */ text) => (text ? String(text).replace(/^\[length:[^\]\n]*\]\s*\n?/m, '') : text);
+  /** @template {string | null | undefined} T @param {T} text @returns {T} */
+  const dropLength = (text) => /** @type {T} */ (text ? String(text).replace(/^\[length:[^\]\n]*\]\s*\n?/m, '') : text);
   // true or false; null for timed lyrics saved before their length was kept
-  /** @param {any} text @param {number} duration */
+  /** @param {string} text @param {number} duration */
   function savedFits(text, duration) {
     if (!(duration > 0) || !/^\[\d+:\d/m.test(text || '')) return true;
     const m = /^\[length:\s*(\d+):(\d+(?:\.\d+)?)\]/m.exec(text);
     return m ? syncedFits({ duration: Number(m[1]) * 60 + Number(m[2]) }, duration) : null;
   }
   // the words without their timing, for lyrics timed on another cut when there's nothing better
-  const untimed = (/** @type {any} */ text) => dropLength(text).replace(/^\[\d+:\d+(?:\.\d+)?\]\s*/gm, '').replace(/<\d+:\d+(?:\.\d+)?>\s*/g, '');
+  const untimed = (/** @type {string} */ text) => dropLength(text).replace(/^\[\d+:\d+(?:\.\d+)?\]\s*/gm, '').replace(/<\d+:\d+(?:\.\d+)?>\s*/g, '');
 
   // lrclib search results -> the best one for this song, or null when nothing really matches. A result whose
   // length is too far off for its timing comes back with its plain lyrics only.

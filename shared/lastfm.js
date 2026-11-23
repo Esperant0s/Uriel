@@ -6,12 +6,13 @@
   if (!window.UrielLastfm) return;
   const L = window.UrielLastfm;
   const ENABLED = 'uriel_lastfm_enabled';
-  /** @type {(id: string) => any} */
-  const $ = (id) => document.getElementById(id);
+  const $ = (/** @type {string} */ id) => document.getElementById(id);
+  const input = (/** @type {string} */ id) => /** @type {HTMLInputElement | null} */ (document.getElementById(id));
   const profileId = () => (window.UrielProfiles && window.UrielProfiles.id) || 'default';
   const isPhone = () => !!(window.electronAPI && window.electronAPI.isMobile);
-  /** @type {any} */
-  let core = null;
+  // set by hook() below, before anything here can run
+  /** @type {Window['UrielCore']} */
+  let core = /** @type {never} */ (null);
   let account = { connected: false, username: '', error: '' };
   let enabled = (() => { try { return localStorage.getItem(ENABLED) !== 'false'; } catch (e) { return true; } })();
   const tracker = L.createTracker();
@@ -19,7 +20,9 @@
   let pollTimer = null;
   let pollUntil = 0;
 
-  /** @param {string} route @param {object} [body] */
+  // what the server's /api/lastfm routes answer (server.js lastfmRoute)
+  /** @typedef {{ success?: boolean, error?: string, code?: string, username?: string, authUrl?: string, accepted?: number, connected?: boolean, saved?: boolean, pending?: boolean, expired?: boolean, retry?: boolean }} LastfmReply */
+  /** @param {string} route @param {object} [body] @returns {Promise<LastfmReply>} */
   async function api(route, body = {}) {
     if (!core) return { success: false, error: 'Uriel is still starting' };
     try {
@@ -64,7 +67,7 @@
     const who = on ? `@${account.username || 'you'}` : '';
     if (!on) cardLine(account.error || T('Not connected'));
     else cardLine(enabled ? Tf('Scrobbling as {0}', who) : Tf('Paused ({0})', who));
-    const toggle = $('btn-lastfm-toggle');
+    const toggle = /** @type {HTMLButtonElement | null} */ ($('btn-lastfm-toggle'));
     if (toggle) {
       toggle.classList.toggle('active', on && enabled);
       toggle.disabled = !on;
@@ -98,7 +101,7 @@
     const m = $('lastfm-modal');
     if (!m || !core) return;
     setStatus('');
-    const pass = $('lastfm-input-pass');
+    const pass = input('lastfm-input-pass');
     if (pass) pass.value = '';
     render();
     core.openModal(m);
@@ -106,25 +109,26 @@
 
   function closeDialog() {
     stopPolling();
-    const pass = $('lastfm-input-pass');
+    const pass = input('lastfm-input-pass');
     if (pass) pass.value = '';
     const m = $('lastfm-modal');
     if (m && core) core.closeModal(m);
   }
 
   function keyPair() {
-    const key = ($('lastfm-input-key') && $('lastfm-input-key').value.trim()) || '';
-    const secret = ($('lastfm-input-secret') && $('lastfm-input-secret').value.trim()) || '';
+    const keyEl = input('lastfm-input-key'), secretEl = input('lastfm-input-secret');
+    const key = (keyEl && keyEl.value.trim()) || '';
+    const secret = (secretEl && secretEl.value.trim()) || '';
     return key || secret ? { apiKey: key, apiSecret: secret } : {};
   }
 
-  /** @param {any} r */
+  /** @param {LastfmReply} r */
   function connected(r) {
     stopPolling();
     account = { connected: true, username: String(r.username || ''), error: '' };
     enabled = true;
     try { localStorage.setItem(ENABLED, 'true'); } catch (e) {}
-    const secret = $('lastfm-input-secret');
+    const secret = input('lastfm-input-secret');
     if (secret) secret.value = '';
     render();
     if (r.error) core.toast(r.error, 'info');
@@ -160,12 +164,12 @@
   }
 
   async function directSignIn() {
-    const user = $('lastfm-input-user');
-    const pass = $('lastfm-input-pass');
+    const user = input('lastfm-input-user');
+    const pass = input('lastfm-input-pass');
     const username = user ? user.value.trim() : '';
     const password = pass ? pass.value : '';
     if (!username || !password) { setStatus('Enter your Last.fm username and password', true); return; }
-    const btn = $('btn-lastfm-login-direct');
+    const btn = /** @type {HTMLButtonElement | null} */ ($('btn-lastfm-login-direct'));
     if (btn) btn.disabled = true;
     setStatus('Signing in…');
     try {
@@ -199,14 +203,14 @@
 
   const active = () => account.connected && enabled;
 
-  /** @param {any} meta */
+  /** @param {NonNullable<ReturnType<typeof L.cleanMeta>>} meta */
   async function announce(meta) {
     const r = await api('now-playing', meta);
     if (r.success) cardLine(`Now playing: ${meta.artist} — ${meta.track}`);
     else if (r.code === 'reauth') { account = { connected: false, username: '', error: r.error || '' }; render(); }
   }
 
-  /** @param {any} meta @param {number} timestamp */
+  /** @param {NonNullable<ReturnType<typeof L.cleanMeta>>} meta @param {number} timestamp */
   async function scrobble(meta, timestamp) {
     const r = await api('scrobble', { ...meta, timestamp });
     if (r.success && r.accepted) cardLine(`Scrobbled: ${meta.artist} — ${meta.track}`);
@@ -258,7 +262,7 @@
       render();
       if (enabled) announceCurrent();
     });
-    const pass = $('lastfm-input-pass');
+    const pass = input('lastfm-input-pass');
     if (pass) pass.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => { if (e.key === 'Enter') { e.preventDefault(); directSignIn(); } });
     const m = $('lastfm-modal');
     if (m) m.addEventListener('click', (/** @type {MouseEvent} */ e) => { if (e.target === m) closeDialog(); });

@@ -131,7 +131,7 @@ function cleanText(value) {
   return value.replace(/[\r\n\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 128);
 }
 
-/** @param {any} rawTrack */
+/** @param {{ title?: unknown, artist?: unknown, duration?: unknown, position?: unknown, isPlaying?: unknown, thumbnail?: unknown, url?: unknown } | null | undefined} rawTrack */
 function setPresence(rawTrack) {
   const details = cleanText(rawTrack && rawTrack.title) || 'Unknown Track';
   const state = cleanText(rawTrack && rawTrack.artist) || 'Unknown Artist';

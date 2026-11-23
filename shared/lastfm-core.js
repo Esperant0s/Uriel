@@ -4,7 +4,7 @@
 // Last.fm's rules (last.fm/api/scrobbling): a song longer than 30 seconds is scrobbled once it has been listened to
 // for half its length or for 4 minutes, whichever comes first. Only listening counts: time spent paused or skipped
 // over by seeking doesn't. "Now playing" goes out as soon as a song really plays.
-(function (/** @type {any} */ root) {
+(function (/** @type {Record<string, unknown>} */ root) {
   const MIN_LENGTH = 30;
   const MAX_WAIT = 240;
   const NOW_PLAYING_AFTER = 1; // seconds listened: a song skipped straight away isn't announced
@@ -82,7 +82,7 @@
 
   // What Last.fm should hear for a song: YouTube titles carry "(Official Video)" and "Artist - Title", channels end
   // in " - Topic" or "VEVO", and only the first of several listed artists names the song's artist.
-  /** @param {any} track */
+  /** @param {{ title?: unknown, artist?: unknown, album?: unknown, duration?: unknown } | null | undefined} track */
   function cleanMeta(track) {
     if (!track) return null;
     let title = clip(track.title, 512).replace(NOISE, '').trim();
@@ -113,7 +113,7 @@
   }
 
   // the song as the tracker knows it: a new key is a new listen
-  const trackKey = (/** @type {any} */ t) => (t ? `${t.platform || ''}|${t.id || ''}|${t.title || ''}|${t.artist || ''}` : '');
+  const trackKey = (/** @type {{ platform?: string, id?: string | number, title?: string, artist?: string } | null | undefined} */ t) => (t ? `${t.platform || ''}|${t.id || ''}|${t.title || ''}|${t.artist || ''}` : '');
 
   const api = { MIN_LENGTH, MAX_WAIT, scrobbleAfter, createTracker, cleanMeta, trackKey };
   if (typeof module === 'object' && module.exports) module.exports = api;

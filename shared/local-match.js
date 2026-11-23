@@ -56,9 +56,11 @@ function sameArtist(a, b) {
 }
 
 // songs: [{ id, title, artist, duration }]. Returns { find({ title, artist, duration }) -> song | null, size }.
-/** @param {any[]} songs */
+// a song on the device, the fields matched on (library.json and the device scan add more)
+/** @typedef {{ id: string, title?: string, artist?: string, duration?: number }} LocalSong */
+/** @template {LocalSong} S @param {S[]} songs */
 function createLocalIndex(songs) {
-  /** @type {Map<string, { song: any, artists: string[] }[]>} */
+  /** @type {Map<string, { song: S, artists: string[] }[]>} */
   const byKey = new Map();
   for (const song of songs || []) {
     if (!song || !song.id || !song.title) continue;
@@ -69,7 +71,7 @@ function createLocalIndex(songs) {
     }
   }
 
-  /** @param {any} track */
+  /** @param {{ title?: string | null, artist?: string | null, duration?: number } | null | undefined} track */
   function find(track) {
     if (!track || !track.title || !byKey.size) return null;
     const want = Number(track.duration) || 0;

@@ -61,12 +61,14 @@ function playerBody(id, v) {
 }
 
 // audio-only formats with a plain link, best first
-/** @param {any} player */
+// one of the player answer's formats, the fields read here
+/** @typedef {{ url?: string, mimeType?: string, itag?: number }} PlayerFormat */
+/** @param {{ streamingData?: { adaptiveFormats?: PlayerFormat[] } } | null | undefined} player */
 function pickFormats(player) {
-  const formats = ((player && player.streamingData && player.streamingData.adaptiveFormats) || [])
-    .filter((/** @type {any} */ f) => f && f.url && /^audio\//.test(f.mimeType || ''));
-  const rank = (/** @type {any} */ f) => { const i = PREFERRED_ITAGS.indexOf(f.itag); return i === -1 ? PREFERRED_ITAGS.length : i; };
-  return formats.sort((/** @type {any} */ a, /** @type {any} */ b) => rank(a) - rank(b));
+  const formats = /** @type {(PlayerFormat & { url: string })[]} */ (((player && player.streamingData && player.streamingData.adaptiveFormats) || [])
+    .filter((f) => f && f.url && /^audio\//.test(f.mimeType || '')));
+  const rank = (/** @type {PlayerFormat} */ f) => { const i = PREFERRED_ITAGS.indexOf(Number(f.itag)); return i === -1 ? PREFERRED_ITAGS.length : i; };
+  return formats.sort((a, b) => rank(a) - rank(b));
 }
 
 const videoId = (/** @type {unknown} */ u) => { const m = String(u || '').match(/(?:v=|youtu\.be\/|\/shorts\/|^)([\w-]{11})(?:[&?#]|$)/); return m ? m[1] : null; };

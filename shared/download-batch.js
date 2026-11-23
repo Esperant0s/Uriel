@@ -7,9 +7,10 @@
 (function () {
   // what a failed download says: 'rate' (YouTube is refusing us: wait before anything else), 'retry' (worth
   // another go), 'fatal' (won't change)
-  /** @param {any} err */
-  function classifyError(err) {
-    if (!err) return 'retry';
+  /** @param {unknown} e */
+  function classifyError(e) {
+    if (!e) return 'retry';
+    const err = /** @type {{ name?: string, status?: unknown, message?: unknown }} */ (e);
     if (err.name === 'AbortError') return 'fatal';
     const status = Number(err.status) || 0;
     const msg = String(err.message || '');

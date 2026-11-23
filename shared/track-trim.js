@@ -20,13 +20,16 @@
   }
 
   // a saved trim is usable when it keeps a real stretch of the song
-  const isActive = (/** @type {any} */ trim) => !!trim && Number.isFinite(trim.end) && trim.end > (trim.start || 0) + 1.5;
+  /** @typedef {{ start?: number, end: number }} Trim */
+  /** @returns {trim is Trim} */
+  const isActive = (/** @type {Partial<Trim> | null | undefined} */ trim) => !!trim && typeof trim.end === 'number' && Number.isFinite(trim.end) && trim.end > (trim.start || 0) + 1.5;
 
   // during playback at `time`: 'start' (seek to the trim start), 'end' (the kept part is over) or null
-  /** @param {any} trim @param {number} time */
+  /** @param {Partial<Trim> | null | undefined} trim @param {number} time */
   function trimAction(trim, time) {
     if (!isActive(trim) || !Number.isFinite(time)) return null;
-    if (trim.start > 0 && time < trim.start - 0.25) return 'start';
+    const start = trim.start || 0;
+    if (start > 0 && time < start - 0.25) return 'start';
     if (time >= trim.end) return 'end';
     return null;
   }
@@ -63,7 +66,7 @@
   const fadeInGain = (/** @type {unknown} */ p) => Math.sin(Math.min(1, Math.max(0, Number(p) || 0)) * Math.PI / 2);
 
   // "1:05.3"
-  /** @param {any} sec */
+  /** @param {number} sec */
   function formatPreciseTime(sec) {
     if (!Number.isFinite(sec) || sec < 0) sec = 0;
     const tenths = Math.floor(sec * 10 + 1e-6);

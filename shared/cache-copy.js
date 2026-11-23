@@ -9,8 +9,9 @@
 
 const { spawn: startProcess } = require('child_process');
 const { track } = require('./child-procs');
-/** @type {(...args: any[]) => any} */
-const spawn = (...args) => track(startProcess.apply(null, /** @type {any} */ (args)));
+/** @typedef {(command: string, args: readonly string[], options: import('child_process').SpawnOptionsWithoutStdio) => import('child_process').ChildProcess} SpawnFn */
+/** @type {SpawnFn} */
+const spawn = (command, args, options) => track(startProcess(command, args, options));
 
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
@@ -23,9 +24,9 @@ function cacheCopyArgs(url, outPath, mode) {
   return ['-y', '-v', 'error', '-nostdin', ...input, '-vn', '-map', '0:a:0', ...codec, '-f', 'opus', outPath];
 }
 
-/** @param {string} bin @param {string[]} args @param {{ spawnFn?: (...args: any[]) => any, onChild?: (proc: any) => void, timeoutMs?: number }} [o] */
+/** @param {string} bin @param {string[]} args @param {{ spawnFn?: SpawnFn, onChild?: (proc: import('child_process').ChildProcess) => void, timeoutMs?: number }} [o] */
 function runFfmpeg(bin, args, { spawnFn = spawn, onChild, timeoutMs = 10 * 60 * 1000 } = {}) {
-  return new Promise((resolve) => {
+  return /** @type {Promise<{ code: number | null, err: string }>} */ (new Promise((resolve) => {
     let proc;
     try { proc = spawnFn(bin, args, { windowsHide: true }); } catch (e) { return resolve({ code: -1, err: String((e instanceof Error && e.message) || e) }); }
     if (onChild) { try { onChild(proc); } catch (_) {} }
@@ -34,12 +35,12 @@ function runFfmpeg(bin, args, { spawnFn = spawn, onChild, timeoutMs = 10 * 60 * 
     const timer = setTimeout(() => { try { proc.kill('SIGKILL'); } catch (_) {} }, timeoutMs);
     proc.on('error', (/** @type {Error} */ e) => { clearTimeout(timer); resolve({ code: -1, err: String((e && e.message) || e) }); });
     proc.on('close', (/** @type {number | null} */ code) => { clearTimeout(timer); resolve({ code, err }); });
-  });
+  }));
 }
 
 // Copies the stream at `url` into `outPath` (an .opus file). Resolves true when a usable file is there.
 // opts: { spawnFn, onChild(proc), minBytes, fs }
-/** @param {string} ffmpegBin @param {string} url @param {string} outPath @param {{ spawnFn?: (...args: any[]) => any, onChild?: (proc: any) => void, minBytes?: number, fs?: typeof import('fs') }} [opts] */
+/** @param {string} ffmpegBin @param {string} url @param {string} outPath @param {{ spawnFn?: SpawnFn, onChild?: (proc: import('child_process').ChildProcess) => void, minBytes?: number, fs?: typeof import('fs') }} [opts] */
 async function copyStreamToCache(ffmpegBin, url, outPath, opts = {}) {
   const fs = opts.fs || require('fs');
   const minBytes = opts.minBytes == null ? 60000 : opts.minBytes;

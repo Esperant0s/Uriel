@@ -30,7 +30,7 @@ const streamSource = require('./stream-source');
 const ytFast = require('./yt-fast');
 // request headers yt-dlp would use for each media URL it resolved (#17), for the audio proxy
 const streamHeaders = new Map();
-function rememberStreamHeaders(/** @type {string} */ url, /** @type {Record<string, string> | undefined} */ headers) {
+function rememberStreamHeaders(/** @type {string | null | undefined} */ url, /** @type {Record<string, string> | undefined} */ headers) {
   if (!url || !headers) return;
   streamHeaders.delete(url);
   streamHeaders.set(url, headers);
@@ -4350,7 +4350,7 @@ async function handleLyrics(/** @type {import('http').IncomingMessage} */ req, /
     return res.end(JSON.stringify({ success: true, lyrics: dropLength(cached.text), isCustom: cached.isCustom || false }));
   }
 
-  /** @typedef {{ success: boolean, lyrics: string, isCustom: boolean }} LyricsOutcome */
+  /** @typedef {{ success: boolean, lyrics: string | null, isCustom: boolean }} LyricsOutcome */
   /** @type {(value: LyricsOutcome) => void} */
   let resolveLyrics = () => {};
   /** @type {Promise<LyricsOutcome>} */
