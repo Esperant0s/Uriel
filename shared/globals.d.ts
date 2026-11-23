@@ -45,6 +45,7 @@ declare global {
       plugins(deps: Record<string, unknown>, out: UrielPluginsPart): void;
       imports(deps: Record<string, unknown>, out: UrielImportsPart): void;
       radio(deps: Record<string, unknown>, out: UrielRadioPart): void;
+      artist(deps: Record<string, unknown>, out: UrielArtistPart): void;
       lyrics(deps: Record<string, unknown>, out: UrielLyricsPart): void;
       home(deps: Record<string, unknown>, out: UrielHomePart): void;
       look(deps: Record<string, unknown>): { applyIconPack(pack: string): void };
@@ -430,6 +431,16 @@ declare global {
     end: number;
   }
   // what each part of app.js (shared/app/) hands back to it
+  interface UrielArtistPart {
+    compactCount(n: number): string;
+    getFollowedArtists(): { name: string; id?: string; avatar?: string; fans?: number; [field: string]: unknown }[];
+    setFollowedArtists(list: { name: string; [field: string]: unknown }[]): void;
+    openArtistProfile(name: string, o?: { id?: string; video?: string }): Promise<void>;
+    openTrackArtist(track: UrielTrack): void;
+    renderAlbumCards(container: HTMLElement, albums: UrielAlbum[], subOf: (album: UrielAlbum) => string): void;
+    updateFollowButton(): void;
+    updateArtistBlockButton(): void;
+  }
   interface UrielPluginsPart {
     emitPluginEvent(event: string, data?: unknown): void;
     reloadPluginsList(): Promise<void>;
