@@ -37,7 +37,7 @@
 
   // items: what to download. worker(item, { attempt, fresh }) resolves when the song is saved, throws otherwise
   // (err.status for an HTTP answer). Resolves { done: [items], failed: [{ item, error }], aborted }.
-  /** @template T @param {Iterable<T> | ArrayLike<T> | null | undefined} items @param {(item: T, o: { attempt: number, fresh: boolean }) => Promise<any>} worker @param {{ concurrency?: number, retries?: number, finalPass?: boolean, finalPassDelayMs?: number, signal?: AbortSignal | null, sleep?: (ms: number, signal?: AbortSignal | null) => Promise<void>, now?: () => number, onProgress?: ((p: { done: number, failed: number, total: number, current: T | null }) => void) | null, backoff?: { baseMs?: number, rateBaseMs?: number, maxMs?: number, random?: () => number } }} [opts] */
+  /** @template T @param {Iterable<T> | ArrayLike<T> | null | undefined} items @param {(item: T, o: { attempt: number, fresh: boolean }) => Promise<unknown>} worker @param {{ concurrency?: number, retries?: number, finalPass?: boolean, finalPassDelayMs?: number, signal?: AbortSignal | null, sleep?: (ms: number, signal?: AbortSignal | null) => Promise<void>, now?: () => number, onProgress?: ((p: { done: number, failed: number, total: number, current: T | null }) => void) | null, backoff?: { baseMs?: number, rateBaseMs?: number, maxMs?: number, random?: () => number } }} [opts] */
   async function runDownloadBatch(items, worker, opts = {}) {
     const {
       concurrency = 2, retries = 3, finalPass = true, finalPassDelayMs = 20000, signal = null,

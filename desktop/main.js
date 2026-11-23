@@ -34,7 +34,7 @@ const { LIBRARY_DIR, DATA_DIR, resolveBinary, tutorialDone, markTutorialDone, re
 const { getLauncherInfo, installLauncher } = require('./launcher');
 const { getSystemAudioOutputInfo } = require('./audio-output');
 const { log, tail, LOG_DIR } = require('./logger');
-const logger = { log, tail, LOG_DIR, error: (/** @type {string} */ msg, /** @type {any} */ err) => log('ERROR', `${msg}: ${err && err.message ? err.message : err}`) };
+const logger = { log, tail, LOG_DIR, error: (/** @type {string} */ msg, /** @type {unknown} */ err) => log('ERROR', `${msg}: ${err instanceof Error && err.message ? err.message : err}`) };
 
 process.on('uncaughtException', (err) => {
   try { logger.error('Uncaught exception in main', err); } catch (_) {}

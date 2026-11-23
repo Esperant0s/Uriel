@@ -13,7 +13,8 @@ if (!args.includes('lyrics') && !args.includes('--lyrics')) {
 const PORT = 38472;
 const URL = `http://127.0.0.1:${PORT}/api/lyrics-stream`;
 
-/** @type {any} */
+// cfonts is optional: big letters when it's installed
+/** @type {typeof import('cfonts') | null} */
 let cfonts = null;
 try {
   cfonts = require('cfonts');
@@ -46,7 +47,8 @@ function renderLatin(word, cols, rows) {
         env: 'node'
       });
 
-      renderedLines = out.string.split('\n').filter((/** @type {string} */ l) => l.trim().length > 0);
+      // render() answers false when it can't draw the text
+      if (out) renderedLines = out.string.split('\n').filter((l) => l.trim().length > 0);
     } catch (e) {
     }
   }
