@@ -167,6 +167,17 @@ declare global {
 
   // A song as the app keeps it (queue, favorites, history, playlists). Services add their own fields, so the rest
   // stay loose; mobile/types.d.ts has the phone layer's view of the same thing.
+  // a plugin file in the plugins folder (desktop/plugins.js reads its comment header)
+  interface UrielPluginInfo {
+    file: string;
+    name?: string;
+    author?: string;
+    version?: string;
+    description?: string;
+    enabled?: boolean;
+    code?: string;
+    wrongExt?: boolean;
+  }
   // the parts of PeerJS (assets/peerjs.min.js) sync.js uses
   interface UrielPeerConn {
     peer: string;
@@ -291,7 +302,7 @@ declare global {
     discordPresenceUpdate?(trackInfo: unknown): void;
     discordPresenceClear?(): void;
     updates?: NonNullable<Window['UrielAppUpdater']>;
-    listPlugins?(): Promise<{ file: string; name?: string; enabled?: boolean; code?: string; wrongExt?: boolean; [field: string]: unknown }[]>;
+    listPlugins?(): Promise<UrielPluginInfo[]>;
     setPluginEnabled?(file: string, on: boolean): void;
     disableAllPlugins?(): void;
     removePlugin?(file: string): void;
@@ -499,6 +510,7 @@ declare global {
     localTracks: UrielTrack[];
     loadToken: number;
     serverPort: number;
+    syncedLyrics: UrielLyricLine[];
     [field: string]: any;
   }
 

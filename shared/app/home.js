@@ -22,7 +22,7 @@ window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, sa
   }
   const DAILY_MIXES_KEY = 'uriel_daily_mixes';
   const TRENDING_CACHE_KEY = 'uriel_trending_cache';
-  const spThumb = (/** @type {any} */ t) => (t && (getTrackThumbUrl(t) || t.thumbnail || t.cover)) || '';
+  const spThumb = (/** @type {Partial<UrielTrack> | null | undefined} */ t) => (t && (getTrackThumbUrl(t) || t.thumbnail || t.cover)) || '';
 
   function spCoverPlaceholder(/** @type {HTMLElement} */ wrap) {
     if (wrap.querySelector('.sp-cover-note')) return;
@@ -104,7 +104,7 @@ window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, sa
     tile('sp-tile-liked', 'Liked songs', `${favs} song${favs === 1 ? '' : 's'}`, () => switchView('favorites'))
       .innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>';
     const seen = new Set();
-    /** @type {any[]} */
+    /** @type {UrielTrack[]} */
     const recent = [];
     for (const t of state.history || []) {
       const k = t && (getTrackCanonicalId(t) || `${t.artist}::${t.title}`);
@@ -117,7 +117,7 @@ window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, sa
       const art = tile('', t.title || 'Untitled', t.artist || '', () => { state.myWaveActive = false; playTrack(t, [...recent], i); });
       art.innerHTML = `<img loading="lazy" decoding="async" alt="" src="${escapeHtml(listThumb(spThumb(t)) || spThumb(t))}">`;
     });
-    (state.playlists || []).slice(0, Math.max(0, 5 - recent.length)).forEach((/** @type {any} */ pl) => {
+    (state.playlists || []).slice(0, Math.max(0, 5 - recent.length)).forEach((pl) => {
       const n = (pl.tracks || []).length;
       const art = tile('', pl.name || 'Untitled', `${n} song${n === 1 ? '' : 's'}`, () => openPlaylistDetail(pl.id));
       renderPlaylistCover(art, pl, 64);
@@ -129,7 +129,9 @@ window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, sa
     const v = safeJson(DAILY_MIXES_KEY, null);
     return v && v.day === Lib.localDay() && Array.isArray(v.mixes) ? v : null;
   };
-  function mixCovers(/** @type {any} */ mix) {
+  // a Daily Mix as it is kept for the day
+  /** @typedef {{ id: string, title?: string, artists?: string[], tracks?: UrielTrack[] }} DailyMix */
+  function mixCovers(/** @type {DailyMix} */ mix) {
     /** @type {string[]} */
     const out = [];
     for (const t of mix.tracks || []) {
@@ -169,7 +171,7 @@ window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, sa
           });
           const data = await res.json();
           // a mix of a handful of songs is not much of a mix
-          const mixTracks = data && data.success && Array.isArray(data.tracks) ? data.tracks.filter((/** @type {any} */ t) => !isBlocked(t)) : [];
+          const mixTracks = data && data.success && Array.isArray(data.tracks) ? data.tracks.filter((/** @type {UrielTrack} */ t) => !isBlocked(t)) : [];
           if (mixTracks.length >= 8) {
             mixes.push({ id: plan.id, title: `Daily Mix ${mixes.length + 1}`, artists: plan.artists, tracks: mixTracks });
             try { localStorage.setItem(DAILY_MIXES_KEY, JSON.stringify({ day, mixes })); } catch (e) {}
@@ -189,7 +191,7 @@ window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, sa
     }
   }
 
-  /** @type {any} */
+  /** @type {ReturnType<typeof setTimeout> | 0} */
   let mixesTimer = 0;
   function renderMadeForYou() {
     const sec = document.getElementById('sp-made-sec');
@@ -211,7 +213,7 @@ window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, sa
     row.appendChild(wave.length
       ? spCard({ cover: spThumb(wave[0]), title: state.isHotPicks ? (state.hotPicksTitle || 'Hot picks') : 'My Wave', sub: state.isHotPicks ? 'Popular right now' : 'Based on your taste', onClick: playWave })
       : spSpinnerCard('My Wave'));
-    mixes.forEach((/** @type {any} */ mix, /** @type {number} */ i) => {
+    mixes.forEach((/** @type {DailyMix} */ mix, /** @type {number} */ i) => {
       const covers = mixCovers(mix);
       row.appendChild(spCard({
         cover: covers[0] || '',
@@ -248,9 +250,9 @@ window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, sa
 
   // ---- Trending now: Apple Music's most played songs in your country (or Deezer's chart), from /api/trending ----
   let trendingLoadedAt = 0;
-  function renderTrendingCards(/** @type {HTMLElement} */ row, /** @type {any[]} */ tracks) {
+  function renderTrendingCards(/** @type {HTMLElement} */ row, /** @type {UrielTrack[]} */ tracks) {
     row.innerHTML = '';
-    tracks.forEach((/** @type {any} */ t, /** @type {number} */ i) => row.appendChild(spCard({
+    tracks.forEach((t, i) => row.appendChild(spCard({
       cover: spThumb(t),
       title: t.title || 'Untitled',
       sub: t.artist || '',
@@ -290,9 +292,11 @@ window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, sa
   // ---- the artists you follow: "Your artists" (both layouts), Play and Profile on each ----
   function artistPlays(/** @type {string} */ name) {
     const k = Lib.nameKey(name);
-    return (state.history || []).filter((/** @type {any} */ t) => t && Lib.nameKey(String(t.artist || '').split(/\s*(?:,|&|\bfeat\.|\bft\.)\s*/i)[0]) === k).length;
+    return (state.history || []).filter((t) => t && Lib.nameKey(String(t.artist || '').split(/\s*(?:,|&|\bfeat\.|\bft\.)\s*/i)[0]) === k).length;
   }
-  async function playFollowedArtist(/** @type {any} */ a) {
+  // a followed artist (library-pages.js keeps the list)
+  /** @typedef {{ name: string, id?: string, avatar?: string, fans?: number }} FollowedArtist */
+  async function playFollowedArtist(/** @type {FollowedArtist} */ a) {
     try {
       const q = `name=${encodeURIComponent(a.name)}${a.id ? `&id=${encodeURIComponent(a.id)}` : ''}`;
       const res = await fetch(`http://127.0.0.1:${state.serverPort}/api/artist?${q}`);
@@ -305,11 +309,11 @@ window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, sa
       showToast(`Couldn't play ${a.name}`, 'error');
     }
   }
-  function followedArtistCard(/** @type {any} */ a) {
+  function followedArtistCard(/** @type {FollowedArtist} */ a) {
     const card = document.createElement('div');
     card.className = 'fav-artist-card';
     const plays = artistPlays(a.name);
-    const badge = plays > 0 ? `${compactCount(plays)} play${plays === 1 ? '' : 's'}` : (a.fans > 0 ? `${compactCount(a.fans)} fans` : '');
+    const badge = plays > 0 ? `${compactCount(plays)} play${plays === 1 ? '' : 's'}` : (a.fans && a.fans > 0 ? `${compactCount(a.fans)} fans` : '');
     card.innerHTML = `
       <div class="fav-artist-circle">
         ${a.avatar ? `<img class="fav-artist-img" loading="lazy" decoding="async" alt="" src="${escapeHtml(a.avatar)}" onerror="this.style.visibility='hidden'">` : '<svg class="fav-artist-placeholder" width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'}
@@ -328,8 +332,8 @@ window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, sa
   }
   // followed before their page was opened (or on another device): their picture, once per session
   const followedMetaTried = new Set();
-  async function fetchFollowedMeta(/** @type {any[]} */ list) {
-    const todo = list.filter((/** @type {any} */ a) => !a.avatar && !followedMetaTried.has(a.id || Lib.nameKey(a.name))).slice(0, 8);
+  async function fetchFollowedMeta(/** @type {FollowedArtist[]} */ list) {
+    const todo = list.filter((a) => !a.avatar && !followedMetaTried.has(a.id || Lib.nameKey(a.name))).slice(0, 8);
     // the details are applied at the end to the list as it is then: a follow or unfollow (here, or from a linked
     // device) during the lookups would otherwise be overwritten with the list read before them
     const updates = [];
@@ -354,7 +358,8 @@ window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, sa
     if (changed) setFollowedArtists(followed);
   }
   function renderFollowedArtists() {
-    const list = getFollowedArtists().filter((/** @type {any} */ a) => a && a.name);
+    /** @type {FollowedArtist[]} */
+    const list = getFollowedArtists().filter((/** @type {FollowedArtist | null} */ a) => a && a.name);
     const on = getAdv('fav_artists', true) && list.length > 0;
     const sp = isSpotifyHome();
     const spSec = document.getElementById('sp-artists-sec');
@@ -362,7 +367,7 @@ window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, sa
     if (spSec) spSec.hidden = !(on && sp);
     if (spRow && on && sp) {
       spRow.innerHTML = '';
-      list.forEach((/** @type {any} */ a) => spRow.appendChild(followedArtistCard(a)));
+      list.forEach((a) => spRow.appendChild(followedArtistCard(a)));
       finishRow(spRow);
     }
     const box = document.getElementById('section-home-artists');
@@ -371,7 +376,7 @@ window.UrielApp.home = function ({ state, Lib, escapeHtml, getAdv, playTrack, sa
       if (on && !sp) {
         box.innerHTML = '<div class="onrepeat-head"><h3 class="section-title">Your artists</h3></div><div class="sp-row fav-artists-row" id="home-artists-row"></div>';
         const row = /** @type {HTMLElement} */ (box.querySelector('.sp-row'));
-        list.forEach((/** @type {any} */ a) => row.appendChild(followedArtistCard(a)));
+        list.forEach((a) => row.appendChild(followedArtistCard(a)));
         finishRow(row);
       } else {
         box.innerHTML = '';
