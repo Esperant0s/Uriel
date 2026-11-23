@@ -15,9 +15,9 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   const { normalizeForMatch, parseAppleExportCSV, parseAppleExportJSON } = Core;
 
   // the artist has to match as well as the title, covers / live / sped-up uploads lose (#18; track-match.js)
-  const pickBestMatch = (/** @type {any} */ sp, /** @type {any[]} */ results) => window.trackMatch.pickBestMatch(sp, results);
+  const pickBestMatch = (/** @type {Partial<UrielImportSong>} */ sp, /** @type {UrielTrack[]} */ results) => window.trackMatch.pickBestMatch(sp, results);
 
-  async function matchSpotifyTracks(/** @type {any[]} */ list, /** @type {(done: number, total: number) => void} */ onProgress) {
+  async function matchSpotifyTracks(/** @type {Partial<UrielImportSong>[]} */ list, /** @type {(done: number, total: number) => void} */ onProgress) {
     const total = Array.isArray(list) ? list.length : 0;
     let completed = 0;
     let errorCount = 0;
@@ -44,7 +44,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       throw new Error((sData && sData.error) || `Status ${sRes.status}`);
     }
 
-    const results = await pool(list || [], 6, async (/** @type {any} */ t) => {
+    const results = await pool(list || [], 6, async (/** @type {Partial<UrielImportSong>} */ t) => {
       if (aborted) return null;
       let matched = null;
       let lastErr = null;
@@ -125,38 +125,38 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     return matchedTracks;
   }
 
-  const spotifyModal = /** @type {any} */ (document.getElementById('spotify-import-modal'));
-  const btnOpenSpotifyImport = /** @type {any} */ (document.getElementById('btn-open-spotify-import'));
-  const btnCancelSpotifyImport = /** @type {any} */ (document.getElementById('btn-cancel-spotify-import'));
-  const btnConfirmSpotifyImport = /** @type {any} */ (document.getElementById('btn-confirm-spotify-import'));
-  const spotifyImportUrl = /** @type {any} */ (document.getElementById('spotify-import-url'));
-  const spotifyImportTarget = /** @type {any} */ (document.getElementById('spotify-import-target'));
-  const spotifyTargetDropdown = /** @type {any} */ (document.getElementById('spotify-target-dropdown'));
-  const spotifyTargetTrigger = /** @type {any} */ (document.getElementById('spotify-target-trigger'));
-  const spotifyTargetLabel = /** @type {any} */ (document.getElementById('spotify-target-label'));
-  const spotifyTargetMenu = /** @type {any} */ (document.getElementById('spotify-target-menu'));
-  const spotifyProgressWrap = /** @type {any} */ (document.getElementById('spotify-import-progress-wrap'));
-  const spotifyWavyContainer = /** @type {any} */ (document.getElementById('spotify-import-wavy-container'));
-  const spotifyProgressLabel = /** @type {any} */ (document.getElementById('spotify-import-progress-label'));
-  const spotifyStatus = /** @type {any} */ (document.getElementById('spotify-import-status'));
-  const spotifyLinkError = /** @type {any} */ (document.getElementById('spotify-link-error'));
-  const spotifyBtnIcon = /** @type {any} */ (document.getElementById('spotify-import-btn-icon'));
-  const spotifyBtnText = /** @type {any} */ (document.getElementById('spotify-import-btn-text'));
+  const spotifyModal = /** @type {HTMLElement} */ (document.getElementById('spotify-import-modal'));
+  const btnOpenSpotifyImport = /** @type {HTMLButtonElement} */ (document.getElementById('btn-open-spotify-import'));
+  const btnCancelSpotifyImport = /** @type {HTMLButtonElement} */ (document.getElementById('btn-cancel-spotify-import'));
+  const btnConfirmSpotifyImport = /** @type {HTMLButtonElement} */ (document.getElementById('btn-confirm-spotify-import'));
+  const spotifyImportUrl = /** @type {HTMLInputElement} */ (document.getElementById('spotify-import-url'));
+  const spotifyImportTarget = /** @type {HTMLSelectElement} */ (document.getElementById('spotify-import-target'));
+  const spotifyTargetDropdown = /** @type {HTMLElement} */ (document.getElementById('spotify-target-dropdown'));
+  const spotifyTargetTrigger = /** @type {HTMLButtonElement} */ (document.getElementById('spotify-target-trigger'));
+  const spotifyTargetLabel = /** @type {HTMLElement} */ (document.getElementById('spotify-target-label'));
+  const spotifyTargetMenu = /** @type {HTMLElement} */ (document.getElementById('spotify-target-menu'));
+  const spotifyProgressWrap = /** @type {HTMLElement} */ (document.getElementById('spotify-import-progress-wrap'));
+  const spotifyWavyContainer = /** @type {HTMLElement} */ (document.getElementById('spotify-import-wavy-container'));
+  const spotifyProgressLabel = /** @type {HTMLElement} */ (document.getElementById('spotify-import-progress-label'));
+  const spotifyStatus = /** @type {HTMLElement} */ (document.getElementById('spotify-import-status'));
+  const spotifyLinkError = /** @type {HTMLElement} */ (document.getElementById('spotify-link-error'));
+  const spotifyBtnIcon = /** @type {HTMLElement} */ (document.getElementById('spotify-import-btn-icon'));
+  const spotifyBtnText = /** @type {HTMLElement} */ (document.getElementById('spotify-import-btn-text'));
 
-  const spModesContainer = /** @type {any} */ (document.getElementById('sp-modes'));
-  const btnSpPickFiles = /** @type {any} */ (document.getElementById('btn-sp-pick-files'));
-  const spFileInput = /** @type {any} */ (document.getElementById('sp-file-input'));
-  const spFileInfo = /** @type {any} */ (document.getElementById('sp-file-info'));
-  const spChkLikes = /** @type {any} */ (document.getElementById('sp-chk-likes'));
-  const spChkPlaylists = /** @type {any} */ (document.getElementById('sp-chk-playlists'));
-  const spClientIdInput = /** @type {any} */ (document.getElementById('sp-client-id'));
-  const btnSpLogin = /** @type {any} */ (document.getElementById('btn-sp-login'));
-  const spRedirectUri = /** @type {any} */ (document.getElementById('sp-redirect-uri'));
-  const spLoginStatus = /** @type {any} */ (document.getElementById('sp-login-status'));
-  const spChkLikes2 = /** @type {any} */ (document.getElementById('sp-chk-likes-2'));
-  const spChkPlaylists2 = /** @type {any} */ (document.getElementById('sp-chk-playlists-2'));
+  const spModesContainer = /** @type {HTMLElement} */ (document.getElementById('sp-modes'));
+  const btnSpPickFiles = /** @type {HTMLButtonElement} */ (document.getElementById('btn-sp-pick-files'));
+  const spFileInput = /** @type {HTMLInputElement} */ (document.getElementById('sp-file-input'));
+  const spFileInfo = /** @type {HTMLElement} */ (document.getElementById('sp-file-info'));
+  const spChkLikes = /** @type {HTMLInputElement} */ (document.getElementById('sp-chk-likes'));
+  const spChkPlaylists = /** @type {HTMLInputElement} */ (document.getElementById('sp-chk-playlists'));
+  const spClientIdInput = /** @type {HTMLInputElement} */ (document.getElementById('sp-client-id'));
+  const btnSpLogin = /** @type {HTMLButtonElement} */ (document.getElementById('btn-sp-login'));
+  const spRedirectUri = /** @type {HTMLElement} */ (document.getElementById('sp-redirect-uri'));
+  const spLoginStatus = /** @type {HTMLElement} */ (document.getElementById('sp-login-status'));
+  const spChkLikes2 = /** @type {HTMLInputElement} */ (document.getElementById('sp-chk-likes-2'));
+  const spChkPlaylists2 = /** @type {HTMLInputElement} */ (document.getElementById('sp-chk-playlists-2'));
   let currentSpotifyImportMode = 'link';
-  /** @type {{ likes: any[], playlists: any[] }} */
+  /** @type {{ likes: UrielImportSong[], playlists: UrielImportPlaylist[] }} */
   let parsedSpotifyExport = { likes: [], playlists: [] };
   /** @type {ReturnType<typeof setInterval> | null} */
   let spLoginPollTimer = null;
@@ -193,12 +193,12 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     unknown: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
   };
   // what went wrong, with its picture (import-core.js decides which)
-  function classifyImportError(/** @type {string} */ provider, /** @type {unknown} */ statusOrError, /** @type {any} */ body) {
+  function classifyImportError(/** @type {string} */ provider, /** @type {unknown} */ statusOrError, /** @type {unknown} */ body) {
     const info = Core.classifyImportError(provider, statusOrError, body, navigator.onLine);
     return { ...info, icon: IMPORT_ICONS[info.icon] };
   }
 
-  function showImportError(/** @type {HTMLElement} */ containerEl, /** @type {any} */ errInfo) {
+  function showImportError(/** @type {HTMLElement} */ containerEl, /** @type {ReturnType<typeof classifyImportError>} */ errInfo) {
     if (!containerEl) return;
     containerEl.innerHTML = `
       <div class="import-error-icon">${errInfo.icon}</div>
@@ -219,13 +219,13 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   function setSpotifyImportMode(/** @type {string | undefined} */ mode) {
     currentSpotifyImportMode = mode || 'link';
     if (spModesContainer) {
-      spModesContainer.querySelectorAll('button').forEach((/** @type {HTMLElement} */ btn) => {
+      /** @type {NodeListOf<HTMLElement>} */ (spModesContainer.querySelectorAll('button')).forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.mode === currentSpotifyImportMode);
       });
     }
     clearImportError(spotifyLinkError);
     if (spotifyModal) {
-      spotifyModal.querySelectorAll('.sp-pane').forEach((/** @type {HTMLElement} */ pane) => {
+      /** @type {NodeListOf<HTMLElement>} */ (spotifyModal.querySelectorAll('.sp-pane')).forEach((pane) => {
         pane.classList.toggle('hidden', pane.dataset.mode !== currentSpotifyImportMode);
       });
     }
@@ -244,7 +244,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   }
 
   if (spModesContainer) {
-    spModesContainer.querySelectorAll('button').forEach((/** @type {HTMLElement} */ btn) => {
+    /** @type {NodeListOf<HTMLElement>} */ (spModesContainer.querySelectorAll('button')).forEach((btn) => {
       btn.addEventListener('click', () => {
         setSpotifyImportMode(btn.dataset.mode);
       });
@@ -380,7 +380,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   }
 
   if (spotifyTargetTrigger && spotifyTargetDropdown) {
-    spotifyTargetTrigger.addEventListener('click', (/** @type {any} */ e) => {
+    spotifyTargetTrigger.addEventListener('click', (/** @type {MouseEvent} */ e) => {
       e.stopPropagation();
       spotifyTargetDropdown.classList.toggle('open');
     });
@@ -414,7 +414,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (spotifyImportTarget) {
       spotifyImportTarget.disabled = false;
       spotifyImportTarget.innerHTML = '<option value="new">New playlist (Spotify name)</option>';
-      state.playlists.forEach((/** @type {any} */ p) => {
+      state.playlists.forEach((p) => {
         const opt = document.createElement('option');
         opt.value = p.id;
         opt.textContent = p.name;
@@ -425,7 +425,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (spotifyTargetMenu) {
       spotifyTargetMenu.innerHTML = '<button class="m3-dropdown-option selected" data-value="new" type="button">New playlist (Spotify name)</button>';
       if (spotifyTargetLabel) spotifyTargetLabel.textContent = 'New playlist (Spotify name)';
-      state.playlists.forEach((/** @type {any} */ p) => {
+      state.playlists.forEach((p) => {
         const opt = document.createElement('button');
         opt.type = 'button';
         opt.className = 'm3-dropdown-option';
@@ -433,10 +433,10 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
         opt.textContent = p.name || 'untitled';
         spotifyTargetMenu.appendChild(opt);
       });
-      spotifyTargetMenu.querySelectorAll('.m3-dropdown-option').forEach((/** @type {HTMLElement} */ opt) => {
-        opt.addEventListener('click', (/** @type {any} */ e) => {
+      /** @type {NodeListOf<HTMLElement>} */ (spotifyTargetMenu.querySelectorAll('.m3-dropdown-option')).forEach((opt) => {
+        opt.addEventListener('click', (/** @type {MouseEvent} */ e) => {
           e.stopPropagation();
-          const val = opt.dataset.value;
+          const val = opt.dataset.value || '';
           if (spotifyImportTarget) spotifyImportTarget.value = val;
           if (spotifyTargetLabel) spotifyTargetLabel.textContent = opt.textContent;
           spotifyTargetMenu.querySelectorAll('.m3-dropdown-option').forEach((/** @type {Element} */ o) => o.classList.remove('selected'));
@@ -468,12 +468,15 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (spotifyModal) closeModal(spotifyModal);
   }
 
-  const importErrorText = (/** @type {any} */ err, fallback = 'Failed to import songs') => (err && err.message === 'search_unresponsive'
-    ? 'Search is not responding, so the import stopped. Try again later; nothing gets added twice. If it keeps happening, open Settings -> About -> Copy diagnostics and send it with your report.'
-    : (err && err.message) || fallback);
+  const importErrorText = (/** @type {unknown} */ err, fallback = 'Failed to import songs') => {
+    const msg = err instanceof Error ? err.message : '';
+    return msg === 'search_unresponsive'
+      ? 'Search is not responding, so the import stopped. Try again later; nothing gets added twice. If it keeps happening, open Settings -> About -> Copy diagnostics and send it with your report.'
+      : msg || fallback;
+  };
 
   // adds the songs that aren't favorites yet (one pass with a Set; comparing every pair froze big imports)
-  function mergeIntoFavorites(/** @type {any[]} */ tracks) {
+  function mergeIntoFavorites(/** @type {UrielTrack[]} */ tracks) {
     const have = new Set(state.favorites.map(getTrackCanonicalId));
     let added = 0;
     for (const track of tracks || []) {
@@ -486,7 +489,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     return added;
   }
 
-  /** @param {{ likes?: any[], playlists?: any[], skippedPlaylists?: any[] }} o */
+  /** @param {{ likes?: UrielImportSong[], playlists?: UrielImportPlaylist[], skippedPlaylists?: UrielImportPlaylist[] }} o */
   async function runSpotifyImport({ likes = [], playlists = [], skippedPlaylists = [] }) {
     const likesToImport = likes || [];
     const playlistsToImport = playlists || [];
@@ -658,10 +661,10 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
         return;
       }
 
-      if (!(data.likes?.length || data.playlists?.some((/** @type {any} */ pl) => pl.tracks?.length))) {
+      if (!(data.likes?.length || data.playlists?.some((/** @type {UrielImportPlaylist} */ pl) => pl.tracks?.length))) {
         if (spotifyStatus) {
           spotifyStatus.textContent = data.partial
-            ? `No available songs to import. ${(data.skippedPlaylists || []).map((/** @type {any} */ pl) => `${pl.name}: ${pl.error}`).join('; ')}`
+            ? `No available songs to import. ${(data.skippedPlaylists || []).map((/** @type {UrielImportPlaylist} */ pl) => `${pl.name}: ${pl.error}`).join('; ')}`
             : 'No songs found in your Spotify library';
           spotifyStatus.style.color = 'var(--md-sys-color-error, #ba1a1a)';
           spotifyStatus.classList.remove('hidden');
@@ -672,7 +675,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       }
       if (data.partial) {
         const skipped = data.skippedPlaylists || [];
-        const details = skipped.map((/** @type {any} */ pl) => `• ${pl.name}: ${pl.error}`).join('\n');
+        const details = skipped.map((/** @type {UrielImportPlaylist} */ pl) => `• ${pl.name}: ${pl.error}`).join('\n');
         if (!window.confirm(`${skipped.length} Spotify playlist(s) could not be read:\n${details}\n\nImport the available songs only?`)) {
           if (spotifyStatus) {
             spotifyStatus.textContent = 'Partial import cancelled';
@@ -779,11 +782,11 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       if (targetVal === 'new') {
         createPlaylist(data.name || 'Spotify Playlist', foundTracks, data.cover || '');
       } else {
-        const pl = state.playlists.find((/** @type {any} */ p) => p.id === targetVal);
+        const pl = state.playlists.find((p) => p.id === targetVal);
         if (pl) {
           if (!pl.cover && data.cover) pl.cover = data.cover;
-          const existingIds = new Set(pl.tracks.map((/** @type {any} */ t) => t.id));
-          const newTracks = foundTracks.filter((/** @type {any} */ t) => !existingIds.has(t.id));
+          const existingIds = new Set(pl.tracks.map((t) => t.id));
+          const newTracks = foundTracks.filter((/** @type {UrielTrack} */ t) => !existingIds.has(t.id));
           pl.tracks.push(...newTracks.map(stampAddedAt));
           localStorage.setItem('devsize_playlists', JSON.stringify(state.playlists));
           renderPlaylistsList();
@@ -831,7 +834,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   if (btnConfirmSpotifyImport) btnConfirmSpotifyImport.addEventListener('click', handleSpotifyImportAction);
   if (spotifyImportUrl) {
     spotifyImportUrl.addEventListener('input', () => clearImportError(spotifyLinkError));
-    spotifyImportUrl.addEventListener('keydown', (/** @type {any} */ e) => {
+    spotifyImportUrl.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         handleSpotifyImportAction();
@@ -839,46 +842,46 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     });
   }
 
-  const appleModal = /** @type {any} */ (document.getElementById('apple-import-modal'));
-  const btnOpenAppleImport = /** @type {any} */ (document.getElementById('btn-open-apple-import'));
-  const btnCancelAppleImport = /** @type {any} */ (document.getElementById('btn-cancel-apple-import'));
-  const btnConfirmAppleImport = /** @type {any} */ (document.getElementById('btn-confirm-apple-import'));
-  const appleImportUrl = /** @type {any} */ (document.getElementById('apple-import-url'));
-  const appleLinkError = /** @type {any} */ (document.getElementById('apple-link-error'));
-  const appleImportTarget = /** @type {any} */ (document.getElementById('apple-import-target'));
-  const appleTargetDropdown = /** @type {any} */ (document.getElementById('apple-target-dropdown'));
-  const appleTargetTrigger = /** @type {any} */ (document.getElementById('apple-target-trigger'));
-  const appleTargetLabel = /** @type {any} */ (document.getElementById('apple-target-label'));
-  const appleTargetMenu = /** @type {any} */ (document.getElementById('apple-target-menu'));
-  const appleModesContainer = /** @type {any} */ (document.getElementById('apple-modes'));
-  const btnApplePickFiles = /** @type {any} */ (document.getElementById('btn-apple-pick-files'));
-  const appleFileInput = /** @type {any} */ (document.getElementById('apple-file-input'));
-  const appleFileInfo = /** @type {any} */ (document.getElementById('apple-file-info'));
-  const appleChkContainer = /** @type {any} */ (document.getElementById('apple-chk-container'));
-  const appleChkLikes = /** @type {any} */ (document.getElementById('apple-chk-likes'));
-  const appleChkPlaylists = /** @type {any} */ (document.getElementById('apple-chk-playlists'));
-  const appleFileSummary = /** @type {any} */ (document.getElementById('apple-file-summary'));
-  const appleProgressWrap = /** @type {any} */ (document.getElementById('apple-import-progress-wrap'));
-  const appleWavyContainer = /** @type {any} */ (document.getElementById('apple-import-wavy-container'));
-  const appleProgressLabel = /** @type {any} */ (document.getElementById('apple-import-progress-label'));
-  const appleStatus = /** @type {any} */ (document.getElementById('apple-import-status'));
-  const appleBtnIcon = /** @type {any} */ (document.getElementById('apple-import-btn-icon'));
-  const appleBtnText = /** @type {any} */ (document.getElementById('apple-import-btn-text'));
+  const appleModal = /** @type {HTMLElement} */ (document.getElementById('apple-import-modal'));
+  const btnOpenAppleImport = /** @type {HTMLButtonElement} */ (document.getElementById('btn-open-apple-import'));
+  const btnCancelAppleImport = /** @type {HTMLButtonElement} */ (document.getElementById('btn-cancel-apple-import'));
+  const btnConfirmAppleImport = /** @type {HTMLButtonElement} */ (document.getElementById('btn-confirm-apple-import'));
+  const appleImportUrl = /** @type {HTMLInputElement} */ (document.getElementById('apple-import-url'));
+  const appleLinkError = /** @type {HTMLElement} */ (document.getElementById('apple-link-error'));
+  const appleImportTarget = /** @type {HTMLSelectElement} */ (document.getElementById('apple-import-target'));
+  const appleTargetDropdown = /** @type {HTMLElement} */ (document.getElementById('apple-target-dropdown'));
+  const appleTargetTrigger = /** @type {HTMLButtonElement} */ (document.getElementById('apple-target-trigger'));
+  const appleTargetLabel = /** @type {HTMLElement} */ (document.getElementById('apple-target-label'));
+  const appleTargetMenu = /** @type {HTMLElement} */ (document.getElementById('apple-target-menu'));
+  const appleModesContainer = /** @type {HTMLElement} */ (document.getElementById('apple-modes'));
+  const btnApplePickFiles = /** @type {HTMLButtonElement} */ (document.getElementById('btn-apple-pick-files'));
+  const appleFileInput = /** @type {HTMLInputElement} */ (document.getElementById('apple-file-input'));
+  const appleFileInfo = /** @type {HTMLElement} */ (document.getElementById('apple-file-info'));
+  const appleChkContainer = /** @type {HTMLElement} */ (document.getElementById('apple-chk-container'));
+  const appleChkLikes = /** @type {HTMLInputElement} */ (document.getElementById('apple-chk-likes'));
+  const appleChkPlaylists = /** @type {HTMLInputElement} */ (document.getElementById('apple-chk-playlists'));
+  const appleFileSummary = /** @type {HTMLElement} */ (document.getElementById('apple-file-summary'));
+  const appleProgressWrap = /** @type {HTMLElement} */ (document.getElementById('apple-import-progress-wrap'));
+  const appleWavyContainer = /** @type {HTMLElement} */ (document.getElementById('apple-import-wavy-container'));
+  const appleProgressLabel = /** @type {HTMLElement} */ (document.getElementById('apple-import-progress-label'));
+  const appleStatus = /** @type {HTMLElement} */ (document.getElementById('apple-import-status'));
+  const appleBtnIcon = /** @type {HTMLElement} */ (document.getElementById('apple-import-btn-icon'));
+  const appleBtnText = /** @type {HTMLElement} */ (document.getElementById('apple-import-btn-text'));
 
   let currentAppleImportMode = 'link';
-  /** @type {{ likes: any[], playlists: any[] }} */
+  /** @type {{ likes: UrielImportSong[], playlists: UrielImportPlaylist[] }} */
   let parsedAppleExport = { likes: [], playlists: [] };
 
   function setAppleImportMode(/** @type {string | undefined} */ mode) {
     currentAppleImportMode = mode || 'link';
     if (appleModesContainer) {
-      appleModesContainer.querySelectorAll('button').forEach((/** @type {HTMLElement} */ btn) => {
+      /** @type {NodeListOf<HTMLElement>} */ (appleModesContainer.querySelectorAll('button')).forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.mode === currentAppleImportMode);
       });
     }
     clearImportError(appleLinkError);
     if (appleModal) {
-      appleModal.querySelectorAll('.sp-pane').forEach((/** @type {HTMLElement} */ pane) => {
+      /** @type {NodeListOf<HTMLElement>} */ (appleModal.querySelectorAll('.sp-pane')).forEach((pane) => {
         pane.classList.toggle('hidden', pane.dataset.mode !== currentAppleImportMode);
       });
     }
@@ -893,7 +896,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   }
 
   if (appleModesContainer) {
-    appleModesContainer.querySelectorAll('button').forEach((/** @type {HTMLElement} */ btn) => {
+    /** @type {NodeListOf<HTMLElement>} */ (appleModesContainer.querySelectorAll('button')).forEach((btn) => {
       btn.addEventListener('click', () => {
         setAppleImportMode(btn.dataset.mode);
       });
@@ -905,8 +908,8 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       appleFileInput.click();
     });
 
-    appleFileInput.addEventListener('change', async (/** @type {any} */ e) => {
-      const files = Array.from(e.target.files || []);
+    appleFileInput.addEventListener('change', async () => {
+      const files = Array.from(appleFileInput.files || []);
       if (!files.length) return;
       parsedAppleExport = { likes: [], playlists: [] };
       const names = [];
@@ -957,7 +960,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   }
 
   if (appleTargetTrigger && appleTargetDropdown) {
-    appleTargetTrigger.addEventListener('click', (/** @type {any} */ e) => {
+    appleTargetTrigger.addEventListener('click', (/** @type {MouseEvent} */ e) => {
       e.stopPropagation();
       appleTargetDropdown.classList.toggle('open');
     });
@@ -986,7 +989,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (appleImportTarget) {
       appleImportTarget.disabled = false;
       appleImportTarget.innerHTML = '<option value="new">New playlist (Apple Music name)</option>';
-      state.playlists.forEach((/** @type {any} */ p) => {
+      state.playlists.forEach((p) => {
         const opt = document.createElement('option');
         opt.value = p.id;
         opt.textContent = p.name;
@@ -997,7 +1000,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (appleTargetMenu) {
       appleTargetMenu.innerHTML = '<button class="m3-dropdown-option selected" data-value="new" type="button">New playlist (Apple Music name)</button>';
       if (appleTargetLabel) appleTargetLabel.textContent = 'New playlist (Apple Music name)';
-      state.playlists.forEach((/** @type {any} */ p) => {
+      state.playlists.forEach((p) => {
         const opt = document.createElement('button');
         opt.type = 'button';
         opt.className = 'm3-dropdown-option';
@@ -1005,10 +1008,10 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
         opt.textContent = p.name || 'untitled';
         appleTargetMenu.appendChild(opt);
       });
-      appleTargetMenu.querySelectorAll('.m3-dropdown-option').forEach((/** @type {HTMLElement} */ opt) => {
-        opt.addEventListener('click', (/** @type {any} */ e) => {
+      /** @type {NodeListOf<HTMLElement>} */ (appleTargetMenu.querySelectorAll('.m3-dropdown-option')).forEach((opt) => {
+        opt.addEventListener('click', (/** @type {MouseEvent} */ e) => {
           e.stopPropagation();
-          const val = opt.dataset.value;
+          const val = opt.dataset.value || '';
           if (appleImportTarget) appleImportTarget.value = val;
           if (appleTargetLabel) appleTargetLabel.textContent = opt.textContent;
           appleTargetMenu.querySelectorAll('.m3-dropdown-option').forEach((/** @type {Element} */ o) => o.classList.remove('selected'));
@@ -1048,9 +1051,9 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (currentAppleImportMode === 'file') {
       const hasLikes = parsedAppleExport.likes.length > 0;
       const hasPlaylists = parsedAppleExport.playlists.length > 0;
-      /** @type {any[]} */
+      /** @type {UrielImportSong[]} */
       let likesToImport = [];
-      /** @type {any[]} */
+      /** @type {UrielImportPlaylist[]} */
       let playlistsToImport = [];
 
       if (hasLikes && hasPlaylists) {
@@ -1208,11 +1211,11 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       if (targetVal === 'new') {
         createPlaylist(data.name || 'Apple Music Playlist', foundTracks, data.cover || '');
       } else {
-        const pl = state.playlists.find((/** @type {any} */ p) => p.id === targetVal);
+        const pl = state.playlists.find((p) => p.id === targetVal);
         if (pl) {
           if (!pl.cover && data.cover) pl.cover = data.cover;
-          const existingIds = new Set(pl.tracks.map((/** @type {any} */ t) => t.id));
-          const newTracks = foundTracks.filter((/** @type {any} */ t) => !existingIds.has(t.id));
+          const existingIds = new Set(pl.tracks.map((t) => t.id));
+          const newTracks = foundTracks.filter((/** @type {UrielTrack} */ t) => !existingIds.has(t.id));
           pl.tracks.push(...newTracks.map(stampAddedAt));
           localStorage.setItem('devsize_playlists', JSON.stringify(state.playlists));
           renderPlaylistsList();
@@ -1257,7 +1260,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   if (btnConfirmAppleImport) btnConfirmAppleImport.addEventListener('click', handleAppleImportAction);
   if (appleImportUrl) {
     appleImportUrl.addEventListener('input', () => clearImportError(appleLinkError));
-    appleImportUrl.addEventListener('keydown', (/** @type {any} */ e) => {
+    appleImportUrl.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         handleAppleImportAction();
@@ -1265,23 +1268,23 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     });
   }
 
-  const linkImportModal = /** @type {any} */ (document.getElementById('link-import-modal'));
-  const btnOpenLinkImport = /** @type {any} */ (document.getElementById('btn-open-link-import'));
-  const btnCancelLinkImport = /** @type {any} */ (document.getElementById('btn-cancel-link-import'));
-  const btnConfirmLinkImport = /** @type {any} */ (document.getElementById('btn-confirm-link-import'));
-  const linkImportUrl = /** @type {any} */ (document.getElementById('link-import-url'));
-  const linkImportStatus = /** @type {any} */ (document.getElementById('link-import-status'));
-  const linkImportError = /** @type {any} */ (document.getElementById('link-import-error'));
-  const linkImportTitle = /** @type {any} */ (document.getElementById('link-import-title'));
-  const linkModesContainer = /** @type {any} */ (document.getElementById('link-modes'));
-  const linkImportProgressWrap = /** @type {any} */ (document.getElementById('link-import-progress-wrap'));
-  const linkImportProgressLabel = /** @type {any} */ (document.getElementById('link-import-progress-label'));
-  const linkImportWavyContainer = /** @type {any} */ (document.getElementById('link-import-wavy-container'));
-  const btnGoogleLogin = /** @type {any} */ (document.getElementById('btn-google-login'));
-  const btnGoogleLogout = /** @type {any} */ (document.getElementById('btn-google-logout'));
-  const googleLoginStatus = /** @type {any} */ (document.getElementById('google-login-status'));
-  const googleChkLikes = /** @type {any} */ (document.getElementById('google-chk-likes'));
-  const googleChkPlaylists = /** @type {any} */ (document.getElementById('google-chk-playlists'));
+  const linkImportModal = /** @type {HTMLElement} */ (document.getElementById('link-import-modal'));
+  const btnOpenLinkImport = /** @type {HTMLButtonElement} */ (document.getElementById('btn-open-link-import'));
+  const btnCancelLinkImport = /** @type {HTMLButtonElement} */ (document.getElementById('btn-cancel-link-import'));
+  const btnConfirmLinkImport = /** @type {HTMLButtonElement} */ (document.getElementById('btn-confirm-link-import'));
+  const linkImportUrl = /** @type {HTMLInputElement} */ (document.getElementById('link-import-url'));
+  const linkImportStatus = /** @type {HTMLElement} */ (document.getElementById('link-import-status'));
+  const linkImportError = /** @type {HTMLElement} */ (document.getElementById('link-import-error'));
+  const linkImportTitle = /** @type {HTMLElement} */ (document.getElementById('link-import-title'));
+  const linkModesContainer = /** @type {HTMLElement} */ (document.getElementById('link-modes'));
+  const linkImportProgressWrap = /** @type {HTMLElement} */ (document.getElementById('link-import-progress-wrap'));
+  const linkImportProgressLabel = /** @type {HTMLElement} */ (document.getElementById('link-import-progress-label'));
+  const linkImportWavyContainer = /** @type {HTMLElement} */ (document.getElementById('link-import-wavy-container'));
+  const btnGoogleLogin = /** @type {HTMLButtonElement} */ (document.getElementById('btn-google-login'));
+  const btnGoogleLogout = /** @type {HTMLButtonElement} */ (document.getElementById('btn-google-logout'));
+  const googleLoginStatus = /** @type {HTMLElement} */ (document.getElementById('google-login-status'));
+  const googleChkLikes = /** @type {HTMLInputElement} */ (document.getElementById('google-chk-likes'));
+  const googleChkPlaylists = /** @type {HTMLInputElement} */ (document.getElementById('google-chk-playlists'));
   let currentLinkImportMode = 'link';
   let currentLinkImportPlatform = '';
   let googleConnected = false;
@@ -1292,11 +1295,11 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
 
   // Settings → Integrations → YouTube → "Play with my YouTube sign-in" (computers: yt-dlp uses the Google login of
   // the library import, so songs play while YouTube is asking this address to prove it isn't a bot)
-  const ytSigninToggle = /** @type {any} */ (document.getElementById('toggle-yt-signin'));
-  const ytSigninBtn = /** @type {any} */ (document.getElementById('btn-yt-signin'));
-  const ytSigninStatus = /** @type {any} */ (document.getElementById('yt-signin-status'));
+  const ytSigninToggle = /** @type {HTMLButtonElement} */ (document.getElementById('toggle-yt-signin'));
+  const ytSigninBtn = /** @type {HTMLButtonElement} */ (document.getElementById('btn-yt-signin'));
+  const ytSigninStatus = /** @type {HTMLElement} */ (document.getElementById('yt-signin-status'));
   const YT_SIGNIN_HINT = ytSigninStatus ? ytSigninStatus.textContent : '';
-  function showYtSignin(/** @type {any} */ st) {
+  function showYtSignin(/** @type {{ enabled?: boolean, loggedIn?: boolean, error?: string } | null | undefined} */ st) {
     if (!ytSigninToggle || !st) return;
     ytSigninToggle.classList.toggle('active', !!st.enabled);
     if (ytSigninBtn) ytSigninBtn.hidden = !!st.loggedIn;
@@ -1350,16 +1353,17 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       btnConfirmLinkImport.textContent = label || (busy ? 'Loading…' : 'Import');
     }
     if (btnCancelLinkImport) btnCancelLinkImport.disabled = busy;
-    ['link-target-trigger', 'google-target-trigger', 'btn-google-login', 'btn-google-logout'].forEach((id) => { const b = /** @type {any} */ (document.getElementById(id)); if (b) b.disabled = busy; });
+    ['link-target-trigger', 'google-target-trigger', 'btn-google-login', 'btn-google-logout'].forEach((id) => { const b = /** @type {HTMLButtonElement | null} */ (document.getElementById(id)); if (b) b.disabled = busy; });
   }
 
   // "Import into": a new playlist, or one of yours (the hidden <select> holds the choice)
   function fillImportTarget(/** @type {string} */ prefix, /** @type {string} */ newLabel) {
-    const sel = /** @type {any} */ (document.getElementById(`${prefix}-import-target`));
-    const menu = /** @type {any} */ (document.getElementById(`${prefix}-target-menu`));
-    const label = /** @type {any} */ (document.getElementById(`${prefix}-target-label`));
-    const drop = /** @type {any} */ (document.getElementById(`${prefix}-target-dropdown`));
-    const trigger = /** @type {any} */ (document.getElementById(`${prefix}-target-trigger`));
+    const sel = /** @type {HTMLSelectElement | null} */ (document.getElementById(`${prefix}-import-target`));
+    const menu = document.getElementById(`${prefix}-target-menu`);
+    const label = document.getElementById(`${prefix}-target-label`);
+    const drop = document.getElementById(`${prefix}-target-dropdown`);
+    // _targetBound: its click handler is on already (the dialog fills this list every time it opens)
+    const trigger = /** @type {(HTMLElement & { _targetBound?: boolean }) | null} */ (document.getElementById(`${prefix}-target-trigger`));
     if (!sel || !menu) return;
     sel.innerHTML = '';
     menu.innerHTML = '';
@@ -1383,26 +1387,26 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       menu.appendChild(b);
     };
     add('new', newLabel, true);
-    state.playlists.forEach((/** @type {any} */ p) => add(p.id, p.name || 'untitled', false));
+    state.playlists.forEach((p) => add(p.id, p.name || 'untitled', false));
     sel.value = 'new';
     if (label) label.textContent = newLabel;
     if (trigger && drop && !trigger._targetBound) {
       trigger._targetBound = true;
-      trigger.addEventListener('click', (/** @type {any} */ e) => { e.stopPropagation(); drop.classList.toggle('open'); });
+      trigger.addEventListener('click', (/** @type {MouseEvent} */ e) => { e.stopPropagation(); drop.classList.toggle('open'); });
       document.addEventListener('click', () => drop.classList.remove('open'));
     }
   }
 
   // songs into the playlist picked under "Import into" (or a new one, opened unless several come in a row);
   // returns how many went in
-  function addImportedTracks(/** @type {string} */ targetId, /** @type {string} */ name, /** @type {any[]} */ tracks, /** @type {string} */ cover, open = true) {
-    const target = targetId && targetId !== 'new' ? state.playlists.find((/** @type {any} */ p) => p.id === targetId) : null;
+  function addImportedTracks(/** @type {string} */ targetId, /** @type {string} */ name, /** @type {UrielTrack[]} */ tracks, /** @type {string} */ cover, open = true) {
+    const target = targetId && targetId !== 'new' ? state.playlists.find((p) => p.id === targetId) : null;
     if (!target) {
       const pl = createPlaylist(name || 'Imported playlist', tracks, cover || '', { open });
       return pl ? pl.tracks.length : 0;
     }
     if (!target.cover && cover) target.cover = cover;
-    const fresh = tracks.filter((/** @type {any} */ t) => !target.tracks.some((/** @type {any} */ x) => isSameTrack(x, t)));
+    const fresh = tracks.filter((t) => !target.tracks.some((x) => isSameTrack(x, t)));
     target.tracks.push(...fresh.map(stampAddedAt));
     localStorage.setItem('devsize_playlists', JSON.stringify(state.playlists));
     renderPlaylistsList();
@@ -1428,8 +1432,8 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
 
   function setLinkImportMode(/** @type {string | undefined} */ mode) {
     currentLinkImportMode = mode === 'login' && googleApi() ? 'login' : 'link';
-    if (linkModesContainer) linkModesContainer.querySelectorAll('button').forEach((/** @type {HTMLElement} */ b) => b.classList.toggle('active', b.dataset.mode === currentLinkImportMode));
-    if (linkImportModal) linkImportModal.querySelectorAll('.link-pane').forEach((/** @type {any} */ p) => p.classList.toggle('hidden', p.dataset.mode !== currentLinkImportMode));
+    if (linkModesContainer) /** @type {NodeListOf<HTMLElement>} */ (linkModesContainer.querySelectorAll('button')).forEach((b) => b.classList.toggle('active', b.dataset.mode === currentLinkImportMode));
+    if (linkImportModal) /** @type {NodeListOf<HTMLElement>} */ (linkImportModal.querySelectorAll('.link-pane')).forEach((p) => p.classList.toggle('hidden', p.dataset.mode !== currentLinkImportMode));
     clearImportError(linkImportError);
     setLinkStatus('');
     if (btnConfirmLinkImport && btnConfirmLinkImport.dataset.action !== 'done') {
@@ -1439,7 +1443,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     if (currentLinkImportMode === 'login') checkGoogleAuthStatus();
   }
 
-  if (linkModesContainer) linkModesContainer.querySelectorAll('button').forEach((/** @type {HTMLElement} */ b) => b.addEventListener('click', () => setLinkImportMode(b.dataset.mode)));
+  if (linkModesContainer) /** @type {NodeListOf<HTMLElement>} */ (linkModesContainer.querySelectorAll('button')).forEach((b) => b.addEventListener('click', () => setLinkImportMode(b.dataset.mode)));
 
   if (btnGoogleLogin) {
     btnGoogleLogin.addEventListener('click', async () => {
@@ -1543,7 +1547,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       setLinkImportBusy(false);
       return;
     }
-    const target = /** @type {any} */ (document.getElementById('link-import-target'));
+    const target = /** @type {HTMLSelectElement} */ (document.getElementById('link-import-target'));
     const added = addImportedTracks(target ? target.value : 'new', data.name || 'Yandex Music playlist', found, data.cover || '');
     const missing = data.tracks.length - found.length;
     linkImportDone(missing > 0 ? `Imported ${added} songs. ${missing} not found on YouTube.` : `Imported ${added} songs.`);
@@ -1570,7 +1574,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       }
       const likes = Array.isArray(res.likes) ? res.likes : [];
       const playlists = Array.isArray(res.playlists) ? res.playlists : [];
-      const total = likes.length + playlists.reduce((/** @type {number} */ n, /** @type {any} */ p) => n + (Array.isArray(p.tracks) ? p.tracks.length : 0), 0);
+      const total = likes.length + playlists.reduce((/** @type {number} */ n, /** @type {{ tracks?: unknown }} */ p) => n + (Array.isArray(p.tracks) ? p.tracks.length : 0), 0);
       if (!total) { setLinkStatus('No songs found to import', true); setLinkImportBusy(false); return; }
       const progress = linkImportProgress();
       let done = 0;
@@ -1587,7 +1591,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
         if (state.currentView === 'favorites') renderFavoritesView();
         window.dispatchEvent(new Event('uriel:library'));
       }
-      const target = /** @type {any} */ (document.getElementById('google-import-target'));
+      const target = /** @type {HTMLSelectElement} */ (document.getElementById('google-import-target'));
       const targetId = target ? target.value : 'new';
       let added = 0;
       for (const pl of playlists) {
@@ -1639,7 +1643,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
         setLinkImportBusy(false);
         return;
       }
-      const target = /** @type {any} */ (document.getElementById('link-import-target'));
+      const target = /** @type {HTMLSelectElement} */ (document.getElementById('link-import-target'));
       const targetId = target ? target.value : 'new';
       const added = addImportedTracks(targetId, data.name, data.tracks, data.cover || '');
       showToast(`Imported ${added} songs`, 'success');
@@ -1663,10 +1667,10 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   });
   // "Create playlist" → import from Spotify / Apple Music: the same dialogs as in Settings → Integrations
   [['btn-cpm-spotify', 'btn-open-spotify-import'], ['btn-cpm-apple', 'btn-open-apple-import']].forEach(([from, to]) => {
-    const b = /** @type {any} */ (document.getElementById(from));
+    const b = document.getElementById(from);
     if (b) b.addEventListener('click', () => {
       if (el.createPlaylistModal) closeModal(el.createPlaylistModal);
-      const target = /** @type {any} */ (document.getElementById(to));
+      const target = document.getElementById(to);
       if (target) target.click();
     });
   });
@@ -1674,7 +1678,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
   if (btnConfirmLinkImport) btnConfirmLinkImport.addEventListener('click', handleLinkImportAction);
   if (linkImportUrl) {
     linkImportUrl.addEventListener('input', () => clearImportError(linkImportError));
-    linkImportUrl.addEventListener('keydown', (/** @type {any} */ e) => {
+    linkImportUrl.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         handleLinkImportAction();

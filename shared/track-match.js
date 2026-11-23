@@ -124,7 +124,7 @@ function versionWords(text) {
 }
 
 // how sure we are that the result is by (one of) the wanted artists: 0..1
-/** @param {string[]} wanted @param {any} result */
+/** @param {string[]} wanted @param {MatchSong} result */
 function artistScore(wanted, result) {
   if (!wanted.length) return 0.5;
   const channel = splitArtists(result.artist || result.uploader || '');
@@ -151,7 +151,8 @@ function artistScore(wanted, result) {
 }
 
 // sp: { title, artist, duration (s) }; results: search results { title, artist, duration }
-/** @param {any} sp @param {any} r */
+/** @typedef {{ title?: string, artist?: string, uploader?: string, duration?: number }} MatchSong */
+/** @param {MatchSong} sp @param {MatchSong} r */
 function scoreCandidate(sp, r) {
   const wanted = realArtists(sp.artist);
   const wantTitle = cleanTitle(sp.title, wanted);
@@ -182,7 +183,7 @@ function scoreCandidate(sp, r) {
   return { score, accept, tSim, aSim, dDiff };
 }
 
-/** @param {any} sp @param {any[] | null | undefined} results */
+/** @template {MatchSong} R @param {MatchSong} sp @param {R[] | null | undefined} results @returns {R | null} */
 function pickBestMatch(sp, results) {
   let best = null;
   let bestScore = -Infinity;
@@ -195,7 +196,7 @@ function pickBestMatch(sp, results) {
 }
 
 // search queries for an imported song, best first: main artist + clean title, then all artists + title
-/** @param {any} sp */
+/** @param {MatchSong} sp */
 function matchQueries(sp) {
   const artists = splitArtists(sp.artist);
   const title = String(stripFeat(dropTail(sp.title || ''))).trim();

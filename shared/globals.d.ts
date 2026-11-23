@@ -128,7 +128,7 @@ declare global {
     URIEL_BUILD?: { sha?: string; repo?: string; channel?: string; [key: string]: unknown };
 
     // libraries loaded when first needed (shared/assets)
-    Peer?: any;
+    Peer?: new (id: string, opts?: object) => UrielPeer;
     Hls?: any;
     monaco?: any;
     qrcode?: any;
@@ -167,6 +167,39 @@ declare global {
 
   // A song as the app keeps it (queue, favorites, history, playlists). Services add their own fields, so the rest
   // stay loose; mobile/types.d.ts has the phone layer's view of the same thing.
+  // the parts of PeerJS (assets/peerjs.min.js) sync.js uses
+  interface UrielPeerConn {
+    peer: string;
+    on(event: 'open' | 'close', fn: () => void): void;
+    on(event: 'data', fn: (msg: unknown) => void): void;
+    on(event: 'error', fn: (err: { type?: string }) => void): void;
+    on(event: 'iceStateChanged', fn: (state: string) => void): void;
+    send(msg: unknown): void;
+    close(): void;
+  }
+  interface UrielPeer {
+    destroyed: boolean;
+    disconnected: boolean;
+    on(event: 'open' | 'disconnected', fn: () => void): void;
+    on(event: 'connection', fn: (conn: UrielPeerConn) => void): void;
+    on(event: 'error', fn: (err: { type?: string }) => void): void;
+    connect(id: string, opts?: object): UrielPeerConn;
+    reconnect(): void;
+    destroy(): void;
+  }
+  // a song read from another service (an export file, a link, a login), before it is found here
+  interface UrielImportSong {
+    title: string;
+    artist: string;
+    duration?: number;
+    album?: string;
+  }
+  interface UrielImportPlaylist {
+    name: string;
+    tracks: UrielImportSong[];
+    cover?: string;
+    error?: string;
+  }
   interface UrielTrack {
     id: string;
     title?: string;
@@ -390,7 +423,7 @@ declare global {
   }
   interface UrielImportsPart {
     refreshYtSignin(): Promise<void>;
-    matchSpotifyTracks(list: UrielTrack[], onProgress: (done: number, total: number) => void): Promise<UrielTrack[] & { failStats?: unknown }>;
+    matchSpotifyTracks(list: Partial<UrielImportSong>[], onProgress: (done: number, total: number) => void): Promise<UrielTrack[] & { failStats?: unknown }>;
   }
   interface UrielRadioPart {
     songRadioEnabled(): boolean;

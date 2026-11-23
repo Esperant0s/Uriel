@@ -62,7 +62,7 @@
 
   // Notes what changed in a list since the last look. The first look (prev === null) dates everything to `base`
   // (long ago), so data that was there before linking never overrides a real edit made elsewhere.
-  /** @param {Record<string, Meta> | null} prev @param {any[]} items @param {(item: any) => string} keyOf @param {number} now @param {number} [base] */
+  /** @template T @param {Record<string, Meta> | null} prev @param {T[]} items @param {(item: T) => string} keyOf @param {number} now @param {number} [base] */
   function stampList(prev, items, keyOf, now, base = 1) {
     /** @type {Record<string, Meta>} */
     const meta = {};
@@ -94,9 +94,12 @@
   }
 
   // Merges a list item by item. Keeps this device's order; things only the other device has go at the end.
-  /** @param {{ items?: any[], meta?: Record<string, Meta> }} local @param {{ items?: any[], meta?: Record<string, Meta> }} remote @param {(item: any) => string} keyOf @param {{ sort?: (a: any, b: any) => number, cap?: number }} [opts] */
+  /** @template T @param {{ items?: T[], meta?: Record<string, Meta> }} local @param {{ items?: T[], meta?: Record<string, Meta> }} remote @param {(item: T) => string} keyOf @param {{ sort?: (a: T, b: T) => number, cap?: number }} [opts] */
   function mergeList(local, remote, keyOf, opts = {}) {
-    const lItems = new Map(), rItems = new Map();
+    /** @type {Map<string, T>} */
+    const lItems = new Map();
+    /** @type {Map<string, T>} */
+    const rItems = new Map();
     for (const it of local.items || []) { const k = keyOf(it); if (k && !lItems.has(k)) lItems.set(k, it); }
     for (const it of remote.items || []) { const k = keyOf(it); if (k && !rItems.has(k)) rItems.set(k, it); }
     /** @type {Record<string, Meta>} */
@@ -109,7 +112,7 @@
       meta[k] = /** @type {Meta} */ (useRemote ? r : (l || r));
       pick[k] = useRemote ? 'r' : 'l';
     }
-    /** @type {any[]} */
+    /** @type {T[]} */
     const out = [];
     const take = (/** @type {string} */ k) => {
       if (isGone(meta[k])) return;
@@ -157,7 +160,7 @@
   }
 
   // { id: { t, del?, ... } }: devices in the group, other devices' listening stats, what they're playing
-  /** @param {Record<string, any>} local @param {Record<string, any> | null | undefined} remote @param {string | null} [skipId] */
+  /** @template {{ t: number }} V @param {Record<string, V>} local @param {Record<string, V> | null | undefined} remote @param {string | null} [skipId] */
   function mergeById(local, remote, skipId) {
     const out = { ...local };
     let changed = false;
