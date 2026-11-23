@@ -15,10 +15,10 @@ const YT_ID = /^[A-Za-z0-9_-]{11}$/;
 const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 const LIMITS = { likePages: 60, playlists: 200, playlistPages: 40, tracksPerList: 5000, requests: 1500 };
 
-const partitionFor = (/** @type {string} */ profile) => (PROFILE_RE.test(String(profile || '')) && profile !== 'default' ? `persist:muriel-google-${profile}` : 'persist:muriel-google');
+const partitionFor = (/** @type {string | null | undefined} */ profile) => (PROFILE_RE.test(String(profile || '')) && profile !== 'default' ? `persist:muriel-google-${profile}` : 'persist:muriel-google');
 
 const readySessions = new WeakSet();
-function googleSession(/** @type {string} */ profile) {
+function googleSession(/** @type {string | null | undefined} */ profile) {
   const s = session.fromPartition(partitionFor(profile));
   if (!readySessions.has(s)) {
     readySessions.add(s);
@@ -30,7 +30,7 @@ function googleSession(/** @type {string} */ profile) {
   return s;
 }
 
-async function sapisid(/** @type {any} */ s) {
+async function sapisid(/** @type {Electron.Session} */ s) {
   try {
     const cookies = await s.cookies.get({ name: 'SAPISID' });
     const c = Array.isArray(cookies) ? cookies.find((x) => x && x.value && /(^|\.)youtube\.com$|(^|\.)google\.com$/.test(String(x.domain || '').replace(/^\./, ''))) : null;
@@ -38,27 +38,30 @@ async function sapisid(/** @type {any} */ s) {
   } catch (e) { return ''; }
 }
 
-const clip = (/** @type {any} */ s, /** @type {any} */ n) => (typeof s === 'string' || typeof s === 'number' ? String(s) : '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
-const httpsUrl = (/** @type {any} */ s) => { try { const u = new URL(String(s)); return u.protocol === 'https:' && String(s).length < 2048 ? u.href : ''; } catch (e) { return ''; } };
+const clip = (/** @type {unknown} */ s, /** @type {number} */ n) => (typeof s === 'string' || typeof s === 'number' ? String(s) : '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n);
+const httpsUrl = (/** @type {unknown} */ s) => { try { const u = new URL(String(s)); return u.protocol === 'https:' && String(s).length < 2048 ? u.href : ''; } catch (e) { return ''; } };
 
-function text(/** @type {any} */ node) {
+// youtubei's JSON: big, undocumented and it changes often, so it isn't typed; every step is checked instead
+/** @typedef {any} PageJson */
+
+function text(/** @type {PageJson} */ node) {
   if (!node) return '';
   if (typeof node === 'string') return node;
   if (typeof node.simpleText === 'string') return node.simpleText;
-  if (Array.isArray(node.runs)) return node.runs.map((/** @type {any} */ r) => (r && r.text) || '').join('');
+  if (Array.isArray(node.runs)) return node.runs.map((/** @type {{ text?: string } | null} */ r) => (r && r.text) || '').join('');
   return '';
 }
 
-function seconds(/** @type {any} */ v) {
+function seconds(/** @type {unknown} */ v) {
   if (typeof v === 'number') return v;
   const m = String(v || '').trim().match(/^(?:(\d+):)?(\d+):(\d{2})$/);
   if (m) return (m[1] ? Number(m[1]) * 3600 : 0) + Number(m[2]) * 60 + Number(m[3]);
-  const n = parseInt(v, 10);
+  const n = parseInt(String(v), 10);
   return Number.isFinite(n) ? n : 0;
 }
 
 // walks a youtubei answer without recursing forever (the answers are deep but finite; this caps it anyway)
-function walk(/** @type {any} */ root, /** @type {(node: any) => boolean | void} */ visit) {
+function walk(/** @type {PageJson} */ root, /** @type {(node: PageJson) => boolean | void} */ visit) {
   const stack = [root];
   const seen = new Set();
   let steps = 0;
@@ -76,33 +79,35 @@ function walk(/** @type {any} */ root, /** @type {(node: any) => boolean | void}
   }
 }
 
-function find(/** @type {any} */ root, /** @type {(node: any) => any} */ pick) {
-  /** @type {any} */
+/** @template T @param {PageJson} root @param {(node: PageJson) => T | null} pick @returns {T | null} */
+function find(root, pick) {
+  /** @type {T | null} */
   let out = null;
-  walk(root, (/** @type {any} */ n) => { if (out) return false; const v = pick(n); if (v) { out = v; return false; } return true; });
+  walk(root, (n) => { if (out) return false; const v = pick(n); if (v) { out = v; return false; } return true; });
   return out;
 }
 
-const continuationOf = (/** @type {any} */ root) => find(root, (/** @type {any} */ n) => {
+const continuationOf = (/** @type {PageJson} */ root) => find(root, (n) => {
   if (n.continuationCommand && typeof n.continuationCommand.token === 'string') return n.continuationCommand.token;
   if (n.nextContinuationData && typeof n.nextContinuationData.continuation === 'string') return n.nextContinuationData.continuation;
   return null;
 });
 
-const thumbOf = (/** @type {any} */ thumbs) => (Array.isArray(thumbs) && thumbs.length ? httpsUrl(thumbs[thumbs.length - 1] && thumbs[thumbs.length - 1].url) : '');
+const thumbOf = (/** @type {PageJson} */ thumbs) => (Array.isArray(thumbs) && thumbs.length ? httpsUrl(thumbs[thumbs.length - 1] && thumbs[thumbs.length - 1].url) : '');
 
-function tracksIn(/** @type {any} */ root, /** @type {any[]} */ out, /** @type {Set<string>} */ seen) {
-  walk(root, (/** @type {any} */ n) => {
+/** @typedef {{ id: string, title: string, artist: string, duration: number, thumbnail: string }} FoundTrack */
+function tracksIn(/** @type {PageJson} */ root, /** @type {FoundTrack[]} */ out, /** @type {Set<string>} */ seen) {
+  walk(root, (n) => {
     const r = n.musicResponsiveListItemRenderer;
     if (r) {
-      const vid = (r.playlistItemData && r.playlistItemData.videoId) || find(r, (/** @type {any} */ x) => (x.watchEndpoint && typeof x.watchEndpoint.videoId === 'string' ? x.watchEndpoint.videoId : null));
+      const vid = (r.playlistItemData && r.playlistItemData.videoId) || find(r, (x) => (x.watchEndpoint && typeof x.watchEndpoint.videoId === 'string' ? x.watchEndpoint.videoId : null));
       if (YT_ID.test(vid || '') && !seen.has(vid)) {
         seen.add(vid);
-        const cols = Array.isArray(r.flexColumns) ? r.flexColumns.map((/** @type {any} */ c) => c && c.musicResponsiveListItemFlexColumnRenderer && c.musicResponsiveListItemFlexColumnRenderer.text) : [];
+        const cols = Array.isArray(r.flexColumns) ? r.flexColumns.map((/** @type {PageJson} */ c) => c && c.musicResponsiveListItemFlexColumnRenderer && c.musicResponsiveListItemFlexColumnRenderer.text) : [];
         const runs = cols[1] && Array.isArray(cols[1].runs) ? cols[1].runs : [];
         const artist = runs.length ? (runs[0].text || '') : text(cols[1]);
         let duration = 0;
-        walk(r, (/** @type {any} */ x) => {
+        walk(r, (x) => {
           if (duration) return false;
           if (Array.isArray(x.runs)) for (const run of x.runs) if (run && /^\d+:\d{2}(?::\d{2})?$/.test(String(run.text || '').trim())) { duration = seconds(run.text); break; }
           return true;
@@ -123,11 +128,12 @@ function tracksIn(/** @type {any} */ root, /** @type {any[]} */ out, /** @type {
   });
 }
 
-function playlistsIn(/** @type {any} */ root, /** @type {any[]} */ out, /** @type {Set<string>} */ seen) {
-  walk(root, (/** @type {any} */ n) => {
+/** @typedef {{ id: string, name: string, cover: string }} FoundPlaylist */
+function playlistsIn(/** @type {PageJson} */ root, /** @type {FoundPlaylist[]} */ out, /** @type {Set<string>} */ seen) {
+  walk(root, (n) => {
     const r = n.musicTwoRowItemRenderer;
     if (r) {
-      const id = (r.navigationEndpoint && r.navigationEndpoint.browseEndpoint && r.navigationEndpoint.browseEndpoint.browseId) || find(r, (/** @type {any} */ x) => (x.browseEndpoint && typeof x.browseEndpoint.browseId === 'string' ? x.browseEndpoint.browseId : null));
+      const id = (r.navigationEndpoint && r.navigationEndpoint.browseEndpoint && r.navigationEndpoint.browseEndpoint.browseId) || find(r, (x) => (x.browseEndpoint && typeof x.browseEndpoint.browseId === 'string' ? x.browseEndpoint.browseId : null));
       if (/^(?:VL)?(?:PL|LM|RD|OL|FL)[A-Za-z0-9_-]{0,60}$|^VL[A-Za-z0-9_-]{2,60}$/.test(id || '') && !seen.has(id)) {
         seen.add(id);
         out.push({ id, name: text(r.title), cover: thumbOf(r.thumbnailRenderer && r.thumbnailRenderer.musicThumbnailRenderer && r.thumbnailRenderer.musicThumbnailRenderer.thumbnail && r.thumbnailRenderer.musicThumbnailRenderer.thumbnail.thumbnails) });
@@ -148,7 +154,7 @@ function playlistsIn(/** @type {any} */ root, /** @type {any[]} */ out, /** @typ
   });
 }
 
-const toTrack = (/** @type {any} */ t) => ({
+const toTrack = (/** @type {FoundTrack} */ t) => ({
   id: t.id,
   title: clip(t.title, 300) || 'Unknown',
   artist: clip(t.artist, 300),
@@ -158,7 +164,7 @@ const toTrack = (/** @type {any} */ t) => ({
   platform: 'youtube',
 });
 
-async function importLibrary(/** @type {any} */ opts) {
+async function importLibrary(/** @type {{ profile?: string, platform?: string, doLikes?: boolean, doPlaylists?: boolean } | null | undefined} */ opts) {
   const profile = opts && opts.profile;
   const ytm = opts && opts.platform === 'ytmusic';
   const doLikes = !opts || opts.doLikes !== false;
@@ -170,7 +176,8 @@ async function importLibrary(/** @type {any} */ opts) {
   const origin = ytm ? 'https://music.youtube.com' : 'https://www.youtube.com';
   const client = ytm ? { clientName: 'WEB_REMIX', clientVersion: '1.20240401.01.00', hl: 'en' } : { clientName: 'WEB', clientVersion: '2.20240401.01.00', hl: 'en' };
   let requests = 0;
-  async function browse(/** @type {any} */ body) {
+  /** @returns {Promise<PageJson>} */
+  async function browse(/** @type {object} */ body) {
     if (++requests > LIMITS.requests) throw new Error('The library is too big to read at once');
     const ts = Math.floor(Date.now() / 1000);
     const hash = crypto.createHash('sha1').update(`${ts} ${sid} ${origin}`).digest('hex');
@@ -189,7 +196,7 @@ async function importLibrary(/** @type {any} */ opts) {
     return JSON.parse(raw);
   }
   async function allTracks(/** @type {string} */ browseId, /** @type {number} */ maxPages) {
-    /** @type {any[]} */
+    /** @type {FoundTrack[]} */
     const out = [];
     const seen = new Set();
     let data = await browse({ browseId });
@@ -210,7 +217,7 @@ async function importLibrary(/** @type {any} */ opts) {
     const likes = doLikes ? await allTracks(ytm ? 'VLLM' : 'VLLL', LIMITS.likePages) : [];
     const playlists = [];
     if (doPlaylists) {
-      /** @type {any[]} */
+      /** @type {FoundPlaylist[]} */
       const found = [];
       const seen = new Set();
       let data = await browse({ browseId: ytm ? 'FEmusic_liked_playlists' : 'FEplaylist_aggregation' });
@@ -228,15 +235,16 @@ async function importLibrary(/** @type {any} */ opts) {
       for (const pl of found.slice(0, LIMITS.playlists)) {
         const bare = pl.id.replace(/^VL/, '');
         if (bare === 'LM' || bare === 'LL' || bare === 'WL' || bare.startsWith('RD')) continue;
-        /** @type {any[]} */
+        /** @type {ReturnType<typeof toTrack>[]} */
         let tracks = [];
-        try { tracks = await allTracks(`VL${bare}`, LIMITS.playlistPages); } catch (/** @type {any} */ e) { if (e.code === 'not_logged_in') throw e; }
+        try { tracks = await allTracks(`VL${bare}`, LIMITS.playlistPages); } catch (e) { if (/** @type {{ code?: string }} */ (e).code === 'not_logged_in') throw e; }
         playlists.push({ id: bare, name: clip(pl.name, 100) || 'YouTube playlist', cover: pl.cover, tracks });
       }
     }
     return { success: true, likes, playlists };
-  } catch (/** @type {any} */ e) {
-    return { success: false, code: e && e.code, error: clip((e && e.message) || "Couldn't read the library", 200) };
+  } catch (e) {
+    const err = /** @type {{ code?: string, message?: string } | null} */ (e);
+    return { success: false, code: err && err.code, error: clip((err && err.message) || "Couldn't read the library", 200) };
   }
 }
 

@@ -1,6 +1,6 @@
 // @ts-check
 
-(function (/** @type {any} */ global) {
+(function (/** @type {Record<string, unknown>} */ global) {
   'use strict';
 
   class UrielAudioEngine {
@@ -12,68 +12,68 @@
       this.keepRunning = null;
       // the graph's nodes are made together in init(); nothing reads them before graphInitialized
       /** @type {MediaElementAudioSourceNode} */
-      this.mediaSource = /** @type {any} */ (null);
+      this.mediaSource = /** @type {never} */ (null);
       this.graphInitialized = false;
 
       /** @type {GainNode} */
-      this.stdInput = /** @type {any} */ (null);
+      this.stdInput = /** @type {never} */ (null);
       /** @type {GainNode} */
-      this.dryGain = /** @type {any} */ (null);
+      this.dryGain = /** @type {never} */ (null);
       /** @type {WaveShaperNode} */
-      this.distortionNode = /** @type {any} */ (null);
+      this.distortionNode = /** @type {never} */ (null);
       /** @type {GainNode} */
-      this.distortionGain = /** @type {any} */ (null);
+      this.distortionGain = /** @type {never} */ (null);
       /** @type {DelayNode} */
-      this.delayNode = /** @type {any} */ (null);
+      this.delayNode = /** @type {never} */ (null);
       /** @type {GainNode} */
-      this.delayFeedback = /** @type {any} */ (null);
+      this.delayFeedback = /** @type {never} */ (null);
       /** @type {GainNode} */
-      this.delayGain = /** @type {any} */ (null);
+      this.delayGain = /** @type {never} */ (null);
       /** @type {ConvolverNode} */
-      this.convolverNode = /** @type {any} */ (null);
+      this.convolverNode = /** @type {never} */ (null);
       /** @type {GainNode} */
-      this.reverbGain = /** @type {any} */ (null);
+      this.reverbGain = /** @type {never} */ (null);
 
       /** @type {GainNode} */
-      this.hqInput = /** @type {any} */ (null);
+      this.hqInput = /** @type {never} */ (null);
       /** @type {DynamicsCompressorNode} */
-      this.hqCompressor = /** @type {any} */ (null);
+      this.hqCompressor = /** @type {never} */ (null);
       /** @type {BiquadFilterNode} */
-      this.hqBass = /** @type {any} */ (null);
+      this.hqBass = /** @type {never} */ (null);
       /** @type {BiquadFilterNode} */
-      this.hqVocal = /** @type {any} */ (null);
+      this.hqVocal = /** @type {never} */ (null);
       /** @type {BiquadFilterNode} */
-      this.hqAir = /** @type {any} */ (null);
+      this.hqAir = /** @type {never} */ (null);
       /** @type {WaveShaperNode} */
-      this.hqSaturation = /** @type {any} */ (null);
+      this.hqSaturation = /** @type {never} */ (null);
       /** @type {DynamicsCompressorNode} */
-      this.hqLimiter = /** @type {any} */ (null);
+      this.hqLimiter = /** @type {never} */ (null);
 
       /** @type {BiquadFilterNode} */
-      this.eqLow = /** @type {any} */ (null);
+      this.eqLow = /** @type {never} */ (null);
       /** @type {BiquadFilterNode} */
-      this.eqMid = /** @type {any} */ (null);
+      this.eqMid = /** @type {never} */ (null);
       /** @type {BiquadFilterNode} */
-      this.eqHigh = /** @type {any} */ (null);
+      this.eqHigh = /** @type {never} */ (null);
       /** @type {BiquadFilterNode[]} */
       this.eqBands = [];
 
       /** @type {GainNode} */
-      this.masterGain = /** @type {any} */ (null);
+      this.masterGain = /** @type {never} */ (null);
       /** @type {AnalyserNode} */
-      this.analyserNode = /** @type {any} */ (null);
+      this.analyserNode = /** @type {never} */ (null);
       /** @type {GainNode} */
-      this.normGain = /** @type {any} */ (null);
+      this.normGain = /** @type {never} */ (null);
       /** @type {DynamicsCompressorNode} */
-      this.normLimiter = /** @type {any} */ (null);
+      this.normLimiter = /** @type {never} */ (null);
       /** @type {AnalyserNode | null} */
       this.levelAnalyser = null;
       /** @type {Float32Array<ArrayBuffer> | null} */
       this.levelBuf = null;
       /** @type {GainNode} */
-      this.fadeGain = /** @type {any} */ (null);
+      this.fadeGain = /** @type {never} */ (null);
       /** @type {GainNode} */
-      this.bus = /** @type {any} */ (null);
+      this.bus = /** @type {never} */ (null);
       this._analyserConnected = false;
       /** @type {ReturnType<typeof setTimeout> | null} */
       this._suspendTimer = null;
@@ -413,7 +413,7 @@
       }
     }
 
-    setHqSettings(/** @type {any} */ settings) {
+    setHqSettings(/** @type {Partial<UrielAudioEngine['hqSettings']>} */ settings) {
       Object.assign(this.hqSettings, settings);
       if (this.graphInitialized) this._applyHqParams();
     }
@@ -465,12 +465,12 @@
     }
 
 
-    setAudioSettings(/** @type {any} */ settings) {
+    setAudioSettings(/** @type {Partial<UrielAudioEngine['audioSettings']>} */ settings) {
       Object.assign(this.audioSettings, settings);
       this.applySettings();
     }
 
-    setEq(/** @type {any} */ eq) {
+    setEq(/** @type {{ low?: unknown, mid?: unknown, high?: unknown } | null | undefined} */ eq) {
       if (!eq) return;
       if (!this.audioSettings.eq) this.audioSettings.eq = { low: 0, mid: 0, high: 0 };
       const clamp = (/** @type {unknown} */ v) => Math.max(-12, Math.min(12, typeof v === 'number' ? v : 0));
@@ -669,7 +669,7 @@
     }
 
 
-    async renderOffline(/** @type {AudioBuffer} */ sourceBuffer, /** @type {any} */ settingsOverride, /** @type {any} */ hqOverride = undefined) {
+    async renderOffline(/** @type {AudioBuffer} */ sourceBuffer, /** @type {UrielAudioEngine['audioSettings'] | null | undefined} */ settingsOverride, /** @type {UrielAudioEngine['hqSettings'] | undefined} */ hqOverride = undefined) {
       const s = settingsOverride || { ...this.audioSettings };
       const hq = hqOverride || { ...this.hqSettings };
       const useHq = this.hqEnabled;

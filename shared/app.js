@@ -7591,7 +7591,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.stopPropagation();
       if (!albumOnPage || albumOnPage.type === 'Daily Mix') return;
       const r = Lib.toggleSavedAlbum(getSavedAlbums(), albumOnPage);
-      setSavedAlbums(r.list);
+      setSavedAlbums(/** @type {UrielAlbum[]} */ (r.list));
       updateSaveAlbumButton();
       showToast(r.saved ? 'Saved to your albums' : 'Removed from your albums', 'info');
     });
@@ -7616,7 +7616,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function rateDailyMix(/** @type {boolean} */ isLike) {
     const mix = albumOnPage;
     if (!mix || mix.type !== 'Daily Mix') return;
-    const fb = Lib.rateMix(getMixFeedback(), { id: mix.id, artists: mix.mixArtists || [], tracks: mix.tracks || [] }, isLike, (/** @type {UrielTrack} */ t) => getTrackNormalizedKey(t.artist, t.title));
+    const fb = Lib.rateMix(getMixFeedback(), { id: mix.id, artists: mix.mixArtists || [], tracks: mix.tracks || [] }, isLike, (t) => getTrackNormalizedKey(t.artist, t.title));
     try { localStorage.setItem(MIX_FEEDBACK_KEY, JSON.stringify(fb)); } catch (e) {}
     const like = document.getElementById('btn-dm-like');
     const dislike = document.getElementById('btn-dm-dislike');
@@ -9059,7 +9059,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnArtistFollow.addEventListener('click', () => {
       if (!artistOnPage) return;
       const r = Lib.toggleFollowArtist(getFollowedArtists(), artistOnPage);
-      setFollowedArtists(r.list);
+      setFollowedArtists(/** @type {{ name: string }[]} */ (r.list));
       updateFollowButton();
       showToast(r.followed ? `Following ${artistOnPage.name}` : `Unfollowed ${artistOnPage.name}`, 'info');
     });
@@ -9142,7 +9142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // follow by the channel when the page has one; a followed entry learns the picture and the channel
       artistOnPage = { name: artist.name || cleanName, id: artist.id || id || '', ids: artist.ids || [], avatar: artist.avatar || '', fans: artist.fans || 0 };
       const refreshed = Lib.refreshFollowed(getFollowedArtists(), artistOnPage);
-      if (refreshed.changed) setFollowedArtists(refreshed.list);
+      if (refreshed.changed) setFollowedArtists(/** @type {{ name: string }[]} */ (refreshed.list));
       updateFollowButton();
 
       if (!bioFromCache) {
@@ -15756,8 +15756,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // songs from Daily Mixes you gave a thumbs up count like favourites, their artists a bit more
     const mixFeedback = getMixFeedback();
-    mixFeedback.likedTracks.forEach((/** @type {UrielTrack} */ track) => {
-      const res = getOrCreateEntry(track);
+    // a rated song is kept as { id, title, artist, key }: enough to count it like a played one
+    mixFeedback.likedTracks.forEach((track) => {
+      const res = getOrCreateEntry(/** @type {UrielTrack} */ (track));
       if (res) res.entry.weight += 3;
     });
 
