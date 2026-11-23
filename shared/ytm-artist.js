@@ -171,7 +171,7 @@ function parseArtistResults(json) {
     const name = runsText(col(0));
     if (!id || !name) return null;
     return { id, name, subtitle: segments(col(1).runs).join(' • '), thumbnail: lastThumb(r.thumbnail).replace(/=w\d+-h\d+/, '=w240-h240') };
-  }).filter(Boolean);
+  }).filter((a) => a !== null);
 }
 
 // who a video is credited to on YouTube Music (the uploader, for an ordinary upload)

@@ -5,9 +5,10 @@
 // so each run is stopped together with everything it started.
 const { execFileSync } = require('child_process');
 
+/** @type {Set<import('child_process').ChildProcess>} */
 const running = new Set();
 
-/** @param {any} proc */
+/** @template {import('child_process').ChildProcess} P @param {P} proc @returns {P} */
 function track(proc) {
   if (proc && proc.pid) {
     running.add(proc);
@@ -52,7 +53,7 @@ function stopAll({ platform = process.platform, exec = execFileSync, kill = proc
   let table = '';
   try { table = exec('ps', ['-A', '-o', 'pid=,ppid='], { encoding: 'utf8', timeout: 2000 }); } catch (e) {}
   for (const p of procs) {
-    for (const pid of descendants(table, p.pid)) { try { kill(pid, 'SIGKILL'); } catch (e) {} }
+    for (const pid of descendants(table, /** @type {number} */ (p.pid))) { try { kill(pid, 'SIGKILL'); } catch (e) {} }
     try { p.kill('SIGKILL'); } catch (e) {}
   }
   return procs.length;

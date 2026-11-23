@@ -80,7 +80,7 @@ function createTaskQueue({ limit = 2, backgroundLimit = 1, now = () => Date.now(
   }
 
   // task: () => Promise. opts: { key, priority: 'play' | 'normal' | 'background', cacheMs, noRetry }
-  /** @param {(o: { priority: string }) => Promise<any>} task @param {{ key?: string, priority?: string, cacheMs?: number, noRetry?: boolean }} [opts] @returns {Promise<any>} */
+  /** @template T @param {(o: { priority: string }) => Promise<T>} task @param {{ key?: string, priority?: string, cacheMs?: number, noRetry?: boolean }} [opts] @returns {Promise<T>} */
   function run(task, opts = {}) {
     const key = opts.key || null;
     const priority = opts.priority && PRIORITY[opts.priority] !== undefined ? opts.priority : 'normal';
