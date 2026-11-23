@@ -2,11 +2,14 @@
 // Recommendations (#19), the parts that are plain data: reading YouTube Music's radio for a song (its "Up next"
 // watch playlist) and Last.fm's similar songs and artists, and keeping blocked and just-played songs out.
 // No network: server.js fetches and uses these in My Wave / the Daily Mixes, test/recommend-core.test.js runs them.
-(function (/** @type {any} */ root) {
-  const lib = typeof module === 'object' && module.exports ? require('./library-pages') : root.UrielLibrary;
-  const list = (/** @type {any} */ v) => (Array.isArray(v) ? v : []);
+(function (/** @type {Record<string, unknown>} */ root) {
+  const lib = /** @type {typeof import('./library-pages')} */ (typeof module === 'object' && module.exports ? require('./library-pages') : root.UrielLibrary);
+  // YouTube Music's and Last.fm's JSON: undocumented and it changes, so it isn't typed; every step is checked instead
+  /** @typedef {any} PageJson */
+  /** @returns {PageJson[]} */
+  const list = (/** @type {unknown} */ v) => (Array.isArray(v) ? v : []);
   const VIDEO_ID = /^[\w-]{11}$/;
-  const runsText = (/** @type {any} */ r) => list(r && r.runs).map((x) => (x && x.text) || '').join('');
+  const runsText = (/** @type {PageJson} */ r) => list(r && r.runs).map((x) => (x && x.text) || '').join('');
 
   /** @param {unknown} text */
   function parseLength(text) {
@@ -52,7 +55,7 @@
 
   // YouTube Music's radio for a song: the `next` call with playlistId RDAMVM<videoId>. Its queue lists the songs
   // YouTube Music would play after this one (the seed itself first). Only songs of a normal length.
-  /** @param {any} json @param {string} seedId */
+  /** @param {PageJson} json @param {string} seedId */
   function parseWatchPlaylist(json, seedId) {
     const tabs = (((((json || {}).contents || {}).singleColumnMusicWatchNextResultsRenderer || {}).tabbedRenderer || {})
       .watchNextTabbedResultsRenderer || {}).tabs;
@@ -93,10 +96,11 @@
   }
 
   const num = (/** @type {unknown} */ v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
-  const one = (/** @type {any} */ v) => (Array.isArray(v) ? v : v && typeof v === 'object' ? [v] : []); // Last.fm sends one item as an object
+  /** @returns {PageJson[]} */
+  const one = (/** @type {unknown} */ v) => (Array.isArray(v) ? v : v && typeof v === 'object' ? [v] : []); // Last.fm sends one item as an object
 
   // track.getSimilar: [{ title, artist, match (0..1), duration }]
-  /** @param {any} json */
+  /** @param {PageJson} json */
   function parseSimilarTracks(json) {
     const items = one(json && json.similartracks && json.similartracks.track);
     return items.map((t) => ({
@@ -108,7 +112,7 @@
   }
 
   // artist.getSimilar: [{ name, match (0..1) }]
-  /** @param {any} json */
+  /** @param {PageJson} json */
   function parseSimilarArtists(json) {
     return one(json && json.similarartists && json.similarartists.artist)
       .map((a) => ({ name: String((a && a.name) || '').trim(), match: Math.max(0, Math.min(1, num(a && a.match))) }))
@@ -116,7 +120,7 @@
   }
 
   // artist.getTopTracks: [{ title, artist }]
-  /** @param {any} json @param {string} [fallbackArtist] */
+  /** @param {PageJson} json @param {string} [fallbackArtist] */
   function parseTopTracks(json, fallbackArtist = '') {
     return one(json && json.toptracks && json.toptracks.track).map((t) => ({
       title: String((t && t.name) || '').trim(),
@@ -127,17 +131,20 @@
   // Keeps out blocked artists and songs (library-pages.js: "Queen" also blocks "Queen & David Bowie"), songs whose
   // key or id is in `recent` (just played, or recommended a moment ago) and repeats within the list itself.
   // keyOf(track) gives the artist+title key the caller uses everywhere else.
-  /** @param {any[]} tracks @param {{ blocks?: any, recentKeys?: any, recentIds?: any, keyOf?: (t: any) => string }} [o] */
+  // a song as the recommenders pass it around: these are the fields read here
+  /** @typedef {{ id?: string | number, title?: string, artist?: string, match?: number }} RecSong */
+  /** @template {RecSong} T @param {T[] | null | undefined} tracks @param {{ blocks?: { artists?: unknown, songs?: unknown }, recentKeys?: Set<string> | string[], recentIds?: Set<string> | string[], keyOf?: (t: T) => string }} [o] @returns {T[]} */
   function dropUnwanted(tracks, { blocks, recentKeys, recentIds, keyOf } = {}) {
     const keys = recentKeys instanceof Set ? recentKeys : new Set(list(recentKeys));
     const ids = recentIds instanceof Set ? recentIds : new Set(list(recentIds));
     const b = { artists: list(blocks && blocks.artists), songs: list(blocks && blocks.songs) };
     const hasBlocks = b.artists.length > 0 || b.songs.length > 0;
-    const key = typeof keyOf === 'function' ? keyOf : (/** @type {any} */ t) => `${lib.nameKey(t.artist)}::${lib.nameKey(t.title)}`;
+    const key = typeof keyOf === 'function' ? keyOf : (/** @type {T} */ t) => `${lib.nameKey(t.artist)}::${lib.nameKey(t.title)}`;
     const seenKeys = new Set();
     const seenIds = new Set();
+    /** @type {T[]} */
     const out = [];
-    for (const t of list(tracks)) {
+    for (const t of tracks || []) {
       if (!t || !t.title) continue;
       const k = key(t);
       const id = t.id ? String(t.id) : '';
@@ -153,18 +160,20 @@
   // Song radio (#28): one list of candidates per seed song, mixed evenly (one from each seed in turn, best first),
   // without repeats across seeds, without the seeds themselves and without anything in `exclude` (songs the radio
   // already queued). At most `perArtist` songs by one artist, so one seed's artist doesn't take over.
-  /** @param {any[][]} perSeed @param {{ limit?: number, exclude?: any, keyOf?: (t: any) => string, perArtist?: number }} [o] */
+  /** @template {RecSong} T @param {T[][]} perSeed @param {{ limit?: number, exclude?: { keys?: Set<string> | string[], ids?: Set<string> | string[] }, keyOf?: (t: T) => string, perArtist?: number }} [o] @returns {T[]} */
   function mixRadio(perSeed, { limit = 25, exclude, keyOf, perArtist = 3 } = {}) {
-    const key = typeof keyOf === 'function' ? keyOf : (/** @type {any} */ t) => `${lib.nameKey(t.artist)}::${lib.nameKey(t.title)}`;
+    const key = typeof keyOf === 'function' ? keyOf : (/** @type {T} */ t) => `${lib.nameKey(t.artist)}::${lib.nameKey(t.title)}`;
     const ex = exclude || {};
     const exKeys = ex.keys instanceof Set ? ex.keys : new Set(list(ex.keys));
     const exIds = ex.ids instanceof Set ? ex.ids : new Set(list(ex.ids));
-    const lists = list(perSeed).map((l) => list(l).filter((t) => t && t.title).slice()
+    const lists = (perSeed || []).map((l) => (l || []).filter((t) => t && t.title).slice()
       .sort((a, b) => (Number(b.match) || 0) - (Number(a.match) || 0)));
     const seenKeys = new Set();
     const seenIds = new Set();
+    /** @type {Map<string, number>} */
     const byArtist = new Map();
     const pos = lists.map(() => 0);
+    /** @type {T[]} */
     const out = [];
     let moved = true;
     while (out.length < limit && moved) {

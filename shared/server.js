@@ -2967,7 +2967,9 @@ async function resolveArtistId(/** @type {string} */ cleanName, /** @type {strin
     videoArtists.set(videoId, credits);
     trimCache(videoArtists, 500);
   }
-  const hit = ytmArtist.pickArtist(await videoArtists.get(videoId), cleanName);
+  /** @type {{ name: string, id: string }[]} */
+  const credits = await videoArtists.get(videoId);
+  const hit = ytmArtist.pickArtist(credits, cleanName);
   return hit ? hit.id : '';
 }
 

@@ -61,7 +61,9 @@
   const overlaps = (/** @type {string} */ a, /** @type {string} */ b) => !!a && !!b && (a === b || a.includes(b) || b.includes(a));
 
   // the Genius search hit for this song: the title has to match, the artist too when the hit names one
-  /** @param {any[]} hits @param {string} title @param {string} artist */
+  // Genius's and NetEase's JSON isn't documented, so it isn't typed; every field is checked before it is used
+  /** @typedef {any} PageJson */
+  /** @param {PageJson[]} hits @param {string} title @param {string} artist */
   function pickGeniusHit(hits, title, artist) {
     const t = simple(title);
     const artists = String(artist || '').split(/\s*(?:,|&|\/|\+|\bx\b|\band\b|\bfeat\.?|\bft\.?)\s*/i).map(simple).filter(Boolean);
@@ -124,7 +126,7 @@
   }
 
   // the NetEase search result that is this song: length within 3 s (when known), title and an artist matching
-  /** @param {any[]} songs @param {string} title @param {string} artist @param {number} duration */
+  /** @param {PageJson[]} songs @param {string} title @param {string} artist @param {number} duration */
   function pickNetEaseSong(songs, title, artist, duration) {
     const t = simple(title);
     const artists = String(artist || '').split(/\s*(?:,|&|\/|\+|\bx\b|\band\b|\bfeat\.?|\bft\.?)\s*/i).map(simple).filter(Boolean);
@@ -133,7 +135,7 @@
       const len = (Number(s.duration || s.dt) || 0) / 1000;
       if (duration > 0 && len > 0 && Math.abs(len - duration) > 3) continue;
       if (!overlaps(simple(s.name), t)) continue;
-      const cand = (s.artists || s.ar || []).map((/** @type {any} */ a) => simple(a && a.name)).filter(Boolean);
+      const cand = (s.artists || s.ar || []).map((/** @type {{ name?: string } | null} */ a) => simple(a && a.name)).filter(Boolean);
       if (artists.length && cand.length && !cand.some((/** @type {string} */ c) => artists.some((a) => overlaps(a, c)))) continue;
       return s.id;
     }
@@ -198,16 +200,16 @@
   // sites split lines differently, so this goes word by word: each shown word takes the time of the same word
   // NetEase has around that line's time. Returns each line's words (or undefined for a line too few words of which
   // were found), or null when too little matched to be the same lyrics.
-  /** @param {any[]} lines @param {any[]} wordLines */
+  /** @param {{ time: number, text: string, isGap?: boolean }[]} lines @param {{ words?: UrielTimedWord[] }[]} wordLines @returns {(UrielTimedWord[] | undefined)[] | null} */
   function alignWordTimings(lines, wordLines) {
     /** @type {number[]} */
     const shown = [];
-    (lines || []).forEach((/** @type {any} */ l, /** @type {number} */ i) => { if (l && l.text && !l.isGap && l.time >= 0) shown.push(i); });
+    (lines || []).forEach((l, i) => { if (l && l.text && !l.isGap && l.time >= 0) shown.push(i); });
     /** @type {{ n: string, start: number, end: number }[]} */
     const pool = [];
     for (const wl of wordLines || []) for (const w of wl.words || []) { const n = simple(w.text); if (n) pool.push({ n, start: w.start, end: w.end }); }
     if (!shown.length || !pool.length) return null;
-    /** @type {{ i: number, next: number, toks: string[], hit: any[] }[]} */
+    /** @type {{ i: number, next: number, toks: string[], hit: ({ n: string, start: number, end: number } | undefined)[] }[]} */
     const matches = [];
     let p = 0;
     shown.forEach((i, k) => {
@@ -215,6 +217,7 @@
       const next = k + 1 < shown.length ? lines[shown[k + 1]].time : line.time + 8;
       const toks = lineTokens(line.text);
       if (!toks.length) return;
+      /** @type {({ n: string, start: number, end: number } | undefined)[]} */
       const hit = new Array(toks.length);
       let found = 0;
       // where this line's words can be: from a little before it starts to a little after the next one starts
@@ -233,41 +236,45 @@
     if (matches.length / shown.length < 0.6) return null;
     // the two sites may have timed slightly different releases: move NetEase's words by the usual gap between a
     // line's start and its first word, so the words follow the line highlighting on screen
-    const gaps = matches.filter((m) => m.hit[0]).map((m) => lines[m.i].time - m.hit[0].start).sort((a, b) => a - b);
+    const gaps = matches.map((m) => m.hit[0] ? lines[m.i].time - m.hit[0].start : null).filter((g) => g !== null).sort((a, b) => a - b);
     const median = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 0;
     const shift = Math.abs(median) > 0.25 ? median : 0;
+    /** @type {(UrielTimedWord[] | undefined)[]} */
     const out = new Array(lines.length);
     for (const { i, next, toks, hit } of matches) {
       const line = lines[i];
       // words NetEase doesn't have get the time between their neighbours
-      /** @type {any[]} */
-      const words = toks.map((/** @type {string} */ tok, /** @type {number} */ j) => (hit[j] ? { text: tok, start: hit[j].start + shift, end: hit[j].end + shift } : { text: tok, start: null, end: null }));
+      /** @type {{ text: string, start: number | null, end: number | null }[]} */
+      const words = toks.map((tok, j) => { const h = hit[j]; return h ? { text: tok, start: h.start + shift, end: h.end + shift } : { text: tok, start: null, end: null }; });
       for (let j = 0; j < words.length; j++) {
         if (words[j].start !== null) continue;
         let e = j;
         while (e < words.length && words[e].start === null) e++;
-        const from = j > 0 ? words[j - 1].end : Math.min(line.time, e < words.length ? words[e].start : line.time);
-        const to = e < words.length ? words[e].start : Math.max(from + 0.3 * (e - j), Math.min(next, from + 0.6 * (e - j)));
+        // the word before has its times by now, and words[e] (the first timed one after the gap) always had them
+        const from = j > 0 ? Number(words[j - 1].end) : Math.min(line.time, e < words.length ? Number(words[e].start) : line.time);
+        const to = e < words.length ? Number(words[e].start) : Math.max(from + 0.3 * (e - j), Math.min(next, from + 0.6 * (e - j)));
         const step = Math.max(0, to - from) / (e - j);
         for (let m = j; m < e; m++) { words[m].start = from + step * (m - j); words[m].end = from + step * (m - j + 1); }
         j = e;
       }
-      out[i] = words.map((w) => ({ text: w.text, start: Math.round(w.start * 1000) / 1000, end: Math.round(w.end * 1000) / 1000 }));
+      // every gap was filled above, so each word has its times now
+      out[i] = words.map((w) => ({ text: w.text, start: Math.round(Number(w.start) * 1000) / 1000, end: Math.round(Number(w.end) * 1000) / 1000 }));
     }
     return out;
   }
 
   // the words to show for a line with timings: its own spelling when the word counts agree, else the timed words
-  /** @param {unknown} text @param {any} words */
+  /** @param {unknown} text @param {unknown} words @returns {UrielTimedWord[] | null} */
   function timedWords(text, words) {
     if (!Array.isArray(words) || !words.length) return null;
     const own = String(text || '').replace(/<[^>]+>/g, '').trim().split(/\s+/).filter(Boolean);
-    if (own.length === words.length) return own.map((w, i) => ({ text: w, start: words[i].start, end: words[i].end }));
-    return words.map(w => ({ text: String(w.text || '').trim(), start: w.start, end: w.end })).filter(w => w.text);
+    const timed = /** @type {UrielTimedWord[]} */ (words);
+    if (own.length === timed.length) return own.map((w, i) => ({ text: w, start: timed[i].start, end: timed[i].end }));
+    return timed.map(w => ({ text: String(w.text || '').trim(), start: w.start, end: w.end })).filter(w => w.text);
   }
 
   // how far (0..1, by characters) the karaoke fill should be at time t for a line with word times
-  /** @param {any} words @param {number} t */
+  /** @param {UrielTimedWord[] | null | undefined} words @param {number} t */
   function timedProgress(words, t) {
     if (!Array.isArray(words) || !words.length) return null;
     const total = words.reduce((n, w) => n + Math.max(1, w.text.length), 0);

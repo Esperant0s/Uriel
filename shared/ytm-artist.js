@@ -6,8 +6,12 @@
 const CHANNEL_ID = /^UC[\w-]{22}$/;
 const VIDEO_ID = /^[\w-]{11}$/;
 
+// innertube's JSON: big, undocumented and it changes often, so it isn't typed; every step is checked instead
+/** @typedef {any} PageJson */
+/** @typedef {{ text: string, navigationEndpoint?: PageJson }} Run */
+
 const channelId = (/** @type {unknown} */ v) => (CHANNEL_ID.test(String(v || '')) ? String(v) : undefined);
-const runsText = (/** @type {any} */ t) => ((t && t.runs) || []).map((/** @type {any} */ r) => r.text).join('').trim();
+const runsText = (/** @type {PageJson} */ t) => ((t && t.runs) || []).map((/** @type {Run} */ r) => r.text).join('').trim();
 // case, accents, spaces and punctuation aside (NFKD splits the accents off as marks, which the filter drops)
 const fold = (/** @type {unknown} */ s) => String(s || '').normalize('NFKD').toLowerCase().replace(/[\u0300-\u036f\u20d0-\u20ff\ufe00-\ufe0f]/g, '').replace(/[^\p{L}\p{N}\p{M}]/gu, '');
 // "NobodyKnows", "NOBODYKNOWS - Topic" and "Nobodyknows+" are the same name
@@ -16,7 +20,7 @@ const nameKey = (/** @type {unknown} */ s) => fold(String(s || '').replace(/\s*-
 const titleKey = (/** @type {unknown} */ s) => fold(String(s || '').replace(/\s*[([].*?[)\]]/g, '').replace(/\s+-\s+(Single|EP)$/i, ''));
 
 // every object under `key`, wherever it sits: YouTube moves shelves around between layouts
-/** @param {any} node @param {string} key @param {any[]} [out] @returns {any[]} */
+/** @param {PageJson} node @param {string} key @param {PageJson[]} [out] @returns {PageJson[]} */
 function findAll(node, key, out = []) {
   if (!node || typeof node !== 'object') return out;
   for (const k of Object.keys(node)) {
@@ -26,24 +30,26 @@ function findAll(node, key, out = []) {
   return out;
 }
 
-const playlistLink = (/** @type {any} */ e) => (e && e.browseEndpoint && /^VL/.test(e.browseEndpoint.browseId || '') ? e.browseEndpoint.browseId : '');
-const titleLink = (/** @type {any} */ t) => playlistLink(t && t.runs && t.runs[0] && t.runs[0].navigationEndpoint);
+const playlistLink = (/** @type {PageJson} */ e) => (e && e.browseEndpoint && /^VL/.test(e.browseEndpoint.browseId || '') ? e.browseEndpoint.browseId : '');
+const titleLink = (/** @type {PageJson} */ t) => playlistLink(t && t.runs && t.runs[0] && t.runs[0].navigationEndpoint);
 
-const lastThumb = (/** @type {any} */ t) => {
+/** @returns {string} */
+const lastThumb = (/** @type {PageJson} */ t) => {
   const list = (t && t.musicThumbnailRenderer && t.musicThumbnailRenderer.thumbnail && t.musicThumbnailRenderer.thumbnail.thumbnails) || [];
   return list.length ? list[list.length - 1].url : '';
 };
 
 // the linked artists in a line of runs ("A & B • Album • 3:20"): [{ name, id }]
-/** @param {any} runs @returns {{ name: string, id: string }[]} */
+/** @param {Run[] | null | undefined} runs @returns {{ name: string, id: string }[]} */
 function artistRuns(runs) {
   return (runs || [])
-    .map((/** @type {any} */ r) => ({ name: r.text, id: channelId(r.navigationEndpoint && r.navigationEndpoint.browseEndpoint && r.navigationEndpoint.browseEndpoint.browseId) }))
-    .filter((/** @type {any} */ a) => a.name && a.id);
+    .map((r) => ({ name: r.text, id: channelId(r.navigationEndpoint && r.navigationEndpoint.browseEndpoint && r.navigationEndpoint.browseEndpoint.browseId) }))
+    .filter((a) => a.name && a.id)
+    .map((a) => ({ name: a.name, id: String(a.id) }));
 }
 
 // "Song • A & B • 1.2B views" -> ["A & B", "1.2B views"]
-/** @param {any} runs */
+/** @param {Run[] | null | undefined} runs */
 function segments(runs) {
   const out = [];
   let cur = '';
@@ -64,16 +70,16 @@ function shortCount(s) {
 }
 
 // the [E] YouTube Music shows next to explicit songs (a row's badges, a card's subtitle badges)
-/** @param {any} r */
+/** @param {PageJson} r */
 function explicitBadge(r) {
-  return [...((r && r.badges) || []), ...((r && r.subtitleBadges) || [])].some((b) => {
+  return [...((r && r.badges) || []), ...((r && r.subtitleBadges) || [])].some((/** @type {PageJson} */ b) => {
     const badge = b && b.musicInlineBadgeRenderer;
     const label = badge && badge.accessibilityData && badge.accessibilityData.accessibilityData && badge.accessibilityData.accessibilityData.label;
     return !!badge && ((badge.icon && badge.icon.iconType === 'MUSIC_EXPLICIT_BADGE') || /explicit/i.test(label || ''));
   });
 }
 
-/** @param {string} id @param {string} title @param {any} runs @param {string} thumbnail @param {number | undefined} duration @param {boolean} isExplicit */
+/** @param {string} id @param {string} title @param {Run[] | undefined} runs @param {string} thumbnail @param {number | undefined} duration @param {boolean} isExplicit */
 function track(id, title, runs, thumbnail, duration, isExplicit) {
   const artist = artistRuns(runs)[0];
   /** @type {{ id: string, title: string, artist: string, artistId: string | undefined, duration: number | undefined, thumbnail: string, url: string, platform: string, isExplicit?: boolean }} */
@@ -92,7 +98,7 @@ function track(id, title, runs, thumbnail, duration, isExplicit) {
 }
 
 // song rows of an artist page or playlist: title | artists | album, the length in a fixed column
-/** @param {any} json @returns {any[]} */
+/** @param {PageJson} json */
 function parseSongRows(json) {
   return findAll(json && json.contents, 'musicResponsiveListItemRenderer').map((r) => {
     const id = r.playlistItemData && r.playlistItemData.videoId;
@@ -100,11 +106,11 @@ function parseSongRows(json) {
     const col = (/** @type {number} */ i) => (r.flexColumns && r.flexColumns[i] && r.flexColumns[i].musicResponsiveListItemFlexColumnRenderer && r.flexColumns[i].musicResponsiveListItemFlexColumnRenderer.text) || {};
     const fixed = r.fixedColumns && r.fixedColumns[0] && r.fixedColumns[0].musicResponsiveListItemFixedColumnRenderer;
     return track(id, runsText(col(0)), col(1).runs, lastThumb(r.thumbnail), parseDuration(fixed && runsText(fixed.text)), explicitBadge(r));
-  }).filter(Boolean);
+  }).filter((t) => t !== null);
 }
 
 // an artist's YouTube Music page: who it is, its songs and videos, and the titles of its releases
-/** @param {any} json @param {string} id */
+/** @param {PageJson} json @param {string} id */
 function parseArtistPage(json, id) {
   const h = json && json.header && (json.header.musicImmersiveHeaderRenderer || json.header.musicVisualHeaderRenderer || json.header.musicHeaderRenderer);
   const name = h && runsText(h.title).replace(/\s*-\s*Topic$/i, '');
@@ -125,7 +131,7 @@ function parseArtistPage(json, id) {
   const videos = cards.map((r) => {
     const watch = r.navigationEndpoint && r.navigationEndpoint.watchEndpoint;
     return watch && VIDEO_ID.test(watch.videoId || '') ? track(watch.videoId, runsText(r.title), r.subtitle && r.subtitle.runs, '', 0, explicitBadge(r)) : null;
-  }).filter(Boolean);
+  }).filter((t) => t !== null);
   const releases = cards.filter((r) => {
     const browse = r.navigationEndpoint && r.navigationEndpoint.browseEndpoint;
     return browse && /^MPRE/.test(browse.browseId || '');
@@ -134,7 +140,7 @@ function parseArtistPage(json, id) {
   // playlist with all of them and their lengths
   const shelf = findAll(json.contents, 'musicShelfRenderer')[0];
   const videoShelf = findAll(json.contents, 'musicCarouselShelfRenderer')
-    .find((c) => (c.contents || []).some((/** @type {any} */ x) => x.musicTwoRowItemRenderer && x.musicTwoRowItemRenderer.navigationEndpoint && x.musicTwoRowItemRenderer.navigationEndpoint.watchEndpoint));
+    .find((c) => (c.contents || []).some((/** @type {PageJson} */ x) => x.musicTwoRowItemRenderer && x.musicTwoRowItemRenderer.navigationEndpoint && x.musicTwoRowItemRenderer.navigationEndpoint.watchEndpoint));
   const videoHeader = videoShelf && videoShelf.header && videoShelf.header.musicCarouselShelfBasicHeaderRenderer;
   const playlist = (shelf && (titleLink(shelf.title) || playlistLink(shelf.bottomEndpoint))) || (!songs.length && videoHeader && titleLink(videoHeader.title)) || '';
 
@@ -163,7 +169,7 @@ function parseArtistPage(json, id) {
 }
 
 // a search with the "Artists" filter: [{ id, name, subtitle, thumbnail }]
-/** @param {any} json */
+/** @param {PageJson} json */
 function parseArtistResults(json) {
   return findAll(json && json.contents, 'musicResponsiveListItemRenderer').map((r) => {
     const id = channelId(r.navigationEndpoint && r.navigationEndpoint.browseEndpoint && r.navigationEndpoint.browseEndpoint.browseId);
@@ -175,18 +181,18 @@ function parseArtistResults(json) {
 }
 
 // who a video is credited to on YouTube Music (the uploader, for an ordinary upload)
-/** @param {any} json @param {string} videoId */
+/** @param {PageJson} json @param {string} videoId */
 function parseWatchArtists(json, videoId) {
   const v = findAll(json, 'playlistPanelVideoRenderer').find((p) => p.videoId === videoId);
   return v ? artistRuns(v.longBylineText && v.longBylineText.runs) : [];
 }
 
 // the credited artist a track's artist text means: the whole text, or the lead artist of "A & B" / "A feat. B"
-/** @param {any[]} artists @param {unknown} name */
+/** @template {{ name: string }} A @param {A[] | null | undefined} artists @param {unknown} name @returns {A | null} */
 function pickArtist(artists, name) {
   const keys = [name, String(name || '').split(/\s*(?:,|&|\bfeat\.|\bft\.|\bfeaturing\b)\s*/i)[0]].map(nameKey).filter(Boolean);
   for (const k of keys) {
-    const hit = (artists || []).find((/** @type {any} */ a) => nameKey(a.name) === k);
+    const hit = (artists || []).find((a) => nameKey(a.name) === k);
     if (hit) return hit;
   }
   return null;
