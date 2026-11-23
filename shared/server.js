@@ -2748,7 +2748,7 @@ const streamResolver = createResolver({
   strategies: STREAM_VIA_CACHE ? PHONE_STRATEGIES : DESKTOP_STRATEGIES,
   health: streamHealth,
   isBlocked: isStreamBlock,
-  log: (song, tried) => {
+  log: (/** @type {StreamSong} */ song, tried) => {
     const ok = tried.some((t) => t.outcome === 'ok');
     if (ok && !YTDLP_DEBUG) return;
     const steps = tried.map((t) => `${t.name} ${t.outcome}${t.ms != null ? ` ${t.ms}ms` : ''}`).join(', ');

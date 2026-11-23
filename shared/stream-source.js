@@ -27,9 +27,10 @@ function parseLookup(raw) {
 // headers for the upstream request: Range (and the rest) from the player, yt-dlp's User-Agent etc. win
 // over the browser's. Cookies and anything else from the renderer never go upstream.
 const YT_HEADERS = new Set(['user-agent', 'accept', 'accept-language', 'sec-fetch-mode', 'referer', 'origin']);
-/** @param {Record<string, any> | null | undefined} reqHeaders @param {Record<string, unknown> | null | undefined} ytHeaders @param {{ googlevideo?: boolean }} [opts] */
+/** @typedef {Record<string, string | string[] | undefined>} Headers */
+/** @param {Headers | null | undefined} reqHeaders @param {Record<string, unknown> | null | undefined} ytHeaders @param {{ googlevideo?: boolean }} [opts] */
 function upstreamHeaders(reqHeaders, ytHeaders, opts) {
-  /** @type {Record<string, any>} */
+  /** @type {Headers} */
   const out = {};
   const from = reqHeaders || {};
   for (const key of ['range', 'accept', 'accept-language', 'user-agent']) {
@@ -51,9 +52,9 @@ function upstreamHeaders(reqHeaders, ytHeaders, opts) {
 
 // upstream response headers passed to the audio element, without the upstream's CORS and cookie headers
 // (the local server answers CORS itself)
-/** @param {Record<string, any> | null | undefined} upstream */
+/** @param {Headers | null | undefined} upstream */
 function downstreamHeaders(upstream) {
-  /** @type {Record<string, any>} */
+  /** @type {Headers} */
   const out = {};
   for (const [k, v] of Object.entries(upstream || {})) {
     const key = k.toLowerCase();
@@ -71,7 +72,7 @@ function isGoogleVideoUrl(u) {
 
 // the src the audio element gets for a /api/stream-info answer: YouTube streams go through the local
 // proxy on desktop; phones (which play downloaded files) and HLS keep the URL they were given
-/** @param {any} data @param {boolean} isMobile */
+/** @param {{ streamUrl?: string, proxyUrl?: string, isHls?: boolean, isLocal?: boolean } | null | undefined} data @param {boolean} isMobile */
 function pickStreamSrc(data, isMobile) {
   if (!data || !data.streamUrl) return null;
   if (!isMobile && !data.isHls && !data.isLocal && data.proxyUrl && isGoogleVideoUrl(data.streamUrl)) return data.proxyUrl;

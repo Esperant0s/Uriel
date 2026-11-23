@@ -19,7 +19,7 @@ function createHealth({ now = () => Date.now() } = {}) {
     return /** @type {SourceHealth} */ (sources.get(src));
   };
   return {
-    blocked(/** @type {string} */ src) { if (!src) return false; const s = get(src); return now() < s.blockedUntil || now() < s.restUntil; },
+    blocked(/** @type {string | null} */ src) { if (!src) return false; const s = get(src); return now() < s.blockedUntil || now() < s.restUntil; },
     block(/** @type {string} */ src, ms = BLOCK_MS) { const s = get(src); s.blockedUntil = now() + ms; s.blocked++; },
     // a soft failure: after SOFT_FAILS in a row the source rests 1, 2, 4, 8, then 10 minutes
     fail(/** @type {string} */ src) {
@@ -44,7 +44,7 @@ function createHealth({ now = () => Date.now() } = {}) {
 }
 
 class ResolveError extends Error {
-  /** @param {string} code @param {any[]} tried */
+  /** @param {string} code @param {Tried[]} tried */
   constructor(code, tried) {
     super(code === 'blocked' ? 'blocked' : code === 'aborted' ? 'aborted' : 'unavailable');
     this.code = code;
@@ -52,7 +52,15 @@ class ResolveError extends Error {
   }
 }
 
-const sourceOf = (/** @type {any} */ s, /** @type {any} */ song) => (typeof s.source === 'function' ? s.source(song) : s.source) || null;
+// what each strategy did for a song, for the log
+/** @typedef {{ name: string, outcome: string, ms?: number, error?: string }} Tried */
+/** @typedef {ReturnType<typeof createHealth>} Health */
+// one way of finding a song's stream; the resolver runs them in order (server.js has them)
+/** @template S @typedef {{ name: string, source?: string | null | ((song: S) => string | null), maxMs?: number, canHandle?: (song: S, health: Health) => boolean, attempt: (song: S, o: { budgetMs: number, health: Health, signal?: { aborted: boolean }, reason: string }) => Promise<StreamFound | null> | StreamFound | null }} Strategy */
+/** @typedef {{ url?: string, local?: boolean, headers?: Record<string, string> }} StreamFound */
+
+/** @template S @param {Strategy<S>} s @param {S} song */
+const sourceOf = (s, song) => (typeof s.source === 'function' ? s.source(song) : s.source) || null;
 
 /** @template T @param {Promise<T>} promise @param {number} ms @returns {Promise<T>} */
 function withTimeout(promise, ms) {
@@ -65,11 +73,11 @@ function withTimeout(promise, ms) {
 // strategies: [{ name, source, maxMs, canHandle(song, health), attempt(song, { budgetMs, health, signal }) }]
 //   attempt resolves to a result ({ url, headers } or { local: true }) or to null for "not here"; throws to fail
 // isBlocked(error): true for a definite refusal ("confirm you're not a bot", HTTP 429)
-/** @param {{ strategies: any[], health?: any, isBlocked?: (e: any) => boolean, now?: () => number, log?: (song: any, tried: any[]) => void }} o */
+/** @template S @param {{ strategies: Strategy<S>[], health?: Health, isBlocked?: (e: unknown) => boolean, now?: () => number, log?: (song: S, tried: Tried[]) => void }} o */
 function createResolver({ strategies, health = createHealth(), isBlocked = () => false, now = () => Date.now(), log = () => {} }) {
   const inFlight = new Map();
 
-  /** @param {any} song @param {{ reason?: string, deadlineMs?: number, signal?: AbortSignal }} [o] */
+  /** @param {S} song @param {{ reason?: string, deadlineMs?: number, signal?: { aborted: boolean } }} [o] */
   async function run(song, { reason = 'play', deadlineMs = 30000, signal } = {}) {
     const start = now();
     const tried = [];
@@ -100,7 +108,7 @@ function createResolver({ strategies, health = createHealth(), isBlocked = () =>
           tried.push({ name: s.name, outcome: 'blocked', ms: now() - t0 });
         } else {
           if (src) health.fail(src);
-          tried.push({ name: s.name, outcome: /** @type {any} */ (e)?.timeout ? 'timeout' : 'error', ms: now() - t0, error: e instanceof Error ? e.message : undefined });
+          tried.push({ name: s.name, outcome: /** @type {{ timeout?: boolean } | null} */ (e)?.timeout ? 'timeout' : 'error', ms: now() - t0, error: e instanceof Error ? e.message : undefined });
         }
       }
     }
@@ -111,8 +119,9 @@ function createResolver({ strategies, health = createHealth(), isBlocked = () =>
   return {
     health,
     // the same song asked for twice at once (a prefetch and a tap) shares one lookup
-    resolve(/** @type {any} */ song, opts = {}) {
-      const key = song && song.key;
+    /** @param {S} song @param {{ reason?: string, deadlineMs?: number, signal?: { aborted: boolean } }} [opts] */
+    resolve(song, opts = {}) {
+      const key = song && /** @type {{ key?: string }} */ (song).key;
       if (key && inFlight.has(key)) return inFlight.get(key);
       const p = run(song, opts).finally(() => { if (key) inFlight.delete(key); });
       if (key) inFlight.set(key, p);
