@@ -7,7 +7,7 @@
 // - A backup is one profile's own localStorage keys. Restoring one only writes Uriel's data and settings keys:
 //   never the device's (profiles-core.js), the sync link, other profiles, logins or custom CSS. Riff's encrypted
 //   account files (.rfacc) are read too: they are the same thing under a fixed, public key.
-(function (/** @type {any} */ root) {
+(function (/** @type {Record<string, unknown>} */ root) {
   const LIMITS = { fileBytes: 30e6, playlists: 2000, tracksPerPlaylist: 20000, tracks: 200000, keyBytes: 8e6, totalBytes: 24e6 };
   const PLATFORMS = new Set(['youtube', 'ytmusic', 'soundcloud', 'local']);
   const YT_ID = /^[A-Za-z0-9_-]{11}$/;
@@ -15,7 +15,9 @@
   const SAFE_KEY = /^[A-Za-z_][A-Za-z0-9_]{0,39}$/;
   // text from a file: only strings and numbers count ({ "toString": 1 } is valid JSON and breaks String())
   const clip = (/** @type {unknown} */ s, /** @type {number} */ n) => (typeof s === 'string' || typeof s === 'number' ? String(s) : '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n);
-  const isObj = (/** @type {any} */ v) => !!v && typeof v === 'object' && !Array.isArray(v);
+  // what a file or storage holds is checked field by field, so a plain object's fields start out unknown
+  /** @returns {v is Record<string, unknown>} */
+  const isObj = (/** @type {unknown} */ v) => !!v && typeof v === 'object' && !Array.isArray(v);
 
   /** @param {string} s */
   function parseUrl(s) {
@@ -33,7 +35,7 @@
     const id = u.hostname.toLowerCase() === 'youtu.be' ? u.pathname.slice(1) : (u.searchParams.get('v') || (u.pathname.match(/^\/(?:shorts|embed)\/([^/]+)/) || [])[1] || '');
     return YT_ID.test(id) ? id : '';
   };
-  const duration = (/** @type {any} */ t) => {
+  const duration = (/** @type {Record<string, unknown>} */ t) => {
     let d = Number(t.duration);
     if (!(d > 0) && Number(t.durationMs) > 0) d = Number(t.durationMs) / 1000;
     if (!(d > 0) && Number(t.duration_ms) > 0) d = Number(t.duration_ms) / 1000;
@@ -42,12 +44,13 @@
 
   // A song from a shared playlist file -> a Uriel track, or null. A song with only a title and artist is kept
   // with needsMatch: true; backup.js looks it up on YouTube, like a Spotify import.
-  /** @param {any} t */
+  /** @typedef {{ title: string, artist: string, album?: string, duration?: number, id?: string, platform?: string, url?: string, thumbnail?: string, needsMatch?: boolean }} SharedTrack */
+  /** @param {unknown} t @returns {SharedTrack | null} */
   function cleanSharedTrack(t) {
     if (!isObj(t)) return null;
     const title = clip(t.title || t.name || t.trackName, 300);
     const artist = clip(t.artist || t.artistName || t.author || t.uploader, 300);
-    /** @type {Record<string, any>} */
+    /** @type {SharedTrack} */
     const base = { title: title || 'Unknown', artist };
     const album = clip(t.album, 300);
     if (album) base.album = album;
@@ -92,7 +95,7 @@
         const c = cleanSharedTrack(t);
         if (c) { tracks.push(c); total++; }
       }
-      /** @type {Record<string, any>} */
+      /** @type {{ name: string, tracks: typeof tracks, description?: string, cover?: string }} */
       const pl = { name: clip(p.name || p.title, 100) || 'Imported playlist', tracks };
       const description = clip(p.description, 500);
       if (description) pl.description = description;
@@ -105,16 +108,16 @@
 
   // Uriel playlists -> a playlist file. Songs from this device's files keep only their library id (the file
   // itself, its path and the local server's address stay here).
-  /** @param {any} t */
+  /** @param {unknown} t */
   function exportTrack(t) {
     if (!isObj(t)) return null;
-    /** @type {Record<string, any>} */
+    /** @type {Record<string, string | number>} */
     const out = { title: clip(t.title, 300), artist: clip(t.artist, 300) };
     const album = clip(t.album, 300);
     if (album) out.album = album;
     const d = duration(t);
     if (d) out.duration = d;
-    const platform = PLATFORMS.has(t.platform) ? t.platform : 'youtube';
+    const platform = typeof t.platform === 'string' && PLATFORMS.has(t.platform) ? t.platform : 'youtube';
     const id = clip(t.id, 200);
     if (platform === 'local' || t.isLocal || LOCAL_ID.test(id)) return { ...out, id, platform: 'local', source: 'local' };
     const url = httpsUrl(t.url) || (YT_ID.test(id) ? `https://www.youtube.com/watch?v=${id}` : '');
@@ -122,14 +125,14 @@
     return { ...out, id, url, platform, source: platform, ...(cover ? { thumbnail: cover, cover } : {}) };
   }
 
-  /** @param {any[]} playlists @param {{ appVersion?: string }} [o] */
+  /** @param {unknown[]} playlists @param {{ appVersion?: string }} [o] */
   function playlistFile(playlists, { appVersion = '' } = {}) {
     return {
       app: 'Uriel',
       appVersion: String(appVersion || ''),
       exportedAt: new Date().toISOString(),
-      playlists: (playlists || []).filter(isObj).map((/** @type {any} */ p) => {
-        /** @type {Record<string, any>} */
+      playlists: (playlists || []).filter(isObj).map((p) => {
+        /** @type {{ name: string, tracks: unknown[], description?: string, cover?: string }} */
         const pl = { name: clip(p.name, 100) || 'untitled', tracks: (Array.isArray(p.tracks) ? p.tracks : []).map(exportTrack).filter(Boolean) };
         const description = clip(p.description, 500);
         if (description) pl.description = description;
@@ -165,7 +168,7 @@
   const keepOnRestore = (/** @type {unknown} */ key, /** @type {((key: string) => boolean) | undefined} */ isDevice) => !backupKeyAllowed(key, isDevice);
 
   // the open profile's own keys -> a backup file
-  /** @param {any} entries @param {{ profileName?: string, appVersion?: string, isDevice?: (key: string) => boolean }} [o] */
+  /** @param {Iterable<[string, unknown]>} entries @param {{ profileName?: string, appVersion?: string, isDevice?: (key: string) => boolean }} [o] */
   function makeBackup(entries, { profileName = '', appVersion = '', isDevice } = {}) {
     /** @type {Record<string, string>} */
     const data = {};
@@ -183,10 +186,10 @@
     const u = v.length <= 4096 ? parseUrl(v) : null;
     return u && (u.protocol === 'https:' || u.protocol === 'http:' || u.protocol === 'file:') ? v : '';
   }
-  /** @param {any} t */
+  /** @param {unknown} t */
   function cleanStoredTrack(t) {
     if (!isObj(t)) return null;
-    /** @type {Record<string, any>} */
+    /** @type {Record<string, string | number | boolean>} */
     const out = {};
     let n = 0;
     for (const k of Object.keys(t)) {
@@ -199,7 +202,7 @@
       else if (typeof v === 'boolean') out[k] = v;
     }
     if (!out.id && !out.title && !out.url) return null;
-    if (out.platform !== undefined && !PLATFORMS.has(out.platform)) out.platform = 'youtube';
+    if (out.platform !== undefined && !PLATFORMS.has(String(out.platform))) out.platform = 'youtube';
     return out;
   }
   const cleanTrackList = (/** @type {unknown} */ list, /** @type {number} */ cap) => (Array.isArray(list) ? list.slice(0, cap).map(cleanStoredTrack).filter(Boolean) : null);
@@ -213,7 +216,7 @@
       let id = typeof p.id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(p.id) ? p.id : '';
       while (!id || seen.has(id)) id = `pl_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
       seen.add(id);
-      /** @type {Record<string, any>} */
+      /** @type {Record<string, unknown>} */
       const pl = { id, name: clip(p.name, 100) || 'untitled', tracks: cleanTrackList(p.tracks, LIMITS.tracksPerPlaylist) || [] };
       for (const k of Object.keys(p)) {
         if (k in pl || !SAFE_KEY.test(k)) continue;
@@ -226,7 +229,7 @@
     return out;
   }
   // keys whose value the app renders as songs and playlists get checked through; the rest stay text as they are
-  /** @type {Record<string, (v: any) => any>} */
+  /** @type {Record<string, (v: unknown) => unknown>} */
   const STRUCTURED = {
     devsize_playlists: cleanStoredPlaylists,
     devsize_favorites: (/** @type {unknown} */ v) => cleanTrackList(v, LIMITS.tracks),
@@ -238,14 +241,14 @@
   const fromOlder = (/** @type {string} */ k) => (typeof k === 'string' ? k.replace(/^(?:riff|muriel|mural)_/, 'uriel_') : k);
 
   // A backup file's contents (already parsed) -> what a restore writes. Throws an Error with a message for people.
-  /** @param {any} obj @param {{ isDevice?: (key: string) => boolean }} [o] */
+  /** @param {unknown} obj @param {{ isDevice?: (key: string) => boolean }} [o] */
   function readBackup(obj, { isDevice } = {}) {
     if (!isObj(obj)) throw new Error("That file isn't a Uriel backup");
     let source = '';
     let raw = null;
     // backups made before the rename say muriel-backup
     if ((obj.kind === 'uriel-backup' || obj.kind === 'muriel-backup') && isObj(obj.data)) { source = 'uriel'; raw = obj.data; }
-    else if (isObj(obj.localStorage) && ['Riff', 'Muriel', 'Mural', 'Uriel'].includes(obj.app)) { source = 'riff'; raw = obj.localStorage; }
+    else if (isObj(obj.localStorage) && ['Riff', 'Muriel', 'Mural', 'Uriel'].includes(String(obj.app))) { source = 'riff'; raw = obj.localStorage; }
     if (!raw) throw new Error("That file isn't a Uriel backup or a Riff account file");
     /** @type {Record<string, string>} */
     const entries = {};
@@ -254,9 +257,12 @@
     let total = 0;
     for (const k0 of Object.keys(raw).slice(0, 5000)) {
       const k = fromOlder(k0);
-      let v = raw[k0];
-      if (!backupKeyAllowed(k, isDevice) || v == null) { skipped.push(k); continue; }
-      if (typeof v !== 'string') { try { v = JSON.stringify(v); } catch (e) { skipped.push(k); continue; } }
+      const value = raw[k0];
+      if (!backupKeyAllowed(k, isDevice) || value == null) { skipped.push(k); continue; }
+      /** @type {string | undefined} */
+      let v;
+      if (typeof value === 'string') v = value;
+      else { try { v = JSON.stringify(value); } catch (e) { skipped.push(k); continue; } }
       if (typeof v !== 'string' || v.length > LIMITS.keyBytes) { skipped.push(k); continue; }
       if (STRUCTURED[k]) {
         let parsed;
@@ -330,7 +336,7 @@
   const autoBackupDay = (/** @type {unknown} */ name) => { const m = AUTO_NAME.exec(String(name || '')); return m ? m[1] : ''; };
   // the day as the user's clock has it
   const dayOf = (/** @type {Date} */ date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  const libraryIsEmpty = (/** @type {any} */ c) => !c || !(c.playlists > 0 || c.favorites > 0 || c.history > 0);
+  const libraryIsEmpty = (/** @type {{ playlists?: number, favorites?: number, history?: number } | null | undefined} */ c) => !c || !((c.playlists || 0) > 0 || (c.favorites || 0) > 0 || (c.history || 0) > 0);
   // once a day, and never an empty library: after a wipe those would push the good backups out
   /** @param {{ lastDay?: string, today: string, counts?: { playlists?: number, favorites?: number, history?: number } }} o */
   const autoBackupDue = ({ lastDay, today, counts }) => !libraryIsEmpty(counts) && lastDay !== today;

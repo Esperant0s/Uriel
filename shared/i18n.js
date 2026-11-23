@@ -20,7 +20,7 @@
 // Right-to-left languages keep Uriel's layout as it is (mirroring a layout built left to right breaks more than
 // it fixes); the translated text itself is laid out right to left (unicode-bidi: plaintext, styles.css), so
 // punctuation lands where it belongs. test/i18n.test.js runs the pure part in Node.
-(function (/** @type {any} */ root) {
+(function (/** @type {{ UrielI18n?: unknown, localStorage?: Storage, dispatchEvent?: Window['dispatchEvent'], addEventListener?: Window['addEventListener'] }} */ root) {
   'use strict';
 
   // ---------- pure part ----------
@@ -77,7 +77,7 @@
     return slots(out) === slots(src) ? out : null;
   }
   // '{0} songs' + [12] -> '12 songs'; a missing argument leaves its slot empty
-  const fill = (/** @type {any} */ template, /** @type {any} */ args) => String(template).replace(/\{(\d)\}/g, (_, i) => (args && args[i] != null ? String(args[i]) : ''));
+  const fill = (/** @type {unknown} */ template, /** @type {unknown[] | null | undefined} */ args) => String(template).replace(/\{(\d)\}/g, (_, i) => (args && args[i] != null ? String(args[i]) : ''));
   // keeps the spaces around a string the way the page had them
   function keepSpace(/** @type {string} */ orig, /** @type {string} */ tr) {
     const lead = /^\s*/.exec(orig)?.[0] || '';
@@ -105,10 +105,10 @@
   let observer = null;
   /** @type {(() => void)[]} */
   const settled = []; // resolve() of setLang/ready waiting for the queue to empty
-  /** @type {any[]} */
-  const statics = []; // { n: Text, src, cur }: the page as index.html had it
-  /** @type {any[]} */
-  const staticAttrs = []; // { el, a, src, cur }
+  /** @type {({ n: Text, src: string, cur: string } | null)[]} */
+  const statics = []; // the page as index.html had it (null: app.js took that text over)
+  /** @type {({ el: Element, a: string, src: string, cur: string } | null)[]} */
+  const staticAttrs = [];
   const nodeRec = new WeakMap(); // Text inside [data-i18n] -> { src, cur }
   const attrRec = new WeakMap(); // [data-i18n-attr] element -> { [attr]: { src, cur } }
   const liveRec = new WeakMap(); // element -> { ref, template, args, cur }: UrielI18n.text / toasts
@@ -139,13 +139,13 @@
     return tr === undefined ? s : keepSpace(s, tr);
   }
   const T = (/** @type {string} */ s) => (typeof s === 'string' && lang !== 'en' ? plain(s) : s);
-  const Tf = (/** @type {any} */ template, /** @type {any[]} */ ...args) => fill(T(template), args);
+  const Tf = (/** @type {string} */ template, /** @type {unknown[]} */ ...args) => fill(T(template), args);
   // a message that remembers what it was made of: showToast and text() translate it when it is shown and again
   // when a missing translation comes in; as a string it is Tf's result
-  const Tm = (/** @type {any} */ template, /** @type {any[]} */ ...args) => ({ i18n: String(template), args, toString() { return Tf(this.i18n, ...this.args); } });
+  const Tm = (/** @type {string} */ template, /** @type {unknown[]} */ ...args) => ({ i18n: String(template), args, toString() { return Tf(this.i18n, ...this.args); } });
   // for HTML built as a string: the translation is escaped, the {n} slots take HTML the caller built and escaped
-  const escHtml = (/** @type {any} */ v) => String(v).replace(/[&<>"']/g, (c) => /** @type {Record<string, string>} */ ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-  const Th = (/** @type {any} */ template, /** @type {any[]} */ ...argsHtml) => escHtml(T(String(template))).replace(/\{(\d)\}/g, (_, i) => (argsHtml[i] != null ? String(argsHtml[i]) : ''));
+  const escHtml = (/** @type {unknown} */ v) => String(v).replace(/[&<>"']/g, (c) => /** @type {Record<string, string>} */ ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const Th = (/** @type {unknown} */ template, /** @type {unknown[]} */ ...argsHtml) => escHtml(T(String(template))).replace(/\{(\d)\}/g, (_, i) => (argsHtml[i] != null ? String(argsHtml[i]) : ''));
 
   // the first look at the page: index.html as it is, before app.js puts anything from the library in it.
   // Only noted here (a few ms); what is worth translating is worked out when there is something to translate.
@@ -153,9 +153,10 @@
   function capture() {
     if (!document.body) return;
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT, {
-      /** @param {any} n */
-      acceptNode(n) {
-        if (n.nodeType === 3) return BLANK.test(n.data) ? NodeFilter.FILTER_SKIP : NodeFilter.FILTER_ACCEPT;
+      /** @param {Node} node */
+      acceptNode(node) {
+        if (node.nodeType === 3) return BLANK.test(/** @type {Text} */ (node).data) ? NodeFilter.FILTER_SKIP : NodeFilter.FILTER_ACCEPT;
+        const n = /** @type {HTMLElement} */ (node);
         if (SKIP.has(n.tagName) || optedOut(n)) return NodeFilter.FILTER_REJECT;
         if (n.hasAttribute('title') || n.hasAttribute('placeholder') || n.hasAttribute('aria-label')) {
           for (const a of ATTRS) {
@@ -190,16 +191,16 @@
       if (v !== r.cur) { r.el.setAttribute(r.a, v); r.cur = v; }
     }
   }
-  function visible(/** @type {any} */ r) {
+  function visible(/** @type {{ n: Text } | null} */ r) {
     const el = r && r.n.parentElement;
     if (!el) return 0;
     try { return el.checkVisibility ? (el.checkVisibility() ? 1 : 0) : (el.offsetParent ? 1 : 0); } catch (e) { return 0; }
   }
   // right to left: the element's text runs that way, the layout around it stays
-  function mark(/** @type {HTMLElement} */ el) { if (el && isRtl(lang) && !el.hasAttribute('data-i18n-bidi')) el.setAttribute('data-i18n-bidi', ''); }
+  function mark(/** @type {HTMLElement | null} */ el) { if (el && isRtl(lang) && !el.hasAttribute('data-i18n-bidi')) el.setAttribute('data-i18n-bidi', ''); }
 
   // text that is English, or a translation code put in itself (T()), or ours from before
-  function sourceOf(/** @type {string} */ text, /** @type {any} */ rec) {
+  function sourceOf(/** @type {string} */ text, /** @type {{ src: string, cur: string } | undefined} */ rec) {
     if (rec && text === rec.cur) return rec.src;
     const key = norm(text);
     if (dict.has(key)) return text;
@@ -234,10 +235,10 @@
     if (el.hasAttribute('data-i18n')) for (const n of el.childNodes) if (n.nodeType === 3) doText(/** @type {Text} */ (n));
     if (el.hasAttribute('data-i18n-attr')) doAttrs(el);
   }
-  const doAll = (/** @type {any} */ rootEl) => { if (rootEl && rootEl.querySelectorAll) for (const el of rootEl.querySelectorAll('[data-i18n],[data-i18n-attr]')) doEl(el); };
+  const doAll = (/** @type {ParentNode | null | undefined} */ rootEl) => { if (rootEl && rootEl.querySelectorAll) for (const el of rootEl.querySelectorAll('[data-i18n],[data-i18n-attr]')) doEl(/** @type {HTMLElement} */ (el)); };
 
   // text set from code with text(): kept translated, also after a language switch
-  function text(/** @type {HTMLElement} */ el, /** @type {any} */ template, /** @type {any[]} */ ...args) {
+  function text(/** @type {HTMLElement} */ el, /** @type {UrielText | null | undefined} */ template, /** @type {unknown[]} */ ...args) {
     if (!el) return;
     if (template && typeof template === 'object' && template.i18n) { args = template.args || []; template = template.i18n; }
     const v = Tf(String(template), ...args);
@@ -264,18 +265,19 @@
     applyStatics(visibleFirst);
     doAll(document.body);
     applyLive();
-    try { root.dispatchEvent(new CustomEvent('uriel:i18n', { detail: { lang } })); } catch (e) {}
+    try { if (root.dispatchEvent) root.dispatchEvent(new CustomEvent('uriel:i18n', { detail: { lang } })); } catch (e) {}
   }
 
   // ---------- watching the page (other languages only) ----------
-  function onMutations(/** @type {any} */ list) {
+  function onMutations(/** @type {MutationRecord[]} */ list) {
     for (const m of list) {
-      const tg = m.target;
-      if (m.type === 'characterData') { const p = tg.parentElement; if (p && p.hasAttribute('data-i18n')) doText(tg); continue; }
+      const tg = /** @type {HTMLElement} */ (m.target);
+      if (m.type === 'characterData') { const p = tg.parentElement; if (p && p.hasAttribute('data-i18n')) doText(/** @type {Text} */ (m.target)); continue; }
       if (m.type === 'attributes') { if (tg.hasAttribute('data-i18n-attr')) doAttrs(tg); continue; }
       if (tg.nodeType === 1 && tg.hasAttribute('data-i18n')) doEl(tg);
-      for (const n of m.addedNodes) {
-        if (n.nodeType !== 1) continue;
+      for (const node of m.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        const n = /** @type {HTMLElement} */ (node);
         if (n.hasAttribute('data-i18n') || n.hasAttribute('data-i18n-attr')) doEl(n);
         if (n.firstElementChild) doAll(n);
       }
@@ -420,11 +422,11 @@
   }
 
   // a toast can wait a moment for its words instead of showing English
-  function ready(/** @type {any} */ template, ms = 700) {
+  function ready(/** @type {UrielText} */ template, ms = 700) {
     if (lang === 'en' || !base || Date.now() < failUntil) return Promise.resolve();
     const key = norm(template);
     if (!translatable(key) || dict.has(key)) return Promise.resolve();
-    T(template);
+    if (typeof template === 'string') T(template);
     return new Promise((/** @type {(value?: void) => void} */ resolve) => {
       const timer = setTimeout(resolve, ms);
       settled.push(() => { clearTimeout(timer); resolve(); });
@@ -447,10 +449,10 @@
   /** @type {Omit<UrielI18nPage, 'lang'>} */
   const page = {
     T, Tf, Tm, Th, text, setLang, connect, ready,
-    known: (/** @type {any} */ list) => { for (const k of list || []) if (typeof k === 'string') known.add(k); },
+    known: (/** @type {unknown[] | null | undefined} */ list) => { for (const k of list || []) if (typeof k === 'string') known.add(k); },
     refresh: () => refresh(false),
     // the page's own words as index.html has them (what a switch asks for), for checking what is sent
-    strings: () => [...new Set(statics.filter(Boolean).map((r) => norm(r.src)).concat(staticAttrs.filter(Boolean).map((r) => norm(r.src)))
+    strings: () => [...new Set(statics.filter((r) => r !== null).map((r) => norm(r.src)).concat(staticAttrs.filter((r) => r !== null).map((r) => norm(r.src)))
       .map((s) => { const n = numbered(s); return n ? n.template : s; }))].filter(translatable),
   };
   root.UrielI18n = Object.defineProperty(Object.assign({}, core, page), 'lang', { get: () => lang, enumerable: true });
