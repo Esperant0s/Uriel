@@ -8,6 +8,8 @@
 (() => {
   const build = window.URIEL_BUILD || {};
   const core = window.UrielUpdateCore;
+  // what update-core.js's describe() makes of a newer release
+  /** @typedef {NonNullable<ReturnType<typeof import('./update-core').describe>>} UpdateInfo */
   const CHECK_EVERY = 6 * 3600 * 1000;
   const SNOOZE = 3 * 24 * 3600 * 1000;
   const store = {
@@ -43,14 +45,14 @@
     }
   }
 
-  /** @param {string} url */
+  /** @param {string | undefined} url */
   function open(url) {
-    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) location.href = url; // the native shell hands outside links to the browser
+    if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) location.href = String(url); // the native shell hands outside links to the browser
     else window.open(url, '_blank');
   }
 
   // "Uriel 1.2.4" when the new build is a new version, else its build number
-  /** @param {any} update */
+  /** @param {UpdateInfo} update */
   function label(update) {
     if (update.version && update.version !== build.version) return `Uriel ${update.version}`;
     if (update.run && build.run && update.run > build.run) return `Build ${update.run}`;
@@ -64,17 +66,17 @@
   const listeners = new Set();
   const changed = () => listeners.forEach((fn) => fn());
 
-  /** @param {any} update */
+  /** @param {UpdateInfo} update */
   async function startUpdate(update) {
     if (!installer || phase === 'downloading' || phase === 'ready') return;
     phase = 'downloading';
     percent = 0;
     changed();
-    const result = await installer.download(update, (/** @type {any} */ p) => {
+    const result = await installer.download(update, (p) => {
       if (!p || !p.total) return;
-      const next = Math.min(100, Math.floor((p.received / p.total) * 100));
+      const next = Math.min(100, Math.floor(((p.received || 0) / p.total) * 100));
       if (next !== percent) { percent = next; changed(); }
-    }).catch((/** @type {any} */ e) => ({ ok: false, error: e && e.message }));
+    }).catch((e) => ({ ok: false, error: e instanceof Error ? e.message : undefined }));
     if (result && result.ok) phase = 'ready';
     else { phase = 'failed'; failure = (result && result.error) || ''; }
     changed();
@@ -82,7 +84,7 @@
 
   async function finishUpdate() {
     if (!installer) return;
-    const result = await installer.install().catch((/** @type {any} */ e) => ({ ok: false, error: e && e.message }));
+    const result = await installer.install().catch((e) => ({ ok: false, error: e instanceof Error ? e.message : undefined }));
     // Android: the first install needs "Install unknown apps" allowed for Uriel; install() opened that setting
     if (result && result.error === 'permission') { failure = 'permission'; changed(); }
     else if (!result || !result.ok) { phase = 'failed'; failure = (result && result.error) || ''; changed(); }
@@ -100,7 +102,7 @@
     b.classList.remove('show');
     setTimeout(() => b.remove(), 400);
   }
-  /** @param {any} update */
+  /** @param {UpdateInfo} update */
   async function showBanner(update) {
     if (banner) return;
     const snooze = store.get('uriel_update_snooze');
@@ -166,7 +168,7 @@
   // Settings > About: status line and "Check now" (then "Update" / "Restart now", or "Download" without an installer)
   const statusEl = document.getElementById('update-status');
   const checkBtn = /** @type {HTMLButtonElement | null} */ (document.getElementById('btn-check-updates'));
-  /** @type {any} */
+  /** @type {UpdateInfo | null} */
   let current = null;
   let found = '';
   const setStatus = (/** @type {string} */ text) => {
@@ -176,10 +178,11 @@
   };
   function renderStatus() {
     if (!statusEl) return;
-    const inApp = canInstall && current;
-    statusEl.textContent = !inApp || phase === 'idle' ? found
-      : phase === 'downloading' ? `Downloading ${label(current)} · ${percent}%`
-        : phase === 'ready' ? (failure === 'permission' ? 'Allow Uriel to install apps, then tap Install' : `${label(current)} is ready to install`)
+    const cur = canInstall ? current : null;
+    const inApp = !!cur;
+    statusEl.textContent = !cur || phase === 'idle' ? found
+      : phase === 'downloading' ? `Downloading ${label(cur)} · ${percent}%`
+        : phase === 'ready' ? (failure === 'permission' ? 'Allow Uriel to install apps, then tap Install' : `${label(cur)} is ready to install`)
           : `Update failed${failure && failure !== 'permission' ? `: ${failure}` : ''}`;
     statusEl.classList.toggle('has-update', !!current);
     if (!checkBtn) return;
@@ -196,7 +199,7 @@
     const last = store.get('uriel_update_last') || 0;
     if (!manual && Date.now() - last < CHECK_EVERY) {
       const cached = store.get('uriel_update_found');
-      if (cached && cached.from === build.sha) { current = cached.update; await installable(); setStatus(`${label(current)} is available`); showBanner(current); }
+      if (cached && cached.from === build.sha) { const u = /** @type {UpdateInfo} */ (cached.update); current = u; await installable(); setStatus(`${label(u)} is available`); showBanner(u); }
       return;
     }
     if (manual) setStatus('Checking…');

@@ -17,7 +17,7 @@ const api = {
   getSystemColors: () => ipcRenderer.invoke('get-system-colors'),
   getGpuCompositing: () => ipcRenderer.invoke('get-gpu-compositing'),
   pickMedia: () => ipcRenderer.invoke('pick-media'),
-  importAudioFiles: (/** @type {any} */ opts) => ipcRenderer.invoke('import-audio-files', opts && opts.folder ? { folder: true } : undefined),
+  importAudioFiles: (opts) => ipcRenderer.invoke('import-audio-files', opts && opts.folder ? { folder: true } : undefined),
   onWindowVisibility: (/** @type {(visible: boolean) => void} */ callback) => {
     ipcRenderer.on('window-visibility', (event, visible) => callback(visible));
   },
@@ -49,14 +49,14 @@ const api = {
   getHwAccel: () => ipcRenderer.invoke('get-hw-accel'),
   setHwAccel: (/** @type {boolean} */ v) => ipcRenderer.send('set-hw-accel', v),
   trimMemory: () => { try { webFrame.clearCache(); } catch (e) {} },
-  onMediaCommand: (/** @type {(value: any) => void} */ cb) => ipcRenderer.on('media-command', (e, cmd) => cb(cmd)),
+  onMediaCommand: (cb) => ipcRenderer.on('media-command', (e, cmd) => cb(cmd)),
   toggleMiniWindow: () => ipcRenderer.invoke('toggle-mini-window'),
   setMiniLyrics: (/** @type {boolean} */ enabled) => ipcRenderer.invoke('set-mini-lyrics', enabled),
   isWindows: process.platform === 'win32',
   setMediaKeys: (/** @type {boolean} */ v) => ipcRenderer.send('set-media-keys', v),
   mediaKeysActive: () => ipcRenderer.send('media-keys-active'),
-  welcomeFinish: (/** @type {any} */ detail) => ipcRenderer.send('welcome-finish', detail),
-  onWelcomeResult: (/** @type {(value: any) => void} */ cb) => ipcRenderer.on('welcome-result', (e, d) => cb(d)),
+  welcomeFinish: (detail) => ipcRenderer.send('welcome-finish', detail),
+  onWelcomeResult: (cb) => ipcRenderer.on('welcome-result', (e, d) => cb(d)),
   getLauncherInfo: () => ipcRenderer.invoke('launcher-info'),
   listPlugins: () => ipcRenderer.invoke('plugins-list'),
   setPluginEnabled: (/** @type {string} */ file, /** @type {boolean} */ on) => ipcRenderer.send('plugins-set-enabled', file, on),
@@ -64,14 +64,14 @@ const api = {
   openPluginsFolder: () => ipcRenderer.send('plugins-open-folder'),
   removePlugin: (/** @type {string} */ file) => ipcRenderer.send('plugins-remove', file),
   importPlugins: () => ipcRenderer.invoke('plugins-import'),
-  discordPresenceUpdate: (/** @type {any} */ trackInfo) => ipcRenderer.send('discord-presence-update', trackInfo),
+  discordPresenceUpdate: (trackInfo) => ipcRenderer.send('discord-presence-update', trackInfo),
   discordPresenceClear: () => ipcRenderer.send('discord-presence-clear'),
   openExternal: (/** @type {string} */ u) => ipcRenderer.send('open-external', u),
   // in-app updates (desktop-updater.js): download the new build with progress, then put it in and restart
   updates: {
     supported: () => ipcRenderer.invoke('updater-supported'),
-    download: (/** @type {any} */ update, /** @type {(p: any) => void} */ onProgress) => {
-      const listener = (/** @type {Electron.IpcRendererEvent} */ e, /** @type {any} */ p) => { if (onProgress) onProgress(p); };
+    download: (update, onProgress) => {
+      const listener = (/** @type {Electron.IpcRendererEvent} */ e, /** @type {Parameters<typeof onProgress>[0]} */ p) => { if (onProgress) onProgress(p); };
       ipcRenderer.on('updater-progress', listener);
       return ipcRenderer.invoke('updater-download').finally(() => ipcRenderer.removeListener('updater-progress', listener));
     },
@@ -88,10 +88,10 @@ const api = {
   googleAuthStatus: (/** @type {string} */ profile) => ipcRenderer.invoke('google-auth-status', profile),
   // Settings → Integrations → YouTube: yt-dlp plays with that Google login (google-library.js)
   ytSigninStatus: (/** @type {string} */ profile) => ipcRenderer.invoke('yt-signin-status', profile),
-  ytSigninSet: (/** @type {any} */ opts) => ipcRenderer.invoke('yt-signin-set', opts),
+  ytSigninSet: (opts) => ipcRenderer.invoke('yt-signin-set', opts),
   setAppIcon: (/** @type {string} */ src) => ipcRenderer.invoke('set-app-icon', src),
-  googleImportLibrary: (/** @type {any} */ opts) => ipcRenderer.invoke('google-import-library', opts),
-  saveTextFile: (/** @type {any} */ payload) => ipcRenderer.invoke('save-text-file', payload),
+  googleImportLibrary: (opts) => ipcRenderer.invoke('google-import-library', opts),
+  saveTextFile: (payload) => ipcRenderer.invoke('save-text-file', payload),
 };
 contextBridge.exposeInMainWorld('electronAPI', api);
 

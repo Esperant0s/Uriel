@@ -5,8 +5,14 @@
 // Channels (tools/build-info.mjs stamps one into each CI build):
 //  - windows, android, ios: the rolling "<channel>-latest" release, rebuilt on every push to main
 //  - windows-setup, linux, mac: the installer, AppImage and app from the versioned releases (release.yml)
-(function (/** @type {any} */ root) {
+(function (/** @type {Record<string, unknown>} */ root) {
   'use strict';
+
+  // what GitHub's releases api answers, the fields read here
+  /** @typedef {{ name?: string, browser_download_url?: string, size?: number, digest?: string }} ReleaseAsset */
+  /** @typedef {{ tag_name?: string, body?: string, target_commitish?: string, published_at?: string, created_at?: string, html_url?: string, assets?: ReleaseAsset[] }} Release */
+  // this build (build-info.js)
+  /** @typedef {{ sha?: string, version?: string, builtAt?: string }} BuildInfo */
 
   /** @type {Record<string, string>} */
   const TAGS = { ios: 'ios-latest', android: 'android-latest', windows: 'windows-latest', 'windows-setup': 'latest', linux: 'latest', mac: 'latest' };
@@ -33,17 +39,17 @@
     return 0;
   }
 
-  const releaseVersion = (/** @type {any} */ rel) => ((rel.body || '').match(/(?:uriel|muriel)-version: ([0-9][\w.-]*)/) || [])[1] || String(rel.tag_name || '').replace(/^v(?=\d)/, '');
+  const releaseVersion = (/** @type {Release} */ rel) => ((rel.body || '').match(/(?:uriel|muriel)-version: ([0-9][\w.-]*)/) || [])[1] || String(rel.tag_name || '').replace(/^v(?=\d)/, '');
 
   // Versioned channels: a higher version. Rolling ones: built from another commit and published after this
   // build was made (so test builds that are newer than the public release don't get told to "update" to an older one).
-  /** @param {any} rel @param {any} build @param {string} channel */
+  /** @param {Release | null | undefined} rel @param {BuildInfo | null | undefined} build @param {string} channel */
   function isNewer(rel, build, channel) {
     if (!rel || !build || !build.sha || build.sha === 'dev') return false;
     if (VERSIONED.has(channel)) return compareVersions(releaseVersion(rel), build.version) > 0;
     if (!rel.target_commitish || rel.target_commitish === build.sha) return false;
-    const published = Date.parse(rel.published_at || rel.created_at || 0);
-    const built = Date.parse(build.builtAt || 0);
+    const published = Date.parse(String(rel.published_at || rel.created_at || 0));
+    const built = Date.parse(String(build.builtAt || 0));
     return published > built + 60000;
   }
 
@@ -56,14 +62,15 @@
     mac: (/** @type {string | undefined} */ arch) => new RegExp(`-mac-${arch === 'arm64' ? 'arm64' : 'x64'}\\.zip$`),
     android: () => /^(Uriel|Mural)\.apk$/,
   };
-  /** @param {any} rel @param {string} kind @param {string} [arch] */
+  /** @param {Release | null | undefined} rel @param {string} kind @param {string} [arch] */
   function installAsset(rel, kind, arch) {
     const pattern = INSTALL_ASSET[kind] && INSTALL_ASSET[kind](arch);
-    const asset = pattern && ((rel && rel.assets) || []).find((/** @type {any} */ a) => pattern.test(a.name || ''));
+    const asset = pattern && ((rel && rel.assets) || []).find((a) => pattern.test(a.name || ''));
     const sha256 = asset && (String(asset.digest || '').match(/^sha256:([0-9a-f]{64})$/) || [])[1];
     // GitHub's own checksum is what makes the download safe to run: no checksum, no in-app update
     if (!asset || !sha256 || !isGithubUrl(asset.browser_download_url)) return null;
-    return { name: asset.name, url: asset.browser_download_url, size: Number(asset.size) || 0, sha256 };
+    // the name matched the pattern and the url was checked just above, so both are there
+    return { name: String(asset.name), url: String(asset.browser_download_url), size: Number(asset.size) || 0, sha256 };
   }
 
   // downloads only ever come from GitHub (release links redirect to its download servers)
@@ -74,11 +81,11 @@
     return url.protocol === 'https:' && (url.hostname === 'github.com' || url.hostname === 'api.github.com' || /\.githubusercontent\.com$/.test(url.hostname));
   }
 
-  /** @param {any} rel @param {any} build @param {string} channel */
+  /** @param {Release | null | undefined} rel @param {BuildInfo | null | undefined} build @param {string} channel */
   function describe(rel, build, channel) {
-    if (!isNewer(rel, build, channel)) return null;
+    if (!rel || !isNewer(rel, build, channel)) return null;
     const pattern = BROWSER_ASSET[channel];
-    const asset = pattern && (rel.assets || []).find((/** @type {any} */ a) => pattern.test(a.name || ''));
+    const asset = pattern && (rel.assets || []).find((a) => pattern.test(a.name || ''));
     const run = Number(((rel.body || '').match(/run (\d+)/) || [])[1]) || 0;
     return {
       sha: rel.target_commitish || rel.tag_name, run, version: releaseVersion(rel),

@@ -125,7 +125,7 @@ declare global {
       rebuild?(): string;
     };
     trackMatch: typeof import("./track-match");
-    URIEL_BUILD?: { sha?: string; repo?: string; channel?: string; [key: string]: unknown };
+    URIEL_BUILD?: { sha?: string; repo?: string; channel?: string; version?: string; run?: number; builtAt?: string; [key: string]: unknown };
 
     // libraries loaded when first needed (shared/assets)
     Peer?: new (id: string, opts?: object) => UrielPeer;
