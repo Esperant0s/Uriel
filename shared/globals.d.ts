@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      lyricsView(deps: Record<string, unknown>, out: UrielLyricsViewPart): void;
       playlists(deps: Record<string, unknown>, out: UrielPlaylistsPart): void;
       reorder(deps: Record<string, unknown>): void;
       wave(deps: Record<string, unknown>, out: UrielWavePart): void;
@@ -524,6 +525,28 @@ declare global {
     removeTrackFromCurrentPlaylist(track: UrielTrack): void;
     deleteCurrentPlaylist(): void;
     openAddToPlaylistModal(track: UrielTrack | null, many?: UrielTrack[] | null): void;
+  }
+  interface UrielLyricsViewPart {
+    TRANSLATION_LANGUAGES: { code: string; name: string; flag: string }[];
+    setLyricsEmpty(isEmpty: boolean): void;
+    loadSyncedLyrics(title: string, artist: string, token: number): Promise<void>;
+    getLyricsWordStyle(): string;
+    renderLyricsView(): void;
+    updateLyricsPadding(): void;
+    fetchAndApplyTranslation(): Promise<void>;
+    updateLyricsTranslationUI(): void;
+    getLineStartTime(idx: number): number;
+    getLineEndTime(idx: number): number;
+    getLyricsEase(): string;
+    getLyricsSpeed(): number;
+    applyLyricsEase(): void;
+    getLyricsGradientTightness(): number;
+    applyLyricsGradientTightness(): void;
+    stopLyricsScroll(): void;
+    animateLyricsScroll(container: HTMLElement, target: number): void;
+    updateActiveGradient(): void;
+    stopGradientLoop(): void;
+    updateSyncedLyricsHighlight(currentTime: number): void;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
