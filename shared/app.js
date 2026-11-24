@@ -1056,6 +1056,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  // playback flags the parts in shared/app/ read and set too, so they live in one object passed to them
+  const playback = {
+    // the playing song is fading out for Crossfade, and the next one should fade in when it starts
+    crossfadeTriggered: false,
+    crossfadeFadeInPending: false,
+    // the progress bar's knob is being dragged
+    isDraggingScrubber: false,
+  };
+
   let hasDrawnPausedFrame = false;
   let cachedPrimaryColor = '';
   let cachedDimColor = '';
@@ -1085,6 +1094,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     cachedPrimaryColor = rootStyle.getPropertyValue('--md-sys-color-primary').trim() || '#6750A4';
     cachedDimColor = rootStyle.getPropertyValue('--md-sys-color-on-surface').trim() || '#E6E0E9';
     hasDrawnPausedFrame = false;
+  }
+  // the theme's primary colour, read from the page the first time it's needed
+  function primaryColor() {
+    if (!cachedPrimaryColor) refreshCachedThemeColors();
+    return cachedPrimaryColor;
   }
 
   const coverAnalysisCache = new Map();
@@ -1918,6 +1932,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                           btnRefreshVibe: /** @type {HTMLButtonElement} */ (document.getElementById('btn-refresh-vibe'))
   };
+
+  // ---- Download dialog → "Trim best part": keep only part of a song (app/trim.js) ----
+  const trimPart = /** @type {UrielTrimPart} */ ({});
+  function getTrackTrim(/** @type {UrielTrack} */ track) { return trimPart.getTrackTrim(track); }
+  function enforceTrackTrim() { return trimPart.enforceTrackTrim(); }
+  function showDownloadPane(/** @type {string} */ which) { return trimPart.showDownloadPane(which); }
+  function prepareTrimPane(/** @type {UrielTrack} */ track) { return trimPart.prepareTrimPane(track); }
+  function forgetTrackTrims() { return trimPart.forgetTrackTrims(); }
+  window.UrielApp.trim({ T, el, getTrackCanonicalId, getTrackToDownload, isSameTrack, playNext, playSmooth, playTrack, playback, primaryColor, queueFinished, safeJson, showToast, state }, trimPart);
 
   /** @type {const} */ (['Vocal', 'Air', 'Bass']).forEach(type => {
     const slider = el[/** @type {const} */ (`sliderHq${type}`)];
@@ -2822,7 +2845,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      if (!state.isPlaying && !isDraggingScrubber) {
+      if (!state.isPlaying && !playback.isDraggingScrubber) {
         if (hasDrawnPausedFrame) {
           animationFrameId = null;
           if (audioEngine && audioEngine.setAnalyserEnabled) audioEngine.setAnalyserEnabled(false);
@@ -3031,7 +3054,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           : (state.currentTrack && Number.isFinite(state.currentTrack.duration) ? state.currentTrack.duration : 0);
         let cur = (el.nativeAudio && Number.isFinite(el.nativeAudio.currentTime)) ? el.nativeAudio.currentTime : 0;
 
-        if (isDraggingScrubber && state.scrubberDragTargetTime !== undefined) {
+        if (playback.isDraggingScrubber && state.scrubberDragTargetTime !== undefined) {
           cur = state.scrubberDragTargetTime;
           const t = formatDuration(cur);
           if (el.timeCurrent && el.timeCurrent.textContent !== t) el.timeCurrent.textContent = t;
@@ -3058,10 +3081,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const targetProgress = dur > 0 ? Math.max(0, Math.min(1, cur / dur)) : 0;
-        const followSpeed = isDraggingScrubber ? 32 : 45;
+        const followSpeed = playback.isDraggingScrubber ? 32 : 45;
         scrubProgress += (targetProgress - scrubProgress) * Math.min(1, dt * followSpeed);
 
-        const targetAnim = isDraggingScrubber ? 1 : 0;
+        const targetAnim = playback.isDraggingScrubber ? 1 : 0;
         scrubKnobAnim += (targetAnim - scrubKnobAnim) * Math.min(1, Math.max(0, dt * 16));
         // a NaN here sticks for good and roundRect throws on a negative radius
         scrubKnobAnim = Math.max(0, Math.min(1, Number.isFinite(scrubKnobAnim) ? scrubKnobAnim : 0));
@@ -3080,7 +3103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const k = (2 * Math.PI) / 42;
 
-        if (isDraggingScrubber) {
+        if (playback.isDraggingScrubber) {
           scrubPhase += deltaX * k;
         } else if (state.isPlaying) {
           scrubPhase += 3.5 * dt;
@@ -3191,7 +3214,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // the daily mixes wait while the window is hidden (#16): make them now if they're still missing
       try { if (spHomeReady && isSpotifyHome() && !readDailyMixes()) renderMadeForYou(); } catch (e) {}
       hasDrawnPausedFrame = false;
-      if (state.isPlaying || isDraggingScrubber) startVisualizers();
+      if (state.isPlaying || playback.isDraggingScrubber) startVisualizers();
       resumeCacheBars();
       if (typeof updateLyricsPadding === 'function') {
         const syncOnRestore = () => {
@@ -3669,12 +3692,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     localStorage.setItem('uriel_track_art', JSON.stringify(all));
   }
 
-  let crossfadeTriggered = false;
-  let crossfadeFadeInPending = false;
   // undoes the Crossfade fade-out of the playing song (a seek back, a pause, a skip, the queue ending)
   function cancelEndFade() {
-    if (!crossfadeTriggered) return;
-    crossfadeTriggered = false;
+    if (!playback.crossfadeTriggered) return;
+    playback.crossfadeTriggered = false;
     if (audioEngine && audioEngine.masterGain && audioEngine.ctx) {
       try { audioEngine.masterGain.gain.cancelScheduledValues(audioEngine.ctx.currentTime); } catch (e) {}
       audioEngine._applyMasterVolume();
@@ -3803,9 +3824,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     clearTimeout(p.timer);
     const fallback = () => {
       if (xfade.prep === p) dropCrossfadePrep();
-      if (p.token !== state.loadToken || a.paused || crossfadeTriggered) return;
+      if (p.token !== state.loadToken || a.paused || playback.crossfadeTriggered) return;
       // the plain fade-out of #22: the song still plays to its end, the next one starts on 'ended'
-      crossfadeTriggered = true;
+      playback.crossfadeTriggered = true;
       if (audioEngine) audioEngine.fadeOut(Math.max(0.3, (p.end - a.currentTime) / (a.playbackRate || 1)));
     };
     // My Wave on its last song: the next one is still being fetched, so moving on would start nothing and the
@@ -3833,7 +3854,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (t.ended || cur >= tail.end - 0.02) { stopCrossfadeTail(0); return; }
         try { t.volume = tail.level * window.UrielTrim.fadeOutGain((cur - tail.point) / (tail.end - tail.point)); } catch (e) {}
       }, 40);
-      crossfadeFadeInPending = true;
+      playback.crossfadeFadeInPending = true;
       xfade.handingOver = true;
       state._isNaturalEnding = true;
       try { playNext(); } finally { state._isNaturalEnding = false; xfade.handingOver = false; }
@@ -3873,7 +3894,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     clearInterval(xfade.fadeInTimer);
     // a song that ended after the plain fade-out still fades the next one in ('ended' set it)
     if (state._isNaturalEnding) return;
-    crossfadeFadeInPending = false;
+    playback.crossfadeFadeInPending = false;
     if (isPhoneApp && elementVolumeWorks()) { try { el.nativeAudio.volume = 1; } catch (e) {} }
   }
   let currentAlbumPlayRunId = 0;
@@ -6576,7 +6597,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     if (curToken !== smoothFadeToken) return;
 
-    if (crossfadeFadeInPending) {
+    if (playback.crossfadeFadeInPending) {
       if (audioEngine && audioEngine.fadeGain && audioEngine.ctx) {
         try {
           audioEngine.fadeGain.gain.cancelScheduledValues(audioEngine.ctx.currentTime);
@@ -6618,7 +6639,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
-    if (!crossfadeFadeInPending && audioEngine && audioEngine.fadeGain && audioEngine.ctx) {
+    if (!playback.crossfadeFadeInPending && audioEngine && audioEngine.fadeGain && audioEngine.ctx) {
       try {
         const ct = audioEngine.ctx.currentTime;
         audioEngine.fadeGain.gain.setTargetAtTime(1, ct, 0.05);
@@ -6903,8 +6924,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (audioEngine.resumeAudioContext) audioEngine.resumeAudioContext();
         audioEngine._applyMasterVolume();
       }
-      if (crossfadeFadeInPending) {
-        crossfadeFadeInPending = false;
+      if (playback.crossfadeFadeInPending) {
+        playback.crossfadeFadeInPending = false;
         crossfadeFadeIn();
       }
       sendStateToServer();
@@ -6946,7 +6967,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (audioEngine.setAnalyserEnabled) audioEngine.setAnalyserEnabled(false);
       }
       // a song that faded out (Crossfade) hands over to one that fades in
-      const fadedOut = crossfadeTriggered && !state.isRepeat && !queueFinished();
+      const fadedOut = playback.crossfadeTriggered && !state.isRepeat && !queueFinished();
       if (!fadedOut) cancelEndFade();
       if (state.isRepeat) {
         el.nativeAudio.currentTime = 0;
@@ -6956,7 +6977,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         queueEndedToken = state.loadToken;
         saveQueueState();
       } else {
-        if (fadedOut) crossfadeFadeInPending = true;
+        if (fadedOut) playback.crossfadeFadeInPending = true;
         state._isNaturalEnding = true;
         try {
           playNext();
@@ -7038,7 +7059,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       // With overlap (#29) the last X seconds move to a second player that plays them to the end while the next
       // song starts (prepareCrossfade); the song itself is never cut short.
       const X = crossfadeSeconds();
-      if (X > 0 && !crossfadeTriggered && !state.isRepeat && !el.nativeAudio.paused && audioEngine && !audioEngine.isLiveStream(el.nativeAudio) && window.UrielTrim) {
+      if (X > 0 && !playback.crossfadeTriggered && !state.isRepeat && !el.nativeAudio.paused && audioEngine && !audioEngine.isLiveStream(el.nativeAudio) && window.UrielTrim) {
         const trim = state.currentTrack ? getTrackTrim(state.currentTrack) : null;
         const end = trim && window.UrielTrim.isActive(trim) ? Math.min(trim.end, dur) : dur;
         const sleepAtEnd = state.sleepTimer && state.sleepTimer.mode === 'end';
@@ -7049,7 +7070,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (!step && !xfade.prep) {
           const fade = window.UrielTrim.endFadeSeconds(cur, end, X, el.nativeAudio.playbackRate);
           if (fade > 0) {
-            crossfadeTriggered = true;
+            playback.crossfadeTriggered = true;
             audioEngine.fadeOut(fade);
           }
         }
@@ -7064,7 +7085,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         m3cDraw(performance.now());
       }
 
-      if (isDraggingScrubber || state.isPlaying) return;
+      if (playback.isDraggingScrubber || state.isPlaying) return;
       const roundedSec = Math.floor(cur);
       if (lastTimeupdateSec === roundedSec) return;
       lastTimeupdateSec = roundedSec;
@@ -7076,7 +7097,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  let isDraggingScrubber = false;
 
   function updateScrubberPositionFromEvent(/** @type {PointerEvent} */ e) {
     if (!el.scrubberTrack) return 0;
@@ -7103,7 +7123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     el.scrubberTrack.style.touchAction = 'none';
     el.scrubberTrack.addEventListener('pointerdown', (/** @type {PointerEvent} */ e) => {
       if (e.pointerType === 'mouse' && e.button !== 0) return;
-      isDraggingScrubber = true;
+      playback.isDraggingScrubber = true;
       scrubberPointerId = e.pointerId;
       try { el.scrubberTrack.setPointerCapture(e.pointerId); } catch (_) {}
       hasDrawnPausedFrame = false;
@@ -7114,13 +7134,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   window.addEventListener('pointermove', (e) => {
-    if (!isDraggingScrubber || e.pointerId !== scrubberPointerId) return;
+    if (!playback.isDraggingScrubber || e.pointerId !== scrubberPointerId) return;
     updateScrubberPositionFromEvent(e);
   });
 
   const endScrub = (/** @type {PointerEvent} */ e, /** @type {boolean} */ commit) => {
-    if (!isDraggingScrubber || e.pointerId !== scrubberPointerId) return;
-    isDraggingScrubber = false;
+    if (!playback.isDraggingScrubber || e.pointerId !== scrubberPointerId) return;
+    playback.isDraggingScrubber = false;
     scrubberPointerId = null;
     if (el.scrubberTrack) el.scrubberTrack.classList.remove('dragging');
     const targetTime = commit ? updateScrubberPositionFromEvent(e) : state.scrubberDragTargetTime;
@@ -15260,247 +15280,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     audio.addEventListener('playing', stop);
   })();
 
-  // ---- Download dialog → "Trim best part": keep only part of a song; playback skips the rest ----
-  /** @type {Record<string, { start: number, end: number, updatedAt?: number }> | null} */
-  var trackTrims = null;
-  var trimDraft = { start: 0, end: 180, dur: 180 };
-  var TRIM_BARS = 84;
-  var trimPeaks = new Map();
-  function allTrackTrims() {
-    if (!trackTrims) trackTrims = /** @type {Record<string, { start: number, end: number, updatedAt?: number }>} */ (safeJson('uriel_track_trims', {}) || {});
-    return trackTrims;
-  }
-  function getTrackTrim(/** @type {UrielTrack} */ track) {
-    const id = track ? getTrackCanonicalId(track) : '';
-    return id ? allTrackTrims()[id] || null : null;
-  }
-  function saveTrackTrim(/** @type {UrielTrack} */ track, /** @type {{ start: number, end: number } | null} */ trim) {
-    const id = track ? getTrackCanonicalId(track) : '';
-    if (!id) return;
-    const all = allTrackTrims();
-    if (trim) all[id] = { ...trim, updatedAt: Date.now() }; else delete all[id];
-    localStorage.setItem('uriel_track_trims', JSON.stringify(all));
-  }
-  window.addEventListener('storage', (e) => { if (!e.key || /uriel_track_trims$/.test(e.key)) trackTrims = null; });
-  // called on every timeupdate: before the kept part, jump to it; after it, the song is over
-  function enforceTrackTrim() {
-    const a = el.nativeAudio;
-    if (!a || !state.currentTrack || isDraggingScrubber || !window.UrielTrim) return false;
-    const trim = getTrackTrim(state.currentTrack);
-    const action = window.UrielTrim.trimAction(trim, a.currentTime);
-    if (action === 'start' && trim) { a.currentTime = trim.start; return true; }
-    if (action !== 'end' || a.paused) return false;
-    if (state.isRepeat && trim) { a.currentTime = trim.start; return true; }
-    if ((state.sleepTimer && state.sleepTimer.mode === 'end') || queueFinished()) {
-      a.pause();
-      a.dispatchEvent(new Event('ended'));
-      return true;
-    }
-    if (crossfadeTriggered) crossfadeFadeInPending = true;
-    state._isNaturalEnding = true;
-    try { playNext(); } finally { state._isNaturalEnding = false; }
-    return true;
-  }
-  if (el.nativeAudio) {
-    // a trimmed song starts at its trim
-    const toTrimStart = () => {
-      const trim = state.currentTrack && window.UrielTrim ? getTrackTrim(state.currentTrack) : null;
-      if (window.UrielTrim && window.UrielTrim.trimAction(trim, el.nativeAudio.currentTime) === 'start' && trim) el.nativeAudio.currentTime = trim.start;
-    };
-    el.nativeAudio.addEventListener('loadedmetadata', toTrimStart);
-    el.nativeAudio.addEventListener('play', toTrimStart);
-  }
-  function showDownloadPane(/** @type {string} */ which) {
-    /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.dl-mode-tab')).forEach((t) => t.classList.toggle('active', t.dataset.dlTab === which));
-    const dl = document.getElementById('dl-pane-download');
-    const tr = document.getElementById('dl-pane-trim');
-    if (dl) dl.classList.toggle('hidden', which !== 'download');
-    if (tr) tr.classList.toggle('hidden', which !== 'trim');
-    if (which === 'trim') { sizeTrimCanvas(); updateTrimmerUI(); }
-  }
-  function prepareTrimPane(/** @type {UrielTrack} */ track) {
-    const a = el.nativeAudio;
-    const dur = isSameTrack(track, state.currentTrack) && a && Number.isFinite(a.duration) && a.duration > 0
-      ? a.duration
-      : (Number(track.duration) > 0 ? Number(track.duration) : 180);
-    const saved = getTrackTrim(track);
-    trimDraft = { start: saved ? Math.max(0, saved.start) : 0, end: saved ? Math.min(dur, saved.end) : dur, dur };
-    const reset = document.getElementById('btn-cc-reset');
-    if (reset) reset.classList.toggle('hidden', !saved);
-    showDownloadPane('download');
-    // a saved trim also fills in the download's trim (computers: ffmpeg cuts the file)
-    if (saved) {
-      const s = /** @type {HTMLInputElement} */ (document.getElementById('trim-start'));
-      const e = /** @type {HTMLInputElement} */ (document.getElementById('trim-end'));
-      if (s) s.value = window.UrielTrim.formatPreciseTime(trimDraft.start);
-      if (e) e.value = window.UrielTrim.formatPreciseTime(trimDraft.end);
-    }
-  }
-  function sizeTrimCanvas() {
-    const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('capcut-wave-canvas'));
-    if (!canvas) return;
-    const r = canvas.getBoundingClientRect();
-    if (!r.width) return;
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.round(r.width * dpr);
-    canvas.height = Math.round(r.height * dpr);
-  }
-  // the bars: the song's real waveform when it is on this device (decoded at a low sample rate, so a long song
-  // stays small), else a stand-in shape
-  function trimWavePeaks(/** @type {UrielTrack} */ track) {
-    const id = getTrackCanonicalId(track);
-    if (trimPeaks.has(id)) return trimPeaks.get(id);
-    const peaks = window.UrielTrim.placeholderPeaks(id, TRIM_BARS);
-    trimPeaks.set(id, peaks);
-    if (trimPeaks.size > 30) trimPeaks.delete(trimPeaks.keys().next().value);
-    (async () => {
-      try {
-        let url = '';
-        if (track.platform === 'local' && track.id) url = `http://127.0.0.1:${state.serverPort}/api/library-file?id=${encodeURIComponent(track.id)}`;
-        else if (track.id) {
-          const r = await fetch(`http://127.0.0.1:${state.serverPort}/api/check-cache?id=${encodeURIComponent(track.id)}`);
-          const c = await r.json();
-          if (c && c.cached) url = `http://127.0.0.1:${state.serverPort}/api/local-track?id=${encodeURIComponent(track.id)}`;
-        }
-        if (!url) return;
-        const res = await fetch(url);
-        if (!res.ok) return;
-        const buf = await res.arrayBuffer();
-        if (!buf.byteLength || buf.byteLength > 60e6) return;
-        const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-        if (!Offline) return;
-        const audio = await new Offline(1, 1, 8000).decodeAudioData(buf);
-        trimPeaks.set(id, window.UrielTrim.wavePeaks(audio.getChannelData(0), TRIM_BARS));
-        const shown = getTrackToDownload();
-        if (shown && getTrackCanonicalId(shown) === id) renderTrimWave();
-      } catch (e) {}
-    })();
-    return peaks;
-  }
-  function renderTrimWave() {
-    const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('capcut-wave-canvas'));
-    const track = getTrackToDownload();
-    if (!canvas || !track) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const peaks = trimWavePeaks(track);
-    const w = canvas.width;
-    const h = canvas.height;
-    const dpr = window.devicePixelRatio || 1;
-    ctx.clearRect(0, 0, w, h);
-    const dur = Math.max(1, trimDraft.dur);
-    const from = trimDraft.start / dur;
-    const to = trimDraft.end / dur;
-    if (!cachedPrimaryColor) refreshCachedThemeColors();
-    const step = w / TRIM_BARS;
-    const barW = step * 0.6;
-    for (let i = 0; i < TRIM_BARS; i++) {
-      const at = i / (TRIM_BARS - 1);
-      ctx.fillStyle = at >= from - 0.01 && at <= to + 0.01 ? (cachedPrimaryColor || '#a8c7fa') : 'rgba(255, 255, 255, 0.22)';
-      const barH = Math.max(6 * dpr, (peaks[i] || 0.3) * (h - 16 * dpr));
-      ctx.beginPath();
-      ctx.roundRect(i * step + (step - barW) / 2, (h - barH) / 2, barW, barH, 2 * dpr);
-      ctx.fill();
-    }
-  }
-  function updateTrimmerUI() {
-    const T = window.UrielTrim;
-    if (!T) return;
-    const dur = Math.max(1, trimDraft.dur);
-    const startPct = (trimDraft.start / dur) * 100;
-    const endPct = (trimDraft.end / dur) * 100;
-    const set = (/** @type {string} */ id, /** @type {(n: HTMLElement) => void} */ fn) => { const n = document.getElementById(id); if (n) fn(n); };
-    set('cc-mask-left', (/** @type {HTMLElement} */ n) => { n.style.width = `${startPct}%`; });
-    set('cc-mask-right', (/** @type {HTMLElement} */ n) => { n.style.width = `${100 - endPct}%`; });
-    set('cc-selection-box', (/** @type {HTMLElement} */ n) => { n.style.left = `${startPct}%`; n.style.width = `${Math.max(0, endPct - startPct)}%`; });
-    const s = T.formatPreciseTime(trimDraft.start);
-    const e = T.formatPreciseTime(trimDraft.end);
-    set('cc-trim-start-val', (/** @type {HTMLElement} */ n) => { n.textContent = s; });
-    set('cc-trim-end-val', (/** @type {HTMLElement} */ n) => { n.textContent = e; });
-    set('cc-trim-dur-val', (/** @type {HTMLElement} */ n) => { n.textContent = T.formatPreciseTime(Math.max(0, trimDraft.end - trimDraft.start)); });
-    set('cc-float-left', (/** @type {HTMLElement} */ n) => { n.textContent = s; });
-    set('cc-float-right', (/** @type {HTMLElement} */ n) => { n.textContent = e; });
-    renderTrimWave();
-    updateTrimPlayhead();
-  }
-  function updateTrimPlayhead() {
-    const head = document.getElementById('cc-playhead');
-    if (!head) return;
-    const track = getTrackToDownload();
-    const same = track && state.currentTrack && isSameTrack(state.currentTrack, track);
-    head.style.display = same ? '' : 'none';
-    if (same && el.nativeAudio) head.style.left = `${Math.max(0, Math.min(100, ((el.nativeAudio.currentTime || 0) / Math.max(1, trimDraft.dur)) * 100))}%`;
-  }
-  (function setupTrimmer() {
-    /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.dl-mode-tab')).forEach((tab) => tab.addEventListener('click', () => showDownloadPane(tab.dataset.dlTab || '')));
-    const stage = document.getElementById('capcut-wave-stage');
-    if (!stage) return;
-    const minKeep = window.UrielTrim ? window.UrielTrim.MIN_KEEP : 1;
-    const ratioAt = (/** @type {PointerEvent} */ e) => { const r = stage.getBoundingClientRect(); return r.width ? Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) : 0; };
-    const dragHandle = (/** @type {HTMLElement | null} */ handle, /** @type {string} */ side) => {
-      if (!handle) return;
-      let dragging = false;
-      handle.addEventListener('pointerdown', (/** @type {PointerEvent} */ e) => { e.stopPropagation(); dragging = true; handle.setPointerCapture(e.pointerId); handle.classList.add('dragging'); });
-      handle.addEventListener('pointermove', (/** @type {PointerEvent} */ e) => {
-        if (!dragging) return;
-        const t = Math.round(ratioAt(e) * trimDraft.dur * 10) / 10;
-        if (side === 'start') trimDraft.start = Math.max(0, Math.min(t, trimDraft.end - minKeep));
-        else trimDraft.end = Math.min(trimDraft.dur, Math.max(t, trimDraft.start + minKeep));
-        updateTrimmerUI();
-      });
-      const stop = (/** @type {PointerEvent} */ e) => { if (!dragging) return; dragging = false; try { handle.releasePointerCapture(e.pointerId); } catch (_) {} handle.classList.remove('dragging'); };
-      handle.addEventListener('pointerup', stop);
-      handle.addEventListener('pointercancel', stop);
-    };
-    dragHandle(document.getElementById('cc-handle-left'), 'start');
-    dragHandle(document.getElementById('cc-handle-right'), 'end');
-    // tap the waveform to listen from there
-    const playFrom = async (/** @type {number} */ t) => {
-      const track = getTrackToDownload();
-      if (!track || !el.nativeAudio) return;
-      if (!isSameTrack(state.currentTrack, track)) await playTrack(track);
-      el.nativeAudio.currentTime = t;
-      if (el.nativeAudio.paused) playSmooth();
-    };
-    stage.addEventListener('pointerdown', (e) => { if (!/** @type {HTMLElement} */ (e.target).closest('.cc-handle')) playFrom(ratioAt(e) * trimDraft.dur); });
-    const btnPreview = document.getElementById('btn-cc-preview');
-    if (btnPreview) btnPreview.addEventListener('click', () => playFrom(trimDraft.start));
-    const btnSave = document.getElementById('btn-cc-save');
-    const btnReset = document.getElementById('btn-cc-reset');
-    if (btnSave) btnSave.addEventListener('click', () => {
-      const track = getTrackToDownload();
-      if (!track) return;
-      const trim = window.UrielTrim.normalizeTrim(trimDraft.start, trimDraft.end, trimDraft.dur);
-      saveTrackTrim(track, trim);
-      if (btnReset) btnReset.classList.toggle('hidden', !trim);
-      const T = window.UrielTrim;
-      showToast(trim ? `Trim saved: ${T.formatPreciseTime(trim.start)} – ${T.formatPreciseTime(trim.end)}` : 'That keeps the whole song, so there is no trim', trim ? 'success' : 'info');
-      if (trim) {
-        const s = /** @type {HTMLInputElement} */ (document.getElementById('trim-start'));
-        const e = /** @type {HTMLInputElement} */ (document.getElementById('trim-end'));
-        if (s) s.value = T.formatPreciseTime(trim.start);
-        if (e) e.value = T.formatPreciseTime(trim.end);
-        if (state.currentTrack && isSameTrack(state.currentTrack, track) && el.nativeAudio) {
-          const t = el.nativeAudio.currentTime;
-          if (t < trim.start || t > trim.end) el.nativeAudio.currentTime = trim.start;
-        }
-      }
-    });
-    if (btnReset) btnReset.addEventListener('click', () => {
-      const track = getTrackToDownload();
-      if (!track) return;
-      saveTrackTrim(track, null);
-      trimDraft.start = 0;
-      trimDraft.end = trimDraft.dur;
-      updateTrimmerUI();
-      btnReset.classList.add('hidden');
-      showToast('Trim removed', 'info');
-    });
-    if (el.nativeAudio) el.nativeAudio.addEventListener('timeupdate', () => {
-      const pane = document.getElementById('dl-pane-trim');
-      if (pane && !pane.classList.contains('hidden') && el.downloadModal && !el.downloadModal.classList.contains('hidden')) updateTrimPlayhead();
-    });
-  })();
   // ======================= end of Riff 43: player & look =======================
 
   restoreQueueState();
@@ -15610,7 +15389,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         state.riffFont = localStorage.getItem('uriel_font') || 'google';
         applyFont(state.riffFont);
       }
-      if (has('uriel_track_trims')) trackTrims = null;
+      if (has('uriel_track_trims')) forgetTrackTrims();
       if (has('uriel_icon_pack')) applyIconPack(localStorage.getItem('uriel_icon_pack') || 'material');
       if (has('uriel_adv_intensity_bg')) updateThemeFromState();
       if (keys.some((/** @type {string} */ k) => k === 'devsize_playlists' || k === 'devsize_favorites')) window.dispatchEvent(new Event('uriel:library'));

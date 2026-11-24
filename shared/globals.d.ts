@@ -57,6 +57,7 @@ declare global {
       tools(deps: Record<string, unknown>, out: UrielToolsPart): void;
       trackArt(deps: Record<string, unknown>, out: UrielTrackArtPart): void;
       sleepTimer(deps: Record<string, unknown>, out: UrielSleepTimerPart): void;
+      trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       language(deps: Record<string, unknown>): void;
       lyrics(deps: Record<string, unknown>, out: UrielLyricsPart): void;
       home(deps: Record<string, unknown>, out: UrielHomePart): void;
@@ -446,6 +447,13 @@ declare global {
   // a song's own pictures and banner effects (the Track art dialog), kept in uriel_track_art by song id
   interface UrielBannerFx { blur: number; opacity: number; fade: number }
   interface UrielTrackArt { cover?: string; banner?: string; bannerFx?: UrielBannerFx & { enabled?: boolean } }
+  interface UrielTrimPart {
+    getTrackTrim(track: UrielTrack): { start: number; end: number } | null;
+    enforceTrackTrim(): boolean;
+    showDownloadPane(which: string): void;
+    prepareTrimPane(track: UrielTrack): void;
+    forgetTrackTrims(): void;
+  }
   interface UrielSleepTimerPart {
     updateSleepTimerUI(): void;
   }

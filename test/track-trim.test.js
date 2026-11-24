@@ -67,7 +67,7 @@ test('the timeupdate handler never starts the next song itself', () => {
   const path = require('node:path');
   const src = appSource();
   const start = src.indexOf("el.nativeAudio.addEventListener('timeupdate'");
-  const body = src.slice(start, src.indexOf('let isDraggingScrubber', start));
+  const body = src.slice(start, src.indexOf('function updateScrubberPositionFromEvent', start));
   assert.ok(start > 0 && body.includes('endFadeSeconds'));
   assert.ok(!/playNext\(/.test(body), 'only the ended handler (or a trim end) may advance');
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'shared/index.html'), 'utf8'), /id="slider-crossfade"[^>]*value="0"/);
