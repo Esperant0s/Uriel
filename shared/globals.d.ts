@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      m3Cover(deps: Record<string, unknown>, out: UrielM3CoverPart): void;
       language(deps: Record<string, unknown>): void;
       lyrics(deps: Record<string, unknown>, out: UrielLyricsPart): void;
       home(deps: Record<string, unknown>, out: UrielHomePart): void;
@@ -449,6 +450,14 @@ declare global {
   // a song's own pictures and banner effects (the Track art dialog), kept in uriel_track_art by song id
   interface UrielBannerFx { blur: number; opacity: number; fade: number }
   interface UrielTrackArt { cover?: string; banner?: string; bannerFx?: UrielBannerFx & { enabled?: boolean } }
+  interface UrielM3CoverPart {
+    m3cEnabled(): boolean;
+    m3cInit(): void;
+    m3cSetImage(url: string): void;
+    m3cDraw(now: number): void;
+    m3cStart(): void;
+    applyM3Cover(): void;
+  }
   interface UrielVisualizerPart {
     startVisualizers(): void;
     resizeCanvases(): void;
