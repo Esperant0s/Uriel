@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      albums(deps: Record<string, unknown>, out: UrielAlbumsPart): void;
       presets(deps: Record<string, unknown>, out: UrielPresetsPart): void;
       library(deps: Record<string, unknown>, out: UrielLibraryPart): void;
       trackRows(deps: Record<string, unknown>, out: UrielTrackRowsPart): void;
@@ -602,6 +603,19 @@ declare global {
     saveCustomPreset(name: string): void;
     renameCustomPreset(id: string, newName: string): void;
     deleteCustomPreset(id: string): void;
+  }
+  interface UrielAlbumsPart {
+    fetchArtistCardForSearch(query: string, token: number, searchTracks: UrielTrack[]): Promise<void>;
+    resolveAlbumTrack(album: UrielAlbum, t: UrielTrack): Promise<UrielTrack | null>;
+    playAlbumFrom(album: UrielAlbum, tracks: UrielTrack[], startIndex?: number): Promise<void>;
+    getSavedAlbums(): UrielAlbum[];
+    setSavedAlbums(list: UrielAlbum[]): void;
+    updateAlbumsCount(): void;
+    renderSavedAlbums(): void;
+    applyShowAlbums(): void;
+    updateSaveAlbumButton(): void;
+    getMixFeedback(): ReturnType<typeof import("./library-pages")["cleanFeedback"]>;
+    showAlbumExtras(album: UrielAlbum): void;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
