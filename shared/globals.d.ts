@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      playerBar(deps: Record<string, unknown>, out: UrielPlayerBarPart): void;
       desktop(deps: Record<string, unknown>, out: UrielDesktopPart): void;
       controls(deps: Record<string, unknown>): void;
       playback(deps: Record<string, unknown>, out: UrielPlaybackPart): void;
@@ -689,6 +690,13 @@ declare global {
   }
   interface UrielDesktopPart {
     toggleMiniWindow(): Promise<void>;
+  }
+  interface UrielPlayerBarPart {
+    setPlatform(platform: string, triggerSearch?: boolean): void;
+    updateEngineWidthVar(): void;
+    setShuffle(on: boolean): void;
+    persistVolumeState(): void;
+    syncVolumeControls(): void;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
