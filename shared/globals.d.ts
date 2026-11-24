@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      lyricsEditor(deps: Record<string, unknown>, out: UrielLyricsEditorPart): void;
       background(deps: Record<string, unknown>, out: UrielBackgroundPart): void;
       m3Cover(deps: Record<string, unknown>, out: UrielM3CoverPart): void;
       language(deps: Record<string, unknown>): void;
@@ -462,6 +463,11 @@ declare global {
   interface UrielBackgroundPart {
     updateCustomBg(): void;
     onBackgroundChanged(kind: string, enabled: boolean): void;
+  }
+  interface UrielSyncState { active: boolean; lines: { text: string; time: number | null }[]; currentIndex: number; song?: { title: string; artist: string } }
+  interface UrielLyricsEditorPart {
+    syncState: UrielSyncState;
+    handleSyncLineClick(idx: number): void;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
