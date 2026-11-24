@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      library(deps: Record<string, unknown>, out: UrielLibraryPart): void;
       trackRows(deps: Record<string, unknown>, out: UrielTrackRowsPart): void;
       blocks(deps: Record<string, unknown>, out: UrielBlocksPart): void;
       themePalette(deps: Record<string, unknown>, out: UrielThemePalettePart): void;
@@ -572,6 +573,26 @@ declare global {
     highlightPlayingRow(): void;
     isFavoriteSong(track: UrielTrack): boolean;
     showActionMenu(x: number, y: number, items: UrielMenuItem[], aboveY?: number): void;
+  }
+  interface UrielLibraryPart {
+    toggleFavoriteTrack(track: UrielTrack): void;
+    updateFavoriteIcon(): void;
+    updateFavoritesBadge(): void;
+    getTrackSortMode(kind: string): string;
+    setTrackSortMode(kind: string, mode: string): void;
+    sortTracksFor(kind: string, tracks: UrielTrack[]): UrielTrack[];
+    stampAddedAt(track: UrielTrack): UrielTrack;
+    renderFavoritesView(): void;
+    syncSortDropdown(kind: string): void;
+    setupSortDropdown(kind: string, selectEl: HTMLSelectElement): void;
+    getLibrarySort(kind: string): string;
+    renderHistoryView(): void;
+    updateQueueBadge(): void;
+    renderQueueView(): void;
+    updateLocalBadge(): void;
+    renderLocalView(forceFetch?: boolean): Promise<void>;
+    sortedLibrary<I extends { name: string }>(kind: string, items: I[]): I[];
+    importLocalFiles(opts?: { folder?: boolean }): Promise<void>;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
