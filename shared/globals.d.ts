@@ -60,6 +60,9 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      renameTrack(deps: Record<string, unknown>): void;
+      touch(deps: Record<string, unknown>): void;
+      railDrawer(deps: Record<string, unknown>): void;
       trackAudio(deps: Record<string, unknown>, out: UrielTrackAudioPart): void;
       performance(deps: Record<string, unknown>, out: UrielPerformancePart): void;
       playerBar(deps: Record<string, unknown>, out: UrielPlayerBarPart): void;
