@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      performance(deps: Record<string, unknown>, out: UrielPerformancePart): void;
       playerBar(deps: Record<string, unknown>, out: UrielPlayerBarPart): void;
       desktop(deps: Record<string, unknown>, out: UrielDesktopPart): void;
       controls(deps: Record<string, unknown>): void;
@@ -697,6 +698,9 @@ declare global {
     setShuffle(on: boolean): void;
     persistVolumeState(): void;
     syncVolumeControls(): void;
+  }
+  interface UrielPerformancePart {
+    applyPerfMode(on: boolean): void;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
