@@ -88,7 +88,8 @@ test('#33: timed lyrics for a cut of another length come back untimed', () => {
 
 test('#36: the crossfade tail keeps the speed and pitch through loading the song', () => {
   const app = appSource();
-  const prep = app.slice(app.indexOf('function prepareCrossfade('), app.indexOf('function startCrossfade('));
+  const part = app.slice(app.indexOf('window.UrielApp.crossfade = function'));
+  const prep = part.slice(part.indexOf('function prepareCrossfade('), part.indexOf('function startCrossfade('));
   assert.match(prep, /t\.defaultPlaybackRate = rate;/);
   assert.match(prep, /addEventListener\('loadedmetadata', \(\) => \{ matchRate\(\);/);
   // set before the src, not only after it

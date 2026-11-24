@@ -36,7 +36,7 @@ test('the player keeps saying a song failed after the toast is gone, until anoth
 });
 
 test('covers are saved in one batch: a save per cover ran the phone out of memory on a long list', () => {
-  const remember = fnBody(app, 'rememberTrackArt');
+  const remember = fnBody(app.slice(app.indexOf('window.UrielApp.covers = function')), 'rememberTrackArt');
   assert.doesNotMatch(remember, /JSON\.stringify|localStorage/);
   assert.match(remember, /setTimeout\(saveRememberedArt/);
   assert.match(fnBody(app, 'saveRememberedArt'), /localStorage\.setItem\('devsize_favorites'/);
