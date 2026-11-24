@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      presets(deps: Record<string, unknown>, out: UrielPresetsPart): void;
       library(deps: Record<string, unknown>, out: UrielLibraryPart): void;
       trackRows(deps: Record<string, unknown>, out: UrielTrackRowsPart): void;
       blocks(deps: Record<string, unknown>, out: UrielBlocksPart): void;
@@ -593,6 +594,14 @@ declare global {
     renderLocalView(forceFetch?: boolean): Promise<void>;
     sortedLibrary<I extends { name: string }>(kind: string, items: I[]): I[];
     importLocalFiles(opts?: { folder?: boolean }): Promise<void>;
+  }
+  interface UrielPresetsPart {
+    renderPresets(): void;
+    updateFade(el: Element | null): void;
+    updatePresetsFade(): void;
+    saveCustomPreset(name: string): void;
+    renameCustomPreset(id: string, newName: string): void;
+    deleteCustomPreset(id: string): void;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
