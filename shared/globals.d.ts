@@ -52,6 +52,7 @@ declare global {
       search(deps: Record<string, unknown>, out: UrielSearchPart): void;
       lyricsSettings(deps: Record<string, unknown>): void;
       downloads(deps: Record<string, unknown>, out: UrielDownloadsPart): void;
+      storage(deps: Record<string, unknown>, out: UrielStoragePart): void;
       language(deps: Record<string, unknown>): void;
       lyrics(deps: Record<string, unknown>, out: UrielLyricsPart): void;
       home(deps: Record<string, unknown>, out: UrielHomePart): void;
@@ -438,6 +439,14 @@ declare global {
     end: number;
   }
   // what each part of app.js (shared/app/) hands back to it
+  interface UrielStoragePart {
+    updateDeviceMusicUI(change?: Record<string, unknown>): Promise<void>;
+    updateOfflineStorageUI(): Promise<void>;
+    updateMusicFolderUI(): Promise<void>;
+    updateDownloadFolderUI(): Promise<void>;
+    pauseCacheBars(): void;
+    resumeCacheBars(): void;
+  }
   interface UrielDownloadsPart {
     openDownloadModal(track: UrielTrack): void;
     openDownloadAllModal(playlist: UrielDownloadJob | UrielPlaylist | undefined): void;
