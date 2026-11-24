@@ -50,6 +50,8 @@ declare global {
       settings(deps: Record<string, unknown>, out: UrielSettingsPart): void;
       album(deps: Record<string, unknown>, out: UrielAlbumPart): void;
       search(deps: Record<string, unknown>, out: UrielSearchPart): void;
+      lyricsSettings(deps: Record<string, unknown>): void;
+      language(deps: Record<string, unknown>): void;
       lyrics(deps: Record<string, unknown>, out: UrielLyricsPart): void;
       home(deps: Record<string, unknown>, out: UrielHomePart): void;
       look(deps: Record<string, unknown>): { applyIconPack(pack: string): void };
