@@ -47,7 +47,7 @@ test('desktop proxies googlevideo, phones and other sources keep the direct URL'
 test('app.js uses the same proxy rule and falls back to the proxy before a fresh lookup', () => {
   const app = appSource();
   assert.match(app, /el\.nativeAudio\.src = src;/);
-  const handler = app.slice(app.indexOf("addEventListener('error', () => {", app.indexOf('function retryFresh(')));
+  const handler = app.slice(app.indexOf("addEventListener('error', () => {", app.indexOf('function retryFresh(', app.indexOf('window.UrielApp.playback = function'))));
   assert.ok(handler.indexOf('tryProxyFallback(') >= 0 && handler.indexOf('tryProxyFallback(') < handler.indexOf('retryFresh('));
 });
 

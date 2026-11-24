@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
 const appSource = require('../tools/app-source');
 
 const app = appSource();
-const src = app.slice(app.indexOf('  function shuffleQueue() {'), app.indexOf('  // A song that can\'t be played used to stop'));
+const src = app.slice(app.indexOf('  function shuffleQueue() {', app.indexOf('window.UrielApp.playback = function')), app.indexOf('  // A song that can\'t be played used to stop'));
 function withState(state, heard = []) {
   const make = new Function('state', 'playedThisSession', `${src}; return { shuffleQueue, unshuffleQueue };`);
   return make(state, (t) => heard.includes(t.id));

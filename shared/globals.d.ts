@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      playback(deps: Record<string, unknown>, out: UrielPlaybackPart): void;
       theme(deps: Record<string, unknown>, out: UrielThemePart): void;
       nowPlaying(deps: Record<string, unknown>, out: UrielNowPlayingPart): void;
       effectSettings(deps: Record<string, unknown>): void;
@@ -667,6 +668,23 @@ declare global {
     meshLayer(): string;
     effectiveMode(): string;
   }
+  interface UrielPlaybackPart {
+    playTrack(track: UrielTrack, queueList?: UrielTrack[] | null, startIndex?: number, context?: string | null): Promise<void>;
+    shuffleQueue(): void;
+    unshuffleQueue(): void;
+    pauseSmooth(): void;
+    playSmooth(): Promise<void>;
+    togglePlayPause(): void;
+    restoreQueueAt(index: number, position: number, play: boolean): void;
+    adoptQueueAt(index: number): void;
+    queueFinished(): boolean;
+    playNext(): void;
+    playPrev(): void;
+    prefetchNextQueueTrack(): void;
+    skipUnplayable(token: number, track: UrielTrack | null): boolean;
+    retryFresh(token: number, track: UrielTrack | null): boolean;
+    showPlayFailure(message: UrielText, type?: string): void;
+  }
   interface UrielVisualizerPart {
     startVisualizers(): void;
     resizeCanvases(): void;
@@ -853,7 +871,7 @@ declare global {
     state: UrielAppState;
     el: any;
     Tm: (key: string, ...args: unknown[]) => UrielI18nMessage;
-    showToast: (message: UrielText, kind?: string) => void;
+    showToast: (message: UrielText, kind?: string, duration?: number | null) => void;
     escapeHtml: (value: unknown) => string;
     [name: string]: any;
   }

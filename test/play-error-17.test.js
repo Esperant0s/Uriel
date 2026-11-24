@@ -14,7 +14,7 @@ const app = appSource();
 const main = fs.readFileSync(path.join(__dirname, '..', 'desktop/main.js'), 'utf8');
 
 function fnSource(name) {
-  const start = app.indexOf(`function ${name}(`);
+  const start = app.indexOf(`function ${name}(`, app.indexOf('window.UrielApp.playback = function'));
   assert.ok(start >= 0, name);
   let depth = 0;
   for (let i = app.indexOf('{', start); i < app.length; i++) {
@@ -27,7 +27,7 @@ function fnSource(name) {
 function loadLogger(audio) {
   const logged = [];
   const ctx = {
-    el: { nativeAudio: audio }, state: { loadToken: 7 }, hlsInstance: null, URL,
+    el: { nativeAudio: audio }, state: { loadToken: 7 }, playback: { hls: null }, URL,
     console: { warn: (l) => logged.push(['console', l]) },
     window: { __riffLogError: (level, line) => logged.push([level, line]) },
   };
