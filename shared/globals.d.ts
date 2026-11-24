@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      trackAudio(deps: Record<string, unknown>, out: UrielTrackAudioPart): void;
       performance(deps: Record<string, unknown>, out: UrielPerformancePart): void;
       playerBar(deps: Record<string, unknown>, out: UrielPlayerBarPart): void;
       desktop(deps: Record<string, unknown>, out: UrielDesktopPart): void;
@@ -701,6 +702,11 @@ declare global {
   }
   interface UrielPerformancePart {
     applyPerfMode(on: boolean): void;
+  }
+  interface UrielTrackAudioPart {
+    effectiveAudioSettings(): UrielAppState['audioSettings'];
+    setTempoValues(values: Record<string, number>): void;
+    onTrackAudioTrackChange(): void;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
