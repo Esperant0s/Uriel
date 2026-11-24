@@ -1,9 +1,9 @@
 // @ts-check
 // Settings → Background: your own picture or video behind the app, the song's cover as the background, the
-// mesh gradient and its customizer, and the palette style. Part of app.js, which calls this once as it starts.
+// mesh gradient and the palette style. Part of app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps @param {UrielBackgroundPart} out */
-window.UrielApp.background = function ({ applyFxClip, closeModal, currentUiAlpha, getAdv, getTrackThumbUrl, LiquidMotion, meshLayer, PALETTE_STYLES, registerFx, setCoverBg, setUiAlphaViaSlider, showToast, state, syncBgVideoPlayback, Tm, updateThemeFromState }, out) {
+window.UrielApp.background = function ({ applyFxClip, currentUiAlpha, getAdv, getTrackThumbUrl, PALETTE_STYLES, registerFx, setCoverBg, setUiAlphaViaSlider, showToast, state, syncBgVideoPlayback, Tm, updateThemeFromState }, out) {
   const btnChooseCustomBg = document.getElementById('btn-choose-custom-bg');
   const btnRemoveCustomBg = /** @type {HTMLButtonElement} */ (document.getElementById('btn-remove-custom-bg'));
   const sliderBgOpacity = /** @type {HTMLInputElement} */ (document.getElementById('slider-bg-opacity'));
@@ -228,170 +228,14 @@ window.UrielApp.background = function ({ applyFxClip, closeModal, currentUiAlpha
     }
   } catch (_) {}
 
-  function applyMeshCfg(/** @type {typeof meshCfg} */ cfg, save = true) {
-    meshCfg = cfg;
-    const root = document.documentElement;
-    root.style.setProperty('--mesh-p1x', `${cfg.p1.x}%`);
-    root.style.setProperty('--mesh-p1y', `${cfg.p1.y}%`);
-    root.style.setProperty('--mesh-p2x', `${cfg.p2.x}%`);
-    root.style.setProperty('--mesh-p2y', `${cfg.p2.y}%`);
-    const speedDur = cfg.speed > 0 ? `${(120 / (cfg.speed * 0.2 + 1)).toFixed(1)}s` : '0s';
-    root.style.setProperty('--mesh-speed', speedDur);
-    root.style.setProperty('--mesh-blur', `${cfg.blur}px`);
-
-    const d1 = document.getElementById('mesh-dot-1');
-    const d2 = document.getElementById('mesh-dot-2');
-    if (d1) {
-      d1.style.left = `${cfg.p1.x}%`;
-      d1.style.top = `${cfg.p1.y}%`;
-    }
-    if (d2) {
-      d2.style.left = `${cfg.p2.x}%`;
-      d2.style.top = `${cfg.p2.y}%`;
-    }
-
-    const slSpeed = /** @type {HTMLInputElement} */ (document.getElementById('slider-mesh-speed'));
-    const vlSpeed = document.getElementById('val-mesh-speed');
-    if (slSpeed) slSpeed.value = String(cfg.speed);
-    if (vlSpeed) vlSpeed.textContent = cfg.speed === 0 ? '0 (static)' : `${cfg.speed}`;
-
-    const slBlur = /** @type {HTMLInputElement} */ (document.getElementById('slider-mesh-blur'));
-    const vlBlur = document.getElementById('val-mesh-blur');
-    if (slBlur) slBlur.value = String(cfg.blur);
-    if (vlBlur) vlBlur.textContent = `${cfg.blur}px`;
-
-    if (save) {
-      localStorage.setItem('uriel_mesh_cfg', JSON.stringify(cfg));
-    }
-  }
-
-  applyMeshCfg(meshCfg, false);
-
-  const btnConfigureMesh = document.getElementById('btn-configure-mesh');
-  const meshModal = document.getElementById('mesh-customizer-modal');
-  const btnCloseMeshModal = document.getElementById('btn-close-mesh-modal');
-  const btnResetMesh = document.getElementById('btn-reset-mesh');
-  const sliderMeshSpeed = document.getElementById('slider-mesh-speed');
-  const sliderMeshBlur = document.getElementById('slider-mesh-blur');
-
-  function openMeshModal() {
-    if (!meshModal) return;
-    const card = /** @type {HTMLElement} */ (meshModal.querySelector('.settings-card') || meshModal);
-    const previewBg = document.getElementById('mesh-preview-bg');
-    const meshA = document.getElementById('bg-mesh-a');
-    const meshB = document.getElementById('bg-mesh-b');
-    const curBg = (meshLayer() === 'a' ? meshB : meshA)?.style.background || meshA?.style.background;
-    if (previewBg && curBg) previewBg.style.background = curBg;
-
-    applyMeshCfg(meshCfg, false);
-    meshModal.classList.remove('hidden');
-    requestAnimationFrame(() => {
-      meshModal.classList.add('visible');
-      if (window.LiquidMotion) {
-        LiquidMotion.open(card, btnConfigureMesh, 'y');
-      }
-    });
-  }
-
-  function closeMeshModal() {
-    if (!meshModal) return;
-    const card = /** @type {HTMLElement} */ (meshModal.querySelector('.settings-card') || meshModal);
-    if (window.LiquidMotion) {
-      LiquidMotion.close(card, () => {
-        meshModal.classList.remove('visible');
-        meshModal.classList.add('hidden');
-      });
-    } else {
-      closeModal(meshModal);
-    }
-  }
-
-  if (btnConfigureMesh) btnConfigureMesh.addEventListener('click', openMeshModal);
-  if (btnCloseMeshModal) btnCloseMeshModal.addEventListener('click', closeMeshModal);
-  if (meshModal) {
-    meshModal.addEventListener('click', (e) => {
-      if (e.target === meshModal) closeMeshModal();
-    });
-  }
-
-  if (sliderMeshSpeed) {
-    sliderMeshSpeed.addEventListener('input', (e) => {
-      meshCfg.speed = parseInt(/** @type {HTMLInputElement} */ (e.target).value, 10);
-      applyMeshCfg(meshCfg, true);
-    });
-  }
-
-  if (sliderMeshBlur) {
-    sliderMeshBlur.addEventListener('input', (e) => {
-      meshCfg.blur = parseInt(/** @type {HTMLInputElement} */ (e.target).value, 10);
-      applyMeshCfg(meshCfg, true);
-    });
-  }
-
-  if (btnResetMesh) {
-    btnResetMesh.addEventListener('click', () => {
-      applyMeshCfg({
-        p1: { x: 20, y: 0 },
-        p2: { x: 85, y: 5 },
-        speed: 0,
-        blur: 0
-      }, true);
-    });
-  }
-
-  const previewBox = document.getElementById('mesh-preview-box');
-  const dot1 = document.getElementById('mesh-dot-1');
-  const dot2 = document.getElementById('mesh-dot-2');
-
-  function attachDotDrag(/** @type {HTMLElement | null} */ dotEl, /** @type {'p1' | 'p2'} */ key) {
-    if (!dotEl || !previewBox) return;
-    let isDragging = false;
-
-    dotEl.addEventListener('pointerdown', (/** @type {PointerEvent} */ e) => {
-      e.preventDefault();
-      isDragging = true;
-      dotEl.setPointerCapture(e.pointerId);
-      dotEl.style.cursor = 'grabbing';
-      dotEl.focus();
-    });
-
-    dotEl.addEventListener('pointermove', (/** @type {PointerEvent} */ e) => {
-      if (!isDragging) return;
-      const rect = previewBox.getBoundingClientRect();
-      const x = Math.max(0, Math.min(100, Math.round(((e.clientX - rect.left) / rect.width) * 100)));
-      const y = Math.max(0, Math.min(100, Math.round(((e.clientY - rect.top) / rect.height) * 100)));
-      meshCfg[key] = { x, y };
-      applyMeshCfg(meshCfg, true);
-    });
-
-    const endDrag = (/** @type {PointerEvent} */ e) => {
-      if (isDragging) {
-        isDragging = false;
-        try { dotEl.releasePointerCapture(e.pointerId); } catch (_) {}
-        dotEl.style.cursor = 'grab';
-      }
-    };
-    dotEl.addEventListener('pointerup', endDrag);
-    dotEl.addEventListener('pointercancel', endDrag);
-
-    dotEl.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
-      let dx = 0, dy = 0;
-      if (e.key === 'ArrowLeft') dx = -1;
-      else if (e.key === 'ArrowRight') dx = 1;
-      else if (e.key === 'ArrowUp') dy = -1;
-      else if (e.key === 'ArrowDown') dy = 1;
-      else return;
-      e.preventDefault();
-      const cur = meshCfg[key];
-      const x = Math.max(0, Math.min(100, cur.x + dx));
-      const y = Math.max(0, Math.min(100, cur.y + dy));
-      meshCfg[key] = { x, y };
-      applyMeshCfg(meshCfg, true);
-    });
-  }
-
-  attachDotDrag(dot1, 'p1');
-  attachDotDrag(dot2, 'p2');
+  // the gradient's two points, speed and blur, as saved before its customizer was removed
+  const root = document.documentElement;
+  root.style.setProperty('--mesh-p1x', `${meshCfg.p1.x}%`);
+  root.style.setProperty('--mesh-p1y', `${meshCfg.p1.y}%`);
+  root.style.setProperty('--mesh-p2x', `${meshCfg.p2.x}%`);
+  root.style.setProperty('--mesh-p2y', `${meshCfg.p2.y}%`);
+  root.style.setProperty('--mesh-speed', meshCfg.speed > 0 ? `${(120 / (meshCfg.speed * 0.2 + 1)).toFixed(1)}s` : '0s');
+  root.style.setProperty('--mesh-blur', `${meshCfg.blur}px`);
 
   const paletteDropdown = document.getElementById('palette-style-dropdown');
   const paletteTrigger = document.getElementById('palette-style-trigger');

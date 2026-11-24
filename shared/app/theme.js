@@ -535,10 +535,9 @@ window.UrielApp.theme = function ({ activeSiteTheme, coverAnalysisCache, current
     }
   }
 
-  const meshLayer = () => activeMeshLayer;
   const effectiveMode = () => currentEffectiveMode;
 
   /** @type {UrielThemePart} */
-  const api = { analyzeCover, setCoverBg, registerFx, applyFxClip, updateFxVisibility, refreshMeshCover, redrawMesh, updateMeshGradient, smoothThemeSwap, updateThemeFromState, meshLayer, effectiveMode };
+  const api = { analyzeCover, setCoverBg, registerFx, applyFxClip, updateFxVisibility, refreshMeshCover, redrawMesh, updateMeshGradient, smoothThemeSwap, updateThemeFromState, effectiveMode };
   Object.assign(out, api);
 };

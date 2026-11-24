@@ -987,7 +987,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   function updateMeshGradient(/** @type {string} */ accentHex, /** @type {string} */ accent2Hex, /** @type {string} */ mode) { return themePart.updateMeshGradient(accentHex, accent2Hex, mode); }
   function smoothThemeSwap(/** @type {() => void} */ fn) { return themePart.smoothThemeSwap(fn); }
   function updateThemeFromState() { return themePart.updateThemeFromState(); }
-  function meshLayer() { return themePart.meshLayer(); }
   function effectiveMode() { return themePart.effectiveMode(); }
   window.UrielApp.theme({ activeSiteTheme, coverAnalysisCache, currentUiAlpha, DEFAULT_UI_ALPHA, el, generateM3Palette, getAdv, getCoverDominantColors, getTrackThumbUrl, hexToRgb, hslToHex, mixHex, refreshCachedThemeColors, relLuminance, rgbToHsl, setUiAlphaViaSlider, state, syncSiteThemeCards }, themePart);
 
@@ -1968,7 +1967,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- Settings → Interface: switches, theme mode, font, search box and sliders (app/interfaceSettings.js) ----
   window.UrielApp.interfaceSettings({ applyFont, applyScale, applySystemColors, effectiveMode, el, hslToHex, isPhoneApp, refreshCachedThemeColors, resizeCanvases, setSiteTheme, state, updateEngineWidthVar, updateThemeFromState });
 
-  // also run at start-up, well before the banner settings' part
+  // the banner fit saved before its setting was removed, applied at start-up
   function applyBannerFit(/** @type {string} */ fit) {
     const root = document.documentElement;
     const val = fit || 'zoom';
@@ -1987,9 +1986,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // ---- the banner settings: picture, blur, opacity, fade and fit (app/bannerSettings.js) ----
-  window.UrielApp.bannerSettings({ applyBannerFit, getTrackThumbUrl, savedBannerBlur, savedBannerFade, savedBannerFit, savedBannerOpacity, state, updatePlaylistDetailBanner, updateRightPanelBanner });
-
   function syncBgVideoPlayback() {
     const v = /** @type {HTMLVideoElement} */ (document.querySelector('#custom-bg video'));
     if (!v) return;
@@ -2006,7 +2002,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const backgroundPart = /** @type {UrielBackgroundPart} */ ({});
   function updateCustomBg() { return backgroundPart.updateCustomBg(); }
   function onBackgroundChanged(/** @type {string} */ kind, /** @type {boolean} */ enabled) { return backgroundPart.onBackgroundChanged(kind, enabled); }
-  window.UrielApp.background({ applyFxClip, closeModal, currentUiAlpha, getAdv, getTrackThumbUrl, LiquidMotion, meshLayer, PALETTE_STYLES, registerFx, setCoverBg, setUiAlphaViaSlider, showToast, state, syncBgVideoPlayback, Tm, updateThemeFromState }, backgroundPart);
+  window.UrielApp.background({ applyFxClip, currentUiAlpha, getAdv, getTrackThumbUrl, PALETTE_STYLES, registerFx, setCoverBg, setUiAlphaViaSlider, showToast, state, syncBgVideoPlayback, Tm, updateThemeFromState }, backgroundPart);
 
   // text-only changes (the playbar clock, counters) can't add a slider or a switch: skip the document scan for them
   const addsElements = (/** @type {MutationRecord[]} */ muts) => muts.some((/** @type {MutationRecord} */ m) => Array.prototype.some.call(m.addedNodes, (n) => n.nodeType === 1));
@@ -2032,13 +2028,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- Settings: the categories, back on phones, and search (app/settings.js) ----
   const settingsPart = /** @type {UrielSettingsPart} */ ({});
   function enterSettings() { return settingsPart.enterSettings(); }
-  window.UrielApp.settings({ el, refreshStacks, reloadPluginsList, renderThemeCards }, settingsPart);
+  window.UrielApp.settings({ el, refreshStacks, reloadPluginsList }, settingsPart);
 
   // ---- custom themes and the custom CSS on the page (app/themes.js) ----
   const themesPart = /** @type {UrielThemesPart} */ ({});
   function applyCustomStyles() { return themesPart.applyCustomStyles(); }
-  function loadCustomThemes() { return themesPart.loadCustomThemes(); }
-  function renderThemeCards() { return themesPart.renderThemeCards(); }
   window.UrielApp.themes({ Tm, showToast, refreshCachedThemeColors, clearCssEditor, stopAllPlugins, renderPluginCards }, themesPart);
 
   // ---- plugins and the custom CSS editor (app/plugins.js) ----
@@ -2353,7 +2347,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   checkToolsStatus(false);
   setLyricsEmpty(true);
   updateLyricsTranslationUI();
-  loadCustomThemes();
   applyCustomStyles();
   enterSettings();
   refreshStacks();

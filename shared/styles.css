@@ -6372,57 +6372,6 @@ body.intensity-zero .lyric-word.active-word { opacity: 1; color: var(--md-sys-co
 .right-panel .lyrics-action-btn svg { width: 16px !important; height: 16px !important; }
 .right-panel-header { justify-content: flex-end; }
 
-.mesh-preview-box {
-  position: relative;
-  width: 280px;
-  height: 160px;
-  border-radius: var(--md-shape-corner-m);
-  overflow: hidden;
-  background: var(--md-sys-color-background);
-  border: 1px solid var(--md-sys-color-outline-variant);
-  touch-action: none;
-  user-select: none;
-}
-.mesh-preview-bg {
-  position: absolute;
-  inset: -20px;
-  pointer-events: none;
-  filter: blur(var(--mesh-blur, 0px));
-  animation: meshFloat var(--mesh-speed, 0s) ease-in-out infinite alternate;
-}
-.mesh-dot {
-  position: absolute;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  cursor: grab;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: #fff;
-  border: 2px solid #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-  touch-action: none;
-  user-select: none;
-  outline: none;
-}
-.mesh-dot:focus-visible {
-  box-shadow: 0 0 0 3px var(--md-sys-color-primary), 0 2px 8px rgba(0, 0, 0, 0.4);
-}
-.mesh-dot:active {
-  cursor: grabbing;
-}
-#mesh-dot-1 {
-  background: var(--md-sys-color-primary);
-}
-#mesh-dot-2 {
-  background: var(--md-sys-color-secondary, #b0c6ff);
-}
-
 .tools-wavy-wrap {
   width: 100%;
   height: 14px;
@@ -7060,7 +7009,6 @@ body.has-video-bg :is(.lyrics-header-actions, .right-panel .lyrics-header-action
 .ct-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
 .ct-list { display: flex; flex-direction: column; gap: 5px; }
 .ct-card { display: grid; grid-template-columns: minmax(180px, 240px) 1fr auto auto; align-items: center; gap: 16px; padding: 12px 16px 12px 12px; background: var(--md-sys-color-surface-container-high); }
-.ct-preview { position: relative; width: 100%; overflow: hidden; border-radius: 12px; background: #000; pointer-events: none; }
 .ct-name { font-weight: 700; font-size: calc(15px * var(--font-scale, 1)); }
 .ct-meta { margin-top: 2px; opacity: 0.75; font-size: calc(12.5px * var(--font-scale, 1)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ct-empty { padding: 28px 16px; text-align: center; opacity: 0.75; background: var(--md-sys-color-surface-container-high); }

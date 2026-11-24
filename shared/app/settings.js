@@ -3,7 +3,7 @@
 // Part of app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps @param {UrielSettingsPart} out */
-window.UrielApp.settings = function ({ el, refreshStacks, reloadPluginsList, renderThemeCards }, out) {
+window.UrielApp.settings = function ({ el, refreshStacks, reloadPluginsList }, out) {
   // Settings navigation. Wide windows: the category list on the left, one category on the right. Phones (and
   // narrow windows): the list of categories with their names, tap one to open it, back (the arrow, or Android's
   // back button) returns to the list. The search field filters every row of every category by the text shown on
@@ -33,7 +33,6 @@ window.UrielApp.settings = function ({ el, refreshStacks, reloadPluginsList, ren
     const pane = document.querySelector('#view-settings .settings-pane'); if (pane) requestAnimationFrame(() => { if (pane.scrollTop) pane.scrollTop = 0; });
     settingsScrollTop();
     try { localStorage.setItem('uriel_settings_cat', cat); } catch (e) {}
-    if (cat === 'custom-themes' && typeof renderThemeCards === 'function') renderThemeCards();
     if (cat === 'plugins' && typeof reloadPluginsList === 'function') reloadPluginsList();
     // the corners of the category buttons follow from stackObserver (it sees the 'active' class change)
   }

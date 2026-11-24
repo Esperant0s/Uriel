@@ -78,7 +78,6 @@ declare global {
       nowPlaying(deps: Record<string, unknown>, out: UrielNowPlayingPart): void;
       effectSettings(deps: Record<string, unknown>): void;
       interfaceSettings(deps: Record<string, unknown>): void;
-      bannerSettings(deps: Record<string, unknown>): void;
       soundSettings(deps: Record<string, unknown>): void;
       themeCards(deps: Record<string, unknown>, out: UrielThemeCardsPart): void;
       panelDrawer(deps: Record<string, unknown>, out: UrielPanelDrawerPart): void;
@@ -381,13 +380,6 @@ declare global {
     googleLogout?(profile: string): Promise<{ success?: boolean; error?: string }>;
     googleAuthStatus?(profile: string): Promise<{ loggedIn?: boolean; [field: string]: unknown }>;
     ytSigninStatus?(profile: string): Promise<{ [field: string]: unknown }>;
-    // custom theme files: nothing provides these yet, app.js checks for them first
-    getAppCss?(): Promise<string>;
-    listThemes?(): Promise<{ id: string; name: string; css: string; enabled?: boolean; author?: string; description?: string }[]>;
-    importThemes?(): Promise<{ id: string; name: string; css: string; enabled?: boolean; author?: string; description?: string }[]>;
-    removeTheme?(id: string): Promise<unknown>;
-    setThemeEnabled?(id: string, on: boolean): void;
-    disableAllThemes?(): void;
   }
   // the computer app's electronAPI: code that has made sure it is on a computer (it found one of these) uses this
   type UrielDesktopApi = UrielElectronApi & Required<Pick<UrielElectronApi, 'logError' | 'listPlugins' | 'setPluginEnabled' |
@@ -678,7 +670,6 @@ declare global {
     updateMeshGradient(accentHex: string, accent2Hex: string, mode: string): void;
     smoothThemeSwap(fn: () => void): void;
     updateThemeFromState(): void;
-    meshLayer(): string;
     effectiveMode(): string;
   }
   interface UrielPlaybackPart {
@@ -813,8 +804,6 @@ declare global {
   }
   interface UrielThemesPart {
     applyCustomStyles(): void;
-    loadCustomThemes(): Promise<void>;
-    renderThemeCards(): void;
   }
   interface UrielArtistPart {
     compactCount(n: number): string;
