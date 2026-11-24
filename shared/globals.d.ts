@@ -60,6 +60,8 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      playButton(deps: Record<string, unknown>, out: UrielPlayButtonPart): void;
+      navigation(deps: Record<string, unknown>, out: UrielNavigationPart): void;
       renameTrack(deps: Record<string, unknown>): void;
       touch(deps: Record<string, unknown>): void;
       railDrawer(deps: Record<string, unknown>): void;
@@ -710,6 +712,15 @@ declare global {
     effectiveAudioSettings(): UrielAppState['audioSettings'];
     setTempoValues(values: Record<string, number>): void;
     onTrackAudioTrackChange(): void;
+  }
+  interface UrielNavigationPart {
+    switchView(viewName: string): void;
+    refreshStacks(): void;
+    updateNavIndicator(animate: boolean): void;
+  }
+  interface UrielPlayButtonPart {
+    setPlayPauseState(playing: boolean, animate?: boolean): void;
+    updatePlayPauseButton(isPlaying: boolean, isBuffering?: boolean): void;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;

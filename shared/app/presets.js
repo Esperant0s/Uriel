@@ -3,7 +3,7 @@
 // renaming and deleting your own. Part of app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps @param {UrielPresetsPart} out */
-window.UrielApp.presets = function ({ applyAudioSettings, defaultPresets, el, escapeHtml, I18N, initAudioContext, normalizePreset, openModal, persistSoundSettings, state, syncSettingsSlidersToState }, out) {
+window.UrielApp.presets = function ({ applyAudioSettings, closeModal, defaultPresets, el, escapeHtml, I18N, initAudioContext, normalizePreset, openModal, persistSoundSettings, state, syncSettingsSlidersToState }, out) {
   function getAllPresets() {
     return [...defaultPresets, ...state.customPresets];
   }
@@ -176,6 +176,81 @@ window.UrielApp.presets = function ({ applyAudioSettings, defaultPresets, el, es
     if (msg) I18N.text(msg, 'Delete preset "{0}"?', preset.name);
     const modal = document.getElementById('delete-preset-modal');
     if (modal) openModal(modal);
+  }
+
+  // the save, rename and delete dialogs
+  if (el.btnSavePresetDialog) {
+    el.btnSavePresetDialog.addEventListener('click', () => {
+      if (el.newPresetName) el.newPresetName.value = '';
+      if (el.savePresetModal) openModal(el.savePresetModal);
+      if (el.newPresetName) el.newPresetName.focus();
+    });
+  }
+
+  if (el.btnCancelPreset) {
+    el.btnCancelPreset.addEventListener('click', () => {
+      if (el.savePresetModal) closeModal(el.savePresetModal);
+    });
+  }
+
+  if (el.btnConfirmSavePreset) {
+    el.btnConfirmSavePreset.addEventListener('click', () => {
+      const name = el.newPresetName ? el.newPresetName.value : '';
+      if (name.trim()) {
+        saveCustomPreset(name);
+        if (el.savePresetModal) closeModal(el.savePresetModal);
+      }
+    });
+  }
+
+  if (el.newPresetName) {
+    el.newPresetName.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
+      if (e.key === 'Enter' && el.btnConfirmSavePreset) el.btnConfirmSavePreset.click();
+      if (e.key === 'Escape' && el.btnCancelPreset) el.btnCancelPreset.click();
+    });
+  }
+
+  if (el.btnCancelRenamePreset) {
+    el.btnCancelRenamePreset.addEventListener('click', () => {
+      if (el.renamePresetModal) closeModal(el.renamePresetModal);
+    });
+  }
+
+  if (el.btnConfirmRenamePreset) {
+    el.btnConfirmRenamePreset.addEventListener('click', () => {
+      const name = el.renamePresetName ? el.renamePresetName.value : '';
+      if (name.trim() && state.presetToRenameId) {
+        renameCustomPreset(state.presetToRenameId, name);
+        if (el.renamePresetModal) closeModal(el.renamePresetModal);
+      }
+    });
+  }
+
+  if (el.renamePresetName) {
+    el.renamePresetName.addEventListener('keydown', (/** @type {KeyboardEvent} */ e) => {
+      if (e.key === 'Enter' && el.btnConfirmRenamePreset) el.btnConfirmRenamePreset.click();
+      if (e.key === 'Escape' && el.btnCancelRenamePreset) el.btnCancelRenamePreset.click();
+    });
+  }
+
+  const deletePresetModal = document.getElementById('delete-preset-modal');
+  const btnCancelDeletePreset = document.getElementById('btn-cancel-delete-preset');
+  const btnConfirmDeletePreset = document.getElementById('btn-confirm-delete-preset');
+
+  if (btnCancelDeletePreset) {
+    btnCancelDeletePreset.addEventListener('click', () => {
+      if (deletePresetModal) closeModal(deletePresetModal);
+    });
+  }
+
+  if (btnConfirmDeletePreset) {
+    btnConfirmDeletePreset.addEventListener('click', () => {
+      if (state.presetToDeleteId) {
+        deleteCustomPreset(state.presetToDeleteId);
+        state.presetToDeleteId = null;
+      }
+      if (deletePresetModal) closeModal(deletePresetModal);
+    });
   }
 
   /** @type {UrielPresetsPart} */
