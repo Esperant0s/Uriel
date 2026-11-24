@@ -60,6 +60,8 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      playlists(deps: Record<string, unknown>, out: UrielPlaylistsPart): void;
+      reorder(deps: Record<string, unknown>): void;
       wave(deps: Record<string, unknown>, out: UrielWavePart): void;
       tvKaraoke(deps: Record<string, unknown>, out: UrielTvKaraokePart): void;
       outputDevice(deps: Record<string, unknown>): void;
@@ -510,6 +512,18 @@ declare global {
     loadForYou(force?: boolean): Promise<void>;
     warmHomeSongs(tracks: UrielTrack[], n: number): void;
     loadHomePage(isRefresh?: boolean): Promise<boolean>;
+  }
+  interface UrielPlaylistsPart {
+    renderPlaylistCover(container: HTMLElement, playlist: UrielPlaylist, size?: number): void;
+    renderPlaylistsList(): void;
+    createPlaylist(name: string, initialTracks?: UrielTrack[], cover?: string, opts?: { open?: boolean }): UrielPlaylist | null;
+    openPlaylistDetail(playlistId: string): void;
+    sharePlaylist(pl: { name: string; tracks: UrielTrack[] } | undefined): Promise<void>;
+    refreshPlaylistDownloads(pl: UrielPlaylist | undefined): Promise<void>;
+    importSharedPlaylist(text: string): Promise<boolean>;
+    removeTrackFromCurrentPlaylist(track: UrielTrack): void;
+    deleteCurrentPlaylist(): void;
+    openAddToPlaylistModal(track: UrielTrack | null, many?: UrielTrack[] | null): void;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
