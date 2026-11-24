@@ -29,8 +29,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
+      - uses: actions/checkout@v7
+      - uses: actions/configure-pages@v6
       # the web player reads shared playlist links with the same code as the app
       - run: cp shared/share-link.js site/play/share-link.js
       # what the page needs from the releases, plus the stars; the page counts them the same way as before
@@ -41,8 +41,8 @@ jobs:
           gh api "repos/${{ github.repository }}/releases?per_page=100" --jq '[.[] | {tag_name, body: ((.body // "") | capture("(?<m>muriel-downloads-before:\\s*\\d+)").m // ""), draft, prerelease, published_at, assets: [.assets[] | {name, size, download_count, browser_download_url}]}]' > releases.json
           stars=$(gh api "repos/${{ github.repository }}" --jq .stargazers_count)
           jq -n --slurpfile r releases.json --argjson s "$stars" --arg at "$(date -u +%FT%TZ)" '{at: $at, stars: $s, releases: $r[0]}' > site/stats.json
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: site
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

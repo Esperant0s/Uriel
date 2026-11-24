@@ -15,8 +15,8 @@ jobs:
       run:
         working-directory: rust
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - uses: dtolnay/rust-toolchain@stable
@@ -30,7 +30,7 @@ jobs:
         run: Invoke-WebRequest -Uri https://nodejs.org/dist/v22.11.0/win-x64/node.exe -OutFile backend/node.exe
       - name: Build
         run: npx --yes @tauri-apps/cli@2.1.0 build
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Uriel-RS-windows
           path: |
