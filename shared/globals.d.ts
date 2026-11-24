@@ -56,6 +56,7 @@ declare global {
       storage(deps: Record<string, unknown>, out: UrielStoragePart): void;
       tools(deps: Record<string, unknown>, out: UrielToolsPart): void;
       trackArt(deps: Record<string, unknown>, out: UrielTrackArtPart): void;
+      sleepTimer(deps: Record<string, unknown>, out: UrielSleepTimerPart): void;
       language(deps: Record<string, unknown>): void;
       lyrics(deps: Record<string, unknown>, out: UrielLyricsPart): void;
       home(deps: Record<string, unknown>, out: UrielHomePart): void;
@@ -442,6 +443,9 @@ declare global {
     end: number;
   }
   // what each part of app.js (shared/app/) hands back to it
+  interface UrielSleepTimerPart {
+    updateSleepTimerUI(): void;
+  }
   interface UrielTrackArtPart {
     openTrackArtModal(track: UrielTrack, triggerEl?: HTMLElement | null): void;
   }
