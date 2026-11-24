@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      theme(deps: Record<string, unknown>, out: UrielThemePart): void;
       nowPlaying(deps: Record<string, unknown>, out: UrielNowPlayingPart): void;
       effectSettings(deps: Record<string, unknown>): void;
       interfaceSettings(deps: Record<string, unknown>): void;
@@ -650,6 +651,21 @@ declare global {
     updateNowPlayingUI(track: UrielTrack): void;
     updateRightPanelBanner(thumbUrl: string): void;
     updatePlaylistDetailBanner(thumbUrl: string): void;
+  }
+  interface UrielCoverColors { accent: string; accent2: string; luminance: number; saturation: number }
+  interface UrielThemePart {
+    analyzeCover(imgSrc: string): Promise<UrielCoverColors>;
+    setCoverBg(url: string): void;
+    registerFx(el: HTMLElement | null, kind: string, viewEl: HTMLElement | null): void;
+    applyFxClip(): void;
+    updateFxVisibility(): void;
+    refreshMeshCover(): Promise<void>;
+    redrawMesh(): void;
+    updateMeshGradient(accentHex: string, accent2Hex: string, mode: string): void;
+    smoothThemeSwap(fn: () => void): void;
+    updateThemeFromState(): void;
+    meshLayer(): string;
+    effectiveMode(): string;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
