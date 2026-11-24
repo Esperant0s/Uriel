@@ -60,6 +60,8 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      multiSelect(deps: Record<string, unknown>, out: UrielMultiSelectPart): void;
+      offline(deps: Record<string, unknown>, out: UrielOfflinePart): void;
       mediaSession(deps: Record<string, unknown>, out: UrielMediaSessionPart): void;
       playButton(deps: Record<string, unknown>, out: UrielPlayButtonPart): void;
       navigation(deps: Record<string, unknown>, out: UrielNavigationPart): void;
@@ -732,6 +734,22 @@ declare global {
     handleMediaCommand(cmd: string, src: string): void;
     registerMediaActions(): void;
     discordPresenceOn(): boolean;
+  }
+  interface UrielOfflinePart {
+    OFFLINE_ICON: string;
+    offlineKey(t: UrielTrack): string;
+    offlineState(t: UrielTrack): boolean;
+    checkOffline(tracks: UrielTrack[]): void;
+    offlineChanged(track?: UrielTrack, on?: boolean): void;
+  }
+  interface UrielMultiSelectPart {
+    multiSel: { active: boolean; context: string; tracks: Map<string, UrielTrack> };
+    updateMultiSelectBar(): void;
+    rerenderMultiSelectView(): void;
+    exitMultiSelect(rerender?: boolean): void;
+    startMultiSelect(context: string): void;
+    toggleTrackSelection(track: UrielTrack, row: HTMLElement): void;
+    multiSelectSourceTracks(): UrielTrack[];
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;

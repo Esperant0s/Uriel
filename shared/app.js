@@ -662,14 +662,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Interface opacity when it was never set: panels mostly solid, so text stays readable over busy backgrounds and
   // album colours (Riff's 20% made every panel 80% see-through). Menus and dialogs are solid whatever it is (styles.css).
   const DEFAULT_UI_ALPHA = '85';
-  // "Available offline" marks (checkOffline, further down): kept up here, playTrack can run before that part
-  const OFFLINE_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="8"/><path d="M8 3.6v6.2M5.2 7.4 8 10.2l2.8-2.8M5 12h6" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const offlineKnown = new Map(); // offlineKey -> true / false
-  const offlineSeen = new Map(); // offlineKey -> the track, to ask again when the device's songs change
-  /** @type {number | null} */
-  let offlineLocalVersion = null;
-  let offlinePending = new Map();
-  let offlineTimer = 0;
 
   function mixHex(/** @type {string} */ a, /** @type {string} */ b, /** @type {number} */ t) {
     const c1 = hexToRgb(a);
@@ -972,6 +964,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   function registerMediaActions() { return mediaSessionPart.registerMediaActions(); }
   function discordPresenceOn() { return mediaSessionPart.discordPresenceOn(); }
   window.UrielApp.mediaSession({ el, getTrackThumbUrl, pauseSmooth, playNext, playPrev, state, togglePlayPause, updateSyncedLyricsHighlight }, mediaSessionPart);
+
+  // ---- "Available offline" marks (app/offline.js) ----
+  const offlinePart = /** @type {UrielOfflinePart} */ ({});
+  const offlineKey = (/** @type {UrielTrack} */ t) => offlinePart.offlineKey(t);
+  const offlineState = (/** @type {UrielTrack} */ t) => offlinePart.offlineState(t);
+  function checkOffline(/** @type {UrielTrack[]} */ tracks) { return offlinePart.checkOffline(tracks); }
+  /** @param {UrielTrack} [track] @param {boolean} [on] */
+  function offlineChanged(track, on) { return offlinePart.offlineChanged(track, on); }
+  window.UrielApp.offline({ capMap, el, getTrackCanonicalId, state }, offlinePart);
+  const OFFLINE_ICON = offlinePart.OFFLINE_ICON;
 
   // ---- painting the theme: cover colours, the mesh, the cover background, light and dark (app/theme.js) ----
   const themePart = /** @type {UrielThemePart} */ ({});
@@ -1692,132 +1694,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   function performSearch(/** @type {string} */ query) { return searchPart.performSearch(query); }
   window.UrielApp.search({ Tm, bindHorizontalWheel, el, escapeHtml, fetchArtistCardForSearch, getAdv, importSharedPlaylist, openAlbum, renderTracks, showToast, state, switchView, syncHomeAmbientVisibility, updateRowFade }, searchPart);
 
-  const multiSel = { active: false, context: '', tracks: new Map() };
-
-  function updateMultiSelectBar() {
-    const bar = document.getElementById('multi-select-bar');
-    if (!bar) return;
-    bar.classList.toggle('hidden', !multiSel.active);
-    const count = document.getElementById('multi-select-count');
-    if (count) count.textContent = `${multiSel.tracks.size} selected`;
-    const hasSel = multiSel.tracks.size > 0;
-    ['multi-select-fav', 'multi-select-add', 'multi-select-radio', 'multi-select-download', 'multi-select-remove'].forEach(id => {
-      const b = /** @type {HTMLButtonElement} */ (document.getElementById(id));
-      if (b) b.disabled = !hasSel;
-    });
-  }
-
-  function rerenderMultiSelectView() {
-    if (multiSel.context === 'playlist' && state.currentPlaylistId) openPlaylistDetail(state.currentPlaylistId);
-    else if (multiSel.context === 'favorites') renderFavoritesView();
-  }
-
-  function exitMultiSelect(rerender = true) {
-    if (!multiSel.active) return;
-    multiSel.active = false;
-    multiSel.tracks.clear();
-    document.body.classList.remove('multi-select-on');
-    updateMultiSelectBar();
-    if (rerender) rerenderMultiSelectView();
-  }
-
-  function startMultiSelect(/** @type {string} */ context) {
-    if (multiSel.active) return exitMultiSelect();
-    multiSel.active = true;
-    multiSel.context = context;
-    multiSel.tracks.clear();
-    document.body.classList.add('multi-select-on');
-    updateMultiSelectBar();
-    rerenderMultiSelectView();
-  }
-
-  function toggleTrackSelection(/** @type {UrielTrack} */ track, /** @type {HTMLElement} */ row) {
-    const key = getTrackCanonicalId(track);
-    if (multiSel.tracks.has(key)) multiSel.tracks.delete(key);
-    else multiSel.tracks.set(key, track);
-    if (row) row.classList.toggle('selected', multiSel.tracks.has(key));
-    updateMultiSelectBar();
-  }
-
-  // only what the list shows: with a search typed in, "Select all" took every song and Remove deleted hidden ones
-  function multiSelectSourceTracks() {
-    const fav = multiSel.context === 'favorites';
-    const pl = fav ? null : state.playlists.find((/** @type {UrielPlaylist} */ p) => p.id === state.currentPlaylistId);
-    const all = fav ? state.favorites : (pl ? (pl.tracks || []) : []);
-    const input = fav ? el.favoritesSearchInput : el.playlistSearchInput;
-    const query = input ? normalizeSearch(input.value) : '';
-    return query ? all.filter((/** @type {UrielTrack} */ t) => matchesTrackQuery(t, query)) : all;
-  }
-
-  // ---- "Available offline": the small arrow before a song's artist, like Spotify's ----
-  // A song plays without internet when it's a local file, in the Downloads folder, or in the offline cache (songs
-  // kept from playing them). Local songs are marked at once; for the others server.js is asked in one batch per
-  // drawn list, and the answer is remembered until something changes (a download, a cleared cache).
-  const offlineKey = (/** @type {UrielTrack} */ t) => (t ? (getTrackCanonicalId(t) || `${t.artist || ''}|${t.title || ''}`) : '');
-  const offlineState = (/** @type {UrielTrack} */ t) => !!t && (t.platform === 'local' || offlineKnown.get(offlineKey(t)) === true);
-  function checkOffline(/** @type {UrielTrack[]} */ tracks) {
-    for (const t of tracks || []) {
-      if (!t || t.platform === 'local') continue;
-      const key = offlineKey(t);
-      if (key && !offlineKnown.has(key)) offlinePending.set(key, t);
-    }
-    if (!offlinePending.size || offlineTimer || !state.serverPort) return;
-    // one request for everything drawn in this moment (several lists can render together)
-    offlineTimer = window.setTimeout(async () => {
-      offlineTimer = 0;
-      const batch = [...offlinePending.entries()].slice(0, 200);
-      batch.forEach(([k]) => offlinePending.delete(k));
-      try {
-        const res = await fetch(`http://127.0.0.1:${state.serverPort}/api/downloaded-status`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tracks: batch.map(([, t]) => ({ id: t.id || '', title: t.title || '', artist: t.artist || '', duration: Number(t.duration) || 0 })) }),
-        });
-        const data = await res.json();
-        if (data && data.success && Array.isArray(data.downloaded)) {
-          batch.forEach(([k, t], i) => { offlineKnown.set(k, !!data.downloaded[i]); offlineSeen.set(k, t); if (data.downloaded[i]) showOfflineBadges(k, true); });
-          capMap(offlineKnown, 5000);
-          capMap(offlineSeen, 5000);
-          // the songs on the device changed since earlier answers (a scan finished, a song was imported)
-          if (data.localVersion !== undefined) {
-            if (offlineLocalVersion !== null && data.localVersion !== offlineLocalVersion) recheckOffline();
-            offlineLocalVersion = data.localVersion;
-          }
-        }
-      } catch (e) {}
-      if (offlinePending.size) checkOffline([]);
-    }, 60);
-  }
-  // songs found on the device (local-match.js on the server) count as offline: when that list changes, the
-  // songs answered "not offline" are asked about again
-  function recheckOffline() {
-    const again = [];
-    for (const [k, on] of offlineKnown) if (on === false) { offlineKnown.delete(k); if (offlineSeen.has(k)) again.push(offlineSeen.get(k)); }
-    if (again.length) checkOffline(again);
-  }
-  window.addEventListener('uriel:device-music', recheckOffline);
-  // computers scan the Music folder after start-up and on every change in it: look again when the app gets focus
-  async function checkLocalVersion() {
-    if (!state.serverPort || offlineLocalVersion === null) return;
-    try {
-      const data = await (await fetch(`http://127.0.0.1:${state.serverPort}/api/device-music`)).json();
-      if (data && data.localVersion !== undefined && data.localVersion !== offlineLocalVersion) {
-        offlineLocalVersion = data.localVersion;
-        recheckOffline();
-      }
-    } catch (e) {}
-  }
-  window.addEventListener('focus', checkLocalVersion);
-  setTimeout(checkLocalVersion, 15000);
-  function showOfflineBadges(/** @type {string} */ key, /** @type {boolean} */ on) {
-    /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.offline-badge[data-offline-key]')).forEach((b) => { if (b.dataset.offlineKey === key) b.hidden = !on; });
-  }
-  // something changed: this song (downloaded, removed) or everything (offline library cleared)
-  /** @param {UrielTrack} [track] @param {boolean} [on] */
-  function offlineChanged(track, on) {
-    if (!track) { offlineKnown.clear(); /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.offline-badge[data-offline-key]')).forEach((b) => { b.hidden = !b.hasAttribute('data-local'); }); return; }
-    const key = offlineKey(track);
-    if (on === undefined) offlineKnown.delete(key); else { offlineKnown.set(key, on); showOfflineBadges(key, on); }
-  }
+  // ---- selecting several songs (app/multiSelect.js) ----
+  const multiSelectPart = /** @type {UrielMultiSelectPart} */ ({});
+  function updateMultiSelectBar() { return multiSelectPart.updateMultiSelectBar(); }
+  function rerenderMultiSelectView() { return multiSelectPart.rerenderMultiSelectView(); }
+  function exitMultiSelect(rerender = true) { return multiSelectPart.exitMultiSelect(rerender); }
+  function startMultiSelect(/** @type {string} */ context) { return multiSelectPart.startMultiSelect(context); }
+  function toggleTrackSelection(/** @type {UrielTrack} */ track, /** @type {HTMLElement} */ row) { return multiSelectPart.toggleTrackSelection(track, row); }
+  function multiSelectSourceTracks() { return multiSelectPart.multiSelectSourceTracks(); }
+  window.UrielApp.multiSelect({ el, getTrackCanonicalId, matchesTrackQuery, openPlaylistDetail, renderFavoritesView, state }, multiSelectPart);
+  const multiSel = multiSelectPart.multiSel;
 
   // ---- blocked artists and songs (from Riff 43.1) (app/blocks.js) ----
   const blocksPart = /** @type {UrielBlocksPart} */ ({});
