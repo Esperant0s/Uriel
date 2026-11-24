@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      background(deps: Record<string, unknown>, out: UrielBackgroundPart): void;
       m3Cover(deps: Record<string, unknown>, out: UrielM3CoverPart): void;
       language(deps: Record<string, unknown>): void;
       lyrics(deps: Record<string, unknown>, out: UrielLyricsPart): void;
@@ -457,6 +458,10 @@ declare global {
     m3cDraw(now: number): void;
     m3cStart(): void;
     applyM3Cover(): void;
+  }
+  interface UrielBackgroundPart {
+    updateCustomBg(): void;
+    onBackgroundChanged(kind: string, enabled: boolean): void;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
