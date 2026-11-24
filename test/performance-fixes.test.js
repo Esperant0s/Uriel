@@ -31,7 +31,7 @@ test('a failed start stops the playing state: is-playing left on kept the animat
 
 test('the player keeps saying a song failed after the toast is gone, until another song loads', () => {
   assert.match(fnBody(app, 'showPlayFailure'), /classList\.add\('play-failed'\)/);
-  assert.match(fnBody(app, 'updateNowPlayingUI'), /classList\.remove\('play-failed'\)/);
+  assert.match(fnBody(app.slice(app.indexOf('window.UrielApp.nowPlaying = function')), 'updateNowPlayingUI'), /classList\.remove\('play-failed'\)/);
   assert.doesNotMatch(app, /!skipUnplayable\([^)]*\)\) showToast/);
 });
 

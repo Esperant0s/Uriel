@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      nowPlaying(deps: Record<string, unknown>, out: UrielNowPlayingPart): void;
       effectSettings(deps: Record<string, unknown>): void;
       interfaceSettings(deps: Record<string, unknown>): void;
       bannerSettings(deps: Record<string, unknown>): void;
@@ -643,6 +644,12 @@ declare global {
   interface UrielThemeCardsPart {
     setSiteTheme(id: string, apply?: boolean): void;
     applySystemColors(): Promise<void>;
+  }
+  interface UrielNowPlayingPart {
+    shownThumbs: Set<string | null>;
+    updateNowPlayingUI(track: UrielTrack): void;
+    updateRightPanelBanner(thumbUrl: string): void;
+    updatePlaylistDetailBanner(thumbUrl: string): void;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
