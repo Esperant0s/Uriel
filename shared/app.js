@@ -587,9 +587,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ---- the theme palette and the website themes (app/themePalette.js) ----
   const themePalettePart = /** @type {UrielThemePalettePart} */ ({});
-  function activeSiteTheme() { return themePalettePart.activeSiteTheme(); }
-  function generateM3Palette(/** @type {string} */ hexColor, /** @type {string} */ mode, /** @type {number} */ intensity, /** @type {number} */ brightness) { return themePalettePart.generateM3Palette(hexColor, mode, intensity, brightness); }
   window.UrielApp.themePalette({ getAdv, hexToRgb, hslToHex, mixHex, relLuminance, rgbToHsl, state }, themePalettePart);
+  const { activeSiteTheme, generateM3Palette } = themePalettePart;
   const PALETTE_STYLES = themePalettePart.PALETTE_STYLES;
   const SITE_THEMES = themePalettePart.SITE_THEMES;
 
@@ -956,49 +955,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- the system media controls, the server's play state and Discord (app/mediaSession.js) ----
   const mediaSessionPart = /** @type {UrielMediaSessionPart} */ ({});
   function sendStateToServer(currentWordText = '', wordIndex = -1, lineIndex = -1) { return mediaSessionPart.sendStateToServer(currentWordText, wordIndex, lineIndex); }
-  function getMediaArtwork(/** @type {string | undefined} */ thumb) { return mediaSessionPart.getMediaArtwork(thumb); }
-  function updateMediaPositionState() { return mediaSessionPart.updateMediaPositionState(); }
-  function updateDiscordPresence() { return mediaSessionPart.updateDiscordPresence(); }
-  function updateMediaSession() { return mediaSessionPart.updateMediaSession(); }
-  function handleMediaCommand(/** @type {string} */ cmd, /** @type {string} */ src) { return mediaSessionPart.handleMediaCommand(cmd, src); }
-  function registerMediaActions() { return mediaSessionPart.registerMediaActions(); }
-  function discordPresenceOn() { return mediaSessionPart.discordPresenceOn(); }
   window.UrielApp.mediaSession({ el, getTrackThumbUrl, pauseSmooth, playNext, playPrev, state, togglePlayPause, updateSyncedLyricsHighlight }, mediaSessionPart);
+  const { getMediaArtwork, updateMediaPositionState, updateDiscordPresence, updateMediaSession, handleMediaCommand, registerMediaActions, discordPresenceOn } = mediaSessionPart;
 
   // ---- "Available offline" marks (app/offline.js) ----
   const offlinePart = /** @type {UrielOfflinePart} */ ({});
-  const offlineKey = (/** @type {UrielTrack} */ t) => offlinePart.offlineKey(t);
-  const offlineState = (/** @type {UrielTrack} */ t) => offlinePart.offlineState(t);
-  function checkOffline(/** @type {UrielTrack[]} */ tracks) { return offlinePart.checkOffline(tracks); }
-  /** @param {UrielTrack} [track] @param {boolean} [on] */
-  function offlineChanged(track, on) { return offlinePart.offlineChanged(track, on); }
   window.UrielApp.offline({ capMap, el, getTrackCanonicalId, state }, offlinePart);
+  const { offlineKey, offlineState, checkOffline, offlineChanged } = offlinePart;
   const OFFLINE_ICON = offlinePart.OFFLINE_ICON;
 
   // ---- painting the theme: cover colours, the mesh, the cover background, light and dark (app/theme.js) ----
   const themePart = /** @type {UrielThemePart} */ ({});
-  function analyzeCover(/** @type {string} */ imgSrc) { return themePart.analyzeCover(imgSrc); }
-  function setCoverBg(/** @type {string} */ url) { return themePart.setCoverBg(url); }
-  function registerFx(/** @type {HTMLElement | null} */ el, /** @type {string} */ kind, /** @type {HTMLElement | null} */ viewEl) { return themePart.registerFx(el, kind, viewEl); }
-  function applyFxClip() { return themePart.applyFxClip(); }
-  function updateFxVisibility() { return themePart.updateFxVisibility(); }
-  function refreshMeshCover() { return themePart.refreshMeshCover(); }
-  function redrawMesh() { return themePart.redrawMesh(); }
-  function updateMeshGradient(/** @type {string} */ accentHex, /** @type {string} */ accent2Hex, /** @type {string} */ mode) { return themePart.updateMeshGradient(accentHex, accent2Hex, mode); }
   function smoothThemeSwap(/** @type {() => void} */ fn) { return themePart.smoothThemeSwap(fn); }
-  function updateThemeFromState() { return themePart.updateThemeFromState(); }
-  function effectiveMode() { return themePart.effectiveMode(); }
   window.UrielApp.theme({ activeSiteTheme, coverAnalysisCache, currentUiAlpha, DEFAULT_UI_ALPHA, el, generateM3Palette, getAdv, getCoverDominantColors, getTrackThumbUrl, hexToRgb, hslToHex, mixHex, refreshCachedThemeColors, relLuminance, rgbToHsl, setUiAlphaViaSlider, state, syncSiteThemeCards }, themePart);
+  const { analyzeCover, setCoverBg, registerFx, applyFxClip, updateFxVisibility, refreshMeshCover, redrawMesh, updateMeshGradient, updateThemeFromState, effectiveMode } = themePart;
 
 
   // ---- Download dialog → "Trim best part": keep only part of a song (app/trim.js) ----
   const trimPart = /** @type {UrielTrimPart} */ ({});
-  function getTrackTrim(/** @type {UrielTrack} */ track) { return trimPart.getTrackTrim(track); }
-  function enforceTrackTrim() { return trimPart.enforceTrackTrim(); }
-  function showDownloadPane(/** @type {string} */ which) { return trimPart.showDownloadPane(which); }
-  function prepareTrimPane(/** @type {UrielTrack} */ track) { return trimPart.prepareTrimPane(track); }
-  function forgetTrackTrims() { return trimPart.forgetTrackTrims(); }
   window.UrielApp.trim({ T, el, getTrackCanonicalId, getTrackToDownload, isSameTrack, playNext, playSmooth, playTrack, playback, primaryColor, queueFinished, safeJson, showToast, state }, trimPart);
+  const { getTrackTrim, enforceTrackTrim, showDownloadPane, prepareTrimPane, forgetTrackTrims } = trimPart;
 
   /** @type {const} */ (['Vocal', 'Air', 'Bass']).forEach(type => {
     const slider = el[/** @type {const} */ (`sliderHq${type}`)];
@@ -1098,8 +1074,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- yt-dlp and ffmpeg: checking for them and installing them (app/tools.js) ----
   const toolsPart = /** @type {UrielToolsPart} */ ({});
   function checkToolsStatus(promptUser = false) { return toolsPart.checkToolsStatus(promptUser); }
-  function toolsReady(/** @type {string[]} */ need) { return toolsPart.toolsReady(need); }
   window.UrielApp.tools({ I18N, closeModal, createWavyProgress, isPhoneApp, openModal, state }, toolsPart);
+  const { toolsReady } = toolsPart;
   checkToolsStatus(true);
   // when to look up the next song: phones download it whole, so halfway through; the computer only needs
   // a stream URL (a few seconds of yt-dlp), so in the last 45 seconds (#16)
@@ -1146,19 +1122,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- sound presets (app/presets.js) ----
   const presetsPart = /** @type {UrielPresetsPart} */ ({});
   function renderPresets() { return presetsPart.renderPresets(); }
-  function updateFade(/** @type {Element | null} */ el) { return presetsPart.updateFade(el); }
   function updatePresetsFade() { return presetsPart.updatePresetsFade(); }
-  function saveCustomPreset(/** @type {string} */ name) { return presetsPart.saveCustomPreset(name); }
-  function renameCustomPreset(/** @type {string} */ id, /** @type {string} */ newName) { return presetsPart.renameCustomPreset(id, newName); }
-  function deleteCustomPreset(/** @type {string} */ id) { return presetsPart.deleteCustomPreset(id); }
   window.UrielApp.presets({ applyAudioSettings, closeModal, defaultPresets, el, escapeHtml, I18N, initAudioContext, normalizePreset, openModal, persistSoundSettings, state, syncSettingsSlidersToState }, presetsPart);
+  const { updateFade, saveCustomPreset, renameCustomPreset, deleteCustomPreset } = presetsPart;
 
   // ---- per-song speed, pitch and volume (issue #11) (app/trackAudio.js) ----
   const trackAudioPart = /** @type {UrielTrackAudioPart} */ ({});
-  function effectiveAudioSettings() { return trackAudioPart.effectiveAudioSettings(); }
-  function setTempoValues(/** @type {Record<string, number>} */ values) { return trackAudioPart.setTempoValues(values); }
-  function onTrackAudioTrackChange() { return trackAudioPart.onTrackAudioTrackChange(); }
   window.UrielApp.trackAudio({ applyAudioSettings, getTrackCanonicalId, initAudioContext, renderPresets, safeJson, showToast, state, syncSettingsSlidersToState, T, Tm }, trackAudioPart);
+  const { effectiveAudioSettings, setTempoValues, onTrackAudioTrackChange } = trackAudioPart;
 
   syncSettingsSlidersToState();
   updateHqRouting();
@@ -1230,8 +1201,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- the visualizers and the render loop (app/visualizer.js) ----
   const visualizerPart = /** @type {UrielVisualizerPart} */ ({});
   function startVisualizers() { return visualizerPart.startVisualizers(); }
-  function resizeCanvases() { return visualizerPart.resizeCanvases(); }
   window.UrielApp.visualizer({ audioEngine, cancelVizFrame, dimColor, el, formatDuration, isPhoneApp, miniLyricsShown, nextPrefetchDue, playback, prefetchNextQueueTrack, primaryColor, scheduleVizFrame, state, updateMiniLyricsHighlight, updateSyncedLyricsHighlight, viz }, visualizerPart);
+  const { resizeCanvases } = visualizerPart;
 
   let trimTimer = 0;
   function handleVisibilityChange(/** @type {boolean} */ visible) {
@@ -1390,9 +1361,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const nowPlayingPart = /** @type {UrielNowPlayingPart} */ ({});
   /** @param {UrielTrack} track */
   function updateNowPlayingUI(track) { return nowPlayingPart.updateNowPlayingUI(track); }
-  function updateRightPanelBanner(/** @type {string} */ thumbUrl) { return nowPlayingPart.updateRightPanelBanner(thumbUrl); }
-  function updatePlaylistDetailBanner(/** @type {string} */ thumbUrl) { return nowPlayingPart.updatePlaylistDetailBanner(thumbUrl); }
   window.UrielApp.nowPlaying({ analyzeCover, applyVisualEffects, el, formatDuration, getAdv, getMediaArtwork, getTrackArt, getTrackCanonicalId, getTrackThumbUrl, highlightPlayingRow, m3cSetImage, nextPlayerArt, refreshMeshCover, rememberTrackArt, setCoverBg, setTrackArt, state, syncTvBanner, updateFavoriteIcon, updateMediaSession, updateThemeFromState, updateTvKaraokeMeta }, nowPlayingPart);
+  const { updateRightPanelBanner, updatePlaylistDetailBanner } = nowPlayingPart;
   const shownThumbs = nowPlayingPart.shownThumbs;
 
   function getTrackCanonicalId(/** @type {UrielTrack} */ track) {
@@ -1451,17 +1421,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ---- Crossfade: the old song plays out on a second player while the next one starts (app/crossfade.js) ----
   const crossfadePart = /** @type {UrielCrossfadePart} */ ({});
-  function crossfadeSeconds() { return crossfadePart.crossfadeSeconds(); }
-  function canOverlap(/** @type {HTMLAudioElement | null} */ a) { return crossfadePart.canOverlap(a); }
-  function prepareCrossfade(/** @type {number} */ point, /** @type {number} */ end) { return crossfadePart.prepareCrossfade(point, end); }
-  function crossfadePrepared() { return crossfadePart.crossfadePrepared(); }
-  function crossfadeFadeIn() { return crossfadePart.crossfadeFadeIn(); }
-  function crossfadeOnTrackChange() { return crossfadePart.crossfadeOnTrackChange(); }
-  function cancelEndFade() { return crossfadePart.cancelEndFade(); }
-  function dropCrossfadePrep() { return crossfadePart.dropCrossfadePrep(); }
-  function pauseCrossfadeTail() { return crossfadePart.pauseCrossfadeTail(); }
-  function resumeCrossfadeTail() { return crossfadePart.resumeCrossfadeTail(); }
   window.UrielApp.crossfade({ audioEngine, el, isPhoneApp, playNext, playback, queueFinished, state, usingHls: () => !!playback.hls }, crossfadePart);
+  const { crossfadeSeconds, canOverlap, prepareCrossfade, crossfadePrepared, crossfadeFadeIn, crossfadeOnTrackChange, cancelEndFade, dropCrossfadePrep, pauseCrossfadeTail, resumeCrossfadeTail } = crossfadePart;
 
   function flipAnimate(/** @type {(HTMLElement | null)[] | null} */ elements, /** @type {() => void} */ mutateFn, duration = 380) {
     const validElements = /** @type {HTMLElement[]} */ ((elements || []).filter((item) => item && item.getBoundingClientRect));
@@ -1528,95 +1489,59 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ---- the synced lyrics view and translating lyrics (app/lyricsView.js) ----
   const lyricsViewPart = /** @type {UrielLyricsViewPart} */ ({});
-  function setLyricsEmpty(/** @type {boolean} */ isEmpty) { return lyricsViewPart.setLyricsEmpty(isEmpty); }
-  function loadSyncedLyrics(/** @type {string} */ title, /** @type {string} */ artist, /** @type {number} */ token) { return lyricsViewPart.loadSyncedLyrics(title, artist, token); }
-  function getLyricsWordStyle() { return lyricsViewPart.getLyricsWordStyle(); }
-  function renderLyricsView() { return lyricsViewPart.renderLyricsView(); }
   function updateLyricsPadding() { return lyricsViewPart.updateLyricsPadding(); }
-  function fetchAndApplyTranslation() { return lyricsViewPart.fetchAndApplyTranslation(); }
-  function updateLyricsTranslationUI() { return lyricsViewPart.updateLyricsTranslationUI(); }
-  function getLineStartTime(/** @type {number} */ idx) { return lyricsViewPart.getLineStartTime(idx); }
-  function getLineEndTime(/** @type {number} */ idx) { return lyricsViewPart.getLineEndTime(idx); }
-  function getLyricsEase() { return lyricsViewPart.getLyricsEase(); }
-  function getLyricsSpeed() { return lyricsViewPart.getLyricsSpeed(); }
-  function applyLyricsEase() { return lyricsViewPart.applyLyricsEase(); }
-  function getLyricsGradientTightness() { return lyricsViewPart.getLyricsGradientTightness(); }
-  function applyLyricsGradientTightness() { return lyricsViewPart.applyLyricsGradientTightness(); }
   function stopLyricsScroll() { return lyricsViewPart.stopLyricsScroll(); }
-  function animateLyricsScroll(/** @type {HTMLElement} */ container, /** @type {number} */ target) { return lyricsViewPart.animateLyricsScroll(container, target); }
-  function updateActiveGradient() { return lyricsViewPart.updateActiveGradient(); }
   function stopGradientLoop() { return lyricsViewPart.stopGradientLoop(); }
   function updateSyncedLyricsHighlight(/** @type {number} */ currentTime) { return lyricsViewPart.updateSyncedLyricsHighlight(currentTime); }
   window.UrielApp.lyricsView({ capMap, lyricsSourcePref, el, fetchAndUpgradeWords, flipAnimate, getAdv, I18N, isPhoneApp, lineTimedWords, lyricWordSpans, miniLyricsShown, renderMiniLyrics, sendStateToServer, state, syncTvLayout, timedWordIndex, updateMiniLyricsHighlight, viz }, lyricsViewPart);
+  const { setLyricsEmpty, loadSyncedLyrics, getLyricsWordStyle, renderLyricsView, fetchAndApplyTranslation, updateLyricsTranslationUI, getLineStartTime, getLineEndTime, getLyricsEase, getLyricsSpeed, applyLyricsEase, getLyricsGradientTightness, applyLyricsGradientTightness, animateLyricsScroll, updateActiveGradient } = lyricsViewPart;
   const TRANSLATION_LANGUAGES = lyricsViewPart.TRANSLATION_LANGUAGES;
 
   // ---- the TV karaoke and its settings (app/tvKaraoke.js) ----
   const tvKaraokePart = /** @type {UrielTvKaraokePart} */ ({});
-  function openTvKaraoke() { return tvKaraokePart.openTvKaraoke(); }
-  function closeTvKaraoke() { return tvKaraokePart.closeTvKaraoke(); }
-  function initTvk() { return tvKaraokePart.initTvk(); }
-  function resetTvIdleTimer() { return tvKaraokePart.resetTvIdleTimer(); }
   function syncTvBanner() { return tvKaraokePart.syncTvBanner(); }
   /** @param {boolean} [forcedNoLyrics] */
   function syncTvLayout(forcedNoLyrics) { return tvKaraokePart.syncTvLayout(forcedNoLyrics); }
   function updateTvKaraokeMeta() { return tvKaraokePart.updateTvKaraokeMeta(); }
-  function updateTvkOutput() { return tvKaraokePart.updateTvkOutput(); }
-  function updateTvkVisualizerSetting(/** @type {boolean | string} */ enabled) { return tvKaraokePart.updateTvkVisualizerSetting(enabled); }
-  function updateTvkVisualizerLyricsSetting(/** @type {boolean | string} */ enabled) { return tvKaraokePart.updateTvkVisualizerLyricsSetting(enabled); }
-  function updateTvkVisualizerOpacity(/** @type {string | number} */ opacityVal) { return tvKaraokePart.updateTvkVisualizerOpacity(opacityVal); }
   window.UrielApp.tvKaraoke({ applyTrackBannerFx, audioEngine, el, ensureSfFontLoaded, fontVal, getTrackArt, getTrackThumbUrl, isPhoneApp, playNext, playPrev, renderLyricsView, resizeCanvases, setPlayPauseState, setTvkAmbient, SF_FONT_STACK, showToast, startVisualizers, state, stopLyricsScroll, syncTvkAmbientPlayback, syncTvkProgress, T, Tf, Tm, toggleFavoriteTrack, togglePlayPause, updateLyricsPadding, updatePlayPauseButton, updateSyncedLyricsHighlight, viz }, tvKaraokePart);
+  const { openTvKaraoke, closeTvKaraoke, initTvk, resetTvIdleTimer, updateTvkOutput, updateTvkVisualizerSetting, updateTvkVisualizerLyricsSetting, updateTvkVisualizerOpacity } = tvKaraokePart;
 
   // ---- Settings > Tracks > Output device (app/outputDevice.js) ----
   window.UrielApp.outputDevice({ audioEngine, el, isPhoneApp, showToast, state, T, Tf, Tm, updateTvkOutput });
 
   // ---- your own lyrics and timing them (app/lyricsEditor.js) ----
   const lyricsEditorPart = /** @type {UrielLyricsEditorPart} */ ({});
-  function handleSyncLineClick(/** @type {number} */ idx) { return lyricsEditorPart.handleSyncLineClick(idx); }
   window.UrielApp.lyricsEditor({ animateLyricsScroll, closeModal, el, loadSyncedLyrics, openModal, playSmooth, showToast, state, Tm }, lyricsEditorPart);
+  const { handleSyncLineClick } = lyricsEditorPart;
   const syncState = lyricsEditorPart.syncState;
 
   // ---- playing songs: streams, recovery, play and pause, the queue and the progress bar (app/playback.js) ----
   const playbackPart = /** @type {UrielPlaybackPart} */ ({});
   function playTrack(/** @type {UrielTrack} */ track, /** @type {UrielTrack[] | null} */ queueList = null, startIndex = -1, /** @type {string | null} */ context = null) { return playbackPart.playTrack(track, queueList, startIndex, context); }
-  function shuffleQueue() { return playbackPart.shuffleQueue(); }
-  function unshuffleQueue() { return playbackPart.unshuffleQueue(); }
   function pauseSmooth() { return playbackPart.pauseSmooth(); }
   function playSmooth() { return playbackPart.playSmooth(); }
   function togglePlayPause() { return playbackPart.togglePlayPause(); }
-  function restoreQueueAt(/** @type {number} */ index, /** @type {number} */ position, /** @type {boolean} */ play) { return playbackPart.restoreQueueAt(index, position, play); }
-  function adoptQueueAt(/** @type {number} */ index) { return playbackPart.adoptQueueAt(index); }
   function queueFinished() { return playbackPart.queueFinished(); }
   function playNext() { return playbackPart.playNext(); }
   function playPrev() { return playbackPart.playPrev(); }
   function prefetchNextQueueTrack() { return playbackPart.prefetchNextQueueTrack(); }
-  function skipUnplayable(/** @type {number} */ token, /** @type {UrielTrack | null} */ track) { return playbackPart.skipUnplayable(token, track); }
-  /** @param {number} token @param {UrielTrack | null} track */
-  function retryFresh(token, track) { return playbackPart.retryFresh(token, track); }
   /** @param {UrielText} message */
   function showPlayFailure(message, type = 'error') { return playbackPart.showPlayFailure(message, type); }
   window.UrielApp.playback({ applyAudioSettings, applyM3Cover, audioEngine, cancelEndFade, canOverlap, crossfadeFadeIn, crossfadeOnTrackChange, crossfadePrepared, crossfadeSeconds, dropCrossfadePrep, el, emitPluginEvent, enforceTrackTrim, extendMyWaveQueue, formatDuration, getTrackCanonicalId, getTrackNormalizedKey, getTrackTrim, initAudioContext, isBlocked, isPhoneApp, isSameTrack, loadScriptOnce, loadSyncedLyrics, m3cDraw, m3cEnabled, m3cStart, miniLyricsShown, nextPrefetchDue, offlineChanged, onTrackAudioTrackChange, pauseCrossfadeTail, playback, prepareCrossfade, recordWaveSkip, registerMediaActions, renderHistoryView, renderQueueView, resetLevelWatcher, resumeCrossfadeTail, saveQueueState, sendStateToServer, showToast, startVisualizers, state, stopLyricsScroll, syncTvkProgress, Tm, tokenUrl, toolsReady, updateDiscordPresence, updateMediaPositionState, updateMediaSession, updateMiniLyricsHighlight, updateNowPlayingUI, updatePlayPauseButton, updateQueueBadge, updateSleepTimerUI, updateSyncedLyricsHighlight, visualizerPart, viz }, playbackPart);
+  const { shuffleQueue, unshuffleQueue, restoreQueueAt, adoptQueueAt, skipUnplayable, retryFresh } = playbackPart;
 
   const Lib = window.UrielLibrary;
 
   // ---- playing albums, saved albums and rating Daily Mixes (app/albums.js) ----
   const albumsPart = /** @type {UrielAlbumsPart} */ ({});
-  function fetchArtistCardForSearch(/** @type {string} */ query, /** @type {number} */ token, /** @type {UrielTrack[]} */ searchTracks) { return albumsPart.fetchArtistCardForSearch(query, token, searchTracks); }
-  function resolveAlbumTrack(/** @type {UrielAlbum} */ album, /** @type {UrielTrack} */ t) { return albumsPart.resolveAlbumTrack(album, t); }
   function playAlbumFrom(/** @type {UrielAlbum} */ album, /** @type {UrielTrack[]} */ tracks, startIndex = 0) { return albumsPart.playAlbumFrom(album, tracks, startIndex); }
-  function getSavedAlbums() { return albumsPart.getSavedAlbums(); }
-  function setSavedAlbums(/** @type {UrielAlbum[]} */ list) { return albumsPart.setSavedAlbums(list); }
-  function updateAlbumsCount() { return albumsPart.updateAlbumsCount(); }
-  function renderSavedAlbums() { return albumsPart.renderSavedAlbums(); }
-  function applyShowAlbums() { return albumsPart.applyShowAlbums(); }
-  function updateSaveAlbumButton() { return albumsPart.updateSaveAlbumButton(); }
-  function getMixFeedback() { return albumsPart.getMixFeedback(); }
-  function showAlbumExtras(/** @type {UrielAlbum} */ album) { return albumsPart.showAlbumExtras(album); }
   window.UrielApp.albums({ el, escapeHtml, getTrackNormalizedKey, isSameTrack, Lib, normalizeImportText, openArtistProfile, playback, playTrack, pool, refreshStacks, renderAlbumCards, renderQueueView, safeArray, safeJson, showToast, shuffleQueue, sortedLibrary, state, switchView, Tm, toSeconds, updateNavIndicator, updateQueueBadge }, albumsPart);
+  const { fetchArtistCardForSearch, resolveAlbumTrack, getSavedAlbums, setSavedAlbums, updateAlbumsCount, renderSavedAlbums, applyShowAlbums, updateSaveAlbumButton, getMixFeedback, showAlbumExtras } = albumsPart;
 
   // ---- the album page and downloading a whole album (app/album.js) ----
   const albumPart = /** @type {UrielAlbumPart} */ ({});
-  function openAlbum(/** @type {UrielAlbum} */ album) { return albumPart.openAlbum(album); }
   window.UrielApp.album({ Lib, T, Tf, Tm, createTrackRow, escapeHtml, getCoverDominantColors, getSavedAlbums, getTrackCanonicalId, highlightPlayingRow, openArtistProfile, openDownloadAllModal, openTrackArtist, playAlbumFrom, playTrack, resolveAlbumTrack, setSavedAlbums, showAlbumExtras, showToast, state, switchView, updateFade }, albumPart);
+  const { openAlbum } = albumPart;
 
   function updateRowFade(/** @type {HTMLElement | null} */ row) {
     if (!row) return;
@@ -1690,63 +1615,46 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ---- the search results page (app/search.js) ----
   const searchPart = /** @type {UrielSearchPart} */ ({});
-  function performSearch(/** @type {string} */ query) { return searchPart.performSearch(query); }
   window.UrielApp.search({ Tm, bindHorizontalWheel, el, escapeHtml, fetchArtistCardForSearch, getAdv, importSharedPlaylist, openAlbum, renderTracks, showToast, state, switchView, syncHomeAmbientVisibility, updateRowFade }, searchPart);
+  const { performSearch } = searchPart;
 
   // ---- selecting several songs (app/multiSelect.js) ----
   const multiSelectPart = /** @type {UrielMultiSelectPart} */ ({});
-  function updateMultiSelectBar() { return multiSelectPart.updateMultiSelectBar(); }
-  function rerenderMultiSelectView() { return multiSelectPart.rerenderMultiSelectView(); }
   function exitMultiSelect(rerender = true) { return multiSelectPart.exitMultiSelect(rerender); }
-  function startMultiSelect(/** @type {string} */ context) { return multiSelectPart.startMultiSelect(context); }
-  function toggleTrackSelection(/** @type {UrielTrack} */ track, /** @type {HTMLElement} */ row) { return multiSelectPart.toggleTrackSelection(track, row); }
-  function multiSelectSourceTracks() { return multiSelectPart.multiSelectSourceTracks(); }
   window.UrielApp.multiSelect({ el, getTrackCanonicalId, matchesTrackQuery, openPlaylistDetail, renderFavoritesView, state }, multiSelectPart);
+  const { updateMultiSelectBar, rerenderMultiSelectView, startMultiSelect, toggleTrackSelection, multiSelectSourceTracks } = multiSelectPart;
   const multiSel = multiSelectPart.multiSel;
 
   // ---- blocked artists and songs (from Riff 43.1) (app/blocks.js) ----
   const blocksPart = /** @type {UrielBlocksPart} */ ({});
-  function getBlocks() { return blocksPart.getBlocks(); }
   function isBlocked(/** @type {UrielTrack} */ track) { return blocksPart.isBlocked(track); }
-  function toggleBlockArtist(/** @type {string} */ name) { return blocksPart.toggleBlockArtist(name); }
-  function toggleBlockSong(/** @type {UrielTrack} */ track) { return blocksPart.toggleBlockSong(track); }
-  function renderBlockedSettings() { return blocksPart.renderBlockedSettings(); }
   window.UrielApp.blocks({ I18N, Lib, showToast, T, Tm, updateArtistBlockButton }, blocksPart);
+  const { getBlocks, toggleBlockArtist, toggleBlockSong, renderBlockedSettings } = blocksPart;
 
   // ---- song rows, the song menu and the action menus (app/trackRows.js) ----
   const trackRowsPart = /** @type {UrielTrackRowsPart} */ ({});
   function createTrackRow(/** @type {UrielTrack} */ track, /** @type {number} */ idx, /** @type {string} */ currentCanonicalId, /** @type {string} */ context, /** @type {UrielTrack[]} */ tracks, /** @type {HTMLElement} */ container) { return trackRowsPart.createTrackRow(track, idx, currentCanonicalId, context, tracks, container); }
   function renderTracks(/** @type {HTMLElement} */ container, /** @type {UrielTrack[]} */ tracks, context = 'search') { return trackRowsPart.renderTracks(container, tracks, context); }
   function highlightPlayingRow() { return trackRowsPart.highlightPlayingRow(); }
-  function isFavoriteSong(/** @type {UrielTrack} */ track) { return trackRowsPart.isFavoriteSong(track); }
   function showActionMenu(/** @type {number} */ x, /** @type {number} */ y, /** @type {UrielMenuItem[]} */ items, aboveY = y) { return trackRowsPart.showActionMenu(x, y, items, aboveY); }
   window.UrielApp.trackRows({ canReorder, checkOffline, copyText, dragGrip, el, escapeHtml, formatDuration, getBlocks, getTrackCanonicalId, getTrackThumbUrl, I18N, isBlocked, isPhoneApp, isSameTrack, Lib, listThumb, multiSel, OFFLINE_ICON, offlineKey, offlineState, openAddToPlaylistModal, openDownloadModal, openTrackArtist, openTrackArtModal, playTrack, removeTrackFromCurrentPlaylist, renderBlockedSettings, renderLocalView, rowTitle, sharePlaylist, shownThumbs, showToast, songRadioEnabled, sortTracksFor, startSongRadio, state, T, Tf, THUMB_FALLBACK, Tm, toggleBlockArtist, toggleBlockSong, toggleFavoriteTrack, toggleTrackSelection, trackArtCandidates, updateArtistBlockButton, updateLocalBadge, updateQueueBadge }, trackRowsPart);
+  const { isFavoriteSong } = trackRowsPart;
 
   // ---- the artist page and following artists (app/artist.js) ----
   const artistPart = /** @type {UrielArtistPart} */ ({});
-  function compactCount(/** @type {number} */ n) { return artistPart.compactCount(n); }
-  function getFollowedArtists() { return artistPart.getFollowedArtists(); }
-  function setFollowedArtists(/** @type {{ name: string, [field: string]: unknown }[]} */ list) { return artistPart.setFollowedArtists(list); }
   function openArtistProfile(/** @type {string} */ name, /** @type {{ id?: string, video?: string }} */ o = {}) { return artistPart.openArtistProfile(name, o); }
   function openTrackArtist(/** @type {UrielTrack} */ track) { return artistPart.openTrackArtist(track); }
   function renderAlbumCards(/** @type {HTMLElement} */ container, /** @type {UrielAlbum[]} */ albums, /** @type {(album: UrielAlbum) => string} */ subOf) { return artistPart.renderAlbumCards(container, albums, subOf); }
-  function updateFollowButton() { return artistPart.updateFollowButton(); }
   function updateArtistBlockButton() { return artistPart.updateArtistBlockButton(); }
   window.UrielApp.artist({ I18N, Lib, capMap, closeModal, el, escapeHtml, getBlocks, getCoverDominantColors, isPhoneApp, openAlbum, openModal, playTrack, renderFollowedArtists, renderTracks, safeArray, showToast, state, switchView, toggleBlockArtist }, artistPart);
+  const { compactCount, getFollowedArtists, setFollowedArtists, updateFollowButton } = artistPart;
 
   // ---- the library lists: favourites, history, the queue and your own files (app/library.js) ----
   const libraryPart = /** @type {UrielLibraryPart} */ ({});
   function toggleFavoriteTrack(/** @type {UrielTrack} */ track) { return libraryPart.toggleFavoriteTrack(track); }
   function updateFavoriteIcon() { return libraryPart.updateFavoriteIcon(); }
-  function updateFavoritesBadge() { return libraryPart.updateFavoritesBadge(); }
-  function getTrackSortMode(/** @type {string} */ kind) { return libraryPart.getTrackSortMode(kind); }
-  function setTrackSortMode(/** @type {string} */ kind, /** @type {string} */ mode) { return libraryPart.setTrackSortMode(kind, mode); }
   function sortTracksFor(/** @type {string} */ kind, /** @type {UrielTrack[]} */ tracks) { return libraryPart.sortTracksFor(kind, tracks); }
-  function stampAddedAt(/** @type {UrielTrack} */ track) { return libraryPart.stampAddedAt(track); }
   function renderFavoritesView() { return libraryPart.renderFavoritesView(); }
-  function syncSortDropdown(/** @type {string} */ kind) { return libraryPart.syncSortDropdown(kind); }
-  function setupSortDropdown(/** @type {string} */ kind, /** @type {HTMLSelectElement} */ selectEl) { return libraryPart.setupSortDropdown(kind, selectEl); }
-  function getLibrarySort(/** @type {string} */ kind) { return libraryPart.getLibrarySort(kind); }
   function renderHistoryView() { return libraryPart.renderHistoryView(); }
   function updateQueueBadge() { return libraryPart.updateQueueBadge(); }
   function renderQueueView() { return libraryPart.renderQueueView(); }
@@ -1754,22 +1662,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderLocalView(forceFetch = true) { return libraryPart.renderLocalView(forceFetch); }
   /** @template {{ name: string }} I @param {string} kind @param {I[]} items @returns {I[]} */
   function sortedLibrary(kind, items) { return libraryPart.sortedLibrary(kind, items); }
-  /** @param {{ folder?: boolean }} [opts] */
-  function importLocalFiles(opts) { return libraryPart.importLocalFiles(opts); }
   window.UrielApp.library({ artistPlays, el, isFavoriteSong, isPhoneApp, matchesTrackQuery, renderArtistsTab, renderPlaylistsList, renderSavedAlbums, renderTracks, scheduleQueueSave, showToast, state, Tm, tokenUrl }, libraryPart);
+  const { updateFavoritesBadge, getTrackSortMode, setTrackSortMode, stampAddedAt, syncSortDropdown, setupSortDropdown, getLibrarySort, importLocalFiles } = libraryPart;
 
   // ---- song covers: picking one, the fallbacks, and saving the ones that worked (app/covers.js) ----
   const coversPart = /** @type {UrielCoversPart} */ ({});
   function listThumb(/** @type {string} */ url) { return coversPart.listThumb(url); }
-  function trackYoutubeId(/** @type {UrielTrack} */ track) { return coversPart.trackYoutubeId(track); }
   function trackArtCandidates(/** @type {UrielTrack | null} */ track) { return coversPart.trackArtCandidates(track); }
   function nextPlayerArt(/** @type {UrielTrack} */ track, /** @type {HTMLImageElement} */ img) { return coversPart.nextPlayerArt(track, img); }
   function getTrackThumbUrl(/** @type {UrielTrack | null} */ track) { return coversPart.getTrackThumbUrl(track); }
   function rowTitle(/** @type {UrielTrack} */ track) { return coversPart.rowTitle(track); }
-  function nextTrackArt(/** @type {HTMLImageElement} */ img) { return coversPart.nextTrackArt(img); }
   /** @param {string | undefined} canonicalId @param {string} url */
   function rememberTrackArt(canonicalId, url) { return coversPart.rememberTrackArt(canonicalId, url); }
   window.UrielApp.covers({ getAdv, getTrackArt, getTrackCanonicalId, isPhoneApp, state, tokenUrl }, coversPart);
+  const { trackYoutubeId, nextTrackArt } = coversPart;
   const YT_THUMB = coversPart.YT_THUMB;
 
   // Phones move rows by a grip at their end. A held row worked only upwards: moving down, Android took the
@@ -1798,12 +1704,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   function createPlaylist(/** @type {string} */ name, /** @type {UrielTrack[]} */ initialTracks = [], cover = '', { open = true } = {}) { return playlistsPart.createPlaylist(name, initialTracks, cover, { open }); }
   function openPlaylistDetail(/** @type {string} */ playlistId) { return playlistsPart.openPlaylistDetail(playlistId); }
   function sharePlaylist(/** @type {{ name: string, tracks: UrielTrack[] } | undefined} */ pl) { return playlistsPart.sharePlaylist(pl); }
-  function refreshPlaylistDownloads(/** @type {UrielPlaylist | undefined} */ pl) { return playlistsPart.refreshPlaylistDownloads(pl); }
   function importSharedPlaylist(/** @type {string} */ text) { return playlistsPart.importSharedPlaylist(text); }
   function removeTrackFromCurrentPlaylist(/** @type {UrielTrack} */ track) { return playlistsPart.removeTrackFromCurrentPlaylist(track); }
-  function deleteCurrentPlaylist() { return playlistsPart.deleteCurrentPlaylist(); }
   function openAddToPlaylistModal(/** @type {UrielTrack | null} */ track, /** @type {UrielTrack[] | null} */ many = null) { return playlistsPart.openAddToPlaylistModal(track, many); }
   window.UrielApp.playlists({ canReorder, closeModal, downloadedInFolder, dragGrip, el, escapeHtml, exitMultiSelect, formatDuration, getCoverDominantColors, getLibrarySort, getTrackCanonicalId, getTrackSortMode, getTrackThumbUrl, I18N, isBlocked, isFavoriteSong, isPhoneApp, isSameTrack, matchesTrackQuery, multiSel, multiSelectSourceTracks, nextTrackArt, offlineChanged, openModal, playTrack, renderPlaylistDuplicateButton, renderTracks, rerenderMultiSelectView, setShuffle, setTrackSortMode, setupSortDropdown, showActionMenu, showToast, songRadioEnabled, sortedLibrary, sortTracksFor, stampAddedAt, startMultiSelect, startSongRadio, state, switchView, syncSortDropdown, T, Tf, Tm, trackArtCandidates, updateFavoriteIcon, updateFavoritesBadge, updateMultiSelectBar, updateQueueBadge }, playlistsPart);
+  const { refreshPlaylistDownloads, deleteCurrentPlaylist } = playlistsPart;
 
   // ---- dragging rows to reorder lists (app/reorder.js) ----
   window.UrielApp.reorder({ el, getLibrarySort, getTrackSortMode, isPhoneApp, state, updateQueueBadge });
@@ -1866,8 +1771,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- the slide-over drawer: Now playing and Queue (app/panelDrawer.js) ----
   const panelDrawerPart = /** @type {UrielPanelDrawerPart} */ ({});
   function openPanelDrawer(/** @type {string} */ tab) { return panelDrawerPart.openPanelDrawer(tab); }
-  function showPlayingInQueue() { return panelDrawerPart.showPlayingInQueue(); }
   window.UrielApp.panelDrawer({ el, renderQueueView, resizeCanvases, startVisualizers, state, viz }, panelDrawerPart);
+  const { showPlayingInQueue } = panelDrawerPart;
 
   if (el.searchInput) {
     el.searchInput.addEventListener('input', (/** @type {Event} */ e) => {
@@ -1939,11 +1844,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- the search engine buttons and the player bar's buttons and volume (app/playerBar.js) ----
   const playerBarPart = /** @type {UrielPlayerBarPart} */ ({});
   function setPlatform(/** @type {string} */ platform, triggerSearch = true) { return playerBarPart.setPlatform(platform, triggerSearch); }
-  function updateEngineWidthVar() { return playerBarPart.updateEngineWidthVar(); }
   function setShuffle(/** @type {boolean} */ on) { return playerBarPart.setShuffle(on); }
-  function persistVolumeState() { return playerBarPart.persistVolumeState(); }
-  function syncVolumeControls() { return playerBarPart.syncVolumeControls(); }
   window.UrielApp.playerBar({ applyAudioSettings, el, performSearch, persistSoundSettings, playNext, playPrev, renderHistoryView, renderQueueView, showPlayingInQueue, shuffleQueue, state, T, toggleFavoriteTrack, togglePlayPause, unshuffleQueue, updateQueueBadge }, playerBarPart);
+  const { updateEngineWidthVar, persistVolumeState, syncVolumeControls } = playerBarPart;
 
   // ---- the sound settings: HQ audio, the effect sliders and the EQ (app/soundSettings.js) ----
   window.UrielApp.soundSettings({ applyAudioSettings, applyHqSettings, closeModal, el, EQ_BAND_LABELS, initAudioContext, openModal, persistSoundSettings, refreshStacks, renderPresets, setTempoValues, state, updateHqRouting });
@@ -1961,8 +1864,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- the app theme cards and the System theme (app/themeCards.js) ----
   const themeCardsPart = /** @type {UrielThemeCardsPart} */ ({});
   function setSiteTheme(/** @type {string} */ id, apply = true) { return themeCardsPart.setSiteTheme(id, apply); }
-  function applySystemColors() { return themeCardsPart.applySystemColors(); }
   window.UrielApp.themeCards({ activeSiteTheme, SITE_THEMES, smoothThemeSwap, state, syncSiteThemeCards, updateThemeFromState }, themeCardsPart);
+  const { applySystemColors } = themeCardsPart;
 
   // ---- Settings → Interface: switches, theme mode, font, search box and sliders (app/interfaceSettings.js) ----
   window.UrielApp.interfaceSettings({ applyFont, applyScale, applySystemColors, effectiveMode, el, hslToHex, isPhoneApp, refreshCachedThemeColors, resizeCanvases, setSiteTheme, state, updateEngineWidthVar, updateThemeFromState });
@@ -2000,9 +1903,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ---- Settings → Background: your own picture or video, the cover background and the mesh (app/background.js) ----
   const backgroundPart = /** @type {UrielBackgroundPart} */ ({});
-  function updateCustomBg() { return backgroundPart.updateCustomBg(); }
-  function onBackgroundChanged(/** @type {string} */ kind, /** @type {boolean} */ enabled) { return backgroundPart.onBackgroundChanged(kind, enabled); }
   window.UrielApp.background({ applyFxClip, currentUiAlpha, getAdv, getTrackThumbUrl, PALETTE_STYLES, registerFx, setCoverBg, setUiAlphaViaSlider, showToast, state, syncBgVideoPlayback, Tm, updateThemeFromState }, backgroundPart);
+  const { updateCustomBg, onBackgroundChanged } = backgroundPart;
 
   // text-only changes (the playbar clock, counters) can't add a slider or a switch: skip the document scan for them
   const addsElements = (/** @type {MutationRecord[]} */ muts) => muts.some((/** @type {MutationRecord} */ m) => Array.prototype.some.call(m.addedNodes, (n) => n.nodeType === 1));
@@ -2013,17 +1915,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- the animated cover beside the player bar (app/m3Cover.js) ----
   const m3CoverPart = /** @type {UrielM3CoverPart} */ ({});
   function m3cEnabled() { return m3CoverPart.m3cEnabled(); }
-  function m3cInit() { return m3CoverPart.m3cInit(); }
   function m3cSetImage(/** @type {string} */ url) { return m3CoverPart.m3cSetImage(url); }
   function m3cDraw(/** @type {number} */ now) { return m3CoverPart.m3cDraw(now); }
   function m3cStart() { return m3CoverPart.m3cStart(); }
   function applyM3Cover() { return m3CoverPart.applyM3Cover(); }
   window.UrielApp.m3Cover({ el, getTrackThumbUrl, isPhoneApp, primaryColor, state, viz }, m3CoverPart);
+  const { m3cInit } = m3CoverPart;
 
   // ---- performance mode, the battery saver, the visualizer and progress bar settings (app/performance.js) ----
   const performancePart = /** @type {UrielPerformancePart} */ ({});
-  function applyPerfMode(/** @type {boolean} */ on) { return performancePart.applyPerfMode(on); }
   window.UrielApp.performance({ applyM3Cover, audioEngine, isPhoneApp, showToast, startVisualizers, state, syncBgVideoPlayback, Tm, updateTvkVisualizerLyricsSetting, updateTvkVisualizerOpacity, updateTvkVisualizerSetting, viz }, performancePart);
+  const { applyPerfMode } = performancePart;
 
   // ---- Settings: the categories, back on phones, and search (app/settings.js) ----
   const settingsPart = /** @type {UrielSettingsPart} */ ({});
@@ -2032,8 +1934,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ---- custom themes and the custom CSS on the page (app/themes.js) ----
   const themesPart = /** @type {UrielThemesPart} */ ({});
-  function applyCustomStyles() { return themesPart.applyCustomStyles(); }
   window.UrielApp.themes({ Tm, showToast, refreshCachedThemeColors, clearCssEditor, stopAllPlugins, renderPluginCards }, themesPart);
+  const { applyCustomStyles } = themesPart;
 
   // ---- plugins and the custom CSS editor (app/plugins.js) ----
   const pluginsPart = /** @type {UrielPluginsPart} */ ({});
@@ -2042,16 +1944,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   function clearCssEditor() { return pluginsPart.clearCssEditor(); }
   function stopAllPlugins() { return pluginsPart.stopAllPlugins(); }
   function renderPluginCards() { return pluginsPart.renderPluginCards(); }
-  function loadPlugins() { return pluginsPart.loadPlugins(); }
   window.UrielApp.plugins({ showToast, Tm, state, el, T, applyCustomStyles }, pluginsPart);
+  const { loadPlugins } = pluginsPart;
 
   // ---- slider ticks and the look of the switches (app/controls.js) ----
   window.UrielApp.controls({ addsElements });
 
   // ---- the app window: media keys, the welcome's choices, compact layout, mini player (app/desktop.js) ----
   const desktopPart = /** @type {UrielDesktopPart} */ ({});
-  function toggleMiniWindow() { return desktopPart.toggleMiniWindow(); }
   window.UrielApp.desktop({ handleMediaCommand, onBackgroundChanged, setSiteTheme, showToast, SITE_THEMES, Tm, updateCustomBg }, desktopPart);
+  const { toggleMiniWindow } = desktopPart;
 
   // ---- Settings → Interface → Language, the picker (app/language.js) ----
   window.UrielApp.language({ I18N, TRANSLATION_LANGUAGES, Tm, showToast });
@@ -2157,9 +2059,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- My Wave, Jump back in and For you on Home (app/wave.js) ----
   const wavePart = /** @type {UrielWavePart} */ ({});
   function computeTasteProfile(maxSeeds = 8) { return wavePart.computeTasteProfile(maxSeeds); }
-  function normalizeArtistName(/** @type {string} */ name) { return wavePart.normalizeArtistName(name); }
   function getTrackNormalizedKey(/** @type {string | undefined} */ artist, /** @type {string | undefined} */ title) { return wavePart.getTrackNormalizedKey(artist, title); }
-  function getWaveAvoid() { return wavePart.getWaveAvoid(); }
   function recordWaveSkip(/** @type {UrielTrack} */ track) { return wavePart.recordWaveSkip(track); }
   function extendMyWaveQueue() { return wavePart.extendMyWaveQueue(); }
   function getCoverDominantColors(/** @type {string} */ url) { return wavePart.getCoverDominantColors(url); }
@@ -2167,9 +2067,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   function initHomeHero() { return wavePart.initHomeHero(); }
   /** @param {boolean} [force] */
   function loadForYou(force) { return wavePart.loadForYou(force); }
-  function warmHomeSongs(/** @type {UrielTrack[]} */ tracks, /** @type {number} */ n) { return wavePart.warmHomeSongs(tracks, n); }
   function loadHomePage(isRefresh = false) { return wavePart.loadHomePage(isRefresh); }
   window.UrielApp.wave({ capMap, el, escapeHtml, getAdv, getBlocks, getMixFeedback, getTrackCanonicalId, getTrackThumbUrl, homeReady: () => spHomeReady, I18N, isBlocked, isPhoneApp, isSpotifyHome, Lib, listThumb, offlineState, openArtistProfile, performSearch, playTrack, renderMadeForYou, renderQueueView, safeJson, showToast, state, T, THUMB_FALLBACK, Tm, trackArtCandidates, updateQueueBadge }, wavePart);
+  const { normalizeArtistName, getWaveAvoid, warmHomeSongs } = wavePart;
   const analysisCache = wavePart.analysisCache;
 
   // ---- the Artists tab (#10): the artists you follow, like the Albums tab; Settings > Tracks > Show Artists tab ----
