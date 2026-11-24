@@ -50,10 +50,12 @@ declare global {
       settings(deps: Record<string, unknown>, out: UrielSettingsPart): void;
       album(deps: Record<string, unknown>, out: UrielAlbumPart): void;
       search(deps: Record<string, unknown>, out: UrielSearchPart): void;
+      palette(deps: Record<string, unknown>): void;
       lyricsSettings(deps: Record<string, unknown>): void;
       downloads(deps: Record<string, unknown>, out: UrielDownloadsPart): void;
       storage(deps: Record<string, unknown>, out: UrielStoragePart): void;
       tools(deps: Record<string, unknown>, out: UrielToolsPart): void;
+      trackArt(deps: Record<string, unknown>, out: UrielTrackArtPart): void;
       language(deps: Record<string, unknown>): void;
       lyrics(deps: Record<string, unknown>, out: UrielLyricsPart): void;
       home(deps: Record<string, unknown>, out: UrielHomePart): void;
@@ -440,6 +442,9 @@ declare global {
     end: number;
   }
   // what each part of app.js (shared/app/) hands back to it
+  interface UrielTrackArtPart {
+    openTrackArtModal(track: UrielTrack, triggerEl?: HTMLElement | null): void;
+  }
   interface UrielToolsPart {
     checkToolsStatus(promptUser?: boolean): Promise<void>;
     toolsReady(need: string[]): Promise<boolean>;
