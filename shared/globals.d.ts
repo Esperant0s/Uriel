@@ -60,6 +60,8 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      trackRows(deps: Record<string, unknown>, out: UrielTrackRowsPart): void;
+      blocks(deps: Record<string, unknown>, out: UrielBlocksPart): void;
       themePalette(deps: Record<string, unknown>, out: UrielThemePalettePart): void;
       lyricsView(deps: Record<string, unknown>, out: UrielLyricsViewPart): void;
       playlists(deps: Record<string, unknown>, out: UrielPlaylistsPart): void;
@@ -555,6 +557,21 @@ declare global {
     SITE_THEMES: UrielSiteTheme[];
     activeSiteTheme(): UrielSiteTheme | null;
     generateM3Palette(hexColor: string, mode: string, intensity: number, brightness: number): void;
+  }
+  interface UrielBlocks { rawA: string | null; rawS: string | null; artists: string[]; songs: UrielTrack[] }
+  interface UrielBlocksPart {
+    getBlocks(): UrielBlocks;
+    isBlocked(track: UrielTrack): boolean;
+    toggleBlockArtist(name: string): void;
+    toggleBlockSong(track: UrielTrack): void;
+    renderBlockedSettings(): void;
+  }
+  interface UrielTrackRowsPart {
+    createTrackRow(track: UrielTrack, idx: number, currentCanonicalId: string, context: string, tracks: UrielTrack[], container: HTMLElement): HTMLElement;
+    renderTracks(container: HTMLElement, tracks: UrielTrack[], context?: string): void;
+    highlightPlayingRow(): void;
+    isFavoriteSong(track: UrielTrack): boolean;
+    showActionMenu(x: number, y: number, items: UrielMenuItem[], aboveY?: number): void;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
