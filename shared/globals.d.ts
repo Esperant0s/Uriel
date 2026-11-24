@@ -60,6 +60,8 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      tvKaraoke(deps: Record<string, unknown>, out: UrielTvKaraokePart): void;
+      outputDevice(deps: Record<string, unknown>): void;
       lyricsEditor(deps: Record<string, unknown>, out: UrielLyricsEditorPart): void;
       background(deps: Record<string, unknown>, out: UrielBackgroundPart): void;
       m3Cover(deps: Record<string, unknown>, out: UrielM3CoverPart): void;
@@ -468,6 +470,20 @@ declare global {
   interface UrielLyricsEditorPart {
     syncState: UrielSyncState;
     handleSyncLineClick(idx: number): void;
+  }
+  interface UrielTvKaraokePart {
+    openTvKaraoke(): void;
+    closeTvKaraoke(): void;
+    initTvk(): void;
+    resetTvIdleTimer(): void;
+    getTvIdleTimer(): ReturnType<typeof setTimeout> | null;
+    syncTvBanner(): void;
+    syncTvLayout(forcedNoLyrics?: boolean): void;
+    updateTvKaraokeMeta(): void;
+    updateTvkOutput(): Promise<void>;
+    updateTvkVisualizerSetting(enabled: boolean | string): void;
+    updateTvkVisualizerLyricsSetting(enabled: boolean | string): void;
+    updateTvkVisualizerOpacity(opacityVal: string | number): void;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
