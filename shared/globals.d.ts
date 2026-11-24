@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      wave(deps: Record<string, unknown>, out: UrielWavePart): void;
       tvKaraoke(deps: Record<string, unknown>, out: UrielTvKaraokePart): void;
       outputDevice(deps: Record<string, unknown>): void;
       lyricsEditor(deps: Record<string, unknown>, out: UrielLyricsEditorPart): void;
@@ -484,6 +485,31 @@ declare global {
     updateTvkVisualizerSetting(enabled: boolean | string): void;
     updateTvkVisualizerLyricsSetting(enabled: boolean | string): void;
     updateTvkVisualizerOpacity(opacityVal: string | number): void;
+  }
+  interface UrielTasteProfile {
+    trackCount: number;
+    topArtists: string[];
+    dominantScript: string;
+    avgDuration: number | null;
+    bpmLabel: null;
+    energyLabel: null;
+    seeds: { artist: string; title: string; id?: string; platform: string; weight: number }[];
+  }
+  interface UrielWavePart {
+    analysisCache: Map<string, Record<string, unknown>>;
+    getWaveTracks(): UrielTrack[];
+    computeTasteProfile(maxSeeds?: number): Promise<UrielTasteProfile>;
+    normalizeArtistName(name: string): string;
+    getTrackNormalizedKey(artist: string | undefined, title: string | undefined): string;
+    getWaveAvoid(): { keys: string[]; artists: string[] };
+    recordWaveSkip(track: UrielTrack): void;
+    extendMyWaveQueue(): Promise<boolean>;
+    getCoverDominantColors(url: string): Promise<string[]>;
+    syncHomeAmbientVisibility(): void;
+    initHomeHero(): void;
+    loadForYou(force?: boolean): Promise<void>;
+    warmHomeSongs(tracks: UrielTrack[], n: number): void;
+    loadHomePage(isRefresh?: boolean): Promise<boolean>;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;

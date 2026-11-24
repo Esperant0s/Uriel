@@ -33,7 +33,8 @@ test('My Wave and For you show what they had last time while new picks load', ()
 });
 
 test("recommended songs are looked up ahead, but not on a phone's mobile data or with Data Saver", () => {
-  const fn = app.slice(app.indexOf('function warmHomeSongs'), app.indexOf('function warmHomeSongs') + 1400);
+  const at = app.indexOf('function warmHomeSongs', app.indexOf('window.UrielApp.wave = function'));
+  const fn = app.slice(at, at + 1400);
   assert.match(fn, /conn\.saveData\) return/);
   assert.match(fn, /isPhoneApp && conn && conn\.type && conn\.type !== 'wifi'/);
   assert.match(fn, /homeWarmed\.size >= 8/);
