@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      themePalette(deps: Record<string, unknown>, out: UrielThemePalettePart): void;
       lyricsView(deps: Record<string, unknown>, out: UrielLyricsViewPart): void;
       playlists(deps: Record<string, unknown>, out: UrielPlaylistsPart): void;
       reorder(deps: Record<string, unknown>): void;
@@ -547,6 +548,13 @@ declare global {
     updateActiveGradient(): void;
     stopGradientLoop(): void;
     updateSyncedLyricsHighlight(currentTime: number): void;
+  }
+  interface UrielSiteTheme { id: string; name: string; tag: string; bg: string; bg2: string; bg3: string; text: string; accent: string; accent2: string; pop: string }
+  interface UrielThemePalettePart {
+    PALETTE_STYLES: Record<string, { label: string; secHueShift: number; tertHueShift: number; priSatScale: number; surfSatScale: number; contSatScale: number }>;
+    SITE_THEMES: UrielSiteTheme[];
+    activeSiteTheme(): UrielSiteTheme | null;
+    generateM3Palette(hexColor: string, mode: string, intensity: number, brightness: number): void;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
