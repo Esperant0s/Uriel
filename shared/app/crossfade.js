@@ -216,6 +216,20 @@ window.UrielApp.crossfade = function ({ audioEngine, el, isPhoneApp, playNext, p
   // the second player is already opened for this song's crossfade
   const crossfadePrepared = () => !!xfade.prep;
 
+  // Settings → Crossfade: how many seconds the songs overlap
+  const sliderCrossfade = /** @type {HTMLInputElement} */ (document.getElementById('slider-crossfade'));
+  const valCrossfade = document.getElementById('val-crossfade');
+  if (sliderCrossfade) {
+    const cf = parseInt(localStorage.getItem('uriel_crossfade') || '0', 10);
+    sliderCrossfade.value = String(cf);
+    if (valCrossfade) valCrossfade.textContent = cf > 0 ? `${cf}s` : 'Off';
+    sliderCrossfade.addEventListener('input', (e) => {
+      const v = parseInt(/** @type {HTMLInputElement} */ (e.target).value, 10);
+      if (valCrossfade) valCrossfade.textContent = v > 0 ? `${v}s` : 'Off';
+      localStorage.setItem('uriel_crossfade', String(v));
+    });
+  }
+
   /** @type {UrielCrossfadePart} */
   const api = {
     crossfadeSeconds, canOverlap, prepareCrossfade, crossfadePrepared, crossfadeFadeIn, crossfadeOnTrackChange,

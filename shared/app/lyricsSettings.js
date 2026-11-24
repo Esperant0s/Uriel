@@ -1,9 +1,119 @@
 // @ts-check
-// Settings → Lyrics: translating lyrics automatically, and how synced lyrics move and look (the easing, speed,
+// Settings → Lyrics: translating lyrics (on or off, automatically, into which language), and how synced lyrics move and look (the easing, speed,
 // word style and how tight the sung-word gradient is). Part of app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps */
-window.UrielApp.lyricsSettings = function ({ applyLyricsEase, applyLyricsGradientTightness, el, fetchAndApplyTranslation, getLyricsEase, getLyricsGradientTightness, getLyricsSpeed, getLyricsWordStyle, renderLyricsView, state, updateActiveGradient, updateLyricsTranslationUI, updateSyncedLyricsHighlight }) {
+window.UrielApp.lyricsSettings = function ({ TRANSLATION_LANGUAGES, applyLyricsEase, applyLyricsGradientTightness, el, fetchAndApplyTranslation, getLyricsEase, getLyricsGradientTightness, getLyricsSpeed, getLyricsWordStyle, renderLyricsView, state, updateActiveGradient, updateLyricsTranslationUI, updateSyncedLyricsHighlight }) {
+  if (el.btnTrEnabled) {
+    el.btnTrEnabled.addEventListener('click', () => {
+      state.trEnabled = !state.trEnabled;
+      localStorage.setItem('uriel_tr_enabled', String(state.trEnabled));
+      updateLyricsTranslationUI();
+      if (!state.trEnabled) {
+        state.trActive = false;
+        state.currentTranslations = null;
+        renderLyricsView();
+        if (el.nativeAudio) updateSyncedLyricsHighlight(el.nativeAudio.currentTime || 0);
+      } else if (state.trAuto) {
+        state.trActive = true;
+        updateLyricsTranslationUI();
+        fetchAndApplyTranslation();
+      }
+    });
+  }
+
+  const trLangDropdown = document.getElementById('tr-lang-dropdown');
+  const trLangTrigger = document.getElementById('tr-lang-trigger');
+  const trLangLabel = document.getElementById('tr-lang-label');
+  const trLangMenu = document.getElementById('tr-lang-menu');
+  const trLangList = document.getElementById('tr-lang-list');
+  const trLangSearch = /** @type {HTMLInputElement} */ (document.getElementById('tr-lang-search'));
+
+  if (trLangDropdown && trLangTrigger && trLangMenu) {
+    const curLang = state.trLang || 'en';
+    if (trLangList) {
+      trLangList.innerHTML = '';
+      const frag = document.createDocumentFragment();
+      TRANSLATION_LANGUAGES.forEach((/** @type {{ code: string, name: string, flag: string }} */ item) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'm3-dropdown-option';
+        btn.dataset.value = item.code;
+        const text = `${item.flag} ${item.name} (${item.code})`;
+        btn.textContent = text;
+        if (item.code === curLang) {
+          btn.classList.add('selected');
+          if (trLangLabel) trLangLabel.textContent = text;
+        }
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          state.trLang = item.code;
+          localStorage.setItem('uriel_tr_lang', state.trLang);
+          if (trLangLabel) trLangLabel.textContent = text;
+          /** @type {NodeListOf<HTMLElement>} */ (trLangMenu.querySelectorAll('.m3-dropdown-option')).forEach((o) => o.classList.remove('selected'));
+          btn.classList.add('selected');
+          if (el.selectTrLang) el.selectTrLang.value = item.code;
+          trLangDropdown.classList.remove('open');
+          if (state.trActive) {
+            fetchAndApplyTranslation();
+          }
+        });
+        frag.appendChild(btn);
+      });
+      trLangList.appendChild(frag);
+
+      if (el.selectTrLang) {
+        el.selectTrLang.innerHTML = '';
+        TRANSLATION_LANGUAGES.forEach((/** @type {{ code: string, name: string, flag: string }} */ item) => {
+          const opt = document.createElement('option');
+          opt.value = item.code;
+          opt.textContent = `${item.flag} ${item.name} (${item.code})`;
+          el.selectTrLang.appendChild(opt);
+        });
+        el.selectTrLang.value = curLang;
+      }
+    }
+
+    if (trLangSearch) {
+      trLangSearch.addEventListener('click', (e) => e.stopPropagation());
+      trLangSearch.addEventListener('input', (e) => {
+        const q = /** @type {HTMLInputElement} */ (e.target).value.toLowerCase().trim();
+        if (!trLangList) return;
+        /** @type {NodeListOf<HTMLElement>} */ (trLangList.querySelectorAll('.m3-dropdown-option')).forEach((opt) => {
+          const text = (opt.textContent || '').toLowerCase();
+          const code = (opt.dataset.value || '').toLowerCase();
+          opt.style.display = (!q || text.includes(q) || code.includes(q)) ? '' : 'none';
+        });
+      });
+      trLangSearch.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          trLangDropdown.classList.remove('open');
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          const firstVisible = /** @type {HTMLElement} */ (trLangList ? trLangList.querySelector('.m3-dropdown-option:not([style*="display: none"])') : null);
+          if (firstVisible) firstVisible.click();
+        }
+      });
+    }
+
+    trLangTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = trLangDropdown.classList.toggle('open');
+      if (isOpen && trLangSearch) {
+        trLangSearch.value = '';
+        if (trLangList) {
+          /** @type {NodeListOf<HTMLElement>} */ (trLangList.querySelectorAll('.m3-dropdown-option')).forEach((opt) => opt.style.display = '');
+        }
+        setTimeout(() => trLangSearch.focus(), 50);
+      }
+    });
+
+    document.addEventListener('click', () => {
+      trLangDropdown.classList.remove('open');
+    });
+  }
+
   if (el.btnTrAuto) {
     el.btnTrAuto.addEventListener('click', () => {
       state.trAuto = !state.trAuto;

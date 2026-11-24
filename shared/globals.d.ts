@@ -60,6 +60,8 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      desktop(deps: Record<string, unknown>, out: UrielDesktopPart): void;
+      controls(deps: Record<string, unknown>): void;
       playback(deps: Record<string, unknown>, out: UrielPlaybackPart): void;
       theme(deps: Record<string, unknown>, out: UrielThemePart): void;
       nowPlaying(deps: Record<string, unknown>, out: UrielNowPlayingPart): void;
@@ -684,6 +686,9 @@ declare global {
     skipUnplayable(token: number, track: UrielTrack | null): boolean;
     retryFresh(token: number, track: UrielTrack | null): boolean;
     showPlayFailure(message: UrielText, type?: string): void;
+  }
+  interface UrielDesktopPart {
+    toggleMiniWindow(): Promise<void>;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
