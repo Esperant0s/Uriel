@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      panelDrawer(deps: Record<string, unknown>, out: UrielPanelDrawerPart): void;
       covers(deps: Record<string, unknown>, out: UrielCoversPart): void;
       shortcuts(deps: Record<string, unknown>): void;
       albums(deps: Record<string, unknown>, out: UrielAlbumsPart): void;
@@ -629,6 +630,10 @@ declare global {
     rowTitle(track: UrielTrack): string;
     nextTrackArt(img: HTMLImageElement): boolean;
     rememberTrackArt(canonicalId: string | undefined, url: string): void;
+  }
+  interface UrielPanelDrawerPart {
+    openPanelDrawer(tab: string): void;
+    showPlayingInQueue(): void;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
