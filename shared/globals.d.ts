@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      themeCards(deps: Record<string, unknown>, out: UrielThemeCardsPart): void;
       panelDrawer(deps: Record<string, unknown>, out: UrielPanelDrawerPart): void;
       covers(deps: Record<string, unknown>, out: UrielCoversPart): void;
       shortcuts(deps: Record<string, unknown>): void;
@@ -634,6 +635,10 @@ declare global {
   interface UrielPanelDrawerPart {
     openPanelDrawer(tab: string): void;
     showPlayingInQueue(): void;
+  }
+  interface UrielThemeCardsPart {
+    setSiteTheme(id: string, apply?: boolean): void;
+    applySystemColors(): Promise<void>;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
