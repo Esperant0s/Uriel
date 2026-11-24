@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      bannerSettings(deps: Record<string, unknown>): void;
       soundSettings(deps: Record<string, unknown>): void;
       themeCards(deps: Record<string, unknown>, out: UrielThemeCardsPart): void;
       panelDrawer(deps: Record<string, unknown>, out: UrielPanelDrawerPart): void;
