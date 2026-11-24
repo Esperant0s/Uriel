@@ -60,6 +60,7 @@ declare global {
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
       visualizer(deps: Record<string, unknown>, out: UrielVisualizerPart): void;
+      mediaSession(deps: Record<string, unknown>, out: UrielMediaSessionPart): void;
       playButton(deps: Record<string, unknown>, out: UrielPlayButtonPart): void;
       navigation(deps: Record<string, unknown>, out: UrielNavigationPart): void;
       renameTrack(deps: Record<string, unknown>): void;
@@ -721,6 +722,16 @@ declare global {
   interface UrielPlayButtonPart {
     setPlayPauseState(playing: boolean, animate?: boolean): void;
     updatePlayPauseButton(isPlaying: boolean, isBuffering?: boolean): void;
+  }
+  interface UrielMediaSessionPart {
+    sendStateToServer(currentWordText?: string, wordIndex?: number, lineIndex?: number): void;
+    getMediaArtwork(thumb: string | undefined): MediaImage[];
+    updateMediaPositionState(): void;
+    updateDiscordPresence(): void;
+    updateMediaSession(): void;
+    handleMediaCommand(cmd: string, src: string): void;
+    registerMediaActions(): void;
+    discordPresenceOn(): boolean;
   }
   interface UrielVisualizerPart {
     startVisualizers(): void;
