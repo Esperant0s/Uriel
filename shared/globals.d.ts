@@ -443,11 +443,15 @@ declare global {
     end: number;
   }
   // what each part of app.js (shared/app/) hands back to it
+  // a song's own pictures and banner effects (the Track art dialog), kept in uriel_track_art by song id
+  interface UrielBannerFx { blur: number; opacity: number; fade: number }
+  interface UrielTrackArt { cover?: string; banner?: string; bannerFx?: UrielBannerFx & { enabled?: boolean } }
   interface UrielSleepTimerPart {
     updateSleepTimerUI(): void;
   }
   interface UrielTrackArtPart {
     openTrackArtModal(track: UrielTrack, triggerEl?: HTMLElement | null): void;
+    applyTrackBannerFx(art: UrielTrackArt | null): void;
   }
   interface UrielToolsPart {
     checkToolsStatus(promptUser?: boolean): Promise<void>;

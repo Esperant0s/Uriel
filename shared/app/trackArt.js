@@ -4,7 +4,7 @@
 // it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps @param {UrielTrackArtPart} out */
-window.UrielApp.trackArt = function ({ I18N, LiquidMotion, T, Tm, YT_THUMB, analysisCache, closeModal, coverAnalysisCache, el, getTrackArt, getTrackCanonicalId, getTrackThumbUrl, isSameTrack, listThumb, m3cSetImage, nextTrackArt, renderTrackBannerFxControls, setTrackArt, showToast, state, syncTvBanner, trackArtCandidates, trackYoutubeId, updateMediaSession, updateRightPanelBanner, updateThemeFromState }, out) {
+window.UrielApp.trackArt = function ({ I18N, LiquidMotion, T, Tm, YT_THUMB, analysisCache, closeModal, coverAnalysisCache, el, getTrackArt, getTrackCanonicalId, getTrackThumbUrl, isSameTrack, listThumb, m3cSetImage, nextTrackArt, setTrackArt, showToast, state, syncTvBanner, trackArtCandidates, trackYoutubeId, updateMediaSession, updateRightPanelBanner, updateThemeFromState }, out) {
   /** @type {UrielTrack | null} */
   let trackArtCurrentTrack = null;
 
@@ -315,7 +315,76 @@ window.UrielApp.trackArt = function ({ I18N, LiquidMotion, T, Tm, YT_THUMB, anal
     });
   }
 
+  // ---- banner effects for one song (Track art dialog): its own blur, opacity and fade ----
+  function trackBannerFx(/** @type {UrielTrackArt | null} */ art) {
+    const fx = art && art.bannerFx;
+    return fx && fx.enabled ? fx : null;
+  }
+  function applyTrackBannerFx(/** @type {UrielTrackArt | null} */ art) {
+    const fx = trackBannerFx(art);
+    for (const node of [document.getElementById('right-panel-banner'), document.getElementById('tv-bg')]) {
+      if (!node) continue;
+      node.classList.toggle('has-track-fx', !!fx);
+      if (fx) {
+        node.style.setProperty('--banner-blur', `${document.body.classList.contains('perf') ? 0 : fx.blur}px`);
+        node.style.setProperty('--banner-opacity', String(fx.opacity / 100));
+        node.style.setProperty('--banner-fade-base', `${fx.fade}%`);
+      } else {
+        node.style.removeProperty('--banner-blur');
+        node.style.removeProperty('--banner-opacity');
+        node.style.removeProperty('--banner-fade-base');
+      }
+    }
+  }
+  function renderTrackBannerFxControls(/** @type {UrielTrack} */ track, /** @type {UrielTrackArt | null} */ art) {
+    const toggle = document.getElementById('btn-track-banner-custom-fx');
+    const box = document.getElementById('track-banner-fx-controls');
+    /** @type {Record<keyof UrielBannerFx, HTMLInputElement | null>} */
+    const sliders = { blur: /** @type {HTMLInputElement | null} */ (document.getElementById('slider-track-banner-blur')), opacity: /** @type {HTMLInputElement | null} */ (document.getElementById('slider-track-banner-opacity')), fade: /** @type {HTMLInputElement | null} */ (document.getElementById('slider-track-banner-fade')) };
+    const vals = { blur: document.getElementById('val-track-banner-blur'), opacity: document.getElementById('val-track-banner-opacity'), fade: document.getElementById('val-track-banner-fade') };
+    if (!toggle || !box) return;
+    // a song without its own effects starts from the ones in Settings
+    const global = {
+      blur: parseInt(localStorage.getItem('uriel_banner_blur') || '3', 10),
+      opacity: parseInt(localStorage.getItem('uriel_banner_opacity') || '100', 10),
+      fade: parseInt(localStorage.getItem('uriel_banner_fade') || '100', 10),
+    };
+    /** @type {Partial<NonNullable<UrielTrackArt['bannerFx']>>} */
+    const fx = (art && art.bannerFx) || {};
+    /** @type {UrielBannerFx} */
+    const cur = { blur: fx.blur !== undefined ? fx.blur : global.blur, opacity: fx.opacity !== undefined ? fx.opacity : global.opacity, fade: fx.fade !== undefined ? fx.fade : global.fade };
+    const on = !!fx.enabled;
+    const unit = { blur: 'px', opacity: '%', fade: '%' };
+    /** @type {(keyof UrielBannerFx)[]} */
+    const keys = ['blur', 'opacity', 'fade'];
+    toggle.classList.toggle('active', on);
+    box.style.display = on ? 'flex' : 'none';
+    for (const k of keys) {
+      const slider = sliders[k], val = vals[k];
+      if (slider) slider.value = String(cur[k]);
+      if (val) val.textContent = `${cur[k]}${unit[k]}`;
+    }
+    const save = () => {
+      const next = { enabled: toggle.classList.contains('active'), ...cur };
+      for (const k of keys) { const slider = sliders[k]; if (slider) next[k] = parseInt(slider.value, 10); }
+      setTrackArt(track, { bannerFx: next });
+      if (state.currentTrack && isSameTrack(state.currentTrack, track)) applyTrackBannerFx(getTrackArt(track));
+      if (state.isTvKaraokeOpen) syncTvBanner();
+    };
+    toggle.onclick = () => {
+      const next = !toggle.classList.contains('active');
+      toggle.classList.toggle('active', next);
+      box.style.display = next ? 'flex' : 'none';
+      save();
+    };
+    for (const k of keys) {
+      const slider = sliders[k], val = vals[k];
+      if (!slider) continue;
+      slider.oninput = () => { if (val) val.textContent = `${slider.value}${unit[k]}`; save(); };
+    }
+  }
+
   /** @type {UrielTrackArtPart} */
-  const api = { openTrackArtModal };
+  const api = { openTrackArtModal, applyTrackBannerFx };
   Object.assign(out, api);
 };
