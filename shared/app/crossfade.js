@@ -145,7 +145,9 @@ window.UrielApp.crossfade = function ({ audioEngine, el, isPhoneApp, playNext, p
     // My Wave on its last song: the next one is still being fetched, so moving on would start nothing and the
     // tail would play this same song again over it
     const waveAtEnd = state.myWaveActive && state.queueIndex >= state.queue.length - 1;
-    if (!p.ready || p.token !== state.loadToken || a.paused || state.isRepeat || queueFinished() || waveAtEnd) { fallback(); return; }
+    // "end of song" picked after the tail was opened: this song has to be the last
+    const sleepAtEnd = state.sleepTimer && state.sleepTimer.mode === 'end';
+    if (!p.ready || p.token !== state.loadToken || a.paused || state.isRepeat || queueFinished() || waveAtEnd || sleepAtEnd) { fallback(); return; }
     const t = p.el;
     const level = tailLevel();
     try { t.currentTime = Math.min(p.end, a.currentTime + 0.02); } catch (e) {}
