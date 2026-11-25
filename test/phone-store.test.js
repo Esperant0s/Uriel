@@ -74,7 +74,7 @@ test('a write that fails half-way leaves no half file behind', async () => {
 // ---- Android: downloads go to Music/Uriel, where people (and their music apps) find them ----
 
 // a small in-memory phone: "DIRECTORY:path" -> { dir } or { size }
-function phone({ platform = 'android', perm = 'granted', answer = 'granted', hold = false, files = [], refuse = () => false } = {}) {
+function phone({ platform = 'android', perm = 'granted', answer = 'granted', hold = false, files = [], refuse = () => false, undeletable = () => false } = {}) {
   const disk = new Map();
   const scans = [];
   const asked = [];
@@ -109,8 +109,9 @@ function phone({ platform = 'android', perm = 'granted', answer = 'granted', hol
       disk.set(key(toDirectory, to), { ...e });
       return { uri: `file:///${toDirectory}/${to}` };
     },
-    async rename(o) { await Filesystem.copy(o); disk.delete(key(o.directory, o.from)); },
-    async deleteFile({ path: p, directory }) { must(directory, p); disk.delete(key(directory, p)); },
+    // like Android's: a file the app may read but not delete is copied, and the original stays (it says nothing)
+    async rename(o) { await Filesystem.copy(o); if (!undeletable(o.directory, o.from)) disk.delete(key(o.directory, o.from)); },
+    async deleteFile({ path: p, directory }) { must(directory, p); if (undeletable(directory, p)) throw new Error('Operation not permitted'); disk.delete(key(directory, p)); },
     async rmdir({ path: p, directory, recursive }) {
       must(directory, p);
       const inside = [...disk.keys()].filter((k) => k.startsWith(key(directory, p) + '/'));
@@ -259,6 +260,22 @@ test("Android: a song that can't be moved out of Music/Mural stays there, still 
   assert.ok(disk.has('EXTERNAL_STORAGE:Music/Uriel/A - One.mka'));
   assert.ok(disk.has('EXTERNAL_STORAGE:Music/Mural/B - Two.mka'));
   assert.strictEqual(await store.fileUrl('/data/Downloads/B - Two.webm'), 'app:file:///EXTERNAL_STORAGE/Music/Mural/B - Two.mka');
+});
+
+test('Android: a song in Music/Mural that can be read but not deleted is copied once, listed once, and the folder stays', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const opts = { files: [CACHED, ['EXTERNAL_STORAGE', 'Music/Mural/B - Two.mka', 300]], undeletable: (dir, p) => p === 'Music/Mural/B - Two.mka' };
+  const first = phone(opts);
+  let listed = (await first.store.list()).map((e) => e.vpath);
+  assert.ok(first.disk.has('EXTERNAL_STORAGE:Music/Uriel/B - Two.mka'));
+  assert.ok(first.disk.has('EXTERNAL_STORAGE:Music/Mural/B - Two.mka'), 'Android kept the original');
+  assert.strictEqual(listed.filter((v) => v === '/data/Downloads/B - Two.webm').length, 1);
+  // the next launch: both copies are there, the old one still can't go; still one song in the list
+  const second = phone({ ...opts, files: [CACHED, ['EXTERNAL_STORAGE', 'Music/Mural/B - Two.mka', 300], ['EXTERNAL_STORAGE', 'Music/Uriel/B - Two.mka', 300]] });
+  listed = (await second.store.list()).map((e) => e.vpath);
+  assert.strictEqual(listed.filter((v) => v === '/data/Downloads/B - Two.webm').length, 1);
+  assert.strictEqual(await second.store.fileUrl('/data/Downloads/B - Two.webm'), 'app:file:///EXTERNAL_STORAGE/Music/Uriel/B - Two.mka');
+  assert.ok(second.disk.has('EXTERNAL_STORAGE:Music/Mural/B - Two.mka'));
 });
 
 test('Android 10 and older, permission refused: downloads stay in the app as before, asked once', async (t) => {

@@ -129,19 +129,26 @@ async function moveOldFolder(oldRoot: string, found: (Entry & { rpath: string })
     const to = { path: (pub || '') + rel, directory: PUBLIC };
     let there = null;
     try { there = await Filesystem.stat(to); } catch (err) {}
+    const sameThere = !!there && there.size === e.size;
     try {
       // the same song in both: the copy in the new folder is the one kept
-      if (there && there.size === e.size) await Filesystem.deleteFile({ path: e.rpath, directory: PUBLIC });
+      if (sameThere) await Filesystem.deleteFile({ path: e.rpath, directory: PUBLIC });
       else if (there) throw new Error('a different file with that name is there');
       else {
         await ensureDir({ path: path.dirname(to.path), directory: PUBLIC });
         await Filesystem.rename({ from: e.rpath, directory: PUBLIC, to: to.path, toDirectory: PUBLIC });
         scan(to);
+        // with "Music and audio" allowed, a song saved before a reinstall can be read but not deleted: the
+        // rename then copies it and reports success with the original still there
+        let stuck = false;
+        try { await Filesystem.stat({ path: e.rpath, directory: PUBLIC }); stuck = true; } catch (err) {}
+        if (stuck) left++;
       }
     } catch (err) {
       left++;
+      // a copy already in the new folder is the one listed; the old one is only left where it is
       const vpath = DOWNLOADS + rel.replace(/\.mka$/i, '.webm');
-      if (!placed.has(vpath) || placed.get(vpath)!.directory === DIR) found.push({ vpath, rpath: e.rpath, isDir: false, size: e.size, mtimeMs: e.mtimeMs });
+      if (!sameThere && (!placed.has(vpath) || placed.get(vpath)!.directory === DIR)) found.push({ vpath, rpath: e.rpath, isDir: false, size: e.size, mtimeMs: e.mtimeMs });
     }
   }
   if (!left) await Filesystem.rmdir({ path: oldRoot, directory: PUBLIC, recursive: true }).catch(() => {});
