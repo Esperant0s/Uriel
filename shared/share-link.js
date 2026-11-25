@@ -1,6 +1,6 @@
 // @ts-check
 // Shared playlists: the whole playlist travels inside the link (after the #, so it never reaches a server).
-// https://cloverscripts.github.io/riff-muriel/play/#p=<payload>  — opens the web player
+// https://esperant0s.github.io/Uriel/play/#p=<payload>  — opens the web player
 // uriel://playlist?p=<payload>                                   — opens the app
 // payload, when every song is on YouTube (the usual case): "y" + base64url(name length byte, name, then each
 // video id as its 8 bytes). Titles aren't in the link; fillInfo() looks them up from YouTube. That keeps a
@@ -10,7 +10,7 @@
 // (ref = video id), "s" = SoundCloud (ref = track URL), "u" = anything else with a URL. Songs from files on
 // the device can't be shared and are left out. Used by the app (app.js), the website (site/play) and tests.
 (function (/** @type {Record<string, unknown>} */ root) {
-  const WEB = 'https://cloverscripts.github.io/riff-muriel/play/';
+  const WEB = 'https://esperant0s.github.io/Uriel/play/';
   const MAX_TRACKS = 500;
   const clip = (/** @type {unknown} */ s, /** @type {number} */ n) => String(s == null ? '' : s).slice(0, n);
   const YT_ID = /^[A-Za-z0-9_-]{11}$/;

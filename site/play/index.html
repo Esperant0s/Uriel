@@ -3,20 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Muriel Web Player</title>
-  <meta name="description" content="Play playlists shared from Muriel right in your browser. No account, no download.">
+  <title>Uriel Web Player</title>
+  <meta name="description" content="Play playlists shared from Uriel right in your browser. No account, no download.">
   <meta name="theme-color" content="#09090b">
   <meta name="color-scheme" content="dark">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Muriel">
-  <meta property="og:title" content="Muriel Web Player">
-  <meta property="og:description" content="Someone shared a playlist with you. Listen in your browser, or add it to Muriel.">
-  <meta property="og:image" content="https://cloverscripts.github.io/riff-muriel/icon.png">
-  <meta property="og:url" content="https://cloverscripts.github.io/riff-muriel/play/">
+  <meta property="og:site_name" content="Uriel">
+  <meta property="og:title" content="Uriel Web Player">
+  <meta property="og:description" content="Someone shared a playlist with you. Listen in your browser, or add it to Uriel.">
+  <meta property="og:image" content="https://esperant0s.github.io/Uriel/icon.png">
+  <meta property="og:url" content="https://esperant0s.github.io/Uriel/play/">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Muriel Web Player">
-  <meta name="twitter:description" content="Someone shared a playlist with you. Listen in your browser, or add it to Muriel.">
+  <meta name="twitter:title" content="Uriel Web Player">
+  <meta name="twitter:description" content="Someone shared a playlist with you. Listen in your browser, or add it to Uriel.">
   <link rel="icon" href="../icon.png">
   <link rel="apple-touch-icon" href="../icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -55,20 +55,20 @@
   </div>
 
   <header class="topbar">
-    <a class="brand" href="../" aria-label="Muriel home">
+    <a class="brand" href="https://github.com/Esperant0s/Uriel" aria-label="Uriel home">
       <img src="../icon.png" alt="" width="30" height="30">
-      <span class="brand-name">Muriel</span>
+      <span class="brand-name">Uriel</span>
       <span class="brand-sub">Web Player</span>
     </a>
-    <a class="top-get" id="top-get" href="../#download">Get Muriel</a>
+    <a class="top-get" id="top-get" href="https://github.com/Esperant0s/Uriel/releases">Get Uriel</a>
   </header>
 
   <!-- landing: no playlist in the link (or a broken one) -->
   <main class="landing" id="landing" hidden>
     <div class="land-card">
       <img class="land-icon" src="../icon.png" alt="" width="76" height="76">
-      <h1 class="land-title">Muriel Web Player</h1>
-      <p class="land-lead">Plays playlists shared from Muriel, right in your browser.</p>
+      <h1 class="land-title">Uriel Web Player</h1>
+      <p class="land-lead">Plays playlists shared from Uriel, right in your browser.</p>
       <div class="land-error" id="land-error" role="alert" hidden>
         <svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg>
         <div><b id="land-error-title">That link didn't work</b><span id="land-error-text"></span></div>
@@ -80,8 +80,8 @@
         <button class="btn primary" type="submit">Open</button>
       </form>
       <p class="paste-hint" id="paste-hint" aria-live="polite"></p>
-      <a class="btn ghost wide" href="../#download"><svg class="ico" aria-hidden="true"><use href="#i-down"/></svg>Get Muriel</a>
-      <p class="land-foot">In Muriel, open a playlist and tap <b>Share</b> to make a link.</p>
+      <a class="btn ghost wide" href="https://github.com/Esperant0s/Uriel/releases"><svg class="ico" aria-hidden="true"><use href="#i-down"/></svg>Get Uriel</a>
+      <p class="land-foot">In Uriel, open a playlist and tap <b>Share</b> to make a link.</p>
     </div>
   </main>
 
@@ -96,7 +96,7 @@
         <div class="hero-actions">
           <button class="btn primary" id="btn-play-all" type="button"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg>Play</button>
           <button class="btn tonal" id="btn-shuffle-all" type="button"><svg class="ico" aria-hidden="true"><use href="#i-shuffle"/></svg>Shuffle</button>
-          <a class="btn ghost" id="btn-add" href="../#download"><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg><span>Add to Muriel</span></a>
+          <a class="btn ghost" id="btn-add" href="https://github.com/Esperant0s/Uriel/releases"><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg><span>Add to Uriel</span></a>
         </div>
         <p class="add-note" id="add-note" role="status" hidden></p>
       </div>
@@ -127,7 +127,7 @@
 
     <section class="list" aria-label="Songs">
       <ol class="songs" id="songs"></ol>
-      <p class="fine">Songs play through the official YouTube and SoundCloud players. Muriel isn't affiliated with either.</p>
+      <p class="fine">Songs play through the official YouTube and SoundCloud players. Uriel isn't affiliated with either.</p>
     </section>
   </main>
 

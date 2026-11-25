@@ -1,6 +1,6 @@
 name: Website
 
-# Publishes site/ (the download page) to GitHub Pages; a fork publishes just link.html.
+# Publishes site/ (the download page) to GitHub Pages; a fork publishes just link.html and play/.
 on:
   push:
     branches: [main]
@@ -47,7 +47,7 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v5
 
-  # a fork publishes only the page its Sync QR code opens (sync.js LINK_PAGE)
+  # a fork publishes only the page its Sync QR code opens (sync.js LINK_PAGE) and the web player for shared playlists
   fork:
     if: github.repository != 'cloverscripts/riff-muriel' && github.event_name != 'schedule'
     runs-on: ubuntu-latest
@@ -59,7 +59,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions/configure-pages@v6
-      - run: mkdir _site && cp site/link.html site/icon.png _site/
+      - run: mkdir _site && cp -r site/link.html site/icon.png site/play _site/ && cp shared/share-link.js _site/play/
       - uses: actions/upload-pages-artifact@v5
         with:
           path: _site

@@ -1,4 +1,4 @@
-// Muriel Web Player. The whole playlist travels in the link (#p=<payload>, see share-link.js); this page decodes
+// Uriel Web Player. The whole playlist travels in the link (#p=<payload>, see share-link.js); this page decodes
 // it and plays it with the official YouTube IFrame Player API, plus the SoundCloud widget for SoundCloud songs.
 // Every string from the link goes into the page with textContent, never innerHTML.
 (function () {
@@ -19,14 +19,14 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* private mode */ } },
   };
 
-  const savedVol = Number(store.get('muriel_web_volume'));
+  const savedVol = Number(store.get('uriel_web_volume'));
   const S = {
     payload: '', name: '', tracks: [], kinds: [], bad: new Map(), // bad: index -> YouTube error code
     order: [], pos: -1, cur: -1, started: false,
     shuffle: false,
-    repeat: REPEAT_TITLES[store.get('muriel_web_repeat')] ? store.get('muriel_web_repeat') : 'off',
-    vol: Number.isFinite(savedVol) && store.get('muriel_web_volume') !== null ? Math.min(100, Math.max(0, savedVol)) : 100,
-    muted: store.get('muriel_web_muted') === '1',
+    repeat: REPEAT_TITLES[store.get('uriel_web_repeat')] ? store.get('uriel_web_repeat') : 'off',
+    vol: Number.isFinite(savedVol) && store.get('uriel_web_volume') !== null ? Math.min(100, Math.max(0, savedVol)) : 100,
+    muted: store.get('uriel_web_muted') === '1',
     engine: '', playing: false, buffering: false, wantPlay: false,
     time: 0, dur: 0, seeking: false, gen: 0,
     hold: { until: 0, to: 0 }, // right after a seek, players still report the old position for a moment
@@ -830,7 +830,7 @@
     set('seekto', (d) => { if (d && Number.isFinite(d.seekTime)) seekTo(d.seekTime); });
   }
 
-  // ---------- Add to Muriel ----------
+  // ---------- Add to Uriel ----------
   let addTimer = 0, addReset = 0;
   function note(parts, ok) {
     const n = $('add-note');
@@ -859,24 +859,24 @@
   }
   function setupAdd() {
     const a = $('btn-add');
-    const share = window.MurielShare;
+    const share = window.UrielShare;
     a.href = IS_PHONE ? share.appLink(S.payload) : share.webLink(S.payload);
     a.classList.remove('done');
     a.querySelector('use').setAttribute('href', '#i-plus');
-    a.querySelector('span').textContent = 'Add to Muriel';
+    a.querySelector('span').textContent = 'Add to Uriel';
     $('add-note').hidden = true;
   }
   async function onAdd(e) {
-    const share = window.MurielShare;
+    const share = window.UrielShare;
     if (!share || !S.payload) return;
     if (IS_PHONE) {
-      // the muriel:// link opens the app, which imports the playlist; if nothing opens, point to the download
+      // the uriel:// link opens the app, which imports the playlist; if nothing opens, point to the download
       clearTimeout(addTimer);
       addTimer = setTimeout(() => {
         if (document.visibilityState !== 'visible') return;
-        const get = h('a', '', 'Get Muriel');
-        get.href = '../#download';
-        note(['Nothing opened? ', get, ' first, then tap Add to Muriel again.']);
+        const get = h('a', '', 'Get Uriel');
+        get.href = 'https://github.com/Esperant0s/Uriel/releases';
+        note(['Nothing opened? ', get, ' first, then tap Add to Uriel again.']);
       }, 2500);
       return;
     }
@@ -884,7 +884,7 @@
     const link = share.webLink(S.payload);
     const a = $('btn-add');
     if (await copyText(link)) {
-      note(['Link copied. Paste it into Muriel’s search bar to add the playlist.'], true);
+      note(['Link copied. Paste it into Uriel’s search bar to add the playlist.'], true);
       a.classList.add('done');
       a.querySelector('use').setAttribute('href', '#i-check');
       a.querySelector('span').textContent = 'Copied';
@@ -892,7 +892,7 @@
       addReset = setTimeout(() => {
         a.classList.remove('done');
         a.querySelector('use').setAttribute('href', '#i-plus');
-        a.querySelector('span').textContent = 'Add to Muriel';
+        a.querySelector('span').textContent = 'Add to Uriel';
       }, 2600);
     } else {
       const box = h('input');
@@ -900,7 +900,7 @@
       box.readOnly = true;
       box.value = link;
       box.setAttribute('aria-label', 'Playlist link');
-      note(['Copy this link, then paste it into Muriel’s search bar: ', box]);
+      note(['Copy this link, then paste it into Uriel’s search bar: ', box]);
       box.focus();
       box.select();
     }
@@ -921,7 +921,7 @@
     stopEverything();
     S.payload = '';
     S.gen++;
-    document.title = 'Muriel Web Player';
+    document.title = 'Uriel Web Player';
     document.body.classList.add('on-landing');
     $('view').hidden = true;
     $('bar').hidden = true;
@@ -955,7 +955,7 @@
     $('b-shuffle').setAttribute('aria-pressed', 'false');
     rebuildOrder();
 
-    document.title = `${pl.name} · Muriel`;
+    document.title = `${pl.name} · Uriel`;
     document.body.classList.remove('on-landing');
     $('landing').hidden = true;
     $('view').hidden = false;
@@ -988,7 +988,7 @@
   }
 
   async function route() {
-    const share = window.MurielShare;
+    const share = window.UrielShare;
     const raw = location.hash.replace(/^#/, '');
     if (!share) {
       showLanding({ title: 'The player didn’t load', text: 'Refresh the page to try again.' });
@@ -997,7 +997,7 @@
     if (!raw) { showLanding(null); return; }
     const p = share.payloadFrom(location.hash) || share.payloadFrom(decodeHashSafe(raw));
     if (!p) {
-      showLanding({ title: 'That link didn’t work', text: 'It doesn’t look like a Muriel playlist link. Check that you copied all of it.' });
+      showLanding({ title: 'That link didn’t work', text: 'It doesn’t look like a Uriel playlist link. Check that you copied all of it.' });
       return;
     }
     if (p === S.payload) return;
@@ -1010,7 +1010,7 @@
       const old = /too old/i.test(String(e && e.message));
       showLanding({
         title: old ? 'This browser can’t open the link' : 'We couldn’t open this playlist',
-        text: old ? 'Try a recent version of Safari, Chrome, Firefox or Edge.' : 'The link looks incomplete. Copy it again from Muriel and paste it below.',
+        text: old ? 'Try a recent version of Safari, Chrome, Firefox or Edge.' : 'The link looks incomplete. Copy it again from Uriel and paste it below.',
       });
       return;
     }
@@ -1025,7 +1025,7 @@
 
   // short links carry only video ids: titles and artists fill in as YouTube answers
   function fillTitles(tracks, gen) {
-    window.MurielShare.fillInfo(tracks, {
+    window.UrielShare.fillInfo(tracks, {
       onUpdate: (t) => {
         if (gen !== S.gen) return;
         const i = S.tracks.indexOf(t);
@@ -1052,7 +1052,7 @@
 
   function setRepeat(mode) {
     S.repeat = REPEAT_TITLES[mode] ? mode : 'off';
-    store.set('muriel_web_repeat', S.repeat);
+    store.set('uriel_web_repeat', S.repeat);
     const b = $('b-repeat');
     b.classList.toggle('on', S.repeat !== 'off');
     b.classList.toggle('one', S.repeat === 'one');
@@ -1150,8 +1150,8 @@
     vol.addEventListener('input', () => {
       S.vol = Number(vol.value);
       S.muted = false;
-      store.set('muriel_web_volume', String(S.vol));
-      store.set('muriel_web_muted', '0');
+      store.set('uriel_web_volume', String(S.vol));
+      store.set('uriel_web_muted', '0');
       applyVolume();
     });
     $('b-mute').addEventListener('click', () => {
@@ -1159,18 +1159,18 @@
         S.muted = false;
         if (S.vol === 0) S.vol = 60;
       } else S.muted = true;
-      store.set('muriel_web_volume', String(S.vol));
-      store.set('muriel_web_muted', S.muted ? '1' : '0');
+      store.set('uriel_web_volume', String(S.vol));
+      store.set('uriel_web_muted', S.muted ? '1' : '0');
       applyVolume();
     });
 
     $('paste-form').addEventListener('submit', (e) => {
       e.preventDefault();
-      const share = window.MurielShare;
+      const share = window.UrielShare;
       const v = $('paste-input').value;
       const p = share ? share.payloadFrom(v) : '';
       if (!p) {
-        $('paste-hint').textContent = v.trim() ? 'That doesn’t look like a Muriel playlist link.' : 'Paste a link that someone shared from Muriel.';
+        $('paste-hint').textContent = v.trim() ? 'That doesn’t look like a Uriel playlist link.' : 'Paste a link that someone shared from Uriel.';
         return;
       }
       $('paste-hint').textContent = '';
