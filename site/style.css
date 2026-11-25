@@ -23,6 +23,7 @@
   --seg-bg: #2c2c2e;
   --seg-on: #48484a;
   --copy-hover: #2c2c2e;
+  --phone: #1c1c1e;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue", "Segoe UI", Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --ease: cubic-bezier(0.28, 0.11, 0.32, 1);
@@ -47,6 +48,7 @@
   --seg-bg: #e3e3e8;
   --seg-on: #fff;
   --copy-hover: #ebebef;
+  --phone: #0b0b0c;
 }
 
 * { box-sizing: border-box; }
@@ -138,12 +140,13 @@ b { font-weight: 600; }
 .hero-stage .phone.right { left: 50%; transform: translateX(calc(-50% + clamp(190px, 26vw, 290px))) rotate(6deg); }
 .hero-stage .phone.main { margin-bottom: -60px; }
 
-/* an iPhone, drawn: black frame, rounded screen */
+/* an iPhone, drawn: black frame, rounded screen. The screen is placed with inset, not padding: a padding in %
+   is a share of the parent's width, which made the frame thicker the wider the window and squeezed the screen. */
 .phone {
-  aspect-ratio: 393 / 852; padding: 3.2%; border-radius: 15% / 7%;
-  background: #0b0b0c; box-shadow: inset 0 0 0 1.5px #3a3a3c, 0 30px 60px -10px rgba(0, 0, 0, 0.35), 0 12px 24px -12px rgba(0, 0, 0, 0.25);
+  position: relative; aspect-ratio: 393 / 852; border-radius: 15% / 7%;
+  background: var(--phone); box-shadow: inset 0 0 0 1.5px #3a3a3c, 0 30px 60px -10px rgba(0, 0, 0, 0.35), 0 12px 24px -12px rgba(0, 0, 0, 0.25);
 }
-.phone img { width: 100%; height: 100%; object-fit: cover; border-radius: 12.5% / 5.8%; }
+.phone img { position: absolute; top: 3.2%; left: 3.2%; width: 93.6%; height: 93.6%; object-fit: cover; border-radius: 12.5% / 5.8%; }
 .dark .phone { box-shadow: inset 0 0 0 1.5px #4a4a4e, 0 30px 80px -20px rgba(0, 0, 0, 0.8); }
 
 /* ---------- the counter (black) ---------- */
