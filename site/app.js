@@ -254,6 +254,23 @@
     .then((j) => { if (j && Number.isFinite(j.stargazers_count)) { showStars(j.stargazers_count); store.set('uriel_site_stars', j.stargazers_count); } })
     .catch(() => {});
 
+  // ---- dark or light: dark unless the visitor picked light ----
+  const themeBtn = $('theme-toggle');
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  function showTheme() {
+    const light = document.documentElement.dataset.theme === 'light';
+    themeBtn.setAttribute('aria-label', light ? 'Switch to the dark theme' : 'Switch to the light theme');
+    themeMeta.content = light ? '#ffffff' : '#000000';
+  }
+  themeBtn.addEventListener('click', () => {
+    const light = document.documentElement.dataset.theme !== 'light';
+    if (light) document.documentElement.dataset.theme = 'light';
+    else delete document.documentElement.dataset.theme;
+    try { localStorage.setItem('uriel_site_theme', light ? 'light' : 'dark'); } catch (e) {}
+    showTheme();
+  });
+  showTheme();
+
   // ---- the bar at the top: where you are, and the menu on small screens ----
   const nav = $('nav');
   const toggle = $('nav-toggle');

@@ -1,21 +1,52 @@
-/* Muriel's site: black and white, in the manner of an Apple product page. The phones and the album art bring the
-   colour. System font (SF Pro on Apple devices), Inter elsewhere. */
+/* Uriel's site: black and white, in the manner of an Apple product page. The phones and the album art bring the
+   colour. Dark unless the visitor picks light (the button in the top bar, kept in localStorage). System font (SF Pro
+   on Apple devices), Inter elsewhere. */
 
 :root {
-  --ink: #1d1d1f;
-  --ink-2: #6e6e73;
+  color-scheme: dark;
+  --ink: #f5f5f7;
+  --ink-2: #a1a1a6;
   --ink-3: #86868b;
-  --paper: #fff;
-  --paper-2: #f5f5f7;
-  --line: #d2d2d7;
-  --night: #000;
+  --on-ink: #000;
+  --ink-hover: #fff;
+  --paper: #000;
+  --paper-2: #161617;
+  --card: #1d1d1f;
+  --line: #424245;
+  --night: #101012;
   --night-2: #161617;
   --night-line: #424245;
+  --link: #2997ff;
+  --nav-bg: rgba(22, 22, 23, 0.72);
+  --menu-bg: rgba(22, 22, 23, 0.96);
+  --nav-line: rgba(255, 255, 255, 0.1);
+  --seg-bg: #2c2c2e;
+  --seg-on: #48484a;
+  --copy-hover: #2c2c2e;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Helvetica Neue", "Segoe UI", Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --ease: cubic-bezier(0.28, 0.11, 0.32, 1);
   --wrap: 980px;
   --gutter: 22px;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --ink: #1d1d1f;
+  --ink-2: #6e6e73;
+  --on-ink: #fff;
+  --ink-hover: #000;
+  --paper: #fff;
+  --paper-2: #f5f5f7;
+  --card: #fff;
+  --line: #d2d2d7;
+  --night: #000;
+  --link: #0066cc;
+  --nav-bg: rgba(255, 255, 255, 0.72);
+  --menu-bg: rgba(255, 255, 255, 0.96);
+  --nav-line: rgba(0, 0, 0, 0.08);
+  --seg-bg: #e3e3e8;
+  --seg-on: #fff;
+  --copy-hover: #ebebef;
 }
 
 * { box-sizing: border-box; }
@@ -30,7 +61,7 @@ img { display: block; max-width: 100%; }
 a { color: inherit; }
 b { font-weight: 600; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.skip { position: absolute; left: -999px; top: 8px; z-index: 100; padding: 10px 16px; border-radius: 999px; background: var(--ink); color: #fff; }
+.skip { position: absolute; left: -999px; top: 8px; z-index: 100; padding: 10px 16px; border-radius: 999px; background: var(--ink); color: var(--on-ink); }
 .skip:focus { left: 12px; }
 :focus-visible { outline: 2px solid #0071e3; outline-offset: 3px; border-radius: 6px; }
 
@@ -47,7 +78,7 @@ b { font-weight: 600; }
 .fine { margin: 14px 0 0; font-size: 14px; color: var(--ink-3); letter-spacing: -0.016em; }
 
 /* the "Learn more ›" kind of link */
-.more { display: inline-flex; align-items: center; gap: 2px; color: #0066cc; text-decoration: none; font-size: 17px; }
+.more { display: inline-flex; align-items: center; gap: 2px; color: var(--link); text-decoration: none; font-size: 17px; }
 .more::after { content: "›"; margin-left: 4px; font-size: 1.15em; line-height: 1; transform: translateY(-1px); }
 .more:hover { text-decoration: underline; }
 .more.light { color: #2997ff; }
@@ -56,23 +87,23 @@ b { font-weight: 600; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 44px; padding: 11px 22px; border-radius: 980px; border: 0;
-  background: var(--ink); color: #fff; text-decoration: none;
+  background: var(--ink); color: var(--on-ink); text-decoration: none;
   font: 400 17px/1.2 var(--font); letter-spacing: -0.022em; cursor: pointer;
   transition: background 0.2s var(--ease), transform 0.2s var(--ease);
 }
-.btn:hover { background: #000; }
+.btn:hover { background: var(--ink-hover); }
 .btn:active { transform: scale(0.97); }
 .btn small { font-size: 14px; opacity: 0.7; }
 .btn.outline { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
-.btn.outline:hover { background: var(--ink); color: #fff; }
+.btn.outline:hover { background: var(--ink); color: var(--on-ink); }
 .dark .btn { background: #fff; color: #000; }
 
 /* ---------- nav ---------- */
 .nav {
   position: sticky; top: 0; z-index: 50; height: 52px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--nav-bg);
   -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid var(--nav-line);
 }
 .nav-in { width: min(var(--wrap), 100% - 2 * var(--gutter)); height: 100%; margin: 0 auto; display: flex; align-items: center; gap: 24px; }
 .nav-brand { display: flex; align-items: center; gap: 9px; margin-right: auto; text-decoration: none; font-size: 21px; font-weight: 600; letter-spacing: 0.011em; }
@@ -81,8 +112,13 @@ b { font-weight: 600; }
 .nav-links a { font-size: 12px; letter-spacing: -0.01em; color: var(--ink); opacity: 0.8; text-decoration: none; padding: 14px 0; transition: opacity 0.2s; }
 .nav-links a:hover, .nav-links a.on { opacity: 1; }
 .nav-links a.on { font-weight: 600; }
-.nav-get { padding: 5px 13px; border-radius: 980px; background: var(--ink); color: #fff; font-size: 12px; text-decoration: none; white-space: nowrap; }
-.nav-get:hover { background: #000; }
+.nav-get { padding: 5px 13px; border-radius: 980px; background: var(--ink); color: var(--on-ink); font-size: 12px; text-decoration: none; white-space: nowrap; }
+.nav-get:hover { background: var(--ink-hover); }
+.theme-toggle { display: grid; place-items: center; width: 32px; height: 32px; margin: 0 -6px; border: 0; border-radius: 50%; background: none; color: var(--ink); cursor: pointer; opacity: 0.8; }
+.theme-toggle:hover { opacity: 1; }
+.theme-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.theme-toggle .moon, :root[data-theme="light"] .theme-toggle .sun { display: none; }
+:root[data-theme="light"] .theme-toggle .moon { display: block; }
 .nav-toggle { display: none; width: 44px; height: 44px; margin-right: -10px; border: 0; background: none; color: var(--ink); cursor: pointer; order: 3; }
 .nav-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.3s var(--ease); }
 .nav.open .nav-toggle svg { transform: rotate(180deg); }
@@ -196,16 +232,16 @@ b { font-weight: 600; }
 
 /* ---------- download ---------- */
 .download { padding: 140px 0 120px; background: var(--paper-2); text-align: center; }
-.segmented { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 2px; padding: 3px; margin-bottom: 28px; border-radius: 12px; background: #e3e3e8; }
+.segmented { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 2px; padding: 3px; margin-bottom: 28px; border-radius: 12px; background: var(--seg-bg); }
 .segmented button {
   display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 8px 18px; border: 0; border-radius: 9px;
   background: transparent; color: var(--ink); font: 500 15px/1 var(--font); letter-spacing: -0.016em; cursor: pointer;
   transition: background 0.25s var(--ease), box-shadow 0.25s var(--ease);
 }
 .segmented button svg { width: 17px; height: 17px; }
-.segmented button[aria-selected="true"] { background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04); font-weight: 600; }
+.segmented button[aria-selected="true"] { background: var(--seg-on); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04); font-weight: 600; }
 .segmented button.mine::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0.5; }
-.card { padding: 40px 44px; border-radius: 28px; background: #fff; text-align: left; }
+.card { padding: 40px 44px; border-radius: 28px; background: var(--card); text-align: left; }
 .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
 .card-head h3 { margin: 0; font-size: 32px; font-weight: 600; letter-spacing: 0.004em; }
 .card-head .n { font-size: 14px; color: var(--ink-3); }
@@ -213,7 +249,7 @@ b { font-weight: 600; }
 .steps li { position: relative; padding-left: 40px; counter-increment: s; }
 .steps li::before {
   content: counter(s); position: absolute; left: 0; top: 0; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
-  background: var(--ink); color: #fff; font-size: 13px; font-weight: 600;
+  background: var(--ink); color: var(--on-ink); font-size: 13px; font-weight: 600;
 }
 .steps a { text-decoration: underline; text-underline-offset: 2px; }
 .btns { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -223,7 +259,7 @@ b { font-weight: 600; }
 .copy { display: flex; align-items: stretch; border-radius: 14px; background: var(--paper-2); overflow: hidden; }
 .copy code { flex: 1; min-width: 0; padding: 14px 16px; font: 12.5px/1.5 var(--mono); letter-spacing: 0; color: var(--ink); white-space: nowrap; overflow-x: auto; scrollbar-width: thin; }
 .copy button { flex: 0 0 auto; min-width: 72px; border: 0; border-left: 1px solid var(--line); background: transparent; color: var(--ink); font: 500 14px var(--font); cursor: pointer; }
-.copy button:hover { background: #ebebef; }
+.copy button:hover { background: var(--copy-hover); }
 .also { margin: 36px 0 0; }
 
 /* ---------- FAQ ---------- */
@@ -279,17 +315,18 @@ b { font-weight: 600; }
 @media (max-width: 834px) {
   .nav-links {
     position: absolute; top: 52px; left: 0; right: 0; flex-direction: column; align-items: stretch; gap: 0;
-    padding: 6px var(--gutter) 18px; background: rgba(255, 255, 255, 0.96);
+    padding: 6px var(--gutter) 18px; background: var(--menu-bg);
     -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 1px solid var(--nav-line);
     opacity: 0; visibility: hidden; transform: translateY(-8px); transition: opacity 0.25s var(--ease), transform 0.25s var(--ease), visibility 0.25s;
   }
   .nav.open .nav-links { opacity: 1; visibility: visible; transform: none; }
-  .nav-links a { padding: 12px 0; font-size: 17px; opacity: 1; border-bottom: 1px solid rgba(0, 0, 0, 0.06); }
+  .nav-links a { padding: 12px 0; font-size: 17px; opacity: 1; border-bottom: 1px solid var(--nav-line); }
   .nav-links a:last-child { border-bottom: 0; }
   .nav-toggle { display: grid; place-items: center; }
   .nav-in { gap: 6px; }
   .nav-get { order: 2; }
+  .theme-toggle { order: 1; margin: 0; }
 }
 @media (max-width: 734px) {
   :root { --gutter: 16px; }
