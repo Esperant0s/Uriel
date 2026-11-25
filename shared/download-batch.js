@@ -48,9 +48,10 @@
     const done = [];
     /** @type {{ item: T, error: unknown }[]} */
     let failed = [];
+    let failedCount = 0; // what the progress shows; a song that works on the final pass moves back to done
     let pauseUntil = 0; // a refusal pauses every worker, not only the one that saw it
     const aborted = () => !!(signal && signal.aborted);
-    const report = (/** @type {T | null} */ current) => { if (onProgress) { try { onProgress({ done: done.length, failed: failed.length, total: list.length, current }); } catch (e) {} } };
+    const report = (/** @type {T | null} */ current) => { if (onProgress) { try { onProgress({ done: done.length, failed: failedCount, total: list.length, current }); } catch (e) {} } };
 
     /** @param {T} item @param {number} maxRetries @param {boolean} freshFirst @returns {Promise<{ ok?: boolean, aborted?: boolean, error?: unknown }>} */
     async function attemptItem(item, maxRetries, freshFirst) {
@@ -76,8 +77,8 @@
       return { ok: false, error: lastErr };
     }
 
-    /** @param {T[]} queue @param {number} workers @param {number} maxRetries @param {boolean} fresh */
-    async function pass(queue, workers, maxRetries, fresh) {
+    /** @param {T[]} queue @param {number} workers @param {number} maxRetries @param {boolean} fresh @param {boolean} retrying */
+    async function pass(queue, workers, maxRetries, fresh, retrying) {
       let next = 0;
       /** @type {{ item: T, error: unknown }[]} */
       const out = [];
@@ -87,7 +88,13 @@
           report(item);
           const r = await attemptItem(item, maxRetries, fresh);
           if (r.aborted) return;
-          if (r.ok) done.push(item); else out.push({ item, error: r.error });
+          if (r.ok) {
+            done.push(item);
+            if (retrying) failedCount--;
+          } else {
+            out.push({ item, error: r.error });
+            if (!retrying) failedCount++;
+          }
           report(null);
         }
       };
@@ -95,14 +102,14 @@
       return out;
     }
 
-    failed = await pass(list, concurrency, retries, false);
+    failed = await pass(list, concurrency, retries, false, false);
     if (finalPass && failed.length && !aborted()) {
       // the last go for what's left: after a pause, one song at a time, each with a fresh lookup
       await sleep(Math.max(finalPassDelayMs, pauseUntil - now()), signal);
       if (!aborted()) {
         const again = failed.map((f) => f.item);
         failed = [];
-        failed = await pass(again, 1, 1, true);
+        failed = await pass(again, 1, 1, true, true);
       }
     }
     return { done, failed, aborted: aborted() };

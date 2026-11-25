@@ -61,8 +61,14 @@ window.UrielApp.album = function ({ Lib, T, Tf, Tm, createTrackRow, escapeHtml, 
       if (missing.length < d.items.length) showToast(Tm('{0} of {1} songs are already downloaded: getting the rest', d.items.length - missing.length, d.items.length), 'info');
       openDownloadAllModal({
         name: d.album.title || 'Album',
+        key: `album:${d.album.id}`,
         tracks: missing,
         resolve: d.isMix ? null : (/** @type {UrielTrack} */ t) => resolveAlbumTrack(d.album, /** @type {UrielTrack} */ (byId.get(t.id))),
+        // busy as soon as it starts or waits in the queue, so a second click can't add it again
+        onStart: () => {
+          d.busy = true;
+          if (albumDownload === d) renderAlbumDownloadButton();
+        },
         onProgress: (/** @type {number} */ i, /** @type {number} */ n) => {
           d.busy = true;
           d.progress = `${i + 1}/${n}`;

@@ -439,7 +439,11 @@ declare global {
   // a playlist, album or selection being downloaded, or waiting for its turn
   interface UrielDownloadJob {
     name: string;
+    key?: string;
     tracks: UrielTrack[];
+    format?: string;
+    quality?: string;
+    onStart?: () => void;
     resolve?: ((t: UrielTrack) => Promise<UrielTrack | null>) | null;
     onProgress?: (done: number, total: number) => void;
     onDone?: (done: number, total: number) => void;

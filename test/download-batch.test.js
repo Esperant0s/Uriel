@@ -86,3 +86,20 @@ test('a fatal error is not retried; abort stops the batch', async () => {
   assert.strictEqual(r2.aborted, true);
   assert.deepStrictEqual(seen, [1, 2]);
 });
+
+test('progress counts failures while the batch runs, and a song that works on the final pass moves to done', async () => {
+  const c = clock();
+  const seen = [];
+  let bTries = 0;
+  await runDownloadBatch(['a', 'b', 'c'], async (item) => {
+    if (item === 'b' && ++bTries <= 1) throw Object.assign(new Error('bad'), { status: 400 });
+    if (item === 'c') throw Object.assign(new Error('bad'), { status: 400 });
+  }, { concurrency: 1, ...c, onProgress: (p) => seen.push(p) });
+  const firstPassEnd = seen.findIndex((p) => p.done + p.failed === 3);
+  assert.ok(firstPassEnd >= 0, 'failures show up before the batch ends');
+  assert.strictEqual(seen[firstPassEnd].failed, 2);
+  const last = seen[seen.length - 1];
+  assert.strictEqual(last.done, 2);
+  assert.strictEqual(last.failed, 1);
+  for (let i = 1; i < seen.length; i++) assert.ok(seen[i].done + seen[i].failed >= seen[i - 1].done + seen[i - 1].failed);
+});

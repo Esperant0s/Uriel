@@ -4037,7 +4037,7 @@ async function handleEncode(/** @type {import('http').IncomingMessage} */ req, /
           try { fs.unlinkSync(renderTempPath); } catch (_) {}
           if (!res.writableEnded) {
             res.writeHead(413, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: false, error: 'WAV exceeds 300MB limit' }));
+            res.end(JSON.stringify({ success: false, error: 'WAV exceeds 500MB limit' }));
           }
           reject(new Error('Payload too large'));
           return;

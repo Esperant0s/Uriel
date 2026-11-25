@@ -162,9 +162,11 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
     }
     trackToDownload = null;
     const name = playlist.name || 'Playlist';
+    // two playlists can share a name, so a download is known by its key (playlist id, album:<id>, favorites...)
+    const key = String(playlist.key || ('id' in playlist && playlist.id) || name);
     // the same playlist downloading already: its dialog comes back with the progress
-    const running = downloadAbort && downloadAbortFor && downloadAbortFor.tracks && downloadAbortFor.name === name ? /** @type {UrielDownloadJob} */ (downloadAbortFor) : null;
-    downloadBatch = running || { name, tracks, resolve: playlist.resolve, onProgress: playlist.onProgress, onDone: playlist.onDone, checking: true };
+    const running = downloadAbort && downloadAbortFor && downloadAbortFor.tracks && downloadAbortFor.key === key ? /** @type {UrielDownloadJob} */ (downloadAbortFor) : null;
+    downloadBatch = running || { name, key, tracks, resolve: playlist.resolve, onStart: playlist.onStart, onProgress: playlist.onProgress, onDone: playlist.onDone, checking: true };
     if (!running) showIdleDownload();
     const batchShown = downloadBatch;
     el.downloadModal.classList.add('batch-mode');
@@ -192,7 +194,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
         else I18N.text(el.downloadPreviewArtist, '{0} of {1} already downloaded · {2} to go', have, tracks.length, tracks.length - have);
       }
     }, () => {
-      if (downloadBatch === batchShown && el.downloadPreviewArtist) I18N.text(el.downloadPreviewArtist, tracks.length === 1 ? '1 song' : '{0} songs', tracks.length);
+      if (downloadBatch === batchShown && el.downloadPreviewArtist) I18N.text(el.downloadPreviewArtist, "Couldn't check what is already downloaded: all {0} will be downloaded", tracks.length);
     }).finally(() => {
       if (downloadBatch !== batchShown) return;
       batchShown.checking = false;
@@ -237,7 +239,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
   function cancelCurrentDownload() {
     if (downloadAbort && downloadAbortFor === (downloadBatch || trackToDownload)) {
       // Cancel stops what waits behind it too
-      downloadQueue.length = 0;
+      clearQueue();
       try { downloadAbort.abort(); } catch (_) {}
       downloadAbort = null;
       const curSpinner = el.downloadSpinner || document.getElementById('download-spinner');
@@ -277,7 +279,12 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
   // Cancel in the phone's download notification
   window.addEventListener('uriel:cancel-downloads', () => {
     if (!downloadAbort) return;
-    if (!cancelCurrentDownload()) { try { downloadAbort.abort(); } catch (_) {} downloadAbort = null; }
+    if (!cancelCurrentDownload()) {
+      clearQueue();
+      try { downloadAbort.abort(); } catch (_) {}
+      downloadAbort = null;
+      updateDownloadBtnLabel();
+    }
     setDownloadProgress(null);
     setDownloadRunning(false);
     announceDownloads(false);
@@ -406,9 +413,21 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
   /** @type {UrielDownloadJob[]} */
   const downloadQueue = [];
   function queueDownload(/** @type {UrielDownloadJob} */ batch) {
-    downloadQueue.push({ name: batch.name, tracks: batch.tracks, resolve: batch.resolve, onProgress: batch.onProgress, onDone: batch.onDone });
+    const key = batch.key || batch.name;
+    const running = downloadAbortFor && 'tracks' in downloadAbortFor && downloadAbortFor.key === key;
+    if (running || downloadQueue.some((q) => q.key === key)) {
+      showToast(Tm('This is already in the download queue'), 'info');
+      return;
+    }
+    // it keeps the format picked now, not whatever the dialog shows when its turn comes
+    downloadQueue.push({ name: batch.name, key, tracks: batch.tracks, resolve: batch.resolve, onStart: batch.onStart, onProgress: batch.onProgress, onDone: batch.onDone, format: batch.format || selectedFormat, quality: batch.quality || selectedQuality });
+    if (typeof batch.onStart === 'function') batch.onStart();
     if (el.downloadModal) closeModal(el.downloadModal);
     showToast(Tm('Added to the download queue ({0} waiting)', downloadQueue.length), 'info');
+  }
+  // Cancel drops what waits too; an album's button stops saying it's downloading
+  function clearQueue() {
+    for (const q of downloadQueue.splice(0)) if (typeof q.onDone === 'function') q.onDone(0, q.tracks.length);
   }
   function startNextDownload() {
     if (downloadAbort || !downloadQueue.length) return;
@@ -423,6 +442,9 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
     // the dialog may show another download by the time this one reports back
     const shown = () => downloadBatch === batch;
     if (shown() && el.btnConfirmDownload) el.btnConfirmDownload.disabled = true;
+    const format = String(batch.format || selectedFormat);
+    const quality = String(batch.quality || selectedQuality);
+    if (typeof batch.onStart === 'function') batch.onStart();
     try {
       let lastDir = null;
       // Cancel/X used to only hide the dialog while every song kept downloading
@@ -430,8 +452,12 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
       downloadAbort = batchAbort;
       downloadAbortFor = batch;
       const total = batch.tracks.length;
+      if (shown()) setDownloadProgress({ text: T('Checking what is already downloaded…') });
       // songs already in the Downloads folder aren't downloaded again (#29)
-      const present = await downloadedInFolder(batch.tracks).catch(() => null);
+      const present = await downloadedInFolder(batch.tracks).catch((e) => {
+        console.warn('downloaded-status failed', e);
+        return null;
+      });
       const tracks = present ? batch.tracks.filter((/** @type {UrielTrack} */ _, /** @type {number} */ i) => !present[i]) : batch.tracks;
       const skipped = total - tracks.length;
       const setProgress = (/** @type {{ done: number, failed: number }} */ p) => {
@@ -450,7 +476,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
           const found = await batch.resolve(t).catch(() => null);
           if (found && found.url) src = { ...t, url: found.url, id: found.id || t.id };
         }
-        const downloadUrl = `http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(src.url || '')}&id=${encodeURIComponent(src.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${selectedFormat}&quality=${selectedQuality}&platform=${encodeURIComponent(src.platform || t.platform || 'youtube')}&duration=${encodeURIComponent(t.duration || 0)}${fresh ? '&fresh=1' : ''}`;
+        const downloadUrl = `http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(src.url || '')}&id=${encodeURIComponent(src.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${format}&quality=${quality}&platform=${encodeURIComponent(src.platform || t.platform || 'youtube')}&duration=${encodeURIComponent(t.duration || 0)}${fresh ? '&fresh=1' : ''}`;
         const res = await fetch(downloadUrl, { signal: batchAbort.signal });
         const text = await res.text();
         let data;
@@ -529,7 +555,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
       if (downloadAbort && downloadAbortFor !== t) {
         const fullSong = startSec === 0 && (endSec === null || !t.duration || endSec >= Number(t.duration) - 1);
         if (!fullSong && !isPhoneApp) { showToast(Tm('A trimmed song can only be downloaded when the others are done'), 'info'); return; }
-        queueDownload({ name: t.title || T('Track'), tracks: [t] });
+        queueDownload({ name: t.title || T('Track'), key: `song:${t.id || t.url}`, tracks: [t] });
         return;
       }
 
@@ -733,7 +759,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
   const btnDownloadFavorites = document.getElementById('btn-download-favorites');
   if (btnDownloadFavorites) {
     btnDownloadFavorites.addEventListener('click', () => {
-      openDownloadAllModal({ name: 'Favorites', tracks: sortTracksFor('favorites', state.favorites || []) }, 'Download favorites');
+      openDownloadAllModal({ name: 'Favorites', key: 'favorites', tracks: sortTracksFor('favorites', state.favorites || []) }, 'Download favorites');
     });
   }
   const btnMultiDownload = document.getElementById('multi-select-download');
@@ -741,7 +767,8 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
     btnMultiDownload.addEventListener('click', () => {
       const tracks = [...multiSel.tracks.values()];
       if (!tracks.length) return;
-      openDownloadAllModal({ name: multiSel.context === 'favorites' ? 'Favorites' : ((state.playlists || []).find((/** @type {UrielPlaylist} */ p) => p.id === state.currentPlaylistId) || {}).name || 'Songs', tracks },
+      const key = 'sel:' + tracks.map((/** @type {UrielTrack} */ t) => t.id).join(',');
+      openDownloadAllModal({ key, name: multiSel.context === 'favorites' ? 'Favorites' : ((state.playlists || []).find((/** @type {UrielPlaylist} */ p) => p.id === state.currentPlaylistId) || {}).name || 'Songs', tracks },
         `Download ${tracks.length} song${tracks.length === 1 ? '' : 's'}`);
     });
   }
