@@ -2792,6 +2792,16 @@ async function soundcloudFallback(/** @type {string | null | undefined} */ title
   return pick ? pick.url : null;
 }
 
+// a download with no link to go by is searched for on YouTube: its first result used to be saved whatever it was
+// (a live version, a 1-hour loop). An upload of about the song's length is taken instead when there is one.
+function pickByLength(/** @type {{ id?: string, title?: string, duration?: number }[]} */ found, /** @type {string} */ title, /** @type {number} */ duration) {
+  const wantsVersion = VERSION_WORDS.test(title || '');
+  const pick = found.find((t) => t && t.id && t.duration
+    && Math.abs(t.duration - duration) <= Math.max(10, duration * 0.08)
+    && (wantsVersion || !VERSION_WORDS.test(t.title || '')));
+  return pick ? `https://www.youtube.com/watch?v=${pick.id}` : null;
+}
+
 async function alternativeUploads(/** @type {string} */ cleanId, /** @type {string | null | undefined} */ title, /** @type {string | null | undefined} */ artist, /** @type {unknown} */ duration) {
   const query = `${artist || ''} ${title || ''}`.trim();
   if (!query) return [];
@@ -3439,6 +3449,39 @@ async function buildDownloadsIndex() {
   return map;
 }
 
+// which song each download is (file name → song id): a different song with the same "Artist - Title" got
+// saved over it, and counted as downloaded already. Files saved before this aren't in it and go by name as before.
+const DOWNLOAD_IDS_PATH = path.join(DATA_DIR, 'download-ids.json');
+/** @type {Record<string, string>} */
+const downloadIds = readJsonFile(DOWNLOAD_IDS_PATH);
+function rememberDownload(/** @type {string} */ filename, /** @type {string | null | undefined} */ id) {
+  if (!id || !filename) return;
+  downloadIds[filename.toLowerCase()] = id;
+  try { writeJsonFile(DOWNLOAD_IDS_PATH, downloadIds); } catch (e) {}
+}
+
+async function downloadBase(/** @type {string} */ base, /** @type {string | null | undefined} */ id) {
+  const index = await buildDownloadsIndex();
+  for (let n = 1; n < 100; n++) {
+    const name = n === 1 ? base : `${base} (${n})`;
+    const file = index.get(name.toLowerCase());
+    const owner = file && downloadIds[file.toLowerCase()];
+    if (!file || !owner || !id || owner === id) return name;
+  }
+  return base;
+}
+
+// downloaded already: a file saved for this song, or one with its name that isn't known to be another song
+async function isDownloaded(/** @type {string} */ title, /** @type {string} */ artist, /** @type {string} */ id) {
+  const index = downloadsIndex && Date.now() - downloadsIndexBuiltAt <= DOWNLOADS_INDEX_TTL ? downloadsIndex : await buildDownloadsIndex();
+  if (id) {
+    for (const file of index.values()) if (downloadIds[file.toLowerCase()] === id) return true;
+  }
+  const file = (title || artist) ? await findDownloadedFile(title, artist) : null;
+  const owner = file && downloadIds[file.toLowerCase()];
+  return !!file && (!owner || !id || owner === id);
+}
+
 async function findDownloadedFile(/** @type {string | null | undefined} */ title, /** @type {string | null | undefined} */ artist) {
   if (!title && !artist) return null;
   let index = downloadsIndex;
@@ -3796,11 +3839,10 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
   const ext = isRaw ? 'wav' : (validFormats.includes(safeFormat) ? safeFormat : 'mp3');
   const safeQuality = /^\d+$/.test(String(quality)) ? String(quality) : '0';
   const tempName = isRaw ? ('raw_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8) + '.wav') : null;
-  const outFilename = isRaw ? tempName : `${cleanArtist} - ${cleanTitle}.${ext}`;
-  const outPath = isRaw ? path.join(tmpDir, /** @type {string} */ (tempName)) : path.join(downloadsDir, /** @type {string} */ (outFilename));
+
   // a % in a title would be read by yt-dlp as a template field: %% writes a plain %
   const tplSafe = (/** @type {string} */ x) => String(x).replace(/%/g, '%%');
-  const tempTemplate = isRaw ? path.join(tmpDir, /** @type {string} */ (tempName).replace(/\.wav$/, '.%(ext)s')) : path.join(downloadsDir, `${tplSafe(cleanArtist)} - ${tplSafe(cleanTitle)}.%(ext)s`);
+
 
   let targetUrl = trackUrl;
   if (!isSafeMediaUrl(targetUrl) || targetUrl.includes('deezer.com') || youtubeSearchPageQuery(targetUrl)) {
@@ -3812,6 +3854,14 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
     const vidMatch = String(targetUrl).match(/(?:v=|\/embed\/|\/watch\/|youtu\.be\/|\/v\/)([a-zA-Z0-9_-]{11})/);
     if (vidMatch) cleanId = cleanTrackId(vidMatch[1]);
   }
+
+  // which song this is, for the downloads' file → song list (an album's song is asked for by its YouTube id)
+  const songId = cleanTrackId(String(query.songId || '')) || cleanId;
+  // "Artist - Title", or "Artist - Title (2)" when a different song is saved under that name already
+  const fileBase = isRaw ? '' : await downloadBase(`${cleanArtist} - ${cleanTitle}`, songId);
+  const outFilename = isRaw ? tempName : `${fileBase}.${ext}`;
+  const outPath = isRaw ? path.join(tmpDir, /** @type {string} */ (tempName)) : path.join(downloadsDir, /** @type {string} */ (outFilename));
+  const tempTemplate = isRaw ? path.join(tmpDir, /** @type {string} */ (tempName).replace(/\.wav$/, '.%(ext)s')) : path.join(downloadsDir, `${tplSafe(fileBase)}.%(ext)s`);
 
   const downloadKey = !isRaw ? JSON.stringify([cleanId || targetUrl, cleanArtist, cleanTitle, ext, safeQuality, start, end]) : null;
   if (downloadKey && downloadInFlight.has(downloadKey)) {
@@ -3870,7 +3920,7 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
     if (!cached) return sendDownloadResponse(blocked ? 429 : 500, { success: false, blocked, error: blocked ? STREAM_BLOCKED : "Couldn't get this song right now. Try again later, or another version from search" });
     await fs.promises.mkdir(downloadsDir, { recursive: true });
     const meta = trackMetadataIndex[cacheId] || {};
-    const base = `${cleanArtist} - ${cleanTitle}`;
+    const base = fileBase;
     if (phoneSaveDownload) {
       const stop = new AbortController();
       res.on('close', () => { if (abandoned()) stop.abort(); });
@@ -3881,11 +3931,13 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
         source: youtubeExtractTarget(targetUrl, cacheId, String(query.platform || 'youtube')).url, id: cacheId, signal: stop.signal,
       });
       downloadsIndex = null;
+      rememberDownload(saved.filename, songId);
       return sendDownloadResponse(200, { success: true, filename: saved.filename, note: saved.note, directory: downloadsDir });
     }
     const savedName = `${base}${path.extname(cached)}`;
     await fs.promises.copyFile(cached, path.join(downloadsDir, savedName));
     downloadsIndex = null;
+    rememberDownload(savedName, songId);
     return sendDownloadResponse(200, { success: true, filename: savedName, directory: downloadsDir });
   }
   const tags = { title: title || cleanTitle, artist: artist || cleanArtist, album: String(query.album || ''), track: String(query.track || ''), year: String(query.year || '') };
@@ -3924,6 +3976,7 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
       try {
         await runFfmpeg(ffmpegBin, ffmpegArgs, (p) => { ffmpegProc = p; }).finally(() => { if (tagArgs.tmp) fs.promises.unlink(tagArgs.tmp).catch(() => {}); });
         downloadsIndex = null;
+        if (!isRaw) rememberDownload(/** @type {string} */ (outFilename), songId);
         return sendDownloadResponse(200, isRaw ? {
           success: true,
           tempName: tempName
@@ -3947,7 +4000,7 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
   async function cleanupPartial() {
     try {
       const files = await fs.promises.readdir(targetDir);
-      const prefix = isRaw ? /** @type {string} */ (tempName).replace(/\.wav$/, '') : `${cleanArtist} - ${cleanTitle}.`;
+      const prefix = isRaw ? /** @type {string} */ (tempName).replace(/\.wav$/, '') : `${fileBase}.`;
       for (const f of files) {
         if (beforeFiles.has(f)) continue;
         if (!f.startsWith(prefix)) continue;
@@ -3989,11 +4042,16 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
     });
   };
 
-  const baseName = isRaw ? /** @type {string} */ (tempName).replace(/\.wav$/, '') : `${cleanArtist} - ${cleanTitle}`;
+  const baseName = isRaw ? /** @type {string} */ (tempName).replace(/\.wav$/, '') : fileBase;
   const videoId = cleanId;
 
   const coverFormats = ['original', 'mp3', 'm4a', 'flac', 'opus', 'ogg'];
   const canCarryCover = !isRaw && coverFormats.includes(ext);
+
+  if (targetUrl.startsWith('ytsearch1:') && duration > 0) {
+    const found = await directYoutubeSearch(`${cleanArtist} ${cleanTitle}`).catch(() => []);
+    targetUrl = pickByLength(found || [], cleanTitle, duration) || targetUrl;
+  }
 
   // Original: the audio YouTube sends, taken out of the video file without re-encoding (Opus or AAC)
   const formatArgs = ext === 'original' ? ['--audio-format', 'best'] : ['--audio-format', ext, '--audio-quality', safeQuality];
@@ -4010,6 +4068,7 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
     await cleanupDownloadArtifacts(downloadsDir, beforeFiles, baseName, videoId, path.extname(name).slice(1), true);
     await retagDownload(path.join(downloadsDir, name), tags, coverPath);
     downloadsIndex = null;
+    rememberDownload(name, songId);
     return name;
   };
 
@@ -7436,7 +7495,7 @@ const server = http.createServer(guardHandler(async (/** @type {import('http').I
           if (!t || typeof t !== 'object') return false;
           const title = typeof t.title === 'string' ? t.title : '';
           const artist = typeof t.artist === 'string' ? t.artist : '';
-          if ((title || artist) && await findDownloadedFile(title, artist)) return true;
+          if (await isDownloaded(title, artist, cleanTrackId(typeof t.id === 'string' ? t.id : ''))) return true;
           // the same song already on the device (Music folder, phone library) is not downloaded again either
           if (findLocalSong(title, artist, t.duration)) return true;
           // "Download all" (#29) only skips songs that are in the Downloads folder, not ones merely cached
@@ -7964,7 +8023,7 @@ function stopServer() {
   });
 }
 
-module.exports = { startServer, stopServer, stopChildren: () => childProcs.stopAll(), PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, setOutProxy, streamHealthStats, _test: { withYtDlpCookies, youtubeExtractTarget, fetchKugouLyrics, ytdlpTimeoutFor, retagDownload, parseYtDlpProgress, downloadErrorText } };
+module.exports = { startServer, stopServer, stopChildren: () => childProcs.stopAll(), PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, setOutProxy, streamHealthStats, _test: { withYtDlpCookies, youtubeExtractTarget, fetchKugouLyrics, ytdlpTimeoutFor, retagDownload, parseYtDlpProgress, downloadErrorText, pickByLength, downloadBase, rememberDownload, isDownloaded } };
 
 if (require.main === module) {
   startServer();

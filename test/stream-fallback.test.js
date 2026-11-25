@@ -102,3 +102,14 @@ test('yt-dlp progress lines and errors are read for the download dialog', () => 
   assert.strictEqual(downloadErrorText('ERROR: [youtube] abc: Video unavailable').text, "This song isn't available on YouTube any more");
   assert.strictEqual(downloadErrorText('WARNING: x\nERROR: [generic] Something odd').text, 'Something odd');
 });
+
+test('a download found by search takes an upload of about the song length, not a version', () => {
+  const { pickByLength } = require('../shared/server')._test;
+  const found = [
+    { id: 'loop', title: 'Song (1 hour loop)', duration: 3600 },
+    { id: 'live', title: 'Song (Live remix)', duration: 212 },
+    { id: 'real', title: 'Song', duration: 205 },
+  ];
+  assert.strictEqual(pickByLength(found, 'Song', 210), 'https://www.youtube.com/watch?v=real');
+  assert.strictEqual(pickByLength(found, 'Song', 500), null);
+});

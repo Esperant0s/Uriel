@@ -512,7 +512,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
           const found = await batch.resolve(t).catch(() => null);
           if (found && found.url) src = { ...t, url: found.url, id: found.id || t.id };
         }
-        const downloadUrl = `http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(src.url || '')}&id=${encodeURIComponent(src.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${format}&quality=${quality}&platform=${encodeURIComponent(src.platform || t.platform || 'youtube')}&duration=${encodeURIComponent(t.duration || 0)}${tagQuery(t, batch)}${fresh ? '&fresh=1' : ''}`;
+        const downloadUrl = `http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(src.url || '')}&id=${encodeURIComponent(src.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${format}&quality=${quality}&platform=${encodeURIComponent(src.platform || t.platform || 'youtube')}&duration=${encodeURIComponent(t.duration || 0)}&songId=${encodeURIComponent(t.id || '')}${tagQuery(t, batch)}${fresh ? '&fresh=1' : ''}`;
         const res = await fetch(downloadUrl, { signal: batchAbort.signal });
         const text = await res.text();
         let data;
