@@ -211,6 +211,12 @@ new MutationObserver((muts) => {
     }
   }
 }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['src'] });
+// By the time the observer swaps it, the WebView has already tried the 127.0.0.1 address and that fails. The
+// failure used to reach the row's onerror, which gave up on the cover while its real file was still being looked up.
+window.addEventListener('error', (e) => {
+  const img = e.target;
+  if (e.isTrusted && img instanceof HTMLImageElement && img.__urielSrc !== undefined && img.getAttribute('src') === img.__urielSrc) e.stopImmediatePropagation();
+}, true);
 
 // Android hardware back: close whatever is on top instead of quitting the app.
 // On Home it backgrounds the app (music keeps playing) rather than closing it.
