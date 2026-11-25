@@ -136,7 +136,7 @@ function electronAPI({ ready, port, fs, fileUrlFor }: Deps) {
     getDataDir: async () => ({ dir: ANDROID ? "In Uriel's storage on this phone" : 'On this iPhone (Files → Uriel → Mural)', defaultDir: '/data', isCustom: false }),
     pickDataDir: async () => null,
     setDataDir: async () => ({ success: false, error: ANDROID ? 'The music folder is fixed on Android' : 'The music folder is fixed on iPhone' }),
-    // fixed on phones (Settings hides Change): Files → Uriel → Mural → Downloads on iOS, Music/Mural on Android (shims/store.ts)
+    // fixed on phones (Settings hides Change): Files → Uriel → Mural → Downloads on iOS, Music/Uriel on Android (shims/store.ts)
     async getDownloadDir() {
       if (Capacitor.getPlatform() !== 'android') return { dir: 'Files → Uriel → Mural → Downloads', isCustom: false };
       await ready;

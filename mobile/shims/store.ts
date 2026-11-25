@@ -1,6 +1,6 @@
 // Persistent storage behind the fs shim. Virtual paths under /data map to Capacitor Filesystem paths under
 // Mural/ (IndexedDB in a browser): in Documents on iOS, visible in the Files app; in the app's private storage
-// on Android, except the songs people download, which go to Music/Mural (see "Android: downloads" below).
+// on Android, except the songs people download, which go to Music/Uriel (see "Android: downloads" below).
 import path = require('path');
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
@@ -27,14 +27,16 @@ async function ensureDir(loc: Loc): Promise<boolean> {
 }
 
 // ---- Android: downloads ----
-// Songs saved with Download (/data/Downloads) go to Music/Mural on the phone's shared storage (Documents/Mural
+// Songs saved with Download (/data/Downloads) go to Music/Uriel on the phone's shared storage (Documents/Uriel
 // if Music can't be used), where file managers and music apps find them. The song cache and the rest stay private.
 // Android 11+ lets an app save files there without asking. Android 10 and older need the storage permission
 // (AndroidManifest.xml); it's asked for when the first song is saved, and without it downloads stay private.
 const DOWNLOADS = '/data/Downloads';
 const PUBLIC = Directory.ExternalStorage;
-const PUBLIC_ROOTS = ['Music/Mural', 'Documents/Mural'];
-let pub: string | null = null; // the public folder in use, e.g. 'Music/Mural'
+const PUBLIC_ROOTS = ['Music/Uriel', 'Documents/Uriel'];
+// where downloads went before the folder was renamed: moved into the one in use at launch
+const OLD_ROOTS = ['Music/Mural', 'Documents/Mural'];
+let pub: string | null = null; // the public folder in use, e.g. 'Music/Uriel'
 let mayAsk = false; // Android 10 and older: storage permission not given, but may be
 let asked = false;
 // where each download really is: found at launch, or saved this session (a download from before: private)
@@ -110,6 +112,41 @@ async function moveOldDownloads() {
   }
 }
 
+// Songs in the old Music/Mural move into the folder in use. One that can't be moved (Android only lets an app
+// touch the files it saved itself, and a reinstall loses that) stays where it is and is still listed, and the old
+// folder is only deleted once nothing is left in it.
+async function moveOldFolder(oldRoot: string, found: (Entry & { rpath: string })[]) {
+  const old: Entry[] = [];
+  await walk(oldRoot, PUBLIC, (r) => r, old);
+  if (!old.length) {
+    await Filesystem.rmdir({ path: oldRoot, directory: PUBLIC }).catch(() => {});
+    return;
+  }
+  let left = 0;
+  for (const e of old) {
+    if (e.isDir || !e.rpath) continue;
+    const rel = e.rpath.slice(oldRoot.length);
+    const to = { path: (pub || '') + rel, directory: PUBLIC };
+    let there = null;
+    try { there = await Filesystem.stat(to); } catch (err) {}
+    try {
+      // the same song in both: the copy in the new folder is the one kept
+      if (there && there.size === e.size) await Filesystem.deleteFile({ path: e.rpath, directory: PUBLIC });
+      else if (there) throw new Error('a different file with that name is there');
+      else {
+        await ensureDir({ path: path.dirname(to.path), directory: PUBLIC });
+        await Filesystem.rename({ from: e.rpath, directory: PUBLIC, to: to.path, toDirectory: PUBLIC });
+        scan(to);
+      }
+    } catch (err) {
+      left++;
+      const vpath = DOWNLOADS + rel.replace(/\.mka$/i, '.webm');
+      if (!placed.has(vpath) || placed.get(vpath)!.directory === DIR) found.push({ vpath, rpath: e.rpath, isDir: false, size: e.size, mtimeMs: e.mtimeMs });
+    }
+  }
+  if (!left) await Filesystem.rmdir({ path: oldRoot, directory: PUBLIC, recursive: true }).catch(() => {});
+}
+
 async function listDownloads(out: Entry[]) {
   for (const e of out) if (!e.isDir && isDownload(e.vpath)) placed.set(e.vpath, priv(e.vpath));
   let perm = null;
@@ -118,6 +155,11 @@ async function listDownloads(out: Entry[]) {
   else mayAsk = perm === 'prompt' || perm === 'prompt-with-rationale';
   if (!pub) return;
   const found: (Entry & { rpath: string })[] = [];
+  for (const oldRoot of OLD_ROOTS) {
+    let old = null;
+    try { old = await Filesystem.stat({ path: oldRoot, directory: PUBLIC }); } catch (e) {}
+    if (old && old.type === 'directory') await moveOldFolder(oldRoot, found);
+  }
   await walk(pub, PUBLIC, fromPub, found);
   for (const e of found) {
     if (e.isDir) continue;

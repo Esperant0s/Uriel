@@ -40,7 +40,7 @@ async function androidSongs(plugin: DeviceMusicPlugin, mayAsk: boolean) {
       artist: s.artist || fromName.artist,
       duration: Number(s.duration) || 0,
       addedAt: Number(s.added) || 0,
-      source: /\/Music\/Mural\//.test(s.path) ? 'downloads' : 'device',
+      source: /\/Music\/(?:Uriel|Mural)\//.test(s.path) ? 'downloads' : 'device',
     };
   }).filter((s) => lib.AUDIO_EXTS.has(s.ext));
 }

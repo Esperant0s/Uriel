@@ -38,7 +38,7 @@ import java.util.concurrent.Executors;
 /**
  * The songs already on the phone, from Android's media library (mobile/device-music.ts lists them in My files).
  * Each comes with its file path: the WebView plays it from there, the way it plays Uriel's own downloads in
- * Music/Mural. Reading the library needs "Music and audio" (Android 13+) or storage access (older), asked once.
+ * Music/Uriel. Reading the library needs "Music and audio" (Android 13+) or storage access (older), asked once.
  */
 @CapacitorPlugin(
         name = "UrielDeviceMusic",
@@ -128,7 +128,7 @@ public class DeviceMusicPlugin extends Plugin {
     }
 
     // ---- Add folder: a folder the person picks, and the ones inside it, copied into the library ----
-    // .mka is how Uriel's own downloads are saved in Music/Mural (WebM songs: mobile/shims/store.ts)
+    // .mka is how Uriel's own downloads are saved in Music/Uriel (WebM songs: mobile/shims/store.ts)
     private static final Set<String> AUDIO = new HashSet<>(Arrays.asList(
             "mp3", "wav", "flac", "opus", "ogg", "oga", "m4a", "aac", "webm", "weba", "mka"));
 
