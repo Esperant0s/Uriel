@@ -55,7 +55,7 @@
     "url": "https://github.com/Esperant0s/Uriel/issues"
   },
   "build": {
-    "appId": "io.github.esperant0s.mural",
+    "appId": "io.github.esperant0s.uriel",
     "productName": "Uriel",
     "artifactName": "${name}-${version}-${os}-${arch}.${ext}",
     "directories": {

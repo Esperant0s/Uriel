@@ -135,7 +135,7 @@ function runGUI() {
   /** @type {Electron.BrowserWindow | null} */
 let mainWindow = null;
   // Must match build.appId so the NSIS shortcut, pinned icons and the running window share one taskbar identity.
-  if (process.platform === 'win32') app.setAppUserModelId('io.github.esperant0s.mural');
+  if (process.platform === 'win32') app.setAppUserModelId('io.github.esperant0s.uriel');
   const gotLock = app.requestSingleInstanceLock();
   if (!gotLock) { app.quit(); return; }
   app.on('second-instance', () => {

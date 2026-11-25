@@ -13,7 +13,7 @@ const size = fs.statSync('Uriel.ipa').size;
 
 const app = {
   name: 'Uriel',
-  bundleIdentifier: 'io.github.esperant0s.mural',
+  bundleIdentifier: 'io.github.esperant0s.uriel',
   developerName: 'Esperant0s',
   subtitle: 'Free music player',
   iconURL: icon,
@@ -27,7 +27,7 @@ const app = {
 
 fs.writeFileSync('sidestore.json', JSON.stringify({
   name: 'Uriel',
-  identifier: 'io.github.esperant0s.mural.source',
+  identifier: 'io.github.esperant0s.uriel.source',
   iconURL: icon,
   website: `https://${REPO.split('/')[0]}.github.io/${REPO.split('/')[1]}/`,
   tintColor: '7C4DFF',
