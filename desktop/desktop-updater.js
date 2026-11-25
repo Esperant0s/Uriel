@@ -34,7 +34,8 @@ function writable(dir) {
 /** @param {{ build: { sha?: string, channel?: string } | null | undefined, platform?: string, env?: NodeJS.ProcessEnv, exePath?: string, packaged?: boolean }} o */
 function installKind({ build, platform = process.platform, env = process.env, exePath = '', packaged = true }) {
   if (!build || !build.sha || build.sha === 'dev' || !packaged) return null;
-  if (platform === 'win32' && build.channel === 'windows' && env.PORTABLE_EXECUTABLE_FILE) return 'portable';
+  if (platform === 'win32' && build.channel === 'windows' && env.PORTABLE_EXECUTABLE_FILE
+    && writable(path.dirname(env.PORTABLE_EXECUTABLE_FILE))) return 'portable';
   if (platform === 'win32' && build.channel === 'windows-setup') return 'nsis';
   if (platform === 'linux' && build.channel === 'linux' && env.APPIMAGE && writable(path.dirname(env.APPIMAGE))) return 'appimage';
   if (platform === 'darwin' && build.channel === 'mac') {
@@ -86,36 +87,62 @@ async function download({ fetch, url, sha256, size, dest, onProgress = () => {},
 }
 
 // Windows: wait until Uriel has let go of its exe (the portable launcher holds it a moment after the app quits),
-// then put the new one in its place or run the installer
-const WINDOWS_SCRIPT = `param([int]$WaitPid, [string]$Kind, [string]$Src, [string]$Dst, [int]$Relaunch)
+// then put the new one in its place or run the installer. If that fails the old Uriel is still there, so it's
+// started again rather than leaving nothing running. The new exe is copied next to the old one first, since a
+// move out of %TEMP% can be a copy to another drive and a half-copied exe wouldn't start.
+const WINDOWS_SCRIPT = `param([int]$WaitPid, [string]$Kind, [string]$Src, [string]$Dst, [int]$Relaunch, [string]$Exe)
 Wait-Process -Id $WaitPid -Timeout 60 -ErrorAction SilentlyContinue
 if ($Kind -eq 'nsis') {
   $installArgs = @('/S')
   if ($Relaunch -eq 1) { $installArgs += '--force-run' }
-  Start-Process -FilePath $Src -ArgumentList $installArgs
-  exit 0
+  $code = 1
+  try {
+    $p = Start-Process -FilePath $Src -ArgumentList $installArgs -PassThru -ErrorAction Stop
+    $p.WaitForExit()   # not -Wait, that would also wait for the Uriel it starts
+    $code = $p.ExitCode
+  } catch {}
+  if ($code -ne 0 -and $Relaunch -eq 1) { Start-Process -FilePath $Exe }
+  exit $code
 }
+$tmp = "$Dst.new"
+$ok = $false
 $deadline = (Get-Date).AddMinutes(2)
-while ($true) {
-  try { Move-Item -LiteralPath $Src -Destination $Dst -Force -ErrorAction Stop; break }
-  catch { if ((Get-Date) -gt $deadline) { exit 1 }; Start-Sleep -Milliseconds 500 }
+while (-not $ok -and (Get-Date) -lt $deadline) {
+  try {
+    Copy-Item -LiteralPath $Src -Destination $tmp -Force -ErrorAction Stop
+    Move-Item -LiteralPath $tmp -Destination $Dst -Force -ErrorAction Stop
+    $ok = $true
+  } catch { Start-Sleep -Milliseconds 500 }
 }
+Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
 if ($Relaunch -eq 1) { Start-Process -FilePath $Dst }
+if (-not $ok) { exit 1 }
 `;
 
 // Mac: once Uriel has quit, swap the bundle (keeping the old one until the new one is in place), clear the
-// download quarantine the unsigned app would otherwise be stopped by, and open it again
+// download quarantine the unsigned app would otherwise be stopped by, and open it again. If the swap fails the
+// old app is put back and opened, so Uriel doesn't just disappear.
 const MAC_SCRIPT = `#!/bin/sh
 pid="$1"; new="$2"; app="$3"; relaunch="$4"
 i=0
 while kill -0 "$pid" 2>/dev/null && [ "$i" -lt 120 ]; do sleep 0.5; i=$((i + 1)); done
 old="$app.old-$$"
-mv "$app" "$old" || exit 1
-if ! mv "$new" "$app"; then mv "$old" "$app"; exit 1; fi
-rm -rf "$old"
-xattr -cr "$app" 2>/dev/null
+status=0
+if mv "$app" "$old"; then
+  if mv "$new" "$app"; then
+    rm -rf "$old"
+    xattr -cr "$app" 2>/dev/null
+  else
+    # a half-moved copy would otherwise end up with the old app inside it
+    rm -rf "$app"
+    mv "$old" "$app"
+    status=1
+  fi
+else
+  status=1
+fi
 [ "$relaunch" = 1 ] && open "$app"
-exit 0
+exit $status
 `;
 
 // Linux: start the new AppImage once this one has quit
@@ -150,6 +177,10 @@ function register() {
   let staged = null; // { kind, file, version } once a verified update is ready to go in
   let applied = false;
 
+  // what the last update left behind (the scripts, the installer); that installer can still be running just after
+  // it starts the new Uriel, so this is allowed to fail
+  try { fs.rmSync(workDir, { recursive: true, force: true }); } catch (e) {}
+
   ipcMain.handle('updater-supported', () => !!kind);
 
   ipcMain.handle('updater-download', async (event) => {
@@ -165,10 +196,10 @@ function register() {
   });
 
   // "Restart now": on success Uriel exits here and the answer never arrives
-  ipcMain.handle('updater-install', () => {
+  ipcMain.handle('updater-install', async () => {
     if (!staged || applied) return { ok: false, error: 'nothing downloaded' };
     try {
-      apply(true);
+      await apply(true);
       return { ok: true };
     } catch (e) {
       applied = false;
@@ -178,7 +209,7 @@ function register() {
 
   // "Later": the downloaded update goes in as Uriel quits
   app.on('will-quit', () => {
-    if (staged && !applied) { try { apply(false); } catch (e) {} }
+    if (staged && !applied) apply(false).catch(() => {});
   });
 
   /** @param {(p: { received: number, total: number }) => void} onProgress */
@@ -218,13 +249,19 @@ function register() {
     return path.join(out, name);
   }
 
+  // resolves once the helper has actually started, so Uriel never quits with nothing there to bring it back
   /** @param {string} cmd @param {string[]} args @param {import('child_process').SpawnOptions} [options] */
   function runDetached(cmd, args, options = {}) {
-    spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true, ...options }).unref();
+    return new Promise((resolve, reject) => {
+      const child = spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true, ...options });
+      child.unref();
+      child.once('error', reject);
+      child.once('spawn', resolve);
+    });
   }
 
   /** @param {boolean} relaunch */
-  function apply(relaunch) {
+  async function apply(relaunch) {
     applied = true;
     const { file } = /** @type {{ file: string }} */ (staged);
     if (kind === 'appimage') {
@@ -232,7 +269,7 @@ function register() {
       // not app.relaunch(): its helper is this build's binary, inside the AppImage's mount that goes away as Uriel
       // quits, and the new AppImage then can't mount ("Cannot mount AppImage, please check your FUSE setup")
       if (relaunch) {
-        runDetached('/bin/sh', ['-c', APPIMAGE_RELAUNCH, 'uriel-update', String(process.pid), appImage],
+        await runDetached('/bin/sh', ['-c', APPIMAGE_RELAUNCH, 'uriel-update', String(process.pid), appImage],
           { cwd: path.dirname(appImage), env: appImageEnv(process.env) });
         app.exit(0);
       }
@@ -241,12 +278,12 @@ function register() {
     if (kind === 'portable' || kind === 'nsis') {
       const script = path.join(workDir, 'apply-update.ps1');
       fs.writeFileSync(script, WINDOWS_SCRIPT);
-      runDetached('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', script,
-        '-WaitPid', String(process.pid), '-Kind', kind, '-Src', file, '-Dst', process.env.PORTABLE_EXECUTABLE_FILE || '', '-Relaunch', relaunch ? '1' : '0']);
+      await runDetached('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', script,
+        '-WaitPid', String(process.pid), '-Kind', kind, '-Src', file, '-Dst', process.env.PORTABLE_EXECUTABLE_FILE || '', '-Relaunch', relaunch ? '1' : '0', '-Exe', process.execPath]);
     } else if (kind === 'mac') {
       const script = path.join(workDir, 'apply-update.sh');
       fs.writeFileSync(script, MAC_SCRIPT, { mode: 0o755 });
-      runDetached('/bin/sh', [script, String(process.pid), file, /** @type {string} */ (macBundle(app.getPath('exe'))), relaunch ? '1' : '0']);
+      await runDetached('/bin/sh', [script, String(process.pid), file, /** @type {string} */ (macBundle(app.getPath('exe'))), relaunch ? '1' : '0']);
     }
     if (relaunch) app.exit(0);
   }

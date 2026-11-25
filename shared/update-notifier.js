@@ -84,10 +84,13 @@
 
   async function finishUpdate() {
     if (!installer) return;
+    // cleared first, or "Allow Uriel to install apps" stays up after the person has allowed it
+    failure = '';
     const result = await installer.install().catch((e) => ({ ok: false, error: e instanceof Error ? e.message : undefined }));
     // Android: the first install needs "Install unknown apps" allowed for Uriel; install() opened that setting
-    if (result && result.error === 'permission') { failure = 'permission'; changed(); }
-    else if (!result || !result.ok) { phase = 'failed'; failure = (result && result.error) || ''; changed(); }
+    if (result && result.error === 'permission') failure = 'permission';
+    else if (!result || !result.ok) { phase = 'failed'; failure = (result && result.error) || ''; }
+    changed();
   }
 
   /** @type {HTMLElement | null} */

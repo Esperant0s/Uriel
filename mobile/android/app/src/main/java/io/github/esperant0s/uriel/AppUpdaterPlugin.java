@@ -40,11 +40,15 @@ public class AppUpdaterPlugin extends Plugin {
         return new File(new File(getContext().getCacheDir(), "updates"), "Uriel.apk");
     }
 
-    // release downloads only: github.com links redirect to GitHub's download servers, over https all the way
+    private static final String RELEASES = "/Esperant0s/Uriel/releases/download/";
+
+    // this repo's release downloads only: github.com links redirect to GitHub's download servers, over https all the way
     private static boolean fromGithub(String url) {
         try {
             URL u = new URL(url);
-            return "https".equals(u.getProtocol()) && "github.com".equals(u.getHost());
+            String path = u.getPath();
+            return "https".equals(u.getProtocol()) && "github.com".equals(u.getHost())
+                && path.startsWith(RELEASES) && !path.contains("..");
         } catch (Exception e) {
             return false;
         }
