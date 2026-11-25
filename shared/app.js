@@ -2480,7 +2480,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     toggleFavorite: (/** @type {UrielTrack} */ t) => { toggleFavoriteTrack(t); window.dispatchEvent(new Event('uriel:library')); return isFavoriteSong(t); },
     createPlaylist(/** @type {string} */ name, /** @type {UrielTrack[]} */ tracks = []) {
       if (!name || !name.trim()) return null;
-      const pl = { id: 'pl_' + Date.now(), name: name.trim(), tracks: tracks.slice() };
+      const pl = { id: 'pl_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), name: name.trim(), tracks: tracks.slice() };
       state.playlists.push(pl);
       savePlaylists();
       return pl;

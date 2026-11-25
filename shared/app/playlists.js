@@ -299,7 +299,7 @@ window.UrielApp.playlists = function ({ canReorder, closeModal, downloadedInFold
     const taken = new Set(state.playlists.map((/** @type {UrielPlaylist} */ p) => p.name));
     let name = Tf('{0} (copy)', pl.name);
     for (let n = 2; taken.has(name); n++) name = Tf('{0} (copy {1})', pl.name, n);
-    const copy = { ...pl, id: 'pl_' + Date.now(), name, tracks: (pl.tracks || []).map((/** @type {UrielTrack} */ t) => ({ ...t })) };
+    const copy = { ...pl, id: 'pl_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), name, tracks: (pl.tracks || []).map((/** @type {UrielTrack} */ t) => ({ ...t })) };
     state.playlists.push(copy);
     localStorage.setItem('devsize_playlists', JSON.stringify(state.playlists));
     window.dispatchEvent(new Event('uriel:library'));
