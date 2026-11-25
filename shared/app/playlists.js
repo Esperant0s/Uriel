@@ -4,7 +4,7 @@
 // Part of app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps @param {UrielPlaylistsPart} out */
-window.UrielApp.playlists = function ({ canReorder, closeModal, downloadedInFolder, dragGrip, el, escapeHtml, exitMultiSelect, formatDuration, getCoverDominantColors, getLibrarySort, getTrackCanonicalId, getTrackSortMode, getTrackThumbUrl, I18N, isBlocked, isFavoriteSong, isPhoneApp, isSameTrack, matchesTrackQuery, multiSel, multiSelectSourceTracks, nextTrackArt, offlineChanged, openModal, playTrack, renderPlaylistDuplicateButton, renderTracks, rerenderMultiSelectView, setShuffle, setTrackSortMode, setupSortDropdown, showActionMenu, showToast, songRadioEnabled, sortedLibrary, sortTracksFor, stampAddedAt, startMultiSelect, startSongRadio, state, switchView, syncSortDropdown, T, Tf, Tm, trackArtCandidates, updateFavoriteIcon, updateFavoritesBadge, updateMultiSelectBar, updateQueueBadge }, out) {
+window.UrielApp.playlists = function ({ canReorder, closeModal, downloadedInFolder, dragGrip, el, escapeHtml, exitMultiSelect, formatDuration, getCoverDominantColors, getLibrarySort, getTrackCanonicalId, getTrackSortMode, getTrackThumbUrl, I18N, isBlocked, isFavoriteSong, isPhoneApp, isSameTrack, matchesTrackQuery, multiSel, multiSelectSourceTracks, nextTrackArt, offlineChanged, openModal, playTrack, renderPlaylistDuplicateButton, renderTracks, rerenderMultiSelectView, setShuffle, setTrackSortMode, setupSortDropdown, showActionMenu, showToast, songRadioEnabled, sortedLibrary, sortTracksFor, stampAddedAt, startMultiSelect, startSongRadio, state, switchView, syncPlaylistFromSource, syncSortDropdown, T, Tf, Tm, trackArtCandidates, updateFavoriteIcon, updateFavoritesBadge, updateMultiSelectBar, updateQueueBadge }, out) {
   function renderPlaylistCover(/** @type {HTMLElement} */ container, /** @type {UrielPlaylist} */ playlist, size = 64) {
     if (!container) return;
     container.innerHTML = '';
@@ -180,6 +180,7 @@ window.UrielApp.playlists = function ({ canReorder, closeModal, downloadedInFold
     if (el.playlistSort) { el.playlistSort.value = getTrackSortMode('playlist'); syncSortDropdown('playlist'); }
     renderPlaylistDescription(pl);
     renderPlaylistDuplicateButton(pl);
+    renderPlaylistSource(pl);
     const totalSec = (pl.tracks || []).reduce((/** @type {number} */ acc, /** @type {UrielTrack} */ t) => acc + (t.duration || 0), 0);
     const durStr = totalSec > 0 ? ` • ${formatDuration(totalSec)}` : '';
     if (el.playlistDetailCount) el.playlistDetailCount.textContent = (query ? `${filtered.length} of ${pl.tracks.length} songs` : `${pl.tracks.length} songs`) + durStr;
@@ -223,6 +224,25 @@ window.UrielApp.playlists = function ({ canReorder, closeModal, downloadedInFold
   // A playlist's description, written right on the page ("Add a description..."); it goes wherever the
   // playlist goes (sync, share links keep to name and songs)
   const playlistDescEl = document.getElementById('playlist-detail-desc');
+  // "From Spotify · imported 3 Nov" on a playlist made from a link, with Sync (app/imports.js)
+  /** @type {Record<string, string>} */
+  const SOURCE_NAMES = { spotify: 'Spotify', apple: 'Apple Music', yandex: 'Yandex Music', youtube: 'YouTube', ytmusic: 'YouTube Music', soundcloud: 'SoundCloud' };
+  function renderPlaylistSource(/** @type {UrielPlaylist} */ pl) {
+    const box = document.getElementById('playlist-source');
+    const text = document.getElementById('playlist-source-text');
+    if (!box || !text) return;
+    const src = pl && pl.source;
+    box.hidden = !(src && src.url);
+    if (!src || !src.url) return;
+    const day = new Date(src.at || Date.now()).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+    text.textContent = Tf('From {0} · synced {1}', SOURCE_NAMES[src.kind] || src.kind, day);
+  }
+  const btnSyncPlaylist = document.getElementById('btn-sync-playlist');
+  if (btnSyncPlaylist) btnSyncPlaylist.addEventListener('click', () => {
+    const pl = state.playlists.find((/** @type {UrielPlaylist} */ p) => p.id === state.currentPlaylistId);
+    if (pl) syncPlaylistFromSource(pl);
+  });
+
   function renderPlaylistDescription(/** @type {UrielPlaylist} */ pl) {
     const desc = document.getElementById('playlist-detail-desc');
     if (!desc || document.activeElement === desc) return;

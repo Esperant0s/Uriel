@@ -7,7 +7,7 @@ window.UrielApp = window.UrielApp || {};
 window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHtml, T, openModal, closeModal, getTrackCanonicalId, stampAddedAt, createWavyProgress, updateFavoritesBadge, updateFavoriteIcon, renderFavoritesView, createPlaylist, showToast, renderPlaylistsList, I18N, Tm, isSameTrack, openPlaylistDetail, isFavoriteSong, importSharedPlaylist, setPlatform, el }, /** @type {UrielImportsPart} */ out) {
   /** @type {UrielImportsPart} */
   const api = {
-    refreshYtSignin, matchSpotifyTracks,
+    refreshYtSignin, matchSpotifyTracks, syncPlaylistFromSource,
   };
   Object.assign(out, api);
 
@@ -780,7 +780,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
 
       const targetVal = spotifyImportTarget ? spotifyImportTarget.value : 'new';
       if (targetVal === 'new') {
-        createPlaylist(data.name || 'Spotify Playlist', foundTracks, data.cover || '');
+        rememberSource(createPlaylist(data.name || 'Spotify Playlist', foundTracks, data.cover || ''), 'spotify', url, tracks);
       } else {
         const pl = state.playlists.find((p) => p.id === targetVal);
         if (pl) {
@@ -1209,7 +1209,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
 
       const targetVal = appleImportTarget ? appleImportTarget.value : 'new';
       if (targetVal === 'new') {
-        createPlaylist(data.name || 'Apple Music Playlist', foundTracks, data.cover || '');
+        rememberSource(createPlaylist(data.name || 'Apple Music Playlist', foundTracks, data.cover || ''), 'apple', url, tracks);
       } else {
         const pl = state.playlists.find((p) => p.id === targetVal);
         if (pl) {
@@ -1397,12 +1397,55 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
     }
   }
 
+  // ---- where an imported playlist came from, and Sync (Riff 0.7) ----
+  // A playlist made from a link keeps the link, when, and which of its songs were there (by id, or by title and
+  // artist for Spotify, Apple Music and Yandex, whose songs are matched on YouTube). Sync reads the link again
+  // and adds only the songs that are new there: songs taken out here by hand don't come back.
+  const sourceKey = (/** @type {UrielTrack} */ t) => (t && t.id ? String(t.id) : `${normalizeImportText(t && t.title)}|${normalizeImportText(t && t.artist)}`);
+  function rememberSource(/** @type {UrielPlaylist | null} */ pl, /** @type {string} */ kind, /** @type {string} */ url, /** @type {UrielTrack[]} */ from) {
+    if (!pl || !url) return;
+    pl.source = { kind, url, at: Date.now(), keys: (from || []).map(sourceKey) };
+    localStorage.setItem('devsize_playlists', JSON.stringify(state.playlists));
+    if (state.currentPlaylistId === pl.id) openPlaylistDetail(pl.id);
+  }
+  const MATCHED = new Set(['spotify', 'apple', 'yandex']);
+  /** @type {Record<string, string>} */
+  const READ_FROM = { spotify: 'spotify-import', apple: 'apple-import', yandex: 'yandex-import' };
+  let syncing = false;
+  async function syncPlaylistFromSource(/** @type {UrielPlaylist} */ pl) {
+    const src = pl && pl.source;
+    if (!src || !src.url || syncing) return;
+    syncing = true;
+    showToast(Tm('Syncing {0}…', pl.name), 'info');
+    try {
+      const res = await fetch(`http://127.0.0.1:${state.serverPort}/api/${READ_FROM[src.kind] || 'playlist-import'}?url=${encodeURIComponent(src.url)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success || !Array.isArray(data.tracks)) { showToast(Tm("Couldn't read the playlist there"), 'error'); return; }
+      const known = new Set(src.keys || []);
+      const fresh = data.tracks.filter((/** @type {UrielTrack} */ t) => !known.has(sourceKey(t)));
+      const found = fresh.length && MATCHED.has(src.kind) ? await matchSpotifyTracks(fresh, () => {}) : fresh;
+      const add = found.filter((/** @type {UrielTrack} */ t) => !pl.tracks.some((x) => isSameTrack(x, t)));
+      pl.tracks.push(...add.map(stampAddedAt));
+      pl.source = { ...src, at: Date.now(), keys: data.tracks.map(sourceKey) };
+      localStorage.setItem('devsize_playlists', JSON.stringify(state.playlists));
+      renderPlaylistsList();
+      if (state.currentPlaylistId === pl.id) openPlaylistDetail(pl.id);
+      showToast(add.length ? Tm('Added {0} new songs', add.length) : Tm('Already up to date'), 'success');
+    } catch (e) {
+      showToast(Tm("Couldn't read the playlist there"), 'error');
+    } finally {
+      syncing = false;
+    }
+  }
+
   // songs into the playlist picked under "Import into" (or a new one, opened unless several come in a row);
   // returns how many went in
-  function addImportedTracks(/** @type {string} */ targetId, /** @type {string} */ name, /** @type {UrielTrack[]} */ tracks, /** @type {string} */ cover, open = true) {
+  /** @param {{ kind: string, url: string, from: UrielTrack[] } | null} [source] where a new playlist came from, for Sync */
+  function addImportedTracks(/** @type {string} */ targetId, /** @type {string} */ name, /** @type {UrielTrack[]} */ tracks, /** @type {string} */ cover, open = true, source = null) {
     const target = targetId && targetId !== 'new' ? state.playlists.find((p) => p.id === targetId) : null;
     if (!target) {
       const pl = createPlaylist(name || 'Imported playlist', tracks, cover || '', { open });
+      if (pl && source) rememberSource(pl, source.kind, source.url, source.from);
       return pl ? pl.tracks.length : 0;
     }
     if (!target.cover && cover) target.cover = cover;
@@ -1548,7 +1591,7 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       return;
     }
     const target = /** @type {HTMLSelectElement} */ (document.getElementById('link-import-target'));
-    const added = addImportedTracks(target ? target.value : 'new', data.name || 'Yandex Music playlist', found, data.cover || '');
+    const added = addImportedTracks(target ? target.value : 'new', data.name || 'Yandex Music playlist', found, data.cover || '', true, { kind: 'yandex', url, from: data.tracks });
     const missing = data.tracks.length - found.length;
     linkImportDone(missing > 0 ? `Imported ${added} songs. ${missing} not found on YouTube.` : `Imported ${added} songs.`);
   }
@@ -1645,7 +1688,8 @@ window.UrielApp.imports = function ({ normalizeImportText, state, pool, escapeHt
       }
       const target = /** @type {HTMLSelectElement} */ (document.getElementById('link-import-target'));
       const targetId = target ? target.value : 'new';
-      const added = addImportedTracks(targetId, data.name, data.tracks, data.cover || '');
+      const kind = url.includes('soundcloud.com') ? 'soundcloud' : url.includes('music.youtube.com') ? 'ytmusic' : 'youtube';
+      const added = addImportedTracks(targetId, data.name, data.tracks, data.cover || '', true, { kind, url, from: data.tracks });
       showToast(`Imported ${added} songs`, 'success');
       closeLinkImportModal();
     } catch (err) {

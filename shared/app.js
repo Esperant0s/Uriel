@@ -1708,7 +1708,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function importSharedPlaylist(/** @type {string} */ text) { return playlistsPart.importSharedPlaylist(text); }
   function removeTrackFromCurrentPlaylist(/** @type {UrielTrack} */ track) { return playlistsPart.removeTrackFromCurrentPlaylist(track); }
   function openAddToPlaylistModal(/** @type {UrielTrack | null} */ track, /** @type {UrielTrack[] | null} */ many = null) { return playlistsPart.openAddToPlaylistModal(track, many); }
-  window.UrielApp.playlists({ canReorder, closeModal, downloadedInFolder, dragGrip, el, escapeHtml, exitMultiSelect, formatDuration, getCoverDominantColors, getLibrarySort, getTrackCanonicalId, getTrackSortMode, getTrackThumbUrl, I18N, isBlocked, isFavoriteSong, isPhoneApp, isSameTrack, matchesTrackQuery, multiSel, multiSelectSourceTracks, nextTrackArt, offlineChanged, openModal, playTrack, renderPlaylistDuplicateButton, renderTracks, rerenderMultiSelectView, setShuffle, setTrackSortMode, setupSortDropdown, showActionMenu, showToast, songRadioEnabled, sortedLibrary, sortTracksFor, stampAddedAt, startMultiSelect, startSongRadio, state, switchView, syncSortDropdown, T, Tf, Tm, trackArtCandidates, updateFavoriteIcon, updateFavoritesBadge, updateMultiSelectBar, updateQueueBadge }, playlistsPart);
+  window.UrielApp.playlists({ canReorder, closeModal, downloadedInFolder, dragGrip, el, escapeHtml, exitMultiSelect, formatDuration, getCoverDominantColors, getLibrarySort, getTrackCanonicalId, getTrackSortMode, getTrackThumbUrl, I18N, isBlocked, isFavoriteSong, isPhoneApp, isSameTrack, matchesTrackQuery, multiSel, multiSelectSourceTracks, nextTrackArt, offlineChanged, openModal, playTrack, renderPlaylistDuplicateButton, renderTracks, rerenderMultiSelectView, setShuffle, setTrackSortMode, setupSortDropdown, showActionMenu, showToast, songRadioEnabled, sortedLibrary, sortTracksFor, stampAddedAt, startMultiSelect, startSongRadio, state, switchView, syncPlaylistFromSource, syncSortDropdown, T, Tf, Tm, trackArtCandidates, updateFavoriteIcon, updateFavoritesBadge, updateMultiSelectBar, updateQueueBadge }, playlistsPart);
   const { refreshPlaylistDownloads, deleteCurrentPlaylist } = playlistsPart;
 
   // ---- dragging rows to reorder lists (app/reorder.js) ----
@@ -2004,6 +2004,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- importing from Spotify, Apple Music, YouTube Music and links (app/imports.js) ----
   const importsPart = /** @type {UrielImportsPart} */ ({});
   function refreshYtSignin() { return importsPart.refreshYtSignin(); }
+  function syncPlaylistFromSource(/** @type {UrielPlaylist} */ pl) { return importsPart.syncPlaylistFromSource(pl); }
   function matchSpotifyTracks(/** @type {Partial<UrielImportSong>[]} */ list, /** @type {((done: number, total: number) => void) | undefined} */ onProgress) { return importsPart.matchSpotifyTracks(list, onProgress); }
   window.UrielApp.imports({ normalizeImportText, state, pool, escapeHtml, T, openModal, closeModal, getTrackCanonicalId, stampAddedAt, createWavyProgress, updateFavoritesBadge, updateFavoriteIcon, renderFavoritesView, createPlaylist, showToast, renderPlaylistsList, I18N, Tm, isSameTrack, openPlaylistDetail, isFavoriteSong, importSharedPlaylist, setPlatform, el }, importsPart);
 

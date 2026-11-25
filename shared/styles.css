@@ -9135,3 +9135,9 @@ body.hide-titlebar:not(.mini) .update-banner { top: 76px; }
 .lyric-gap.active .lyric-gap-note { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--md-sys-color-on-surface) 70%, transparent)); }
 /* during a break the line before it is done: it steps back */
 .lyrics-container.in-gap .lyric-line.active { opacity: 0.55; }
+
+/* ---- where an imported playlist came from, and Sync (app/playlists.js) ---- */
+.playlist-source { display: inline-flex; align-items: center; gap: 10px; }
+.playlist-source[hidden] { display: none; }
+.playlist-source-sync { padding: 3px 12px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 999px; background: transparent; color: var(--md-sys-color-on-surface); font: inherit; font-size: 0.9em; cursor: pointer; }
+.playlist-source-sync:hover { background: var(--md-sys-color-surface-container-high); }

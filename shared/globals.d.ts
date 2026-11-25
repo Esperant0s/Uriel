@@ -829,6 +829,7 @@ declare global {
   }
   interface UrielImportsPart {
     refreshYtSignin(): Promise<void>;
+    syncPlaylistFromSource(pl: UrielPlaylist): Promise<void>;
     matchSpotifyTracks(list: Partial<UrielImportSong>[], onProgress?: (done: number, total: number) => void): Promise<UrielTrack[] & { failStats?: unknown }>;
   }
   interface UrielRadioPart {
