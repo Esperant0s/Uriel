@@ -1,7 +1,7 @@
-// Muriel's site. Picks the right download for the visitor's device and shows live numbers from GitHub:
+// Uriel's site. Picks the right download for the visitor's device and shows live numbers from GitHub:
 // the download counter, file sizes, the latest desktop version, how old the newest build is, and stars.
 (() => {
-  const REPO = 'cloverscripts/riff-muriel';
+  const REPO = 'Esperant0s/Uriel';
   const API = `https://api.github.com/repos/${REPO}`;
   const SOURCE_URL = `https://github.com/${REPO}/releases/download/ios-latest/sidestore.json`;
   const REFRESH_MS = 90 * 1000; // GitHub allows 60 unauthenticated requests an hour per visitor
@@ -35,7 +35,7 @@
   }
   if (os) {
     $('main-dl-label').textContent = `Download for ${OS_NAME[os]}`;
-    $('main-dl').setAttribute('aria-label', `Download Muriel for ${OS_NAME[os]}`);
+    $('main-dl').setAttribute('aria-label', `Download Uriel for ${OS_NAME[os]}`);
     $('np-get').textContent = os === 'ios' ? 'Get' : 'Download';
   }
   updateMainLinks();
@@ -69,9 +69,9 @@
   // file's count when it is replaced. Each build therefore writes the total so far into its release
   // notes (see .github/carry-downloads.sh); seed covers releases made before that existed.
   const ROLLING = {
-    'android-latest': { file: 'Muriel.apk', platform: 'android', seed: 3530 },
-    'ios-latest': { file: 'Muriel.ipa', platform: 'ios', seed: 1640 },
-    'windows-latest': { file: 'Muriel.exe', platform: 'windows', seed: 6 },
+    'android-latest': { file: 'Uriel.apk', platform: 'android', seed: 0 },
+    'ios-latest': { file: 'Uriel.ipa', platform: 'ios', seed: 0 },
+    'windows-latest': { file: 'Uriel.exe', platform: 'windows', seed: 0 },
   };
   const PLATFORMS = [['android', 'Android'], ['ios', 'iPhone'], ['windows', 'Windows'], ['mac', 'Mac'], ['linux', 'Linux']];
   // installers only: .yml and .blockmap files are fetched by the desktop auto-updater, not by people
@@ -86,7 +86,7 @@
     for (const rel of releases) {
       const rolling = ROLLING[rel.tag_name];
       if (rolling) {
-        const m = /muriel-downloads-before:\s*(\d+)/.exec(rel.body || '');
+        const m = /(?:uriel|muriel)-downloads-before:\s*(\d+)/.exec(rel.body || '');
         const asset = rel.assets.find((a) => a.name === rolling.file);
         per[rolling.platform] += (m ? Number(m[1]) : rolling.seed) + (asset ? asset.download_count : 0);
         continue;
@@ -179,9 +179,9 @@
       const a = byTag[tag] && byTag[tag].assets.find((x) => x.name === file);
       if (a && $(id)) $(id).textContent = `· ${mb(a.size)}`;
     };
-    size('android-latest', 'Muriel.apk', 'size-android');
-    size('windows-latest', 'Muriel.exe', 'size-windows');
-    size('ios-latest', 'Muriel.ipa', 'size-ios');
+    size('android-latest', 'Uriel.apk', 'size-android');
+    size('windows-latest', 'Uriel.exe', 'size-windows');
+    size('ios-latest', 'Uriel.ipa', 'size-ios');
     const newest = Object.keys(ROLLING).map((t) => byTag[t] && byTag[t].published_at).filter(Boolean).sort().pop();
     if (newest) $('build-info').textContent = `Free · open source · newest build ${ago(newest)}`;
 
@@ -197,14 +197,14 @@
     set('dl-linux', appImage);
     if (appImage) {
       $('size-linux').textContent = `· ${mb(appImage.size)}`;
-      $('linux-line').textContent = `mkdir -p ~/Applications && curl -L -o ~/Applications/Muriel.AppImage ${appImage.browser_download_url} && chmod +x ~/Applications/Muriel.AppImage && ~/Applications/Muriel.AppImage`;
+      $('linux-line').textContent = `mkdir -p ~/Applications && curl -L -o ~/Applications/Uriel.AppImage ${appImage.browser_download_url} && chmod +x ~/Applications/Uriel.AppImage && ~/Applications/Uriel.AppImage`;
     }
     $('rel-version').textContent = rel.tag_name;
     updateMainLinks();
   }
 
   // ---- live updates ----
-  const cached = store.get('muriel_site_counts');
+  const cached = store.get('uriel_site_counts');
   if (cached && cached.per) render(cached.per);
   let lastFetch = 0;
   let timer = 0;
@@ -215,7 +215,7 @@
       let releases = null;
       try {
         const s = await fetch(`stats.json?t=${Math.floor(Date.now() / 60000)}`, { cache: 'no-store' });
-        if (s.ok) { const j = await s.json(); if (j && Array.isArray(j.releases)) { releases = j.releases; if (Number.isFinite(j.stars)) { showStars(j.stars); store.set('muriel_site_stars', j.stars); } } }
+        if (s.ok) { const j = await s.json(); if (j && Array.isArray(j.releases)) { releases = j.releases; if (Number.isFinite(j.stars)) { showStars(j.stars); store.set('uriel_site_stars', j.stars); } } }
       } catch (e) {}
       if (!releases) {
         const res = await fetch(`${API}/releases?per_page=100`, { headers: { Accept: 'application/vnd.github+json' } });
@@ -225,7 +225,7 @@
       const per = countDownloads(releases);
       render(per);
       details(releases);
-      store.set('muriel_site_counts', { per, at: Date.now() });
+      store.set('uriel_site_counts', { per, at: Date.now() });
       $('live-text').textContent = 'Live from GitHub';
       document.querySelector('.pulse').classList.remove('off');
     } catch (e) {
@@ -247,11 +247,11 @@
 
   // stars, once per visit
   const showStars = (n) => document.querySelectorAll('.stars-n').forEach((el) => { el.textContent = fmt(n); });
-  const cachedStars = store.get('muriel_site_stars');
+  const cachedStars = store.get('uriel_site_stars');
   if (cachedStars) showStars(cachedStars);
   if (!cachedStars) fetch(API, { headers: { Accept: 'application/vnd.github+json' } })
     .then((r) => (r.ok ? r.json() : null))
-    .then((j) => { if (j && Number.isFinite(j.stargazers_count)) { showStars(j.stargazers_count); store.set('muriel_site_stars', j.stargazers_count); } })
+    .then((j) => { if (j && Number.isFinite(j.stargazers_count)) { showStars(j.stargazers_count); store.set('uriel_site_stars', j.stargazers_count); } })
     .catch(() => {});
 
   // ---- the bar at the top: where you are, and the menu on small screens ----

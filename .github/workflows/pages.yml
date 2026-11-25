@@ -1,6 +1,6 @@
 name: Website
 
-# Publishes site/ (the download page) to GitHub Pages; a fork publishes just link.html and play/.
+# Publishes site/ (the download page, the Sync link page and the web player) to GitHub Pages.
 on:
   push:
     branches: [main]
@@ -9,7 +9,7 @@ on:
   # the download counter: GitHub's API allows a visitor only 60 requests an hour, and people behind one address
   # (phone networks, schools) share that, so the numbers are published with the site (site/stats.json) instead
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '0 * * * *'
 
 permissions:
   contents: read
@@ -21,15 +21,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    # site/ is the original Muriel's download page (its links and counts): forks don't publish it
-    if: github.repository == 'cloverscripts/riff-muriel'
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: actions/configure-pages@v6
       # the web player reads shared playlist links with the same code as the app
       - run: cp shared/share-link.js site/play/share-link.js
@@ -38,31 +35,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api "repos/${{ github.repository }}/releases?per_page=100" --jq '[.[] | {tag_name, body: ((.body // "") | capture("(?<m>muriel-downloads-before:\\s*\\d+)").m // ""), draft, prerelease, published_at, assets: [.assets[] | {name, size, download_count, browser_download_url}]}]' > releases.json
+          gh api "repos/${{ github.repository }}/releases?per_page=100" --jq '[.[] | {tag_name, body: ((.body // "") | capture("(?<m>(?:uriel|muriel)-downloads-before:\\s*\\d+)").m // ""), draft, prerelease, published_at, assets: [.assets[] | {name, size, download_count, browser_download_url}]}]' > releases.json
           stars=$(gh api "repos/${{ github.repository }}" --jq .stargazers_count)
           jq -n --slurpfile r releases.json --argjson s "$stars" --arg at "$(date -u +%FT%TZ)" '{at: $at, stars: $s, releases: $r[0]}' > site/stats.json
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site
-      - id: deployment
-        uses: actions/deploy-pages@v5
 
-  # a fork publishes only the page its Sync QR code opens (sync.js LINK_PAGE) and the web player for shared playlists
-  fork-build:
-    if: github.repository != 'cloverscripts/riff-muriel' && github.event_name != 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - uses: actions/configure-pages@v6
-      - run: mkdir _site && cp -r site/link.html site/icon.png site/play _site/ && cp shared/share-link.js _site/play/
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: _site
-
-  fork-deploy:
-    needs: fork-build
+  # its own job: deploying from the job that uploaded kept failing to find the upload
+  deploy:
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages

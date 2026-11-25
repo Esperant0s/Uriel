@@ -875,7 +875,7 @@
       addTimer = setTimeout(() => {
         if (document.visibilityState !== 'visible') return;
         const get = h('a', '', 'Get Uriel');
-        get.href = 'https://github.com/Esperant0s/Uriel/releases';
+        get.href = '../#download';
         note(['Nothing opened? ', get, ' first, then tap Add to Uriel again.']);
       }, 2500);
       return;
