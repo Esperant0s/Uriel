@@ -91,3 +91,14 @@ test('downloads get more time for long songs, between 3 minutes and an hour', ()
   assert.strictEqual(ytdlpTimeoutFor(240), 600000);
   assert.strictEqual(ytdlpTimeoutFor(3 * 3600), 3600000);
 });
+
+test('yt-dlp progress lines and errors are read for the download dialog', () => {
+  const { parseYtDlpProgress, downloadErrorText } = require('../shared/server')._test;
+  assert.strictEqual(parseYtDlpProgress('URIEL 512 1024'), 50);
+  assert.strictEqual(parseYtDlpProgress('URIEL 512 2048.0'), 25);
+  assert.strictEqual(parseYtDlpProgress('[ExtractAudio] Destination: x.mp3'), 'convert');
+  assert.strictEqual(parseYtDlpProgress('[youtube] abc: Downloading webpage'), null);
+  assert.deepStrictEqual(downloadErrorText('ERROR: [youtube] abc: Sign in to confirm you’re not a bot'), { refused: true, text: 'YouTube is refusing downloads right now. Try again in a while' });
+  assert.strictEqual(downloadErrorText('ERROR: [youtube] abc: Video unavailable').text, "This song isn't available on YouTube any more");
+  assert.strictEqual(downloadErrorText('WARNING: x\nERROR: [generic] Something odd').text, 'Something odd');
+});

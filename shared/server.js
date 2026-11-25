@@ -3717,6 +3717,31 @@ function runFfmpeg(/** @type {string} */ bin, /** @type {string[]} */ args, /** 
   });
 }
 
+// how far each running yt-dlp download is, by song id, for the dialog's percentage (GET /api/download-progress)
+/** @type {Map<string, { stage: string, percent: number }>} */
+const downloadProgress = new Map();
+const PROGRESS_TEMPLATE = 'download:URIEL %(progress.downloaded_bytes)s %(progress.total_bytes,progress.total_bytes_estimate)s';
+// a line of yt-dlp's output: the download's percentage (from PROGRESS_TEMPLATE), 'convert' once it's working on
+// the file, or null
+function parseYtDlpProgress(/** @type {string} */ line) {
+  const m = /^URIEL (\d+) (\d+(?:\.\d+)?)/.exec(line.trim());
+  if (m) return Math.min(100, Math.round((Number(m[1]) / Number(m[2])) * 100));
+  if (/^\[(ExtractAudio|EmbedThumbnail|Metadata|FFmpeg\w*)\]/.test(line.trim())) return 'convert';
+  return null;
+}
+
+// what the app shows for a failed download: yt-dlp's stderr is long and full of URLs
+function downloadErrorText(/** @type {string} */ msg) {
+  const m = String(msg || '');
+  if (/\b429\b|too many requests|sign in to confirm|not a bot|\b403\b|forbidden/i.test(m)) return { refused: true, text: 'YouTube is refusing downloads right now. Try again in a while' };
+  if (/confirm your age|age.restricted|inappropriate for some users/i.test(m)) return { refused: false, text: 'YouTube only shows this song to signed-in adults' };
+  if (/private video|video unavailable|not available|has been removed|no longer available/i.test(m)) return { refused: false, text: "This song isn't available on YouTube any more" };
+  if (/timed out/i.test(m)) return { refused: false, text: 'It took too long. Try again' };
+  if (/no video results|no results|nothing found/i.test(m)) return { refused: false, text: "Couldn't find this song on YouTube" };
+  const line = (m.split('\n').find((l) => /^ERROR:/.test(l)) || m.split('\n')[0] || 'Download failed').replace(/^ERROR:\s*(\[[^\]]+\]\s*)?/, '');
+  return { refused: false, text: line.length > 160 ? `${line.slice(0, 157)}...` : line };
+}
+
 // how long one download may take: 3 minutes used to cut off hour-long mixes on a slow line
 function ytdlpTimeoutFor(/** @type {number} */ duration) {
   return Math.min(60 * 60000, Math.max(180000, 120000 + 2000 * (Number(duration) || 0)));
@@ -3947,9 +3972,21 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
     }
   });
   // a run that was still waiting in the yt-dlp queue when the app cancelled is stopped as soon as it starts
+  const progressId = cleanId || '';
   const onChild = (/** @type {import('child_process').ChildProcess} */ c) => {
     child = c;
     if (abandoned()) { try { c.kill('SIGKILL'); } catch (e) {} }
+    if (!progressId || !c.stdout) return;
+    let rest = '';
+    c.stdout.on('data', (/** @type {Buffer} */ d) => {
+      const lines = (rest + d.toString()).split('\n');
+      rest = lines.pop() || '';
+      for (const line of lines) {
+        const p = parseYtDlpProgress(line);
+        if (p === 'convert') downloadProgress.set(progressId, { stage: 'convert', percent: 100 });
+        else if (p !== null) downloadProgress.set(progressId, { stage: 'download', percent: p });
+      }
+    });
   };
 
   const baseName = isRaw ? /** @type {string} */ (tempName).replace(/\.wav$/, '') : `${cleanArtist} - ${cleanTitle}`;
@@ -3982,6 +4019,7 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
     '-x',
     ...formatArgs,
     '--embed-metadata',
+    '--newline', '--progress-template', PROGRESS_TEMPLATE,
     '-o', tempTemplate,
     '--extractor-args', 'youtube:player_client=default,android',
   ];
@@ -4021,6 +4059,7 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
         '-x',
         ...formatArgs,
         '--embed-metadata',
+        '--newline', '--progress-template', PROGRESS_TEMPLATE,
         '-o', tempTemplate,
       ];
       if (canCarryCover) {
@@ -4049,10 +4088,13 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
       }
       const why = (e2 instanceof Error && e2.message) || errMessage(err);
       try { logger.error('Download failure: ' + (title || trackUrl) + ' (' + why + ')', e2); } catch (_) {}
-      sendDownloadResponse(500, { success: false, error: why });
+      const short = downloadErrorText(why);
+      // 429 lets the app's batch wait before the next try instead of hammering YouTube
+      sendDownloadResponse(short.refused ? 429 : 500, { success: false, blocked: short.refused, error: short.text });
     }
   }
   } finally {
+    if (cleanId) downloadProgress.delete(cleanId);
     if (downloadKey && downloadInFlight.get(downloadKey) === downloadPromise) {
       downloadInFlight.delete(downloadKey);
     }
@@ -7378,6 +7420,11 @@ const server = http.createServer(guardHandler(async (/** @type {import('http').I
 
   // which songs of a list are on this device already (a downloaded file, or the offline cache): the album
   // page's Download button (#19) skips them and says so
+  if (parsedUrl.pathname === '/api/download-progress') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify(downloadProgress.get(cleanTrackId(String(parsedUrl.query.id || ''))) || {}));
+  }
+
   if (parsedUrl.pathname === '/api/downloaded-status' && req.method === 'POST') {
     let body = '';
     req.on('data', (/** @type {Buffer} */ chunk) => { if (res.writableEnded) return; body += chunk; if (body.length > MAX_BODY_BYTES) { body = ''; req.removeAllListeners('data'); req.removeAllListeners('end'); res.writeHead(413, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ success: false, error: 'payload too large' })); req.resume(); } });
@@ -7917,7 +7964,7 @@ function stopServer() {
   });
 }
 
-module.exports = { startServer, stopServer, stopChildren: () => childProcs.stopAll(), PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, setOutProxy, streamHealthStats, _test: { withYtDlpCookies, youtubeExtractTarget, fetchKugouLyrics, ytdlpTimeoutFor, retagDownload } };
+module.exports = { startServer, stopServer, stopChildren: () => childProcs.stopAll(), PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, setOutProxy, streamHealthStats, _test: { withYtDlpCookies, youtubeExtractTarget, fetchKugouLyrics, ytdlpTimeoutFor, retagDownload, parseYtDlpProgress, downloadErrorText } };
 
 if (require.main === module) {
   startServer();

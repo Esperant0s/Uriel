@@ -218,9 +218,27 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
     });
   }
 
+  // why songs of a batch failed, under its summary (they used to go only to the console)
+  function showFailures(/** @type {{ item: UrielTrack, error: unknown }[]} */ failed) {
+    const list = document.getElementById('download-failures');
+    if (!list) return;
+    list.classList.toggle('hidden', !failed.length);
+    list.replaceChildren(...failed.slice(0, 20).map((f) => {
+      const li = document.createElement('li');
+      li.textContent = `${f.item.title || f.item.url || ''}: ${f.error instanceof Error ? f.error.message : String(f.error || '')}`;
+      return li;
+    }));
+    if (failed.length > 20) {
+      const li = document.createElement('li');
+      li.textContent = Tf('and {0} more', failed.length - 20);
+      list.append(li);
+    }
+  }
+
   // the dialog ready for a new download: no progress, its button showing (a running one goes on without it)
   function showIdleDownload() {
     setDownloadProgress(null);
+    showFailures([]);
     setDownloadRunning(false);
     if (el.btnConfirmDownload) { el.btnConfirmDownload.style.display = ''; el.btnConfirmDownload.disabled = false; }
   }
@@ -535,6 +553,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
         // the dialog stays open with the summary; its button now retries just the failed songs
         downloadBatch = { ...batch, tracks: failedTracks, retry: true, missing: undefined, checking: false };
         if (el.downloadPreviewArtist) el.downloadPreviewArtist.textContent = summary.join(' · ');
+        showFailures(result.failed);
         updateDownloadBtnLabel();
         showToast(Tm('Downloaded {0}/{1} ({2} failed)', done + skipped, total, failedTracks.length), 'error');
         return;
@@ -623,6 +642,14 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
             }
           };
           window.addEventListener('uriel:dl-progress', onPart);
+          // the PC's yt-dlp says how far it is through the server (phones send uriel:dl-progress)
+          const poll = isPhoneApp || !t.id ? 0 : window.setInterval(async () => {
+            try {
+              const p = await (await fetch(`http://127.0.0.1:${state.serverPort}/api/download-progress?id=${encodeURIComponent(t.id)}`)).json();
+              if (singleAbort.signal.aborted || !p || !p.stage) return;
+              showing(p.stage === 'convert' ? { text: T('Saving…') } : { text: Tf('Downloading {0}%', p.percent), fraction: p.percent / 100 });
+            } catch (e) {}
+          }, 1000);
           setDownloadRunning(true);
           showing({ text: T('Finding the song…') });
           announceDownloads(true, { title: t.title || '', total: 1, done: 0 });
@@ -637,6 +664,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
               saved = d;
             }, { concurrency: 1, retries: 1, finalPass: false, signal: singleAbort.signal, backoff: { baseMs: 1500, rateBaseMs: 3000 } });
           } finally {
+            window.clearInterval(poll);
             window.removeEventListener('uriel:dl-progress', onPart);
             announceDownloads(false);
           }
