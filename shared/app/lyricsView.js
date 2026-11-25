@@ -139,6 +139,45 @@ window.UrielApp.lyricsView = function ({ capMap, lyricsSourcePref, el, fetchAndU
   function getLyricsWordStyle() { return localStorage.getItem('uriel_lyrics_word_style') === 'words' ? 'words' : 'gradient'; }
   function isGradientMode() { return state.lyricsMode === 'word' && getAdv('karaoke_words', true) && getLyricsWordStyle() === 'gradient'; }
 
+  // Instrumental breaks (Riff 0.7): an intro of 6 s or more, or 6 s or more between the end of a line and the next,
+  // get a music note that fills up as the break goes by. It sits between the lines without being one, so nothing
+  // that counts lines (translations, karaoke, the editor) sees it.
+  const GAP_S = 6;
+  /** @type {HTMLElement[]} */
+  let lyricGaps = [];
+  // the break after line `index` (-1: before the first line), or null
+  function gapAfter(/** @type {number} */ index) {
+    const lines = state.syncedLyrics;
+    const next = lines[index + 1];
+    if (!next || !(next.time >= 0)) return null;
+    let from = 0;
+    if (index >= 0) {
+      const line = lines[index];
+      if (!(line.time >= 0)) return null;
+      const words = /** @type {{ end?: number }[] | undefined} */ (line.words);
+      // when the line has word times it ends with its last word; otherwise about 4 s after it starts
+      from = words && words.length ? Number(words[words.length - 1].end) || line.time + 4 : line.time + 4;
+    }
+    if (next.time - from < GAP_S) return null;
+    const gap = document.createElement('div');
+    gap.className = 'lyric-gap';
+    gap.dataset.from = String(from);
+    gap.dataset.to = String(next.time);
+    gap.innerHTML = '<span class="lyric-gap-note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg><span class="lyric-gap-fill"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg></span></span>';
+    return gap;
+  }
+  // every frame: the break playing now (if any) lights up and fills to how far it is
+  function updateLyricGaps(/** @type {number} */ t) {
+    let inGap = false;
+    for (const g of lyricGaps) {
+      const from = Number(g.dataset.from), to = Number(g.dataset.to);
+      const on = t >= from && t < to;
+      if (on) { inGap = true; g.style.setProperty('--gap-pct', `${Math.round(((t - from) / (to - from)) * 100)}%`); }
+      if (g.classList.contains('active') !== on) g.classList.toggle('active', on);
+    }
+    if (el.lyricsContainer && el.lyricsContainer.classList.contains('in-gap') !== inGap) el.lyricsContainer.classList.toggle('in-gap', inGap);
+  }
+
   function renderLyricsView() {
     if (!el.lyricsContainer) return;
     if (state.syncedLyrics.length === 0) return;
@@ -177,7 +216,12 @@ window.UrielApp.lyricsView = function ({ capMap, lyricsSourcePref, el, fetchAndU
         });
       }
       el.lyricsContainer.appendChild(div);
+      const gap = gapAfter(index);
+      if (gap) el.lyricsContainer.appendChild(gap);
     });
+    const intro = gapAfter(-1);
+    if (intro) el.lyricsContainer.prepend(intro);
+    lyricGaps = /** @type {HTMLElement[]} */ ([...el.lyricsContainer.querySelectorAll('.lyric-gap')]);
     updateLyricsPadding();
     state.lastActiveLyricIdx = -1;
     state.forceLyricsScroll = true;
@@ -665,6 +709,7 @@ window.UrielApp.lyricsView = function ({ capMap, lyricsSourcePref, el, fetchAndU
     const lookAhead = state.isCustomLyrics ? 0.25 : 0.0;
     const matchTime = currentTime + lookAhead;
     const activeIndex = window.UrielLyricsSources.activeLineIndex(state.syncedLyrics.length, getLineStartTime, matchTime, state.lastActiveLyricIdx);
+    if (lyricGaps.length) updateLyricGaps(matchTime);
 
     if (activeIndex >= 0 && state.isPlaying) {
       const currentLineTime = getLineStartTime(activeIndex);

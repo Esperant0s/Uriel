@@ -9123,3 +9123,15 @@ body.hide-titlebar:not(.mini) .update-banner { top: 76px; }
 .top-moment-pin { position: absolute; top: 50%; z-index: 3; display: grid; place-items: center; width: 22px; height: 22px; margin: -11px 0 0 -11px; padding: 0; border: 0; border-radius: 50%; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); cursor: pointer; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); transform: translateY(-14px); transition: transform 0.2s; }
 .top-moment-pin:hover { transform: translateY(-14px) scale(1.12); }
 .top-moment-pin[hidden] { display: none; }
+
+/* ---- instrumental breaks in the lyrics: a note that fills up as the break goes by (app/lyricsView.js) ---- */
+.lyric-gap { padding: 10px 12px; opacity: 0.45; transition: opacity 0.35s ease, transform 0.35s ease; }
+.lyric-gap.active { opacity: 1; transform: scale(1.08); transform-origin: left center; }
+.lyric-gap-note { position: relative; display: inline-block; width: 28px; height: 28px; }
+.lyric-gap-note > svg, .lyric-gap-fill svg { position: absolute; left: 0; bottom: 0; width: 28px; height: 28px; }
+.lyric-gap-note > svg { fill: color-mix(in srgb, var(--md-sys-color-on-surface) 28%, transparent); }
+.lyric-gap-fill { position: absolute; left: 0; bottom: 0; width: 100%; height: var(--gap-pct, 0%); overflow: hidden; }
+.lyric-gap-fill svg { fill: var(--md-sys-color-on-surface); }
+.lyric-gap.active .lyric-gap-note { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--md-sys-color-on-surface) 70%, transparent)); }
+/* during a break the line before it is done: it steps back */
+.lyrics-container.in-gap .lyric-line.active { opacity: 0.55; }
