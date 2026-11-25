@@ -397,12 +397,14 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
     writeStr(36, 'data');
     view.setUint32(40, dataSize, true);
 
-    let offset = 44;
-    for (let i = 0; i < length; i++) {
-      for (let ch = 0; ch < numChannels; ch++) {
-        const sample = Math.max(-1, Math.min(1, buffer.getChannelData(ch)[i]));
-        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-        offset += 2;
+    // each channel's samples fetched once (getChannelData per sample froze the window for seconds), written
+    // interleaved; WAV is little-endian like every machine the app runs on
+    const out = new Int16Array(arrayBuffer, 44, length * numChannels);
+    for (let ch = 0; ch < numChannels; ch++) {
+      const data = buffer.getChannelData(ch);
+      for (let i = 0, o = ch; i < length; i++, o += numChannels) {
+        const sample = Math.max(-1, Math.min(1, data[i]));
+        out[o] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
       }
     }
     return new Blob([arrayBuffer], { type: 'audio/wav' });
@@ -567,10 +569,11 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
       const startSec = (parsedStart !== null && parsedStart >= 0) ? parsedStart : 0;
       const endSec = rawEnd ? parseTimeInputToSeconds(rawEnd) : null;
 
+      const applyEffects = !isPhoneApp && Boolean(/** @type {HTMLInputElement | null} */ (document.getElementById('download-apply-effects'))?.checked);
       // another download is running: this song waits its turn (a trimmed one can't: the queue saves whole songs)
       if (downloadAbort && downloadAbortFor !== t) {
         const fullSong = startSec === 0 && (endSec === null || !t.duration || endSec >= Number(t.duration) - 1);
-        if (!fullSong && !isPhoneApp) { showToast(Tm('A trimmed song can only be downloaded when the others are done'), 'info'); return; }
+        if ((!fullSong || applyEffects) && !isPhoneApp) { showToast(Tm('A trimmed song or one with effects can only be downloaded when the others are done'), 'info'); return; }
         queueDownload({ name: t.title || T('Track'), key: `song:${t.id || t.url}`, tracks: [t] });
         return;
       }
@@ -596,17 +599,19 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
         `;
       }
 
-      if (!isPhoneApp) showToast(Tm('Downloading: {0}', `${t.title || T('Song')} (.${selectedFormat})`), 'info');
+      if (!isPhoneApp) showToast(Tm('Downloading: {0}', `${t.title || T('Song')} (${selectedFormat === 'original' ? T('Original') : '.' + selectedFormat})`), 'info');
       // its own controller: Cancel clears the shared one, and a download started after this one replaces it
       const singleAbort = new AbortController();
       downloadAbort = singleAbort;
       downloadAbortFor = t;
 
       try {
-        // Phones have no audio rendering pipeline or ffmpeg: the server saves the song file as it is
-        // (the decode-and-encode path below always ended in "Download failed" there)
-        if (isPhoneApp) {
+        // The server saves the song (yt-dlp or the cache on the PC, mobile/save-download.ts on phones), with retries,
+        // tags and cover. Only the PC's audio effects need the song decoded and rendered here (below), and a song
+        // from the PC's own files.
+        if (isPhoneApp || (!applyEffects && t.platform !== 'local')) {
           if (t.platform === 'local') throw new Error('This song is already on your phone');
+          const trim = isPhoneApp ? '' : `${startSec > 0 ? `&start=${startSec}` : ''}${endSec !== null ? `&end=${endSec}` : ''}`;
           singleFailed = false;
           const onTrack = () => trackToDownload === t;
           const showing = (/** @type {UrielDownloadProgress} */ p) => { if (onTrack()) setDownloadProgress(p); };
@@ -626,7 +631,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
           let result;
           try {
             result = await window.UrielDownloadBatch.runDownloadBatch([t], async (/** @type {UrielTrack} */ _, /** @type {{ fresh: boolean }} */ { fresh }) => {
-              const r = await fetch(`http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(t.url || '')}&id=${encodeURIComponent(t.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${selectedFormat}&quality=${selectedQuality}&platform=${encodeURIComponent(t.platform || 'youtube')}&duration=${encodeURIComponent(t.duration || 0)}${tagQuery(t, null)}${fresh ? '&fresh=1' : ''}`, { signal: singleAbort.signal });
+              const r = await fetch(`http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(t.url || '')}&id=${encodeURIComponent(t.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${selectedFormat}&quality=${selectedQuality}&platform=${encodeURIComponent(t.platform || 'youtube')}&duration=${encodeURIComponent(t.duration || 0)}${tagQuery(t, null)}${trim}${fresh ? '&fresh=1' : ''}`, { signal: singleAbort.signal });
               const d = await r.json();
               if (!d.success) throw Object.assign(new Error(d.error || 'Download failed'), { status: r.status });
               saved = d;
@@ -639,9 +644,13 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
           if (!saved) throw (result.failed[0] && result.failed[0].error) || new Error('Download failed');
           offlineChanged(t, true);
           let folder = '';
-          try { folder = (await window.electronAPI.getDownloadDir()).dir || ''; } catch (e) {}
-          const done = /** @type {{ filename?: string, note?: string }} */ (saved);
-          showToast(done.note ? done.note : folder ? Tm('Saved to {0}', folder) : Tm('Download complete: saved as {0}', done.filename), done.note ? 'info' : 'success');
+          if (isPhoneApp) { try { folder = (await window.electronAPI.getDownloadDir()).dir || ''; } catch (e) {} }
+          const done = /** @type {{ filename?: string, note?: string, directory?: string }} */ (saved);
+          const message = done.note ? done.note
+            : folder ? Tm('Saved to {0}', folder)
+              : !isPhoneApp && done.directory ? Tm('Download complete: saved to {0}', `${done.directory}/${done.filename}`)
+                : Tm('Download complete: saved as {0}', done.filename);
+          showToast(message, done.note ? 'info' : 'success');
           if (el.downloadModal && downloadAbort === singleAbort && onTrack()) closeModal(el.downloadModal);
           return;
         }
@@ -699,7 +708,6 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
           bufferToProcess = trimAudioBuffer(decodeCtx, decodedBuffer, startSec, endSec);
         }
 
-        const applyEffects = Boolean(/** @type {HTMLInputElement | null} */ (document.getElementById('download-apply-effects'))?.checked);
         let finalBuffer = bufferToProcess;
         if (applyEffects) {
           const currentSettings = {
@@ -717,7 +725,9 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
 
         if (singleAbort.signal.aborted) throw new DOMException('Aborted', 'AbortError');
 
-        const encodeUrl = `http://127.0.0.1:${state.serverPort}/api/encode?title=${encodeURIComponent(t.title || 'untitled')}&artist=${encodeURIComponent(t.artist || 'unknown artist')}&format=${selectedFormat}&quality=${selectedQuality}`;
+        // Original means the file as it came, which a song with effects can't be: it's saved lossless instead
+        const encodeFormat = selectedFormat === 'original' ? 'flac' : selectedFormat;
+        const encodeUrl = `http://127.0.0.1:${state.serverPort}/api/encode?title=${encodeURIComponent(t.title || 'untitled')}&artist=${encodeURIComponent(t.artist || 'unknown artist')}&format=${encodeFormat}&quality=${selectedQuality}&id=${encodeURIComponent(t.id || '')}${tagQuery(t, null)}`;
         const resEncode = await fetch(encodeUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'audio/wav' },
