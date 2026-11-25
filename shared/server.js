@@ -3653,6 +3653,11 @@ function handleLocalCover(/** @type {import('http').IncomingMessage} */ req, /**
   streamFileToResponse(fs.createReadStream(file), res);
 }
 
+// how long one download may take: 3 minutes used to cut off hour-long mixes on a slow line
+function ytdlpTimeoutFor(/** @type {number} */ duration) {
+  return Math.min(60 * 60000, Math.max(180000, 120000 + 2000 * (Number(duration) || 0)));
+}
+
 async function handleDownload(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {string} */ trackUrl, /** @type {string} */ title, /** @type {string} */ artist, format = 'mp3', quality = '0', /** @type {number | string | null} */ startParam = null, /** @type {number | string | null} */ endParam = null, raw = false, /** @type {string | null} */ trackId = null, /** @type {string | null} */ streamUrlParam = null) {
   if (!trackUrl && (!title || !artist)) {
     res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -3662,6 +3667,9 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
   // look like a failure and start the fallback download, which nothing could stop)
   let clientGone = false;
   res.on('close', () => { if (!res.writableEnded) clientGone = true; });
+  // the rest of what the app sends: platform, length, and album/track/year/cover for the tags
+  const query = url.parse(req.url || '', true).query;
+  const duration = Number(query.duration) || 0;
   // the same download asked for twice (Download all and a single download of that song) shares one run: it only
   // counts as cancelled once every request waiting for it is gone
   /** @type {(Promise<HttpOutcome> & { waiting?: number }) | null} */
@@ -3756,7 +3764,6 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
     let cached = await findCachedFile(cacheId);
     let blocked = false;
     if (!cached) {
-      const query = url.parse(req.url || '', true).query;
       const platform = String(query.platform || 'youtube');
       const ytTarget = youtubeExtractTarget(targetUrl, cacheId, platform);
       const skip = { aborted: false };
@@ -3767,23 +3774,22 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
         if (proc) { try { proc.kill(); } catch (e) {} }
       });
       try {
-        await streamResolver.resolve({ id: cacheId, cleanId: cacheId, trackUrl: ytTarget.url, platform, title, artist, duration: Number(query.duration) || 0, meta: { title, artist }, youtube: ytTarget.youtube }, { reason: 'play', deadlineMs: 180000, signal: skip });
+        await streamResolver.resolve({ id: cacheId, cleanId: cacheId, trackUrl: ytTarget.url, platform, title, artist, duration, meta: { title, artist }, youtube: ytTarget.youtube }, { reason: 'play', deadlineMs: ytdlpTimeoutFor(duration), signal: skip });
       } catch (e) { blocked = e instanceof ResolveError && e.code === 'blocked'; }
       cached = await findCachedFile(cacheId);
     }
     if (!cached) return sendDownloadResponse(blocked ? 429 : 500, { success: false, blocked, error: blocked ? STREAM_BLOCKED : "Couldn't get this song right now. Try again later, or another version from search" });
     await fs.promises.mkdir(downloadsDir, { recursive: true });
-    const q = url.parse(req.url || '', true).query;
     const meta = trackMetadataIndex[cacheId] || {};
     const base = `${cleanArtist} - ${cleanTitle}`;
     if (phoneSaveDownload) {
       const stop = new AbortController();
       res.on('close', () => { if (abandoned()) stop.abort(); });
       const saved = await phoneSaveDownload({
-        cached, dir: downloadsDir, base, format: String(q.format || 'original'), quality: safeQuality, duration: Number(q.duration) || 0,
-        tags: { title, artist, album: String(q.album || ''), track: String(q.track || ''), year: String(q.year || '') },
-        thumbnail: String(q.thumbnail || meta.thumbnail || ''),
-        source: youtubeExtractTarget(targetUrl, cacheId, String(q.platform || 'youtube')).url, id: cacheId, signal: stop.signal,
+        cached, dir: downloadsDir, base, format: String(query.format || 'original'), quality: safeQuality, duration,
+        tags: { title, artist, album: String(query.album || ''), track: String(query.track || ''), year: String(query.year || '') },
+        thumbnail: String(query.thumbnail || meta.thumbnail || ''),
+        source: youtubeExtractTarget(targetUrl, cacheId, String(query.platform || 'youtube')).url, id: cacheId, signal: stop.signal,
       });
       downloadsIndex = null;
       return sendDownloadResponse(200, { success: true, filename: saved.filename, note: saved.note, directory: downloadsDir });
@@ -3911,7 +3917,7 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
   args.push('--', targetUrl);
 
   try {
-    await executeYtDlp(args, 180000, { onChild, reason: 'download' });
+    await executeYtDlp(args, ytdlpTimeoutFor(duration), { onChild, reason: 'download' });
     if (!isRaw) {
       await cleanupDownloadArtifacts(downloadsDir, beforeFiles, baseName, videoId, ext, true);
       downloadsIndex = null;
@@ -3952,7 +3958,7 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
       }
       fallbackArgs.push('--', targetUrl);
 
-      await executeYtDlp(fallbackArgs, 180000, { onChild, reason: 'download-fallback' });
+      await executeYtDlp(fallbackArgs, ytdlpTimeoutFor(duration), { onChild, reason: 'download-fallback' });
       if (!isRaw) {
         await cleanupDownloadArtifacts(downloadsDir, beforeFiles, baseName, videoId, ext, true);
         downloadsIndex = null;
@@ -7848,7 +7854,7 @@ function stopServer() {
   });
 }
 
-module.exports = { startServer, stopServer, stopChildren: () => childProcs.stopAll(), PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, setOutProxy, streamHealthStats, _test: { withYtDlpCookies, youtubeExtractTarget, fetchKugouLyrics } };
+module.exports = { startServer, stopServer, stopChildren: () => childProcs.stopAll(), PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, setOutProxy, streamHealthStats, _test: { withYtDlpCookies, youtubeExtractTarget, fetchKugouLyrics, ytdlpTimeoutFor } };
 
 if (require.main === module) {
   startServer();

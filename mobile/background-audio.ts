@@ -2,11 +2,14 @@
 // iOS lets an app run in the background only while it plays something. Between two songs nothing does:
 // the next one is still downloading, or one that can't play is being skipped. iOS then suspended Uriel
 // within seconds, and the next song didn't start until the app was opened again. So while a song is on
-// its way (app.js `state.trackLoading`), a second <audio> element loops a second of silence.
+// its way (app.js `state.trackLoading`), a second <audio> element loops a second of silence. Downloads need the
+// same: with the screen locked and nothing playing, a batch of songs stopped after the first few seconds.
 import { Capacitor } from '@capacitor/core';
 
 // a stuck download shouldn't keep the phone busy for good (each request gives up after 30s anyway)
 const MAX_MS = 3 * 60 * 1000;
+// a download keeps it going for as long as it gets anywhere: this long after the last progress at most
+const DOWNLOAD_IDLE_MS = 10 * 60 * 1000;
 
 // one second of 16-bit mono silence as a WAV file
 function silentWav(rate = 8000) {
@@ -25,8 +28,9 @@ function backgroundAudio(): void {
   const core = () => window.UrielCore;
   let silence: HTMLAudioElement | null = null;
   let capTimer: ReturnType<typeof setTimeout> | undefined;
+  let downloading = false;
 
-  function start() {
+  function start(ms: number) {
     if (!silence) {
       silence = new Audio();
       silence.loop = true;
@@ -36,7 +40,7 @@ function backgroundAudio(): void {
     if (!silence.paused) return;
     silence.play().catch(() => {});
     clearTimeout(capTimer);
-    capTimer = setTimeout(stop, MAX_MS);
+    capTimer = setTimeout(stop, ms);
   }
 
   function stop() {
@@ -47,13 +51,26 @@ function backgroundAudio(): void {
 
   function sync() {
     const c = core();
-    if (c && c.state.trackLoading && c.audio.paused) start(); else stop();
+    if (c && (c.state.trackLoading || downloading) && c.audio.paused) start(downloading ? DOWNLOAD_IDLE_MS : MAX_MS); else stop();
+  }
+
+  // a download that's getting somewhere pushes the cap back
+  function downloadMoved() {
+    if (!downloading || !silence || silence.paused) return;
+    clearTimeout(capTimer);
+    capTimer = setTimeout(stop, DOWNLOAD_IDLE_MS);
   }
 
   function hook() {
     const c = core();
     if (!c || !c.audio) return;
     window.addEventListener('uriel:loading', sync);
+    window.addEventListener('uriel:downloads', (e) => {
+      downloading = !!(e as CustomEvent<{ active?: boolean }>).detail?.active;
+      sync();
+      downloadMoved();
+    });
+    window.addEventListener('uriel:dl-progress', downloadMoved);
     ['play', 'playing', 'pause'].forEach((ev) => c.audio.addEventListener(ev, sync));
   }
   if (window.UrielCore) hook(); else window.addEventListener('uriel:ready', hook, { once: true });

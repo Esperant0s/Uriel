@@ -83,3 +83,11 @@ test('a blocked upload is replaced by another upload of the same song', { skip: 
   // never the 10-minute version: it isn't the same recording
   assert.ok(!asked.includes('EXTENDmix01'), asked);
 });
+
+test('downloads get more time for long songs, between 3 minutes and an hour', () => {
+  const { ytdlpTimeoutFor } = require('../shared/server')._test;
+  assert.strictEqual(ytdlpTimeoutFor(0), 180000);
+  assert.strictEqual(ytdlpTimeoutFor(30), 180000);
+  assert.strictEqual(ytdlpTimeoutFor(240), 600000);
+  assert.strictEqual(ytdlpTimeoutFor(3 * 3600), 3600000);
+});

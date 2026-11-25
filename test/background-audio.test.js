@@ -82,3 +82,12 @@ test('the silent clip is a valid one-second WAV', async () => {
 });
 
 test.after(() => { delete global.window; delete global.Audio; });
+
+test('silence also plays while songs download with nothing playing, and stops when they are done', () => {
+  const { silence, audio } = setup();
+  audio.paused = true;
+  window.dispatchEvent(new CustomEvent('uriel:downloads', { detail: { active: true, total: 3, done: 0 } }));
+  assert.strictEqual(silence().paused, false);
+  window.dispatchEvent(new CustomEvent('uriel:downloads', { detail: { active: false } }));
+  assert.strictEqual(silence().paused, true);
+});
