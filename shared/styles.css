@@ -9157,3 +9157,13 @@ body.hide-titlebar:not(.mini) .update-banner { top: 76px; }
 .rec-meta span { color: var(--md-sys-color-on-surface-variant); font-size: 0.9em; }
 .rec-add { flex-shrink: 0; padding: 6px 16px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 999px; background: transparent; color: var(--md-sys-color-on-surface); font: inherit; cursor: pointer; }
 .rec-add:hover { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }
+
+/* ---- song table (Settings → Song table): album and date added columns, with a header (app/trackRows.js) ---- */
+.track-table-head .tth-index { text-align: center; }
+.track-row-album, .track-row-added, .track-table-head { display: none; }
+html:not(.is-mobile) body.track-table .track-row-album,
+html:not(.is-mobile) body.track-table .track-row-added { display: block; flex: 0 0 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--md-sys-color-on-surface-variant); font-size: calc(13px * var(--font-scale, 1)); }
+html:not(.is-mobile) body.track-table .track-row-album { width: 22%; }
+html:not(.is-mobile) body.track-table .track-row-added { width: 110px; }
+html:not(.is-mobile) body.track-table .track-table-head { display: block; position: relative; height: 30px; margin-bottom: 4px; border-bottom: 1px solid var(--md-sys-color-outline-variant); color: var(--md-sys-color-on-surface-variant); font-size: calc(12px * var(--font-scale, 1)); text-transform: uppercase; letter-spacing: 0.04em; }
+.track-table-head > span { position: absolute; top: 4px; white-space: nowrap; overflow: hidden; }

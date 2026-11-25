@@ -45,10 +45,13 @@ window.UrielApp.effectSettings = function ({ addsElements, applyFxClip, applyRed
     });
   }
 
+  // song lists as a table: album and date added columns, with a header (Riff 0.6)
+  document.body.classList.toggle('track-table', getAdv('track_table', false));
+
   const advButtons = /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.effect-switch-btn[data-adv]'));
   advButtons.forEach((btn) => {
     const key = btn.dataset.adv || '';
-    const defaultVal = key === 'reduce_motion' ? systemPrefersReducedMotion() : (key === 'mesh_gradient' || key === 'glass_blur' || key === 'mesh_cover_color' || key === 'clip_fx') ? false : true;
+    const defaultVal = key === 'reduce_motion' ? systemPrefersReducedMotion() : (key === 'mesh_gradient' || key === 'glass_blur' || key === 'mesh_cover_color' || key === 'clip_fx' || key === 'track_table') ? false : true;
     const currentVal = getAdv(key, defaultVal);
     btn.classList.toggle('active', currentVal);
 
@@ -69,6 +72,9 @@ window.UrielApp.effectSettings = function ({ addsElements, applyFxClip, applyRed
         }
       } else if (key === 'blur_fx') {
         document.body.classList.toggle('no-blur', !newVal);
+      } else if (key === 'track_table') {
+        document.body.classList.toggle('track-table', newVal);
+        window.dispatchEvent(new Event('resize')); // the table header lines up with the rows
       } else if (key === 'light_thumbs') {
         /** @type {NodeListOf<HTMLImageElement>} */ (document.querySelectorAll('.track-row-thumb[data-full], .quick-play-pill-img[data-full]')).forEach((img) => { img.src = listThumb(img.dataset.full || '') || img.dataset.full || ''; });
       } else if (key === 'mesh_gradient') {

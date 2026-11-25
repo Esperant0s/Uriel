@@ -61,6 +61,8 @@ window.UrielApp.trackRows = function ({ canReorder, checkOffline, copyText, drag
       <span class="track-row-title">${escapeHtml(rowTitle(track))}</span>
       <span class="track-row-artist-wrap">${offlineTag}${explicitTag}${artistSpan}</span>
       </div>
+      <span class="track-row-album">${escapeHtml(track.album || '')}</span>
+      <span class="track-row-added">${track.addedAt ? escapeHtml(new Date(track.addedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })) : ''}</span>
       <span class="track-row-duration">${formatDuration(track.duration)}</span>
       <div class="track-row-actions">
       <button class="btn-icon-pill btn-row-fav" title="Favorite" data-i18n-attr="title">
@@ -377,6 +379,7 @@ window.UrielApp.trackRows = function ({ canReorder, checkOffline, copyText, drag
   window.addEventListener('resize', closeTrackContextMenu);
   document.addEventListener('scroll', closeTrackContextMenu, true);
 
+  const TABLE_CONTEXTS = new Set(['favorites', 'playlist', 'local', 'history']);
   function renderTracks(/** @type {HTMLElement} */ container, /** @type {UrielTrack[]} */ tracks, context = 'search') {
     if (!container) return;
     
@@ -384,6 +387,15 @@ window.UrielApp.trackRows = function ({ canReorder, checkOffline, copyText, drag
     const scrollParent = container.closest('.drawer-queue-scroll') || document.querySelector('.main-content');
     if (container._vScrollHandler && scrollParent) {
       scrollParent.removeEventListener('scroll', container._vScrollHandler);
+    }
+
+    // the table header (Settings → Song table) sits just above the list, outside it: the list draws only the rows
+    // on screen and measures from its own top
+    if (TABLE_CONTEXTS.has(context) && !(container.previousElementSibling && container.previousElementSibling.classList.contains('track-table-head'))) {
+      const head = document.createElement('div');
+      head.className = 'track-table-head';
+      head.innerHTML = `<span class="tth-index">#</span><span class="tth-title">${escapeHtml(T('Title'))}</span><span class="tth-album">${escapeHtml(T('Album'))}</span><span class="tth-added">${escapeHtml(T('Date added'))}</span><span class="tth-time">${escapeHtml(T('Time'))}</span>`;
+      container.before(head);
     }
 
     // the list keeps its height while it is drawn again: emptied for a moment, the page got shorter and the browser
@@ -498,7 +510,27 @@ window.UrielApp.trackRows = function ({ canReorder, checkOffline, copyText, drag
     container._lastEndIndex = -1;
     renderChunk();
     container.style.minHeight = '';
+    if (TABLE_CONTEXTS.has(context)) requestAnimationFrame(() => alignTableHead(container));
   }
+
+  // the header's columns go where the first row's are (the buttons at the end of a row differ by list)
+  function alignTableHead(/** @type {HTMLElement} */ container) {
+    const head = /** @type {HTMLElement | null} */ (container.previousElementSibling);
+    const row = container.querySelector('.track-row');
+    if (!head || !head.classList.contains('track-table-head') || !row || !document.body.classList.contains('track-table')) return;
+    // layout offsets, not screen positions: the rows are still in their fade-up animation (a transform) here
+    const base = /** @type {HTMLElement} */ (row).offsetLeft + (container.offsetLeft - head.offsetLeft);
+    /** @type {[string, string][]} */
+    const cols = [['tth-index', '.track-row-index'], ['tth-title', '.track-row-info'], ['tth-album', '.track-row-album'], ['tth-added', '.track-row-added'], ['tth-time', '.track-row-duration']];
+    for (const [h, c] of cols) {
+      const span = /** @type {HTMLElement | null} */ (head.querySelector('.' + h));
+      const cell = /** @type {HTMLElement | null} */ (row.querySelector(c));
+      if (!span || !cell) continue;
+      span.style.left = `${base + cell.offsetLeft}px`;
+      span.style.width = `${cell.offsetWidth}px`;
+    }
+  }
+  window.addEventListener('resize', () => document.querySelectorAll('.track-table-head + .tracks-list').forEach((l) => alignTableHead(/** @type {HTMLElement} */ (l))));
 
   function highlightPlayingRow() {
     const currentCanonicalId = state.currentTrack ? getTrackCanonicalId(state.currentTrack) : '';
