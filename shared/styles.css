@@ -9118,3 +9118,8 @@ body.hide-titlebar:not(.mini) .update-banner { top: 76px; }
 .song-credits-row { display: grid; gap: 2px; font-size: calc(13px * var(--font-scale, 1)); }
 .song-credits-row span { color: var(--md-sys-color-on-surface-variant); }
 .song-credits-row b { font-weight: 600; }
+
+/* ---- top moment: the pin over the progress bar (app/topMoment.js) ---- */
+.top-moment-pin { position: absolute; top: 50%; z-index: 3; display: grid; place-items: center; width: 22px; height: 22px; margin: -11px 0 0 -11px; padding: 0; border: 0; border-radius: 50%; background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); cursor: pointer; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); transform: translateY(-14px); transition: transform 0.2s; }
+.top-moment-pin:hover { transform: translateY(-14px) scale(1.12); }
+.top-moment-pin[hidden] { display: none; }

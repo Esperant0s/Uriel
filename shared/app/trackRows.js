@@ -4,7 +4,7 @@
 // calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps @param {UrielTrackRowsPart} out */
-window.UrielApp.trackRows = function ({ canReorder, checkOffline, copyText, dragGrip, el, escapeHtml, formatDuration, getBlocks, getTrackCanonicalId, getTrackThumbUrl, I18N, isBlocked, isPhoneApp, isSameTrack, Lib, listThumb, multiSel, OFFLINE_ICON, offlineKey, offlineState, openAddToPlaylistModal, openDownloadModal, openTrackArtist, openTrackArtModal, playTrack, removeTrackFromCurrentPlaylist, renderBlockedSettings, renderLocalView, rowTitle, sharePlaylist, shownThumbs, showToast, songRadioEnabled, sortTracksFor, startSongRadio, state, T, Tf, THUMB_FALLBACK, Tm, toggleBlockArtist, toggleBlockSong, toggleFavoriteTrack, toggleTrackSelection, trackArtCandidates, updateArtistBlockButton, updateLocalBadge, updateQueueBadge }, out) {
+window.UrielApp.trackRows = function ({ canReorder, checkOffline, copyText, dragGrip, el, escapeHtml, formatDuration, getBlocks, getTrackCanonicalId, getTrackThumbUrl, I18N, isBlocked, isPhoneApp, isSameTrack, Lib, listThumb, multiSel, OFFLINE_ICON, offlineKey, offlineState, openAddToPlaylistModal, openDownloadModal, openTrackArtist, openTrackArtModal, playTrack, removeTrackFromCurrentPlaylist, renderBlockedSettings, renderLocalView, rowTitle, sharePlaylist, shownThumbs, showToast, songRadioEnabled, sortTracksFor, startSongRadio, state, T, Tf, THUMB_FALLBACK, Tm, toggleBlockArtist, toggleBlockSong, toggleFavoriteTrack, toggleTrackSelection, topMomentMenuItem, trackArtCandidates, updateArtistBlockButton, updateLocalBadge, updateQueueBadge }, out) {
   function createTrackRow(/** @type {UrielTrack} */ track, /** @type {number} */ idx, /** @type {string} */ currentCanonicalId, /** @type {string} */ context, /** @type {UrielTrack[]} */ tracks, /** @type {HTMLElement} */ container) {
       const row = document.createElement('div');
       row.className = 'track-row';
@@ -299,6 +299,8 @@ window.UrielApp.trackRows = function ({ canReorder, checkOffline, copyText, drag
         if (svg) svg.setAttribute('fill', on ? 'currentColor' : 'none');
       } }
     ];
+    const moment = topMomentMenuItem(track);
+    if (moment) items.push(moment);
     if (track.artist && !/^unknown artist$/i.test(track.artist)) {
       items.push({ label: 'Go to artist', run: () => openTrackArtist(track) });
     }

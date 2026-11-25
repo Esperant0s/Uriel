@@ -57,6 +57,7 @@ declare global {
       tools(deps: Record<string, unknown>, out: UrielToolsPart): void;
       trackArt(deps: Record<string, unknown>, out: UrielTrackArtPart): void;
       credits(deps: Record<string, unknown>): void;
+      topMoment(deps: Record<string, unknown>, out: UrielTopMomentPart): void;
       sleepTimer(deps: Record<string, unknown>, out: UrielSleepTimerPart): void;
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;
@@ -768,6 +769,9 @@ declare global {
   }
   interface UrielSleepTimerPart {
     updateSleepTimerUI(): void;
+  }
+  interface UrielTopMomentPart {
+    topMomentMenuItem(track: UrielTrack): UrielMenuItem | null;
   }
   interface UrielTrackArtPart {
     openTrackArtModal(track: UrielTrack, triggerEl?: HTMLElement | null): void;
