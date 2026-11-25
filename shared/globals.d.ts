@@ -56,6 +56,7 @@ declare global {
       storage(deps: Record<string, unknown>, out: UrielStoragePart): void;
       tools(deps: Record<string, unknown>, out: UrielToolsPart): void;
       trackArt(deps: Record<string, unknown>, out: UrielTrackArtPart): void;
+      credits(deps: Record<string, unknown>): void;
       sleepTimer(deps: Record<string, unknown>, out: UrielSleepTimerPart): void;
       trim(deps: Record<string, unknown>, out: UrielTrimPart): void;
       crossfade(deps: Record<string, unknown>, out: UrielCrossfadePart): void;

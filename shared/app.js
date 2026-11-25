@@ -2162,6 +2162,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   function applyTrackBannerFx(/** @type {UrielTrackArt | null} */ art) { return trackArtPart.applyTrackBannerFx(art); }
   window.UrielApp.trackArt({ I18N, LiquidMotion, T, Tm, YT_THUMB, analysisCache, closeModal, coverAnalysisCache, el, getTrackArt, getTrackCanonicalId, getTrackThumbUrl, isSameTrack, listThumb, m3cSetImage, nextTrackArt, setTrackArt, showToast, state, syncTvBanner, trackArtCandidates, trackYoutubeId, updateMediaSession, updateThemeFromState }, trackArtPart);
 
+  // ---- who wrote and produced the song, under its lyrics (app/credits.js) ----
+  window.UrielApp.credits({ state, T });
+
   // Search results: All / Songs / Artists / Albums (from Riff 43.1). Only shows or hides the sections, so the
   // choice stays for the next search.
   (function initSearchFilterChips() {

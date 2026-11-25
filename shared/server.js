@@ -4239,6 +4239,53 @@ async function fetchNetEaseWords(/** @type {string} */ title, /** @type {string}
   return lines;
 }
 
+// ---------- Riff 0.7: Kugou, asked last when lrclib and Genius have nothing ----------
+// (Riff's other new one, Musixmatch, answers apps without an account with another song's made-up lyrics)
+async function fetchKugouLyrics(/** @type {string} */ title, /** @type {string} */ artist, duration = 0) {
+  const want = parseForLyrics(title, artist);
+  if (!want.titles[0]) return null;
+  const keyword = `${want.artists[0] || artist} - ${want.titles[0]}`;
+  const found = await lyricsPageJson(`https://lyrics.kugou.com/search?ver=1&man=yes&client=pc&keyword=${encodeURIComponent(keyword)}&duration=${Math.round(duration * 1000)}&hash=`);
+  // the same check as lrclib's results: title, artist, and a length that fits the timing
+  const list = (found && Array.isArray(found.candidates) ? found.candidates : [])
+    .map((/** @type {Record<string, unknown>} */ c) => ({ ...c, trackName: c.song, artistName: c.singer, duration: (Number(c.duration) || 0) / 1000, syncedLyrics: 'yes' }));
+  const best = pickBest(list, want, duration);
+  if (!best || !best.syncedLyrics || !best.id || !best.accesskey) return null;
+  const file = await lyricsPageJson(`https://lyrics.kugou.com/download?ver=1&client=pc&id=${encodeURIComponent(String(best.id))}&accesskey=${encodeURIComponent(String(best.accesskey))}&fmt=lrc&charset=utf8`);
+  if (!file || typeof file.content !== 'string') return null;
+  const lrc = Buffer.from(file.content, 'base64').toString('utf8').replace(/^\[(?:id|ti|ar|al|by|hash|sign|qq|total|offset):[^\]]*\]\r?\n?/gim, '').trim();
+  const { lyrics, credits } = splitKugouCredits(lrc);
+  kugouCredits.set(`${artist}:${title}`, credits);
+  trimCache(kugouCredits, 200);
+  return /^\[\d+:\d/m.test(lyrics) ? withLength(lyrics, best.duration) : null;
+}
+// Kugou's files start with "Title - Artist" and who wrote, composed and produced the song: those go to the song's
+// credits (Now playing), not into its lyrics
+const CREDIT_LINE = /^(Lyrics by|Written by|Composed by|Composer|Lyricist|Produced by|Producer|Arranged by|作词|作曲|编曲|制作人|词|曲)\s*[：:]\s*(.+)$/i;
+/** @type {Map<string, Record<string, string>>} */
+const kugouCredits = new Map();
+function splitKugouCredits(/** @type {string} */ lrc) {
+  /** @type {Record<string, string>} */
+  const credits = {};
+  const lines = lrc.split(/\r?\n/);
+  const out = [];
+  for (const [i, line] of lines.entries()) {
+    const m = /^\[(\d+):(\d+(?:\.\d+)?)\](.*)$/.exec(line);
+    const text = m ? m[3].trim() : line.trim();
+    const early = !m || Number(m[1]) * 60 + Number(m[2]) < 30;
+    const credit = early && CREDIT_LINE.exec(text);
+    if (credit) {
+      const key = /produc|制作/i.test(credit[1]) ? 'produced' : /compos|作曲|^曲/i.test(credit[1]) ? 'composed' : /arrang|编曲/i.test(credit[1]) ? 'arranged' : 'lyrics';
+      credits[key] = credit[2].split(/\s*[\/、,]\s*/).filter(Boolean).join(', ');
+      continue;
+    }
+    // the title line: the first line, "Song - Artist", before anyone sings
+    if (i === 0 && early && / - /.test(text) && Object.keys(credits).length === 0 && lines.slice(1, 4).some((l) => CREDIT_LINE.test(l.replace(/^\[[^\]]*\]/, '').trim()))) continue;
+    out.push(line);
+  }
+  return { lyrics: out.join('\n').trim(), credits };
+}
+
 const crypto = require('crypto');
 
 const SERVER_TOKEN = crypto.randomBytes(24).toString('hex');
@@ -4326,12 +4373,12 @@ function getCustomLyricsPath(/** @type {string} */ title, /** @type {string} */ 
 }
 
 function getFetchedLyricsPath(/** @type {string} */ title, /** @type {string} */ artist, source = 'lrclib') {
-  return path.join(LYRICS_DIR, lyricsKey(title, artist) + (source === 'genius' ? '_genius' : '') + '.lrc');
+  return path.join(LYRICS_DIR, lyricsKey(title, artist) + (source === 'lrclib' ? '' : `_${source}`) + '.lrc');
 }
 
 async function handleLyrics(/** @type {import('http').IncomingMessage} */ req, /** @type {import('http').ServerResponse} */ res, /** @type {string} */ title, /** @type {string} */ artist, allowOnline = true, duration = 0, source = 'lrclib') {
-  // Settings → Lyrics source picks which site is asked first; the other one is the fallback
-  const order = source === 'genius' ? ['genius', 'lrclib'] : ['lrclib', 'genius'];
+  // Settings → Lyrics source picks which site is asked first; the other one is the fallback, then Kugou
+  const order = source === 'genius' ? ['genius', 'lrclib', 'kugou'] : ['lrclib', 'genius', 'kugou'];
   const cacheKey = order[0] === 'genius' ? `${artist}:${title}:genius` : `${artist}:${title}`;
   let cached = lyricsCache.get(cacheKey);
   // kept for another cut of the same song (the studio song, then its music video): look again for this one
@@ -4418,7 +4465,7 @@ async function handleLyrics(/** @type {import('http').IncomingMessage} */ req, /
     if (!allowOnline) continue;
 
     try {
-      rawLyrics = backend === 'genius' ? await fetchGeniusLyrics(title, artist) : await fetchLyricsDirect(title, artist, duration);
+      rawLyrics = backend === 'genius' ? await fetchGeniusLyrics(title, artist) : backend === 'kugou' ? await fetchKugouLyrics(title, artist, duration) : await fetchLyricsDirect(title, artist, duration);
     } catch (err) {
       rawLyrics = null;
     }
@@ -7686,6 +7733,20 @@ const server = http.createServer(guardHandler(async (/** @type {import('http').I
     return handleLyrics(req, res, title, artist, allowOnline, duration, source);
   }
 
+  // who wrote, composed and produced the song (Now playing), from the same Kugou lookup as its lyrics
+  if (parsedUrl.pathname === '/api/credits') {
+    const title = parsedUrl.query.title || '';
+    const artist = parsedUrl.query.artist || '';
+    const key = `${artist}:${title}`;
+    if (!kugouCredits.has(key)) {
+      try { await fetchKugouLyrics(title, artist, Number(parsedUrl.query.duration) || 0); } catch (e) {}
+      if (!kugouCredits.has(key)) kugouCredits.set(key, {}); // nothing found: not asked again for this song
+    }
+    const credits = kugouCredits.get(key) || {};
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ success: Object.keys(credits).length > 0, credits }));
+  }
+
   // word timings for karaoke (Settings → Word-by-word source), lined up with the lyrics by app.js
   if (parsedUrl.pathname === '/api/lyrics-words') {
     const title = parsedUrl.query.title || '';
@@ -7739,7 +7800,7 @@ function stopServer() {
   });
 }
 
-module.exports = { startServer, stopServer, stopChildren: () => childProcs.stopAll(), PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, streamHealthStats, _test: { withYtDlpCookies, youtubeExtractTarget } };
+module.exports = { startServer, stopServer, stopChildren: () => childProcs.stopAll(), PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, streamHealthStats, _test: { withYtDlpCookies, youtubeExtractTarget, fetchKugouLyrics } };
 
 if (require.main === module) {
   startServer();
