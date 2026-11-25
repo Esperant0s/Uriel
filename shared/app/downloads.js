@@ -613,7 +613,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
           const onPart = (/** @type {WindowEventMap['uriel:dl-progress']} */ e) => {
             if (!singleAbort.signal.aborted && e.detail && e.detail.total && (!t.id || String(t.id).includes(e.detail.id))) {
               const percent = e.detail.done / e.detail.total;
-              showing({ text: Tf('Downloading {0}%', Math.round(percent * 100)), fraction: percent });
+              showing({ text: Tf(e.detail.stage === 'convert' ? 'Converting {0}%' : 'Downloading {0}%', Math.round(percent * 100)), fraction: percent });
               announceDownloads(true, { title: t.title || '', total: 1, done: 0, percent: Math.round(percent * 100) });
             }
           };

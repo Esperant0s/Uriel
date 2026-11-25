@@ -42,6 +42,20 @@ await build({
   logLevel: 'warning',
 });
 
+// MP3 and FLAC encoding runs in a worker of its own (mobile/save-download.ts starts it)
+await build({
+  entryPoints: [join(root, 'mobile', 'encode-worker.ts')],
+  outfile: join(out, 'encode-worker.js'),
+  bundle: true,
+  format: 'iife',
+  platform: 'browser',
+  target: ['safari16'],
+  minify: true,
+  legalComments: 'none',
+  alias: { buffer: 'buffer' },
+  logLevel: 'warning',
+});
+
 for (const f of ['storage-migrate.js', 'app.js', 'styles.css', 'audio-engine.js', 'm3shapes.js', 'lyrics-rtl.js', 'playback-recovery.js', 'track-sort.js', 'search-text.js', 'track-match.js', 'library-tools.js', 'library-pages.js', 'update-core.js', 'update-notifier.js', 'lyrics-match.js', 'encore.js', 'sync-core.js', 'sync.js', 'share-link.js', 'library-store.js', 'profiles-core.js', 'theme-boot.js', 'profiles.js', 'lastfm-core.js', 'lastfm.js', 'backup-core.js', 'backup.js', 'i18n.js', 'lyrics-sources.js', 'track-trim.js', 'download-batch.js', 'track-audio.js', 'now-playing.js', 'import-core.js']) cpSync(join(shared, f), join(out, f));
 // iOS or Android is read at runtime; CI fills in the commit and run number
 writeFileSync(join(out, 'build-info.js'), buildInfoScript(''));

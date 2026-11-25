@@ -8,7 +8,7 @@ declare global {
   var urielSessionFetch: ((input: string | URL, init?: RequestInit) => Promise<Response>) | undefined;
   // the download progress server.js reports for a song being saved (shared/app.js listens)
   interface WindowEventMap {
-    'uriel:dl-progress': CustomEvent<{ id: string; done: number; total: number }>;
+    'uriel:dl-progress': CustomEvent<{ id: string; done: number; total: number; stage?: 'convert' }>;
   }
   interface Window {
     // app.js

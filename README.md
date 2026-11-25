@@ -92,3 +92,6 @@ Details, also in German: [LEGAL.md](LEGAL.md).
 ## License
 
 MIT. See [LICENSE](LICENSE). Original Riff code © rootscripts.
+
+The phone app's MP3 encoding uses [lamejs](https://github.com/breezystack/lamejs) (LGPL-3.0), kept in its own
+file (`encode-worker.js` in the phone build) so it can be swapped out.
