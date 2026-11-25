@@ -5,7 +5,7 @@
 // calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps @param {UrielPlaybackPart} out */
-window.UrielApp.playback = function ({ applyAudioSettings, applyM3Cover, audioEngine, cancelEndFade, canOverlap, crossfadeFadeIn, crossfadeOnTrackChange, crossfadePrepared, crossfadeSeconds, dropCrossfadePrep, el, emitPluginEvent, enforceTrackTrim, extendMyWaveQueue, formatDuration, getTrackCanonicalId, getTrackNormalizedKey, getTrackTrim, initAudioContext, isBlocked, isPhoneApp, isSameTrack, loadScriptOnce, loadSyncedLyrics, m3cDraw, m3cEnabled, m3cStart, miniLyricsShown, nextPrefetchDue, offlineChanged, onTrackAudioTrackChange, pauseCrossfadeTail, playback, prepareCrossfade, recordWaveSkip, registerMediaActions, renderHistoryView, renderQueueView, resetLevelWatcher, resumeCrossfadeTail, saveQueueState, sendStateToServer, showToast, startVisualizers, state, stopLyricsScroll, syncTvkProgress, Tm, tokenUrl, toolsReady, updateDiscordPresence, updateMediaPositionState, updateMediaSession, updateMiniLyricsHighlight, updateNowPlayingUI, updatePlayPauseButton, updateQueueBadge, updateSleepTimerUI, updateSyncedLyricsHighlight, visualizerPart, viz }, out) {
+window.UrielApp.playback = function ({ applyAudioSettings, applyM3Cover, audioEngine, cancelEndFade, canOverlap, crossfadeFadeIn, crossfadeOnTrackChange, crossfadePrepared, crossfadeSeconds, dropCrossfadePrep, el, emitPluginEvent, enforceTrackTrim, extendMyWaveQueue, formatDuration, getTrackCanonicalId, getTrackNormalizedKey, getTrackTrim, initAudioContext, isBlocked, isPhoneApp, isSameTrack, loadScriptOnce, loadSyncedLyrics, m3cDraw, m3cEnabled, m3cStart, miniLyricsShown, nextPrefetchDue, offlineChanged, onTrackAudioTrackChange, pauseCrossfadeTail, playback, prepareCrossfade, recordWaveSkip, registerMediaActions, renderHistoryView, renderQueueView, resetLevelWatcher, resumeCrossfadeTail, saveQueueState, sendStateToServer, showToast, sourceOverride, startVisualizers, state, stopLyricsScroll, syncTvkProgress, Tm, tokenUrl, toolsReady, updateDiscordPresence, updateMediaPositionState, updateMediaSession, updateMiniLyricsHighlight, updateNowPlayingUI, updatePlayPauseButton, updateQueueBadge, updateSleepTimerUI, updateSyncedLyricsHighlight, visualizerPart, viz }, out) {
   function pushPlayHistory(/** @type {UrielTrack} */ track) {
     if (!track) return;
     const h = state.playHistory || (state.playHistory = []);
@@ -237,6 +237,9 @@ window.UrielApp.playback = function ({ applyAudioSettings, applyM3Cover, audioEn
 
       let resolvedUrl = track.url;
       let resolvedId = track.id;
+      // another version picked for this song (Find another version): its sound comes from there
+      const override = sourceOverride(track);
+      if (override) { resolvedUrl = override.url || `https://www.youtube.com/watch?v=${override.id}`; resolvedId = override.id; }
 
       if ((!resolvedUrl && !resolvedId) || (resolvedUrl && resolvedUrl.includes('/results?search_query='))) {
         if (track.searchQuery) {

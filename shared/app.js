@@ -1517,7 +1517,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function prefetchNextQueueTrack() { return playbackPart.prefetchNextQueueTrack(); }
   /** @param {UrielText} message */
   function showPlayFailure(message, type = 'error') { return playbackPart.showPlayFailure(message, type); }
-  window.UrielApp.playback({ applyAudioSettings, applyM3Cover, audioEngine, cancelEndFade, canOverlap, crossfadeFadeIn, crossfadeOnTrackChange, crossfadePrepared, crossfadeSeconds, dropCrossfadePrep, el, emitPluginEvent, enforceTrackTrim, extendMyWaveQueue, formatDuration, getTrackCanonicalId, getTrackNormalizedKey, getTrackTrim, initAudioContext, isBlocked, isPhoneApp, isSameTrack, loadScriptOnce, loadSyncedLyrics, m3cDraw, m3cEnabled, m3cStart, miniLyricsShown, nextPrefetchDue, offlineChanged, onTrackAudioTrackChange, pauseCrossfadeTail, playback, prepareCrossfade, recordWaveSkip, registerMediaActions, renderHistoryView, renderQueueView, resetLevelWatcher, resumeCrossfadeTail, saveQueueState, sendStateToServer, showToast, startVisualizers, state, stopLyricsScroll, syncTvkProgress, Tm, tokenUrl, toolsReady, updateDiscordPresence, updateMediaPositionState, updateMediaSession, updateMiniLyricsHighlight, updateNowPlayingUI, updatePlayPauseButton, updateQueueBadge, updateSleepTimerUI, updateSyncedLyricsHighlight, visualizerPart, viz }, playbackPart);
+  window.UrielApp.playback({ applyAudioSettings, applyM3Cover, audioEngine, cancelEndFade, canOverlap, crossfadeFadeIn, crossfadeOnTrackChange, crossfadePrepared, crossfadeSeconds, dropCrossfadePrep, el, emitPluginEvent, enforceTrackTrim, extendMyWaveQueue, formatDuration, getTrackCanonicalId, getTrackNormalizedKey, getTrackTrim, initAudioContext, isBlocked, isPhoneApp, isSameTrack, loadScriptOnce, loadSyncedLyrics, m3cDraw, m3cEnabled, m3cStart, miniLyricsShown, nextPrefetchDue, offlineChanged, onTrackAudioTrackChange, pauseCrossfadeTail, playback, prepareCrossfade, recordWaveSkip, registerMediaActions, renderHistoryView, renderQueueView, resetLevelWatcher, resumeCrossfadeTail, saveQueueState, sendStateToServer, showToast, sourceOverride, startVisualizers, state, stopLyricsScroll, syncTvkProgress, Tm, tokenUrl, toolsReady, updateDiscordPresence, updateMediaPositionState, updateMediaSession, updateMiniLyricsHighlight, updateNowPlayingUI, updatePlayPauseButton, updateQueueBadge, updateSleepTimerUI, updateSyncedLyricsHighlight, visualizerPart, viz }, playbackPart);
   const { shuffleQueue, unshuffleQueue, restoreQueueAt, adoptQueueAt, skipUnplayable, retryFresh } = playbackPart;
 
   const Lib = window.UrielLibrary;
@@ -1627,13 +1627,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderTracks(/** @type {HTMLElement} */ container, /** @type {UrielTrack[]} */ tracks, context = 'search') { return trackRowsPart.renderTracks(container, tracks, context); }
   function highlightPlayingRow() { return trackRowsPart.highlightPlayingRow(); }
   function showActionMenu(/** @type {number} */ x, /** @type {number} */ y, /** @type {UrielMenuItem[]} */ items, aboveY = y) { return trackRowsPart.showActionMenu(x, y, items, aboveY); }
-  window.UrielApp.trackRows({ canReorder, checkOffline, copyText, dragGrip, el, escapeHtml, formatDuration, getBlocks, getTrackCanonicalId, getTrackThumbUrl, I18N, isBlocked, isPhoneApp, isSameTrack, Lib, listThumb, multiSel, OFFLINE_ICON, offlineKey, offlineState, openAddToPlaylistModal, openDownloadModal, openTrackArtist, openTrackArtModal, playTrack, removeTrackFromCurrentPlaylist, renderBlockedSettings, renderLocalView, rowTitle, sharePlaylist, shownThumbs, showToast, songRadioEnabled, sortTracksFor, startSongRadio, state, T, Tf, THUMB_FALLBACK, Tm, toggleBlockArtist, toggleBlockSong, toggleFavoriteTrack, toggleTrackSelection, topMomentMenuItem, trackArtCandidates, updateArtistBlockButton, updateLocalBadge, updateQueueBadge }, trackRowsPart);
+  window.UrielApp.trackRows({ canReorder, checkOffline, copyText, dragGrip, el, escapeHtml, formatDuration, getBlocks, getTrackCanonicalId, getTrackThumbUrl, I18N, isBlocked, isPhoneApp, isSameTrack, Lib, listThumb, multiSel, OFFLINE_ICON, offlineKey, offlineState, openAddToPlaylistModal, openDownloadModal, openTrackArtist, openTrackArtModal, playTrack, removeTrackFromCurrentPlaylist, renderBlockedSettings, renderLocalView, rowTitle, sharePlaylist, shownThumbs, showToast, songRadioEnabled, sortTracksFor, startSongRadio, state, T, Tf, THUMB_FALLBACK, Tm, toggleBlockArtist, toggleBlockSong, toggleFavoriteTrack, toggleTrackSelection, topMomentMenuItem, otherVersionMenuItem, trackArtCandidates, updateArtistBlockButton, updateLocalBadge, updateQueueBadge }, trackRowsPart);
   const { isFavoriteSong } = trackRowsPart;
 
   // ---- top moment: a pin on the progress bar that jumps to a song's best part (app/topMoment.js) ----
   const topMomentPart = /** @type {UrielTopMomentPart} */ ({});
   function topMomentMenuItem(/** @type {UrielTrack} */ track) { return topMomentPart.topMomentMenuItem(track); }
   window.UrielApp.topMoment({ el, formatDuration, getTrackCanonicalId, isSameTrack, showActionMenu, showToast, state, Tf, Tm }, topMomentPart);
+
+  // ---- Find another version: a better source for a song YouTube got wrong (app/otherVersion.js) ----
+  const otherVersionPart = /** @type {UrielOtherVersionPart} */ ({});
+  function sourceOverride(/** @type {UrielTrack | null} */ track) { return otherVersionPart.sourceOverride(track); }
+  function otherVersionMenuItem(/** @type {UrielTrack} */ track) { return otherVersionPart.otherVersionMenuItem(track); }
+  window.UrielApp.otherVersion({ getTrackCanonicalId, playTrack, showToast, state, Tm }, otherVersionPart);
 
   // ---- the artist page and following artists (app/artist.js) ----
   const artistPart = /** @type {UrielArtistPart} */ ({});
