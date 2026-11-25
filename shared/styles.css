@@ -9141,3 +9141,19 @@ body.hide-titlebar:not(.mini) .update-banner { top: 76px; }
 .playlist-source[hidden] { display: none; }
 .playlist-source-sync { padding: 3px 12px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 999px; background: transparent; color: var(--md-sys-color-on-surface); font: inherit; font-size: 0.9em; cursor: pointer; }
 .playlist-source-sync:hover { background: var(--md-sys-color-surface-container-high); }
+
+/* ---- "Recommended for you" under playlists and Liked songs (app/recommendations.js) ---- */
+.recs { margin: 36px 0 24px; }
+.recs[hidden] { display: none; }
+.recs-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.recs-title { margin: 0; font-size: calc(20px * var(--font-scale, 1)); font-weight: 700; }
+.recs-more { padding: 5px 14px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 999px; background: transparent; color: var(--md-sys-color-on-surface); font: inherit; cursor: pointer; }
+.recs-list { display: grid; gap: 4px; }
+.rec-row { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: var(--md-shape-corner-m); cursor: pointer; }
+.rec-row:hover { background: var(--md-sys-color-surface-container-high); }
+.rec-row img { width: 44px; height: 44px; flex-shrink: 0; border-radius: 8px; object-fit: cover; background: var(--md-sys-color-surface-container-highest); }
+.rec-meta { display: grid; flex: 1; min-width: 0; }
+.rec-meta b, .rec-meta span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-meta span { color: var(--md-sys-color-on-surface-variant); font-size: 0.9em; }
+.rec-add { flex-shrink: 0; padding: 6px 16px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 999px; background: transparent; color: var(--md-sys-color-on-surface); font: inherit; cursor: pointer; }
+.rec-add:hover { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: transparent; }

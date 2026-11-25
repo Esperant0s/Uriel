@@ -3,7 +3,7 @@
 // and the counts beside them. Part of app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps @param {UrielLibraryPart} out */
-window.UrielApp.library = function ({ artistPlays, el, isFavoriteSong, isPhoneApp, matchesTrackQuery, renderArtistsTab, renderPlaylistsList, renderSavedAlbums, renderTracks, scheduleQueueSave, showToast, state, Tm, tokenUrl }, out) {
+window.UrielApp.library = function ({ showRecommendations, artistPlays, el, isFavoriteSong, isPhoneApp, matchesTrackQuery, renderArtistsTab, renderPlaylistsList, renderSavedAlbums, renderTracks, scheduleQueueSave, showToast, state, Tm, tokenUrl }, out) {
   function toggleFavoriteTrack(/** @type {UrielTrack} */ track) {
     if (!track) return;
     const exists = isFavoriteSong(track);
@@ -65,6 +65,7 @@ window.UrielApp.library = function ({ artistPlays, el, isFavoriteSong, isPhoneAp
     if (el.favoritesSort) { el.favoritesSort.value = getTrackSortMode('favorites'); syncSortDropdown('favorites'); }
     if (el.favoritesSubtitle) el.favoritesSubtitle.textContent = query ? `${filtered.length} of ${state.favorites.length} songs` : `${state.favorites.length} songs saved`;
     if (el.favoritesTracksList) renderTracks(el.favoritesTracksList, filtered, 'favorites');
+    if (!query) showRecommendations('favorites');
   }
 
   if (el.favoritesSearchInput) {

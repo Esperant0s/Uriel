@@ -1663,8 +1663,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderLocalView(forceFetch = true) { return libraryPart.renderLocalView(forceFetch); }
   /** @template {{ name: string }} I @param {string} kind @param {I[]} items @returns {I[]} */
   function sortedLibrary(kind, items) { return libraryPart.sortedLibrary(kind, items); }
-  window.UrielApp.library({ artistPlays, el, isFavoriteSong, isPhoneApp, matchesTrackQuery, renderArtistsTab, renderPlaylistsList, renderSavedAlbums, renderTracks, scheduleQueueSave, showToast, state, Tm, tokenUrl }, libraryPart);
+  window.UrielApp.library({ showRecommendations, artistPlays, el, isFavoriteSong, isPhoneApp, matchesTrackQuery, renderArtistsTab, renderPlaylistsList, renderSavedAlbums, renderTracks, scheduleQueueSave, showToast, state, Tm, tokenUrl }, libraryPart);
   const { updateFavoritesBadge, getTrackSortMode, setTrackSortMode, stampAddedAt, syncSortDropdown, setupSortDropdown, getLibrarySort, importLocalFiles } = libraryPart;
+
+  // ---- "Recommended for you" under playlists and Liked songs (app/recommendations.js) ----
+  const recommendationsPart = /** @type {UrielRecommendationsPart} */ ({});
+  function showRecommendations(/** @type {'playlist' | 'favorites'} */ kind, /** @type {UrielPlaylist | undefined} */ pl) { return recommendationsPart.showRecommendations(kind, pl); }
+  window.UrielApp.recommendations({ getTrackThumbUrl, isBlocked, isSameTrack, listThumb, openPlaylistDetail, playTrack, renderFavoritesView, renderPlaylistsList, stampAddedAt, state, T, toggleFavoriteTrack }, recommendationsPart);
 
   // ---- song covers: picking one, the fallbacks, and saving the ones that worked (app/covers.js) ----
   const coversPart = /** @type {UrielCoversPart} */ ({});
@@ -1708,7 +1713,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function importSharedPlaylist(/** @type {string} */ text) { return playlistsPart.importSharedPlaylist(text); }
   function removeTrackFromCurrentPlaylist(/** @type {UrielTrack} */ track) { return playlistsPart.removeTrackFromCurrentPlaylist(track); }
   function openAddToPlaylistModal(/** @type {UrielTrack | null} */ track, /** @type {UrielTrack[] | null} */ many = null) { return playlistsPart.openAddToPlaylistModal(track, many); }
-  window.UrielApp.playlists({ canReorder, closeModal, downloadedInFolder, dragGrip, el, escapeHtml, exitMultiSelect, formatDuration, getCoverDominantColors, getLibrarySort, getTrackCanonicalId, getTrackSortMode, getTrackThumbUrl, I18N, isBlocked, isFavoriteSong, isPhoneApp, isSameTrack, matchesTrackQuery, multiSel, multiSelectSourceTracks, nextTrackArt, offlineChanged, openModal, playTrack, renderPlaylistDuplicateButton, renderTracks, rerenderMultiSelectView, setShuffle, setTrackSortMode, setupSortDropdown, showActionMenu, showToast, songRadioEnabled, sortedLibrary, sortTracksFor, stampAddedAt, startMultiSelect, startSongRadio, state, switchView, syncPlaylistFromSource, syncSortDropdown, T, Tf, Tm, trackArtCandidates, updateFavoriteIcon, updateFavoritesBadge, updateMultiSelectBar, updateQueueBadge }, playlistsPart);
+  window.UrielApp.playlists({ showRecommendations, canReorder, closeModal, downloadedInFolder, dragGrip, el, escapeHtml, exitMultiSelect, formatDuration, getCoverDominantColors, getLibrarySort, getTrackCanonicalId, getTrackSortMode, getTrackThumbUrl, I18N, isBlocked, isFavoriteSong, isPhoneApp, isSameTrack, matchesTrackQuery, multiSel, multiSelectSourceTracks, nextTrackArt, offlineChanged, openModal, playTrack, renderPlaylistDuplicateButton, renderTracks, rerenderMultiSelectView, setShuffle, setTrackSortMode, setupSortDropdown, showActionMenu, showToast, songRadioEnabled, sortedLibrary, sortTracksFor, stampAddedAt, startMultiSelect, startSongRadio, state, switchView, syncPlaylistFromSource, syncSortDropdown, T, Tf, Tm, trackArtCandidates, updateFavoriteIcon, updateFavoritesBadge, updateMultiSelectBar, updateQueueBadge }, playlistsPart);
   const { refreshPlaylistDownloads, deleteCurrentPlaylist } = playlistsPart;
 
   // ---- dragging rows to reorder lists (app/reorder.js) ----
