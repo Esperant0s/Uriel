@@ -55,7 +55,8 @@ window.UrielApp.sleepTimer = function ({ Tm, audioEngine, el, pauseSmooth, showT
         return;
       }
       pauseSmooth();
-      audioEngine.setVolume(state.volume, state.isMuted);
+      // once pauseSmooth has stopped the song (280 ms), or it plays a moment at full volume
+      setTimeout(() => audioEngine.setVolume(state.volume, state.isMuted), 300);
     };
     step();
   }

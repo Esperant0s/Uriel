@@ -39,7 +39,7 @@ window.UrielApp.plugins = function ({ showToast, Tm, state, el, T }, /** @type {
         return () => s.remove();
       },
       storage: {
-        get: (/** @type {string} */ k, /** @type {unknown} */ d) => { const v = localStorage.getItem(prefix + k); return v === null ? d : JSON.parse(v); },
+        get: (/** @type {string} */ k, /** @type {unknown} */ d) => { const v = localStorage.getItem(prefix + k); try { return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
         set: (/** @type {string} */ k, /** @type {unknown} */ v) => localStorage.setItem(prefix + k, JSON.stringify(v))
       },
       getTrack: () => state.currentTrack,

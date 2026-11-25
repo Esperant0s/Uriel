@@ -26,8 +26,10 @@ function readBuildInfo(dir = path.join(__dirname, '..', 'shared')) {
 }
 
 /** @param {string} dir */
+// actually writes a file: on Windows fs.access only looks at the read-only flag, not the folder's permissions
 function writable(dir) {
-  try { fs.accessSync(dir, fs.constants.W_OK); return true; } catch (e) { return false; }
+  const probe = path.join(dir, `.uriel-write-test-${process.pid}`);
+  try { fs.writeFileSync(probe, ''); fs.rmSync(probe, { force: true }); return true; } catch (e) { return false; }
 }
 
 // how this copy of Uriel was installed, or null when it can't replace itself

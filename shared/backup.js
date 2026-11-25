@@ -145,7 +145,7 @@
     const prof = P();
     const me = prof ? prof.current() : { name: '' };
     const data = B.makeBackup(ownEntries(), { profileName: me.name, appVersion: await appVersion(), isDevice });
-    const day = new Date().toISOString().slice(0, 10);
+    const day = B.dayOf(new Date());
     try {
       if ((await saveFile(B.fileName(`uriel-backup-${me.name || 'profile'}-${day}`, 'json'), JSON.stringify(data), 'backup')) === 'saved') toast('Backup saved', 'success');
     } catch (e) { toast((e instanceof Error && e.message) || "Couldn't save the backup", 'error'); }
