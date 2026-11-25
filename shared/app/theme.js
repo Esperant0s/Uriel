@@ -336,11 +336,6 @@ window.UrielApp.theme = function ({ activeSiteTheme, coverAnalysisCache, current
     target.style.opacity = '1';
     current.style.opacity = '0';
 
-    const previewBg = document.getElementById('mesh-preview-bg');
-    if (previewBg) {
-      previewBg.style.background = gradient;
-    }
-
     activeMeshLayer = activeMeshLayer === 'a' ? 'b' : 'a';
   }
 

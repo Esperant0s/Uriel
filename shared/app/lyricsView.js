@@ -56,7 +56,6 @@ window.UrielApp.lyricsView = function ({ capMap, lyricsSourcePref, el, fetchAndU
       if (token !== state.loadToken || (state.currentTrack && (state.currentTrack.title || '') !== title)) return;
 
       if (!data.success || !data.lyrics) {
-        if (el.lyricsStatus) el.lyricsStatus.textContent = '';
         if (el.lyricsContainer) {
           el.lyricsContainer.innerHTML = '';
           el.lyricsContainer.scrollTop = 0;
@@ -91,7 +90,6 @@ window.UrielApp.lyricsView = function ({ capMap, lyricsSourcePref, el, fetchAndU
       }
 
       if (parsed.length === 0) {
-        if (el.lyricsStatus) el.lyricsStatus.textContent = '';
         if (el.lyricsContainer) {
           el.lyricsContainer.innerHTML = '';
           el.lyricsContainer.scrollTop = 0;
@@ -104,7 +102,6 @@ window.UrielApp.lyricsView = function ({ capMap, lyricsSourcePref, el, fetchAndU
       state.syncedLyrics = parsed;
       window.dispatchEvent(new Event('uriel:lyrics'));
       const hasSyncTimes = parsed.some(p => p.time >= 0);
-      if (el.lyricsStatus) el.lyricsStatus.textContent = data.isCustom ? (hasSyncTimes ? 'Custom synced' : 'Custom') : (hasSyncTimes ? 'Synced' : 'Plain');
       if (state.trEnabled && state.trAuto) {
         state.trActive = true;
         fetchAndApplyTranslation();
@@ -130,7 +127,6 @@ window.UrielApp.lyricsView = function ({ capMap, lyricsSourcePref, el, fetchAndU
       if (!data.isCustom) fetchAndUpgradeWords(title, artist, token);
     } catch (e) {
       if (token === state.loadToken) {
-        if (el.lyricsStatus) el.lyricsStatus.textContent = '';
         if (el.lyricsContainer) {
           el.lyricsContainer.innerHTML = '';
           el.lyricsContainer.style.opacity = '1';

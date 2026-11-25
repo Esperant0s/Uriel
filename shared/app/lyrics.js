@@ -351,7 +351,6 @@ window.UrielApp.lyrics = function ({ state, formatDuration, el, updateMediaPosit
       if (!ok) return;
       state.syncedLyrics = timedLines.map((l) => ({ time: l.start, text: l.text, words: l.words }));
       window.dispatchEvent(new Event('uriel:lyrics'));
-      if (el.lyricsStatus) el.lyricsStatus.textContent = 'Synced';
       if (state.trActive) fetchAndApplyTranslation();
     }
     renderLyricsView();

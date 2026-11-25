@@ -782,7 +782,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                           rightPanelFallback: /** @type {HTMLElement} */ (document.getElementById('right-panel-fallback')),
                           rightPanelTitle: /** @type {HTMLElement} */ (document.getElementById('right-panel-title')),
                           rightPanelArtist: /** @type {HTMLElement} */ (document.getElementById('right-panel-artist')),
-                          lyricsStatus: /** @type {HTMLElement} */ (document.getElementById('lyrics-status')),
                           lyricsContainer: /** @type {HTMLElement} */ (document.getElementById('lyrics-container')),
                           lyricsHint: /** @type {HTMLElement} */ (document.getElementById('lyrics-hint')),
                           btnTranslateLyrics: /** @type {HTMLButtonElement} */ (document.getElementById('btn-translate-lyrics')),
@@ -825,7 +824,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                           visualizerCanvas: /** @type {HTMLCanvasElement} */ (document.getElementById('visualizer-canvas')),
                           btnOpenSettings: /** @type {HTMLButtonElement} */ (document.getElementById('btn-open-settings')),
-                          btnOpenVisualSettings: /** @type {HTMLElement} */ (document.getElementById('btn-open-visual-settings')),
                           settingsModifiedDot: /** @type {HTMLElement} */ (document.getElementById('settings-modified-dot')),
                           btnVolumeMute: /** @type {HTMLButtonElement} */ (document.getElementById('btn-volume-mute')),
                           volumeIcon: /** @type {HTMLElement} */ (document.getElementById('volume-icon')),
@@ -910,10 +908,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                           valIntensity: /** @type {HTMLElement} */ (document.getElementById('val-theme-intensity')),
                           sliderBrightness: /** @type {HTMLInputElement} */ (document.getElementById('slider-theme-brightness')),
                           valBrightness: /** @type {HTMLElement} */ (document.getElementById('val-theme-brightness')),
-
-                          visualSettingsModal: /** @type {HTMLElement} */ (document.getElementById('visual-settings-modal')),
-                          btnCloseVisualSettings: /** @type {HTMLElement} */ (document.getElementById('btn-close-visual-settings')),
-                          btnResetVfx: /** @type {HTMLElement} */ (document.getElementById('btn-reset-vfx')),
 
                           createPlaylistModal: /** @type {HTMLElement} */ (document.getElementById('create-playlist-modal')),
                           newPlaylistInput: /** @type {HTMLInputElement} */ (document.getElementById('new-playlist-input')),
@@ -1733,14 +1727,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   }
 
-  if (el.btnResetVfx) {
-    el.btnResetVfx.addEventListener('click', () => {
-      state.vfx = { ...defaultVfx };
-      localStorage.setItem('devsize_vfx', JSON.stringify(state.vfx));
-      applyVisualEffects();
-    });
-  }
-
   if (window.electronAPI) {
     if (el.btnMinimize) el.btnMinimize.addEventListener('click', () => window.electronAPI.minimizeWindow());
     if (el.btnMaximize) el.btnMaximize.addEventListener('click', () => window.electronAPI.maximizeWindow());
@@ -1870,7 +1856,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- Settings → Interface: switches, theme mode, font, search box and sliders (app/interfaceSettings.js) ----
   window.UrielApp.interfaceSettings({ applyFont, applyScale, applySystemColors, effectiveMode, el, hslToHex, isPhoneApp, refreshCachedThemeColors, resizeCanvases, setSiteTheme, state, updateEngineWidthVar, updateThemeFromState });
 
-  // the banner fit saved before its setting was removed, applied at start-up
+  // the saved banner fit, applied at start-up
   function applyBannerFit(/** @type {string} */ fit) {
     const root = document.documentElement;
     const val = fit || 'zoom';
@@ -1932,19 +1918,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   function enterSettings() { return settingsPart.enterSettings(); }
   window.UrielApp.settings({ el, refreshStacks, reloadPluginsList }, settingsPart);
 
-  // ---- custom themes and the custom CSS on the page (app/themes.js) ----
-  const themesPart = /** @type {UrielThemesPart} */ ({});
-  window.UrielApp.themes({ Tm, showToast, refreshCachedThemeColors, clearCssEditor, stopAllPlugins, renderPluginCards }, themesPart);
-  const { applyCustomStyles } = themesPart;
+  // ---- Ctrl+Shift+R turns every plugin off (app/themes.js) ----
+  window.UrielApp.themes({ Tm, showToast, stopAllPlugins, renderPluginCards });
 
   // ---- plugins and the custom CSS editor (app/plugins.js) ----
   const pluginsPart = /** @type {UrielPluginsPart} */ ({});
   function emitPluginEvent(/** @type {string} */ event, /** @type {unknown} */ data = undefined) { return pluginsPart.emitPluginEvent(event, data); }
   function reloadPluginsList() { return pluginsPart.reloadPluginsList(); }
-  function clearCssEditor() { return pluginsPart.clearCssEditor(); }
   function stopAllPlugins() { return pluginsPart.stopAllPlugins(); }
   function renderPluginCards() { return pluginsPart.renderPluginCards(); }
-  window.UrielApp.plugins({ showToast, Tm, state, el, T, applyCustomStyles }, pluginsPart);
+  window.UrielApp.plugins({ showToast, Tm, state, el, T }, pluginsPart);
   const { loadPlugins } = pluginsPart;
 
   // ---- slider ticks and the look of the switches (app/controls.js) ----
@@ -2247,7 +2230,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   checkToolsStatus(false);
   setLyricsEmpty(true);
   updateLyricsTranslationUI();
-  applyCustomStyles();
   enterSettings();
   refreshStacks();
   requestAnimationFrame(() => requestAnimationFrame(refreshStacks));
@@ -2611,14 +2593,3 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
   window.dispatchEvent(new Event('uriel:ready'));
 });
-
-document.addEventListener('DOMContentLoaded', () => {
-  const btnCollapseRightPanel = document.getElementById('btn-collapse-right-panel');
-  const rightPanel = document.getElementById('right-panel');
-  if (btnCollapseRightPanel && rightPanel) {
-    btnCollapseRightPanel.addEventListener('click', () => {
-      rightPanel.classList.toggle('is-collapsed');
-    });
-  }
-});
-

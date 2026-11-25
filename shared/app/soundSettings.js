@@ -33,24 +33,6 @@ window.UrielApp.soundSettings = function ({ applyAudioSettings, applyHqSettings,
     });
   }
 
-  if (el.btnOpenVisualSettings) {
-    el.btnOpenVisualSettings.addEventListener('click', () => {
-      if (el.visualSettingsModal) openModal(el.visualSettingsModal);
-    });
-  }
-
-  if (el.btnCloseVisualSettings) {
-    el.btnCloseVisualSettings.addEventListener('click', () => {
-      if (el.visualSettingsModal) closeModal(el.visualSettingsModal);
-    });
-  }
-
-  if (el.visualSettingsModal) {
-    el.visualSettingsModal.addEventListener('click', (/** @type {MouseEvent} */ e) => {
-      if (e.target === el.visualSettingsModal) closeModal(el.visualSettingsModal);
-    });
-  }
-
   if (el.btnToggleHqAudio) {
     el.btnToggleHqAudio.addEventListener('click', () => {
       state.hqEnabled = !state.hqEnabled;

@@ -46,7 +46,7 @@ declare global {
       imports(deps: Record<string, unknown>, out: UrielImportsPart): void;
       radio(deps: Record<string, unknown>, out: UrielRadioPart): void;
       artist(deps: Record<string, unknown>, out: UrielArtistPart): void;
-      themes(deps: Record<string, unknown>, out: UrielThemesPart): void;
+      themes(deps: Record<string, unknown>): void;
       settings(deps: Record<string, unknown>, out: UrielSettingsPart): void;
       album(deps: Record<string, unknown>, out: UrielAlbumPart): void;
       search(deps: Record<string, unknown>, out: UrielSearchPart): void;
@@ -802,9 +802,6 @@ declare global {
   interface UrielSettingsPart {
     enterSettings(): void;
   }
-  interface UrielThemesPart {
-    applyCustomStyles(): void;
-  }
   interface UrielArtistPart {
     compactCount(n: number): string;
     getFollowedArtists(): { name: string; id?: string; avatar?: string; fans?: number; [field: string]: unknown }[];
@@ -818,7 +815,6 @@ declare global {
   interface UrielPluginsPart {
     emitPluginEvent(event: string, data?: unknown): void;
     reloadPluginsList(): Promise<void>;
-    clearCssEditor(): void;
     stopAllPlugins(): void;
     renderPluginCards(): void;
     loadPlugins(): Promise<void>;

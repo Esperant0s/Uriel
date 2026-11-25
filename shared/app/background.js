@@ -184,24 +184,6 @@ window.UrielApp.background = function ({ applyFxClip, currentUiAlpha, getAdv, ge
   document.body.classList.toggle('no-clip-fx', !getAdv('clip_fx', false));
   applyFxClip();
 
-  const sliderMeshBrightness = /** @type {HTMLInputElement} */ (document.getElementById('slider-mesh-brightness'));
-  const valMeshBrightness = document.getElementById('val-mesh-brightness');
-  if (sliderMeshBrightness) {
-    sliderMeshBrightness.value = String(state.meshBrightness);
-    if (valMeshBrightness) valMeshBrightness.textContent = `${state.meshBrightness}%`;
-    sliderMeshBrightness.addEventListener('input', (e) => {
-      const v = parseInt(/** @type {HTMLInputElement} */ (e.target).value, 10);
-      if (valMeshBrightness) valMeshBrightness.textContent = `${v}%`;
-    });
-    sliderMeshBrightness.addEventListener('change', (e) => {
-      const v = parseInt(/** @type {HTMLInputElement} */ (e.target).value, 10);
-      state.meshBrightness = v;
-      if (valMeshBrightness) valMeshBrightness.textContent = `${v}%`;
-      localStorage.setItem('uriel_mesh_brightness', v.toString());
-      updateThemeFromState();
-    });
-  }
-
   const DEFAULT_MESH_CFG = {
     p1: { x: 20, y: 0 },
     p2: { x: 85, y: 5 },
@@ -228,7 +210,7 @@ window.UrielApp.background = function ({ applyFxClip, currentUiAlpha, getAdv, ge
     }
   } catch (_) {}
 
-  // the gradient's two points, speed and blur, as saved before its customizer was removed
+  // apply the saved mesh points, speed and blur
   const root = document.documentElement;
   root.style.setProperty('--mesh-p1x', `${meshCfg.p1.x}%`);
   root.style.setProperty('--mesh-p1y', `${meshCfg.p1.y}%`);

@@ -1,12 +1,12 @@
 // @ts-check
-// Plugins (computers: JavaScript files in the plugins folder, run with the Uriel API) and the custom CSS editor
-// (Monaco). Part of app.js, which calls this once as it starts.
+// Plugins (computers: JavaScript files in the plugins folder, run with the Uriel API). Part of app.js, which calls
+// this once as it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps */
-window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomStyles }, /** @type {UrielPluginsPart} */ out) {
+window.UrielApp.plugins = function ({ showToast, Tm, state, el, T }, /** @type {UrielPluginsPart} */ out) {
   /** @type {UrielPluginsPart} */
   const api = {
-    emitPluginEvent, reloadPluginsList, clearCssEditor, stopAllPlugins, renderPluginCards, loadPlugins,
+    emitPluginEvent, reloadPluginsList, stopAllPlugins, renderPluginCards, loadPlugins,
   };
   Object.assign(out, api);
 
@@ -135,101 +135,5 @@ window.UrielApp.plugins = function ({ showToast, Tm, state, el, T, applyCustomSt
     });
   }
 
-  /** @type {any} */
-  let cssEditorInstance = null;
-  /** @type {Promise<any> | null} */
-  let cssEditorLoading = null;
-
-  function loadMonaco() {
-    if (window.monaco) return Promise.resolve(window.monaco);
-    if (cssEditorLoading) return cssEditorLoading;
-    cssEditorLoading = new Promise((resolve, reject) => {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'vendor/monaco/vs/editor/editor.main.css';
-      document.head.appendChild(link);
-      const s = document.createElement('script');
-      s.src = 'vendor/monaco/vs/loader.js';
-      s.onload = () => {
-        // Monaco's own loader (AMD), not Node's require
-        const amd = /** @type {any} */ (window).require;
-        amd.config({ paths: { vs: 'vendor/monaco/vs' } });
-        amd(['vs/editor/editor.main'], () => resolve(window.monaco), reject);
-      };
-      s.onerror = reject;
-      document.head.appendChild(s);
-    });
-    return cssEditorLoading;
-  }
-
-  function defineRiffMonacoTheme(/** @type {any} */ monaco) {
-    const cs = getComputedStyle(document.documentElement);
-    const hex = (/** @type {string} */ name, /** @type {string} */ fallback) => { const v = cs.getPropertyValue(name).trim(); return /^#[0-9a-f]{6}$/i.test(v) ? v : fallback; };
-    const bg = hex('--md-sys-color-surface-container-lowest-solid', '#141218');
-    const high = hex('--md-sys-color-surface-container-high-solid', '#2b2930');
-    const primary = hex('--md-sys-color-primary', '#d0bcff');
-    const lum = (/** @type {string} */ h) => { const n = parseInt(h.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
-    monaco.editor.defineTheme('uriel', { base: lum(bg) < 0.5 ? 'vs-dark' : 'vs', inherit: true, rules: [], colors: { 'editor.background': bg, 'editorGutter.background': bg, 'minimap.background': bg, 'editor.lineHighlightBackground': high, 'editorCursor.foreground': primary, 'editor.selectionBackground': primary + '55' } });
-    monaco.editor.setTheme('uriel');
-  }
-
-  async function openCssEditor() {
-    const overlay = /** @type {HTMLElement} */ (document.getElementById('css-editor'));
-    overlay.classList.remove('hidden');
-    let monaco;
-    try { monaco = await loadMonaco(); } catch (e) { overlay.classList.add('hidden'); showToast(Tm('Could not load the CSS editor'), 'error'); return; }
-    defineRiffMonacoTheme(monaco);
-    if (cssEditorInstance) { cssEditorInstance.focus(); return; }
-    cssEditorInstance = monaco.editor.create(document.getElementById('css-editor-host'), {
-      value: localStorage.getItem('uriel_custom_css') || '/* Your CSS goes here. Example:\n.btn-pill-primary { border-radius: 8px; }\n*/\n',
-      language: 'css',
-      theme: 'uriel',
-      automaticLayout: true,
-      minimap: { enabled: true },
-      fontSize: 14,
-      fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-      fontLigatures: true,
-      roundedSelection: true,
-      scrollBeyondLastLine: false,
-      smoothScrolling: true,
-      cursorSmoothCaretAnimation: 'on',
-      padding: { top: 12 },
-      tabSize: 2,
-      wordWrap: 'on',
-      bracketPairColorization: { enabled: true },
-      colorDecorators: true
-    });
-    /** @type {ReturnType<typeof setTimeout> | undefined} */
-    let saveTimer;
-    cssEditorInstance.onDidChangeModelContent(() => {
-      clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => {
-        localStorage.setItem('uriel_custom_css', cssEditorInstance.getValue());
-        applyCustomStyles();
-      }, 350);
-    });
-    cssEditorInstance.focus();
-  }
-
-  const btnOpenCssEditor = document.getElementById('btn-open-css-editor');
-  if (btnOpenCssEditor) btnOpenCssEditor.addEventListener('click', openCssEditor);
-  const btnCssClose = document.getElementById('btn-css-close');
-  if (btnCssClose) btnCssClose.addEventListener('click', () => (/** @type {HTMLElement} */ (document.getElementById('css-editor'))).classList.add('hidden'));
-  const btnCssClear = document.getElementById('btn-css-clear');
-  if (btnCssClear) btnCssClear.addEventListener('click', () => {
-    const current = localStorage.getItem('uriel_custom_css') || '';
-    if (current.trim()) localStorage.setItem('uriel_custom_css_backup', current);
-    if (cssEditorInstance) cssEditorInstance.setValue('');
-    else { localStorage.removeItem('uriel_custom_css'); applyCustomStyles(); }
-  });
-  const btnCssRestore = document.getElementById('btn-css-restore');
-  if (btnCssRestore) btnCssRestore.addEventListener('click', () => {
-    const backup = localStorage.getItem('uriel_custom_css_backup');
-    if (!backup) { showToast(Tm('Nothing to restore'), 'info'); return; }
-    if (cssEditorInstance) cssEditorInstance.setValue(backup);
-    else { localStorage.setItem('uriel_custom_css', backup); applyCustomStyles(); }
-  });
-  // for Ctrl+Shift+R (resetCustomStyling)
-  function clearCssEditor() { if (cssEditorInstance) cssEditorInstance.setValue(''); }
   function stopAllPlugins() { pluginsCache.forEach((p) => { p.enabled = false; stopPlugin(p, true); }); }
 };

@@ -266,6 +266,7 @@ function register() {
     const { file } = /** @type {{ file: string }} */ (staged);
     if (kind === 'appimage') {
       fs.renameSync(file, appImage);
+      staged = null; // it's in place now, even if the relaunch below fails
       // not app.relaunch(): its helper is this build's binary, inside the AppImage's mount that goes away as Uriel
       // quits, and the new AppImage then can't mount ("Cannot mount AppImage, please check your FUSE setup")
       if (relaunch) {

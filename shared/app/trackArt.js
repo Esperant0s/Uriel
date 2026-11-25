@@ -1,6 +1,6 @@
 // @ts-check
-// The Track art dialog: a song's own cover and banner (a file, or a cover found online: its own covers in several
-// sizes, YouTube results, iTunes albums), and the banner's own effects. Part of app.js, which calls this once as
+// The Track art dialog: a song's own cover (a file, or a cover found online: its own covers in several sizes,
+// YouTube results, iTunes albums), and the banner effects for it. Part of app.js, which calls this once as
 // it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps @param {UrielTrackArtPart} out */
@@ -83,34 +83,6 @@ window.UrielApp.trackArt = function ({ I18N, LiquidMotion, T, Tm, YT_THUMB, anal
     }
     if (coverStatus) coverStatus.textContent = art.cover ? 'Custom cover' : 'Default art';
 
-    const bannerImg = /** @type {HTMLImageElement} */ (document.getElementById('track-art-banner-img'));
-    const bannerVid = /** @type {HTMLVideoElement} */ (document.getElementById('track-art-banner-vid'));
-    const bannerPh = document.getElementById('track-art-banner-placeholder');
-    const bannerStatus = document.getElementById('track-art-banner-status');
-    const activeBanner = art.banner || localStorage.getItem('uriel_banner_media') || activeCover;
-    const isVideo = activeBanner && /\.(mp4|webm)($|\?)/i.test(activeBanner);
-
-    if (activeBanner) {
-      if (isVideo) {
-        if (bannerImg) bannerImg.style.display = 'none';
-        if (bannerVid) {
-          bannerVid.src = activeBanner;
-          bannerVid.style.display = 'block';
-        }
-      } else {
-        if (bannerVid) bannerVid.style.display = 'none';
-        if (bannerImg) {
-          bannerImg.src = activeBanner;
-          bannerImg.style.display = 'block';
-        }
-      }
-      if (bannerPh) bannerPh.style.display = 'none';
-    } else {
-      if (bannerImg) bannerImg.style.display = 'none';
-      if (bannerVid) bannerVid.style.display = 'none';
-      if (bannerPh) bannerPh.style.display = 'block';
-    }
-    if (bannerStatus) bannerStatus.textContent = art.banner ? 'Custom banner' : (localStorage.getItem('uriel_banner_media') ? 'Global banner' : 'Default art');
     renderTrackBannerFxControls(t, art);
   }
 
@@ -150,8 +122,6 @@ window.UrielApp.trackArt = function ({ I18N, LiquidMotion, T, Tm, YT_THUMB, anal
   const btnCloseTrackArtModal = document.getElementById('btn-close-track-art-modal');
   const btnChooseTrackCover = document.getElementById('btn-choose-track-cover');
   const btnResetTrackCover = document.getElementById('btn-reset-track-cover');
-  const btnChooseTrackBanner = document.getElementById('btn-choose-track-banner');
-  const btnResetTrackBanner = document.getElementById('btn-reset-track-banner');
   const btnRightPanelArt = document.getElementById('btn-right-panel-art');
 
   if (btnRightPanelArt) {
@@ -173,7 +143,6 @@ window.UrielApp.trackArt = function ({ I18N, LiquidMotion, T, Tm, YT_THUMB, anal
   }
 
   const isImageFile = (/** @type {string} */ u) => /\.(png|jpe?g|webp|gif)($|\?)/i.test(u);
-  const isMediaFile = (/** @type {string} */ u) => /\.(png|jpe?g|webp|gif|mp4|webm)($|\?)/i.test(u);
 
   if (btnChooseTrackCover) {
     btnChooseTrackCover.addEventListener('click', async () => {
@@ -285,33 +254,6 @@ window.UrielApp.trackArt = function ({ I18N, LiquidMotion, T, Tm, YT_THUMB, anal
       });
       coverPickerGrid.hidden = !list.length;
       if (coverPickerStatus) I18N.text(coverPickerStatus, list.length ? 'Tap a cover to use it for this song' : 'No covers found');
-    });
-  }
-
-  if (btnChooseTrackBanner) {
-    btnChooseTrackBanner.addEventListener('click', async () => {
-      if (!trackArtCurrentTrack) return;
-      if (window.electronAPI && window.electronAPI.pickMedia) {
-        const url = await window.electronAPI.pickMedia();
-        if (url) {
-          if (!isMediaFile(url)) {
-            showToast(Tm('Banner must be image or video (PNG, JPG, WebP, GIF, MP4, WebM)'));
-            return;
-          }
-          setTrackArt(trackArtCurrentTrack, { banner: url });
-          onTrackArtUpdated(trackArtCurrentTrack);
-          renderTrackArtModal();
-        }
-      }
-    });
-  }
-
-  if (btnResetTrackBanner) {
-    btnResetTrackBanner.addEventListener('click', () => {
-      if (!trackArtCurrentTrack) return;
-      setTrackArt(trackArtCurrentTrack, { banner: undefined });
-      onTrackArtUpdated(trackArtCurrentTrack);
-      renderTrackArtModal();
     });
   }
 
