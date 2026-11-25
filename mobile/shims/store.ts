@@ -190,21 +190,30 @@ function b64FromBytes(bytes: Uint8Array) {
 const PIECE = 3 * 256 * 1024;
 
 async function writeInPieces(vpath: string, size: number, piece: (from: number, to: number) => Promise<Uint8Array>) {
+  const writeTo = async (loc: Loc) => {
+    let at = 0;
+    try {
+      do {
+        const data = b64FromBytes(await piece(at, Math.min(size, at + PIECE)));
+        if (at === 0) await Filesystem.writeFile({ ...loc, data, recursive: true });
+        else await Filesystem.appendFile({ ...loc, data });
+        at += PIECE;
+      } while (at < size);
+    } catch (e) {
+      // no half-written file left behind (it would look like the whole song)
+      try { await Filesystem.deleteFile(loc); } catch (x) {}
+      throw e;
+    }
+    saved(vpath, loc);
+  };
   const loc = saveTo(vpath);
-  let at = 0;
   try {
-    do {
-      const data = b64FromBytes(await piece(at, Math.min(size, at + PIECE)));
-      if (at === 0) await Filesystem.writeFile({ ...loc, data, recursive: true });
-      else await Filesystem.appendFile({ ...loc, data });
-      at += PIECE;
-    } while (at < size);
+    await writeTo(loc);
   } catch (e) {
-    // no half-written file left behind (it would look like the whole song)
-    try { await Filesystem.deleteFile(loc); } catch (x) {}
-    throw e;
+    // the public folder refused it (see copy below): kept in the app's storage
+    if (loc.directory !== PUBLIC) throw e;
+    await writeTo(priv(vpath));
   }
-  saved(vpath, loc);
 }
 
 async function walk(rpath: string, directory: Directory, toV: (rpath: string) => string, out: Entry[]) {
@@ -303,6 +312,13 @@ export = {
     const st = await Filesystem.stat(loc);
     saved(vpath, loc);
     return st.size || 0;
+  },
+
+  // a whole file, read through its URL: the fs shim keeps only text files in memory
+  async readBytes(vpath: string) {
+    const r = await fetch(await this.fileUrl(vpath));
+    if (!r.ok) throw new Error(`couldn't read ${vpath}: ${r.status}`);
+    return new Uint8Array(await r.arrayBuffer());
   },
 
   // A URL the WebView can load directly (same origin, so Web Audio can process it).

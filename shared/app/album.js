@@ -62,6 +62,7 @@ window.UrielApp.album = function ({ Lib, T, Tf, Tm, createTrackRow, escapeHtml, 
       openDownloadAllModal({
         name: d.album.title || 'Album',
         key: `album:${d.album.id}`,
+        album: d.isMix ? undefined : d.album,
         tracks: missing,
         resolve: d.isMix ? null : (/** @type {UrielTrack} */ t) => resolveAlbumTrack(d.album, /** @type {UrielTrack} */ (byId.get(t.id))),
         // busy as soon as it starts or waits in the queue, so a second click can't add it again

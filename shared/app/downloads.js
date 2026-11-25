@@ -14,7 +14,11 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
   // left running (Escape only hides the dialog) must not be cancelled from a single song's dialog, or the reverse
   /** @type {UrielDownloadJob | UrielTrack | null} */
   let downloadAbortFor = null;
-  let selectedFormat = localStorage.getItem('uriel_download_format') || 'mp3';
+  // phones keep their own choice: they used to save 'mp3' here without offering formats, and start on Original
+  const FORMAT_KEY = isPhoneApp ? 'uriel_download_format_phone' : 'uriel_download_format';
+  const PHONE_FORMATS = ['original', 'm4a', 'mp3', 'flac'];
+  let selectedFormat = localStorage.getItem(FORMAT_KEY) || (isPhoneApp ? 'original' : 'mp3');
+  if (isPhoneApp && !PHONE_FORMATS.includes(selectedFormat)) selectedFormat = 'original';
   let selectedQuality = '0';
 
   let singleFailed = false; // the phone's dialog: the last try for this song failed
@@ -56,17 +60,29 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
     } else if (waits) {
       el.downloadBtnText.textContent = T('Add to the download queue');
     } else {
-      // phones save the song as it comes: no format to promise
-      el.downloadBtnText.textContent = !isPhoneApp ? `Download ${selectedFormat.toUpperCase()}` : singleFailed ? T('Try again') : singleSaved ? T('Download again') : T('Download');
+      const name = selectedFormat === 'original' ? T('Original') : selectedFormat.toUpperCase();
+      el.downloadBtnText.textContent = singleFailed ? T('Try again') : singleSaved ? T('Download again') : `${T('Download')} ${name}`;
     }
   }
 
+  // the bitrate only means something for a format that's encoded: not Original or a lossless one, and on phones
+  // only MP3 is (M4A there is YouTube's own AAC, as it came)
   function updateLosslessQualityState() {
-    const isLossless = selectedFormat === 'flac' || selectedFormat === 'wav';
-    const qualityGrid = document.getElementById('quality-chips-grid');
-    if (qualityGrid) {
-      qualityGrid.classList.toggle('disabled', isLossless);
-    }
+    const section = document.getElementById('download-quality-section');
+    const encoded = isPhoneApp ? selectedFormat === 'mp3' : ['mp3', 'm4a', 'opus'].includes(selectedFormat);
+    if (section) section.classList.toggle('hidden', !encoded);
+  }
+
+  // what goes into the saved file's tags besides title and artist
+  function tagQuery(/** @type {UrielTrack} */ t, /** @type {UrielDownloadJob | null} */ batch) {
+    const album = batch && batch.album ? /** @type {UrielAlbum} */ (batch.album) : null;
+    const q = {
+      thumbnail: t.thumbnail || (album && album.cover) || '',
+      album: (album && album.title) || t.album || '',
+      track: album && t.no ? t.no : '',
+      year: (album && album.year) || t.year || '',
+    };
+    return Object.entries(q).filter(([, v]) => v).map(([k, v]) => `&${k}=${encodeURIComponent(String(v))}`).join('');
   }
 
   async function updateDownloadCaptionPath() {
@@ -166,7 +182,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
     const key = String(playlist.key || ('id' in playlist && playlist.id) || name);
     // the same playlist downloading already: its dialog comes back with the progress
     const running = downloadAbort && downloadAbortFor && downloadAbortFor.tracks && downloadAbortFor.key === key ? /** @type {UrielDownloadJob} */ (downloadAbortFor) : null;
-    downloadBatch = running || { name, key, tracks, resolve: playlist.resolve, onStart: playlist.onStart, onProgress: playlist.onProgress, onDone: playlist.onDone, checking: true };
+    downloadBatch = running || { name, key, tracks, album: playlist.album, resolve: playlist.resolve, onStart: playlist.onStart, onProgress: playlist.onProgress, onDone: playlist.onDone, checking: true };
     if (!running) showIdleDownload();
     const batchShown = downloadBatch;
     el.downloadModal.classList.add('batch-mode');
@@ -210,8 +226,8 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
   }
 
   function setDownloadFormat(/** @type {string} */ fmt) {
-    selectedFormat = fmt || 'mp3';
-    localStorage.setItem('uriel_download_format', selectedFormat);
+    selectedFormat = fmt || (isPhoneApp ? 'original' : 'mp3');
+    localStorage.setItem(FORMAT_KEY, selectedFormat);
     /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll('.format-chip')).forEach((c) => {
       c.classList.toggle('active', c.dataset.format === selectedFormat);
     });
@@ -420,7 +436,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
       return;
     }
     // it keeps the format picked now, not whatever the dialog shows when its turn comes
-    downloadQueue.push({ name: batch.name, key, tracks: batch.tracks, resolve: batch.resolve, onStart: batch.onStart, onProgress: batch.onProgress, onDone: batch.onDone, format: batch.format || selectedFormat, quality: batch.quality || selectedQuality });
+    downloadQueue.push({ name: batch.name, key, tracks: batch.tracks, album: batch.album, resolve: batch.resolve, onStart: batch.onStart, onProgress: batch.onProgress, onDone: batch.onDone, format: batch.format || selectedFormat, quality: batch.quality || selectedQuality });
     if (typeof batch.onStart === 'function') batch.onStart();
     if (el.downloadModal) closeModal(el.downloadModal);
     showToast(Tm('Added to the download queue ({0} waiting)', downloadQueue.length), 'info');
@@ -476,7 +492,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
           const found = await batch.resolve(t).catch(() => null);
           if (found && found.url) src = { ...t, url: found.url, id: found.id || t.id };
         }
-        const downloadUrl = `http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(src.url || '')}&id=${encodeURIComponent(src.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${format}&quality=${quality}&platform=${encodeURIComponent(src.platform || t.platform || 'youtube')}&duration=${encodeURIComponent(t.duration || 0)}${fresh ? '&fresh=1' : ''}`;
+        const downloadUrl = `http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(src.url || '')}&id=${encodeURIComponent(src.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${format}&quality=${quality}&platform=${encodeURIComponent(src.platform || t.platform || 'youtube')}&duration=${encodeURIComponent(t.duration || 0)}${tagQuery(t, batch)}${fresh ? '&fresh=1' : ''}`;
         const res = await fetch(downloadUrl, { signal: batchAbort.signal });
         const text = await res.text();
         let data;
@@ -610,7 +626,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
           let result;
           try {
             result = await window.UrielDownloadBatch.runDownloadBatch([t], async (/** @type {UrielTrack} */ _, /** @type {{ fresh: boolean }} */ { fresh }) => {
-              const r = await fetch(`http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(t.url || '')}&id=${encodeURIComponent(t.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${selectedFormat}&quality=${selectedQuality}&platform=${encodeURIComponent(t.platform || 'youtube')}&duration=${encodeURIComponent(t.duration || 0)}${fresh ? '&fresh=1' : ''}`, { signal: singleAbort.signal });
+              const r = await fetch(`http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(t.url || '')}&id=${encodeURIComponent(t.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${selectedFormat}&quality=${selectedQuality}&platform=${encodeURIComponent(t.platform || 'youtube')}&duration=${encodeURIComponent(t.duration || 0)}${tagQuery(t, null)}${fresh ? '&fresh=1' : ''}`, { signal: singleAbort.signal });
               const d = await r.json();
               if (!d.success) throw Object.assign(new Error(d.error || 'Download failed'), { status: r.status });
               saved = d;
@@ -624,7 +640,8 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
           offlineChanged(t, true);
           let folder = '';
           try { folder = (await window.electronAPI.getDownloadDir()).dir || ''; } catch (e) {}
-          showToast(folder ? Tm('Saved to {0}', folder) : Tm('Download complete: saved as {0}', (/** @type {{ filename?: string } | null} */ (saved) || {}).filename), 'success');
+          const done = /** @type {{ filename?: string, note?: string }} */ (saved);
+          showToast(done.note ? done.note : folder ? Tm('Saved to {0}', folder) : Tm('Download complete: saved as {0}', done.filename), done.note ? 'info' : 'success');
           if (el.downloadModal && downloadAbort === singleAbort && onTrack()) closeModal(el.downloadModal);
           return;
         }

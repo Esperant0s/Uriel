@@ -17,6 +17,9 @@ const PORT = 38472;
 const { DATA_DIR, CACHE_DIR, CUSTOM_LYRICS_DIR, LYRICS_DIR, THUMBNAILS_DIR, METADATA_PATH, LIBRARY_DIR, LIBRARY_PATH, ytDlpCommand, resolveDownloadDir, resolveBinary } = require('../desktop/platform');
 // iOS can't hand a cross-origin stream to Web Audio, so it plays everything from the disk cache.
 const STREAM_VIA_CACHE = !!/** @type {{ STREAM_VIA_CACHE?: boolean }} */ (require('../desktop/platform')).STREAM_VIA_CACHE;
+// phones only: writes a downloaded song in the chosen format with its tags (mobile/save-download.ts)
+/** @type {((o: { cached: string, dir: string, base: string, format: string, tags: import('./audio-tags').Tags, thumbnail?: string }) => Promise<{ filename: string, note?: string }>) | undefined} */
+const phoneSaveDownload = /** @type {{ saveDownload?: any }} */ (require('../desktop/platform')).saveDownload;
 const logger = require('../desktop/logger');
 const { getSystemAudioOutputInfo } = require('../desktop/audio-output');
 const ytmArtist = require('./ytm-artist');
@@ -3691,7 +3694,7 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
 
   const cleanTitle = sanitizeFilename(title || 'untitled');
   const cleanArtist = sanitizeFilename(artist || 'unknown artist');
-  const validFormats = ['mp3', 'm4a', 'flac', 'opus', 'wav', 'ogg'];
+  const validFormats = ['original', 'mp3', 'm4a', 'flac', 'opus', 'wav', 'ogg'];
   const safeFormat = String(format || '').toLowerCase();
   const ext = isRaw ? 'wav' : (validFormats.includes(safeFormat) ? safeFormat : 'mp3');
   const safeQuality = /^\d+$/.test(String(quality)) ? String(quality) : '0';
@@ -3769,8 +3772,20 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
       cached = await findCachedFile(cacheId);
     }
     if (!cached) return sendDownloadResponse(blocked ? 429 : 500, { success: false, blocked, error: blocked ? STREAM_BLOCKED : "Couldn't get this song right now. Try again later, or another version from search" });
-    const savedName = `${cleanArtist} - ${cleanTitle}${path.extname(cached)}`;
     await fs.promises.mkdir(downloadsDir, { recursive: true });
+    const q = url.parse(req.url || '', true).query;
+    const meta = trackMetadataIndex[cacheId] || {};
+    const base = `${cleanArtist} - ${cleanTitle}`;
+    if (phoneSaveDownload) {
+      const saved = await phoneSaveDownload({
+        cached, dir: downloadsDir, base, format: String(q.format || 'original'),
+        tags: { title, artist, album: String(q.album || ''), track: String(q.track || ''), year: String(q.year || '') },
+        thumbnail: String(q.thumbnail || meta.thumbnail || ''),
+      });
+      downloadsIndex = null;
+      return sendDownloadResponse(200, { success: true, filename: saved.filename, note: saved.note, directory: downloadsDir });
+    }
+    const savedName = `${base}${path.extname(cached)}`;
     await fs.promises.copyFile(cached, path.join(downloadsDir, savedName));
     downloadsIndex = null;
     return sendDownloadResponse(200, { success: true, filename: savedName, directory: downloadsDir });

@@ -29,4 +29,6 @@ export = {
   readConfig: () => ({}), resolveDataDir: () => DATA_DIR, setDataDir: noop,
   resolveDownloadDir: () => DOWNLOADS_DIR, setDownloadDir: noop,
   copyDirContents: noop, removeDirContents: noop,
+  // server.js hands a downloaded song over to be written in the chosen format (loaded when first used)
+  saveDownload: (o: import('../save-download').SaveRequest) => (require('../save-download') as typeof import('../save-download')).saveDownload(o),
 };

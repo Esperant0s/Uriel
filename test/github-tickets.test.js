@@ -33,10 +33,10 @@ test('phone downloads use the routes playback uses, so a song that plays can be 
   assert.doesNotMatch(phone, /await downloadTrackToDisk\(/);
 });
 
-test('the phone dialog promises no format, shows progress and retries', () => {
+test('the phone dialog offers the formats phones can write, shows progress and retries', () => {
   const css = read('mobile/mobile.css');
-  assert.match(css, /#download-modal :is\(\.download-section:has\(#format-chips-grid\), \.download-section:has\(#quality-chips-grid\), #download-effects-section\)/);
-  assert.match(app, /!isPhoneApp \? `Download \$\{selectedFormat\.toUpperCase\(\)\}`/);
+  assert.match(css, /#download-modal :is\(\.format-chip\[data-format="opus"\], \.format-chip\[data-format="wav"\], #download-effects-section\)/);
+  assert.match(app, /const PHONE_FORMATS = \['original', 'm4a', 'mp3', 'flac'\]/);
   assert.match(app, /'uriel:dl-progress'/);
   assert.match(read('mobile/shims/child_process.ts'), /uriel:dl-progress/);
   assert.match(app, /runDownloadBatch\(\[t\]/);

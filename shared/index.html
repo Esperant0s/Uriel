@@ -3230,13 +3230,17 @@
       <div class="download-section">
         <span class="download-section-label">Audio format</span>
         <div class="format-chips-grid" id="format-chips-grid">
+          <button class="format-chip" data-format="original">
+            <span class="format-chip-name">Original</span>
+            <span class="chip-tag">No re-encode</span>
+          </button>
           <button class="format-chip active" data-format="mp3">
             <span class="format-chip-name">MP3</span>
             <span class="chip-tag">Universal</span>
           </button>
           <button class="format-chip" data-format="flac">
             <span class="format-chip-name">FLAC</span>
-            <span class="chip-tag">Lossless</span>
+            <span class="chip-tag">Big, no extra loss</span>
           </button>
           <button class="format-chip" data-format="m4a">
             <span class="format-chip-name">M4A</span>
@@ -3253,7 +3257,7 @@
         </div>
       </div>
 
-      <div class="download-section">
+      <div class="download-section" id="download-quality-section">
         <span class="download-section-label">Bitrate quality</span>
         <div class="quality-chips-grid" id="quality-chips-grid">
           <button class="quality-chip active" data-quality="0">

@@ -443,6 +443,7 @@ declare global {
     tracks: UrielTrack[];
     format?: string;
     quality?: string;
+    album?: UrielAlbum;
     onStart?: () => void;
     resolve?: ((t: UrielTrack) => Promise<UrielTrack | null>) | null;
     onProgress?: (done: number, total: number) => void;
