@@ -48,12 +48,9 @@ jobs:
         uses: actions/deploy-pages@v5
 
   # a fork publishes only the page its Sync QR code opens (sync.js LINK_PAGE) and the web player for shared playlists
-  fork:
+  fork-build:
     if: github.repository != 'cloverscripts/riff-muriel' && github.event_name != 'schedule'
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -63,5 +60,13 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
+
+  fork-deploy:
+    needs: fork-build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v5
