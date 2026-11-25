@@ -139,12 +139,17 @@ async function downloadRanges(url: string, headers: Headers, signal: AbortSignal
 const playsOpus = () => !!globalThis.__urielPlaysOpus;
 
 // How far a song's download has got, for the download dialog. The file is named after the song's id.
-const progressOf = (template: string | undefined): OnPart => {
-  const id = (String(template || '').split('/').pop() || '').split('.')[0];
-  return (done, total) => {
-    if (typeof window !== 'undefined' && typeof CustomEvent === 'function') window.dispatchEvent(new CustomEvent('uriel:dl-progress', { detail: { id, done, total } }));
-  };
+const progressFor = (id: string): OnPart => (done, total) => {
+  if (typeof window !== 'undefined' && typeof CustomEvent === 'function') window.dispatchEvent(new CustomEvent('uriel:dl-progress', { detail: { id, done, total } }));
 };
+const progressOf = (template: string | undefined) => progressFor((String(template || '').split('/').pop() || '').split('.')[0]);
+
+// YouTube's AAC for a song, as raw ADTS: Android plays (and caches) the Opus, but M4A needs the AAC
+async function fetchAac(target: string, id: string, signal?: AbortSignal): Promise<Uint8Array> {
+  const audio = await ex.resolveAudio(target);
+  if (audio.kind !== 'hls' || audio.ext !== 'aac') throw new Error('no AAC version of this song');
+  return downloadHls(audio.url, audio.headers, signal, audio.container, progressFor(id));
+}
 
 async function download(args: string[], target: string, signal?: AbortSignal): Promise<string> {
   const audio = await ex.resolveAudio(target);
@@ -189,4 +194,4 @@ function spawn(_bin: string, args: string[] = []): FakeProcess {
   return fakeProcess(async () => { throw new Error(`unsupported yt-dlp call: ${args.join(' ')}`); });
 }
 
-export = { joinSegments, spawn, execFile: () => { throw new Error('execFile is not available on iOS'); } };
+export = { joinSegments, spawn, fetchAac, execFile: () => { throw new Error('execFile is not available on iOS'); } };

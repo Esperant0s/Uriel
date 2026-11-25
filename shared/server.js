@@ -18,7 +18,7 @@ const { DATA_DIR, CACHE_DIR, CUSTOM_LYRICS_DIR, LYRICS_DIR, THUMBNAILS_DIR, META
 // iOS can't hand a cross-origin stream to Web Audio, so it plays everything from the disk cache.
 const STREAM_VIA_CACHE = !!/** @type {{ STREAM_VIA_CACHE?: boolean }} */ (require('../desktop/platform')).STREAM_VIA_CACHE;
 // phones only: writes a downloaded song in the chosen format with its tags (mobile/save-download.ts)
-/** @type {((o: { cached: string, dir: string, base: string, format: string, tags: import('./audio-tags').Tags, thumbnail?: string }) => Promise<{ filename: string, note?: string }>) | undefined} */
+/** @type {((o: { cached: string, dir: string, base: string, format: string, tags: import('./audio-tags').Tags, thumbnail?: string, source: string, id: string, signal?: AbortSignal }) => Promise<{ filename: string, note?: string }>) | undefined} */
 const phoneSaveDownload = /** @type {{ saveDownload?: any }} */ (require('../desktop/platform')).saveDownload;
 const logger = require('../desktop/logger');
 const { getSystemAudioOutputInfo } = require('../desktop/audio-output');
@@ -3777,10 +3777,13 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
     const meta = trackMetadataIndex[cacheId] || {};
     const base = `${cleanArtist} - ${cleanTitle}`;
     if (phoneSaveDownload) {
+      const stop = new AbortController();
+      res.on('close', () => { if (abandoned()) stop.abort(); });
       const saved = await phoneSaveDownload({
         cached, dir: downloadsDir, base, format: String(q.format || 'original'),
         tags: { title, artist, album: String(q.album || ''), track: String(q.track || ''), year: String(q.year || '') },
         thumbnail: String(q.thumbnail || meta.thumbnail || ''),
+        source: youtubeExtractTarget(targetUrl, cacheId, String(q.platform || 'youtube')).url, id: cacheId, signal: stop.signal,
       });
       downloadsIndex = null;
       return sendDownloadResponse(200, { success: true, filename: saved.filename, note: saved.note, directory: downloadsDir });
