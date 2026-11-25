@@ -1928,7 +1928,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ---- the app window: media keys, the welcome's choices, compact layout, mini player (app/desktop.js) ----
   const desktopPart = /** @type {UrielDesktopPart} */ ({});
-  window.UrielApp.desktop({ handleMediaCommand, onBackgroundChanged, setSiteTheme, showToast, SITE_THEMES, Tm, updateCustomBg }, desktopPart);
+  window.UrielApp.desktop({ handleMediaCommand, onBackgroundChanged, setSiteTheme, showToast, SITE_THEMES, state, Tf, Tm, updateCustomBg }, desktopPart);
   const { toggleMiniWindow } = desktopPart;
 
   // ---- Settings → Interface → Language, the picker (app/language.js) ----

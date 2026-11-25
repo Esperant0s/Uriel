@@ -730,6 +730,23 @@ async function audioFilesIn(dir, out, depth = 0) {
       });
 
       ipcMain.handle('get-hw-accel', () => readStartupConfig().hwAccel !== false);
+      // Settings → Advanced → Proxy: the window, and the server (yt-dlp and its fetch), go through it; the app's
+      // own server on 127.0.0.1 never does
+      const applyProxy = async (/** @type {string} */ url) => {
+        const { session } = require('electron');
+        await session.defaultSession.setProxy(url ? { proxyRules: url, proxyBypassRules: '<local>;127.0.0.1;localhost' } : { mode: 'direct' });
+        globalThis.urielSessionFetch = url ? (u, o) => session.defaultSession.fetch(String(u), o) : undefined;
+        require('../shared/server').setOutProxy(url);
+      };
+      ipcMain.handle('get-app-proxy', () => readStartupConfig().proxy || '');
+      ipcMain.handle('set-app-proxy', async (e, raw) => {
+        const url = String(raw || '').trim().replace(/\/$/, '');
+        if (url && !/^(https?|socks[45]):\/\/[^\s/:]+:\d+$/i.test(url)) return { ok: false, error: 'bad' };
+        writeStartupConfig({ proxy: url });
+        try { await applyProxy(url); return { ok: true }; } catch (err) { return { ok: false, error: 'failed' }; }
+      });
+      const savedProxy = readStartupConfig().proxy;
+      if (savedProxy) applyProxy(savedProxy).catch(() => {});
       ipcMain.on('set-hw-accel', (e, value) => { writeStartupConfig({ hwAccel: !!value }); });
 
       const MEDIA_KEYS = { MediaPlayPause: 'toggle', MediaNextTrack: 'next', MediaPreviousTrack: 'prev', MediaStop: 'stop' };

@@ -47,6 +47,8 @@ const api = {
   setTrayOnClose: (/** @type {boolean} */ enabled) => ipcRenderer.send('set-tray-on-close', enabled),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   getHwAccel: () => ipcRenderer.invoke('get-hw-accel'),
+  getProxy: () => ipcRenderer.invoke('get-app-proxy'),
+  setProxy: (/** @type {string} */ url) => ipcRenderer.invoke('set-app-proxy', url),
   setHwAccel: (/** @type {boolean} */ v) => ipcRenderer.send('set-hw-accel', v),
   trimMemory: () => { try { webFrame.clearCache(); } catch (e) {} },
   onMediaCommand: (cb) => ipcRenderer.on('media-command', (e, cmd) => cb(cmd)),

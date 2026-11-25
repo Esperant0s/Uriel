@@ -63,6 +63,17 @@ function setYtDlpCookies(/** @type {string | null} */ file) {
   // signed in now: YouTube may let yt-dlp in again, so stop skipping it
   if (ytDlpCookiesFile) streamHealth.reset('youtube-ytdlp');
 }
+// ---- a proxy for what goes out (Settings → Advanced → Proxy, computers only; Riff 43.2) ----
+// yt-dlp gets --proxy; fetch goes through Electron's session, which main.js points at the proxy. The fast YouTube
+// look-up (yt-fast.js) makes its own connections, so with a proxy it's skipped and yt-dlp does the look-ups.
+let outProxy = '';
+function setOutProxy(/** @type {string} */ url) { outProxy = url || ''; }
+function withYtDlpProxy(/** @type {string[]} */ args) {
+  if (!outProxy || !Array.isArray(args) || args.includes('--proxy')) return args;
+  const at = args[0] === '--no-config' ? 1 : 0;
+  return [...args.slice(0, at), '--proxy', outProxy, ...args.slice(at)];
+}
+
 function withYtDlpCookies(/** @type {string[]} */ args) {
   if (!ytDlpCookiesFile || !Array.isArray(args) || args.includes('--cookies')) return args;
   const at = args[0] === '--no-config' ? 1 : 0;
@@ -71,7 +82,7 @@ function withYtDlpCookies(/** @type {string[]} */ args) {
 
 async function fastYouTubeStream(/** @type {string} */ trackUrl, /** @type {string | null} */ id) {
   const vid = ytFast.videoId(id) || ytFast.videoId(trackUrl);
-  if (!vid) return null;
+  if (!vid || outProxy) return null;
   const started = Date.now();
   try {
     const r = await ytFast.lookup(vid);
@@ -241,7 +252,8 @@ function trimCache(/** @type {Map<unknown, unknown> | Set<unknown>} */ map, /** 
 // A bare fetch() waits up to five minutes on a server that stops answering.
 function fetchWithTimeout(/** @type {string | URL} */ target, /** @type {RequestInit} */ options = {}, timeoutMs = 15000) {
   const signal = typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(timeoutMs) : undefined;
-  return fetch(target, signal ? { ...options, signal } : options);
+  const go = outProxy && globalThis.urielSessionFetch ? globalThis.urielSessionFetch : fetch;
+  return go(target, signal ? { ...options, signal } : options);
 }
 
 // fetch() follows redirects on its own, so a public URL could bounce the server into the local network before
@@ -1861,7 +1873,7 @@ function executeYtDlp(/** @type {string[]} */ args, timeoutMs = 25000, /** @type
 
 function runYtDlpNow(/** @type {string[]} */ args, /** @type {number} */ timeoutMs, /** @type {YtDlpOpts} */ opts, /** @type {string} */ priority) {
   return /** @type {Promise<string>} */ (new Promise((resolve, reject) => {
-    const cmd = ytDlpCommand(withYtDlpCookies(args));
+    const cmd = ytDlpCommand(withYtDlpProxy(withYtDlpCookies(args)));
     const proc = spawnYtDlp(cmd, priority, opts.reason);
     if (opts && typeof opts.onChild === 'function') {
       try { opts.onChild(proc); } catch (_) {}
@@ -7747,6 +7759,24 @@ const server = http.createServer(guardHandler(async (/** @type {import('http').I
     return res.end(JSON.stringify({ success: Object.keys(credits).length > 0, credits }));
   }
 
+  // Settings → Proxy → Test: can the proxy be reached, and how fast
+  if (parsedUrl.pathname === '/api/proxy-test') {
+    let u = null;
+    try { u = new URL(String(parsedUrl.query.url || '')); } catch (e) {}
+    const port = u ? Number(u.port) || (u.protocol === 'https:' ? 443 : 80) : 0;
+    const started = Date.now();
+    const ok = await new Promise((resolve) => {
+      if (!u || !/^(https?|socks[45]):$/.test(u.protocol)) return resolve(false);
+      const sock = require('net').connect({ host: u.hostname, port, timeout: 4000 });
+      const done = (/** @type {boolean} */ v) => { try { sock.destroy(); } catch (e) {} resolve(v); };
+      sock.on('connect', () => done(true));
+      sock.on('timeout', () => done(false));
+      sock.on('error', () => done(false));
+    });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ success: ok, ms: ok ? Date.now() - started : null }));
+  }
+
   // word timings for karaoke (Settings → Word-by-word source), lined up with the lyrics by app.js
   if (parsedUrl.pathname === '/api/lyrics-words') {
     const title = parsedUrl.query.title || '';
@@ -7800,7 +7830,7 @@ function stopServer() {
   });
 }
 
-module.exports = { startServer, stopServer, stopChildren: () => childProcs.stopAll(), PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, streamHealthStats, _test: { withYtDlpCookies, youtubeExtractTarget, fetchKugouLyrics } };
+module.exports = { startServer, stopServer, stopChildren: () => childProcs.stopAll(), PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, setOutProxy, streamHealthStats, _test: { withYtDlpCookies, youtubeExtractTarget, fetchKugouLyrics } };
 
 if (require.main === module) {
   startServer();

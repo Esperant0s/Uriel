@@ -4,6 +4,8 @@
 export {};
 
 declare global {
+  // desktop: Electron's session fetch, set by main.js while a proxy is on (server.js fetchWithTimeout uses it)
+  var urielSessionFetch: ((input: string | URL, init?: RequestInit) => Promise<Response>) | undefined;
   // the download progress server.js reports for a song being saved (shared/app.js listens)
   interface WindowEventMap {
     'uriel:dl-progress': CustomEvent<{ id: string; done: number; total: number }>;
@@ -348,6 +350,8 @@ declare global {
     setTrayOnClose(enabled: boolean): void;
     getAppVersion(): Promise<string>;
     getHwAccel(): Promise<boolean>;
+    getProxy?(): Promise<string>;
+    setProxy?(url: string): Promise<{ ok: boolean; error?: string }>;
     setHwAccel(on: boolean): void;
     trimMemory(): void;
     onMediaCommand(cb: (cmd: string) => void): void;

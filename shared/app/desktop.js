@@ -3,7 +3,7 @@
 // small window, and the mini player window. Part of app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps @param {UrielDesktopPart} out */
-window.UrielApp.desktop = function ({ handleMediaCommand, onBackgroundChanged, setSiteTheme, showToast, SITE_THEMES, Tm, updateCustomBg }, out) {
+window.UrielApp.desktop = function ({ handleMediaCommand, onBackgroundChanged, setSiteTheme, showToast, SITE_THEMES, state, Tf, Tm, updateCustomBg }, out) {
   const settingWinMediaKeys = document.getElementById('setting-win-media-keys');
   const btnWinMediaKeys = document.getElementById('btn-win-media-keys');
   const isWindows = (window.electronAPI && typeof window.electronAPI.isWindows === 'boolean')
@@ -101,6 +101,32 @@ window.UrielApp.desktop = function ({ handleMediaCommand, onBackgroundChanged, s
   if (btnMiniPlayer) {
     btnMiniPlayer.addEventListener('click', () => {
       toggleMiniWindow();
+    });
+  }
+
+  // Settings → Advanced → Proxy (desktop/main.js applies it)
+  const proxyInput = /** @type {HTMLInputElement | null} */ (document.getElementById('proxy-input'));
+  const proxyStatus = document.getElementById('proxy-status');
+  const api0 = window.electronAPI;
+  if (proxyInput && api0 && api0.getProxy && api0.setProxy) {
+    const setProxy = api0.setProxy;
+    api0.getProxy().then((url) => { proxyInput.value = url || ''; });
+    const say = (/** @type {string} */ text, bad = false) => { if (proxyStatus) { proxyStatus.textContent = text; proxyStatus.classList.toggle('bad', bad); } };
+    const btnTest = document.getElementById('btn-proxy-test');
+    if (btnTest) btnTest.addEventListener('click', async () => {
+      const url = proxyInput.value.trim();
+      if (!url) { say(Tf('Enter a proxy first'), true); return; }
+      say(Tf('Testing…'));
+      try {
+        const d = await (await fetch(`http://127.0.0.1:${state.serverPort}/api/proxy-test?url=${encodeURIComponent(url)}`)).json();
+        say(d.success ? Tf('Reachable ({0} ms)', d.ms) : Tf("Can't reach it"), !d.success);
+      } catch (e) { say(Tf("Can't reach it"), true); }
+    });
+    const btnSave = document.getElementById('btn-proxy-save');
+    if (btnSave) btnSave.addEventListener('click', async () => {
+      const r = await setProxy(proxyInput.value.trim());
+      if (r && r.ok) { say(proxyInput.value.trim() ? Tf('Saved: Uriel now goes through it') : Tf('No proxy')); showToast(Tm('Proxy saved'), 'success'); }
+      else say(Tf('Use a full address with a port, like socks5://127.0.0.1:1080'), true);
     });
   }
 

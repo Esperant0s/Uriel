@@ -1936,6 +1936,21 @@
 
 
           <div class="settings-section" id="settings-section-advanced" data-cat="advanced">
+                <div class="settings-group-title desktop-only" data-i18n>Network</div>
+                <div class="m3-group desktop-only" data-group="network">
+            <div class="setting-item desktop-only" id="setting-proxy">
+              <div style="display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px;">
+                <span class="setting-name" data-i18n>Proxy</span>
+                <span style="font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-outline);" data-i18n>For when YouTube is blocked or slow where you are. Search, song look-ups and the window go through it. Like socks5://127.0.0.1:1080 or http://host:8080; empty for none</span>
+              </div>
+              <div class="proxy-row">
+                <input type="text" class="proxy-input" id="proxy-input" placeholder="socks5://127.0.0.1:1080" spellcheck="false" autocomplete="off">
+                <button class="btn-outline-pill" id="btn-proxy-test" data-i18n>Test</button>
+                <button class="btn-pill-primary" id="btn-proxy-save" data-i18n>Save</button>
+              </div>
+              <span class="proxy-status" id="proxy-status"></span>
+            </div>
+                </div>
                 <div class="settings-group-title" data-i18n>Performance tuning</div>
                 <div class="m3-group" data-group="perf-tuning">
             <div class="setting-item">
