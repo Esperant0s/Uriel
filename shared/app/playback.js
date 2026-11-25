@@ -802,14 +802,25 @@ window.UrielApp.playback = function ({ applyAudioSettings, applyM3Cover, audioEn
     playTrack(state.queue[prevIdx]);
   }
 
-  // Each look-up starts yt-dlp, which can run a JavaScript runtime at full CPU (#16), so the computer
-  // only looks up the one song that plays next, and only near the end of this one. Phones download
-  // whole songs to play them, so they start on that halfway through.
+  // Each look-up starts yt-dlp, which can run a JavaScript runtime at full CPU (#16). The song that plays next
+  // is looked up first; the one after it (Riff 0.6) 20 s later, at background priority, so a run of skips
+  // stays instant without two look-ups racing. Phones download whole songs, so they start halfway through.
+  /** @type {ReturnType<typeof setTimeout> | undefined} */
+  let secondPrefetch;
   function prefetchNextQueueTrack() {
-    const nextTrack = state.queue && state.queue.slice(state.queueIndex + 1).find((/** @type {UrielTrack} */ t) => !isBlocked(t));
-    if (!nextTrack || nextTrack.platform === 'local' || !(nextTrack.url || nextTrack.id)) return;
-    const q = `url=${encodeURIComponent(nextTrack.url || '')}&id=${encodeURIComponent(nextTrack.id || '')}&platform=${nextTrack.platform || state.platform}&title=${encodeURIComponent(nextTrack.title || '')}&artist=${encodeURIComponent(nextTrack.artist || '')}&duration=${encodeURIComponent(nextTrack.duration || 0)}&thumbnail=${encodeURIComponent(nextTrack.thumbnail || '')}`;
-    fetch(`http://127.0.0.1:${state.serverPort}/api/${isPhoneApp ? 'stream-info' : 'prefetch'}?${q}&next=1`).catch(() => {});
+    const coming = (state.queue || []).slice(state.queueIndex + 1).filter((/** @type {UrielTrack} */ t) => !isBlocked(t)).slice(0, 2);
+    const ask = (/** @type {UrielTrack | undefined} */ t, /** @type {boolean} */ first) => {
+      if (!t || t.platform === 'local' || !(t.url || t.id)) return;
+      const q = `url=${encodeURIComponent(t.url || '')}&id=${encodeURIComponent(t.id || '')}&platform=${t.platform || state.platform}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&duration=${encodeURIComponent(t.duration || 0)}&thumbnail=${encodeURIComponent(t.thumbnail || '')}`;
+      fetch(`http://127.0.0.1:${state.serverPort}/api/${isPhoneApp ? 'stream-info' : 'prefetch'}?${q}${first ? '&next=1' : ''}`).catch(() => {});
+    };
+    ask(coming[0], true);
+    clearTimeout(secondPrefetch);
+    // the phone warms up the next two itself as a song starts (see 'playing' below)
+    if (!isPhoneApp && coming[1]) {
+      const token = state.loadToken;
+      secondPrefetch = setTimeout(() => { if (token === state.loadToken) ask(coming[1], false); }, 20000);
+    }
   }
 
   if (el.nativeAudio) {
@@ -871,7 +882,7 @@ window.UrielApp.playback = function ({ applyAudioSettings, applyM3Cover, audioEn
       document.body.classList.add('is-playing');
       updatePlayPauseButton(true, false);
       // phones warm up the next two songs (staggered) so skipping or a slow network never leaves a gap;
-      // the computer looks up only the next one, near the end of this one (prefetchNextQueueTrack, #16)
+      // the computer looks up the next two from prefetchNextQueueTrack, once this one has played 10 s (#16)
       const upcoming = !isPhoneApp ? [] : [1, 2].map(ahead => state.queue && state.queue[state.queueIndex + ahead]);
       upcoming.forEach((nextTrack, k) => {
         if (nextTrack && nextTrack.url && nextTrack.platform !== 'local') {
