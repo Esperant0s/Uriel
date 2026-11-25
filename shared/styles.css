@@ -9173,6 +9173,3 @@ html:not(.is-mobile) body.track-table .track-table-head { display: block; positi
 .proxy-input { flex: 1; min-width: 200px; padding: 10px 14px; border: 1px solid var(--md-sys-color-outline-variant); border-radius: 999px; background: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); font: inherit; font-family: ui-monospace, monospace; font-size: 0.9em; }
 .proxy-status { display: block; margin-top: 8px; font-size: calc(12px * var(--font-scale, 1)); color: var(--md-sys-color-on-surface-variant); }
 .proxy-status.bad { color: var(--md-sys-color-error); }
-
-/* Original is a phone-only choice for now */
-html:not(.is-mobile) .format-chip[data-format="original"] { display: none; }

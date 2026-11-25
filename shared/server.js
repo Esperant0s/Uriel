@@ -3653,6 +3653,70 @@ function handleLocalCover(/** @type {import('http').IncomingMessage} */ req, /**
   streamFileToResponse(fs.createReadStream(file), res);
 }
 
+const audioTags = require('./audio-tags');
+
+/** @typedef {{ title?: string, artist?: string, album?: string, track?: string | number, year?: string | number }} DownloadTags */
+
+// ffmpeg arguments that put the tags and the cover into a download: `inputs` go after the audio input (0),
+// `args` before the output file. Ogg can't hold a cover as a picture stream, so there it's the
+// METADATA_BLOCK_PICTURE tag, given through a metadata file (a whole image is too long for a command line on
+// Windows); `tmp` is that file, for the caller to delete.
+async function ffmpegTagArgs(/** @type {string} */ ext, /** @type {DownloadTags} */ tags, /** @type {string | null} */ coverPath, keepOldCover = false) {
+  /** @type {string[]} */
+  const inputs = [];
+  /** @type {string[]} */
+  const args = ['-map', '0:a'];
+  /** @type {string | null} */
+  let tmp = null;
+  const fields = [['title', tags.title], ['artist', tags.artist], ['album', tags.album], ['track', tags.track], ['date', tags.year]];
+  if (coverPath && ['mp3', 'm4a', 'flac'].includes(ext)) {
+    inputs.push('-i', coverPath);
+    args.push('-map', '1:v', '-c:v', 'copy', '-disposition:v', 'attached_pic');
+  } else if (keepOldCover && ['mp3', 'm4a', 'flac'].includes(ext)) {
+    args.push('-map', '0:v?', '-c:v', 'copy');
+  } else if (coverPath && ['opus', 'ogg'].includes(ext)) {
+    const picture = audioTags.metadataBlockPicture({ mime: 'image/jpeg', data: await fs.promises.readFile(coverPath) });
+    // ffmetadata escapes = ; # \ and newlines with a backslash
+    tmp = path.join(os.tmpdir(), `uriel-tags-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.txt`);
+    await fs.promises.writeFile(tmp, `;FFMETADATA1\nMETADATA_BLOCK_PICTURE=${picture.replace(/[=;#\\\n]/g, (m) => '\\' + m)}\n`);
+    inputs.push('-i', tmp);
+    args.push('-map_metadata', '1');
+  }
+  // Ogg's tags are the audio stream's: set there, or the video's own title would stay
+  const metaFlag = ext === 'opus' || ext === 'ogg' ? '-metadata:s:a:0' : '-metadata';
+  for (const [k, v] of fields) if (v) args.push(metaFlag, `${k}=${v}`);
+  if (ext === 'mp3') args.push('-id3v2_version', '3');
+  return { inputs, args, tmp };
+}
+
+// the tags and cover put into a file yt-dlp saved: copied over, not re-encoded
+async function retagDownload(/** @type {string} */ file, /** @type {DownloadTags} */ tags, /** @type {string | null} */ coverPath) {
+  const ffmpegBin = resolveBinary('ffmpeg');
+  const ext = path.extname(file).slice(1).toLowerCase();
+  if (!ffmpegBin || ext === 'wav') return;
+  const t = await ffmpegTagArgs(ext, tags, coverPath, true);
+  const tmpOut = `${file}.tagging.${ext}`;
+  try {
+    await runFfmpeg(ffmpegBin, ['-y', '-v', 'error', '-i', file, ...t.inputs, ...t.args, '-c:a', 'copy', tmpOut]);
+    await fs.promises.rename(tmpOut, file);
+  } catch (e) {
+    // the song is there already: without the tags is better than not at all
+    try { logger.error('Tagging a download failed: ' + file, e); } catch (_) {}
+    try { await fs.promises.unlink(tmpOut); } catch (_) {}
+  } finally {
+    if (t.tmp) fs.promises.unlink(t.tmp).catch(() => {});
+  }
+}
+
+function runFfmpeg(/** @type {string} */ bin, /** @type {string[]} */ args, /** @type {(p: import('child_process').ChildProcess) => void} */ onProc = () => {}) {
+  return new Promise((/** @type {(value?: void) => void} */ resolve, reject) => {
+    const proc = spawn(bin, args, { windowsHide: true });
+    onProc(proc);
+    proc.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg exited with code ${code}`))));
+    proc.on('error', reject);
+  });
+}
+
 // how long one download may take: 3 minutes used to cut off hour-long mixes on a slow line
 function ytdlpTimeoutFor(/** @type {number} */ duration) {
   return Math.min(60 * 60000, Math.max(180000, 120000 + 2000 * (Number(duration) || 0)));
@@ -3799,7 +3863,11 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
     downloadsIndex = null;
     return sendDownloadResponse(200, { success: true, filename: savedName, directory: downloadsDir });
   }
-  const cachedFile = cleanId ? await findCachedFile(cleanId) : null;
+  const tags = { title: title || cleanTitle, artist: artist || cleanArtist, album: String(query.album || ''), track: String(query.track || ''), year: String(query.year || '') };
+  // the cover: the song's thumbnail, kept with the cache's (THUMBNAILS_DIR)
+  const coverPath = !isRaw && cleanId ? await cacheThumbnailToDisk(cleanId, String(query.thumbnail || (trackMetadataIndex[cleanId] || {}).thumbnail || '')) : null;
+  // Original is YouTube's own file: the cache can hold a re-encoded copy (cache-copy.js), so it isn't used
+  const cachedFile = cleanId && ext !== 'original' ? await findCachedFile(cleanId) : null;
   if (cachedFile) {
     const ffmpegBin = resolveBinary('ffmpeg');
     if (ffmpegBin) {
@@ -3810,11 +3878,11 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
       if (start !== null) ffmpegArgs.push('-ss', String(start));
       if (end !== null) ffmpegArgs.push('-to', String(end));
       ffmpegArgs.push('-i', cachedFile);
+      const tagArgs = await ffmpegTagArgs(ext, tags, isRaw ? null : coverPath);
+      ffmpegArgs.push(...tagArgs.inputs, ...tagArgs.args);
       if (['mp3', 'm4a', 'opus', 'ogg'].includes(ext)) {
         ffmpegArgs.push('-b:a', bitrate);
       }
-      ffmpegArgs.push('-metadata', `title=${title || cleanTitle}`);
-      ffmpegArgs.push('-metadata', `artist=${artist || cleanArtist}`);
       ffmpegArgs.push(outPath);
 
       /** @type {import('child_process').ChildProcess | null} */
@@ -3829,15 +3897,7 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
       if (abandoned()) return;
 
       try {
-        await new Promise((/** @type {(value?: void) => void} */ resolve, reject) => {
-          const proc = spawn(ffmpegBin, ffmpegArgs, { windowsHide: true });
-          ffmpegProc = proc;
-          proc.on('close', (code) => {
-            if (code === 0) resolve();
-            else reject(new Error(`ffmpeg exited with code ${code}`));
-          });
-          proc.on('error', reject);
-        });
+        await runFfmpeg(ffmpegBin, ffmpegArgs, (p) => { ffmpegProc = p; }).finally(() => { if (tagArgs.tmp) fs.promises.unlink(tagArgs.tmp).catch(() => {}); });
         downloadsIndex = null;
         return sendDownloadResponse(200, isRaw ? {
           success: true,
@@ -3895,15 +3955,32 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
   const baseName = isRaw ? /** @type {string} */ (tempName).replace(/\.wav$/, '') : `${cleanArtist} - ${cleanTitle}`;
   const videoId = cleanId;
 
-  const coverFormats = ['mp3', 'm4a', 'flac', 'opus', 'ogg'];
+  const coverFormats = ['original', 'mp3', 'm4a', 'flac', 'opus', 'ogg'];
   const canCarryCover = !isRaw && coverFormats.includes(ext);
+
+  // Original: the audio YouTube sends, taken out of the video file without re-encoding (Opus or AAC)
+  const formatArgs = ext === 'original' ? ['--audio-format', 'best'] : ['--audio-format', ext, '--audio-quality', safeQuality];
+  // with Original the extension is only known afterwards: the new "Artist - Title.*" audio file
+  const savedName = async () => {
+    if (ext !== 'original') return /** @type {string} */ (outFilename);
+    const files = await fs.promises.readdir(downloadsDir).catch(() => /** @type {string[]} */ ([]));
+    const audio = files.filter((f) => f.startsWith(`${baseName}.`) && /\.(opus|m4a|ogg|mp3|aac|flac|webm)$/i.test(f));
+    return audio.find((f) => !beforeFiles.has(f)) || audio[0] || /** @type {string} */ (outFilename);
+  };
+  // the file yt-dlp saved gets the app's title, artist, album and cover (yt-dlp's are the video's)
+  const finishSaved = async () => {
+    const name = await savedName();
+    await cleanupDownloadArtifacts(downloadsDir, beforeFiles, baseName, videoId, path.extname(name).slice(1), true);
+    await retagDownload(path.join(downloadsDir, name), tags, coverPath);
+    downloadsIndex = null;
+    return name;
+  };
 
   const args = [
     '--no-playlist',
     '--no-warnings',
     '-x',
-    '--audio-format', ext,
-    '--audio-quality', safeQuality,
+    ...formatArgs,
     '--embed-metadata',
     '-o', tempTemplate,
     '--extractor-args', 'youtube:player_client=default,android',
@@ -3918,16 +3995,13 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
 
   try {
     await executeYtDlp(args, ytdlpTimeoutFor(duration), { onChild, reason: 'download' });
-    if (!isRaw) {
-      await cleanupDownloadArtifacts(downloadsDir, beforeFiles, baseName, videoId, ext, true);
-      downloadsIndex = null;
-    }
+    const name = isRaw ? null : await finishSaved();
     sendDownloadResponse(200, isRaw ? {
       success: true,
       tempName: tempName
     } : {
       success: true,
-      filename: outFilename,
+      filename: name,
       directory: downloadsDir
     });
   } catch (err) {
@@ -3945,8 +4019,7 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
         '--no-playlist',
         '--no-warnings',
         '-x',
-        '--audio-format', ext,
-        '--audio-quality', safeQuality,
+        ...formatArgs,
         '--embed-metadata',
         '-o', tempTemplate,
       ];
@@ -3959,16 +4032,13 @@ async function handleDownload(/** @type {import('http').IncomingMessage} */ req,
       fallbackArgs.push('--', targetUrl);
 
       await executeYtDlp(fallbackArgs, ytdlpTimeoutFor(duration), { onChild, reason: 'download-fallback' });
-      if (!isRaw) {
-        await cleanupDownloadArtifacts(downloadsDir, beforeFiles, baseName, videoId, ext, true);
-        downloadsIndex = null;
-      }
+      const name = isRaw ? null : await finishSaved();
       sendDownloadResponse(200, isRaw ? {
         success: true,
         tempName: tempName
       } : {
         success: true,
-        filename: outFilename,
+        filename: name,
         directory: downloadsDir
       });
     } catch (e2) {
@@ -4110,24 +4180,17 @@ async function handleEncode(/** @type {import('http').IncomingMessage} */ req, /
     }
   });
 
-  const ffmpegArgs = ['-y', '-i', renderTempPath];
+  const q = parsedUrl.query;
+  const coverPath = q.id ? await cacheThumbnailToDisk(cleanTrackId(q.id), q.thumbnail || '') : null;
+  const tagArgs = await ffmpegTagArgs(ext, { title, artist, album: q.album, track: q.track, year: q.year }, coverPath);
+  const ffmpegArgs = ['-y', '-i', renderTempPath, ...tagArgs.inputs, ...tagArgs.args];
   if (['mp3', 'm4a', 'opus', 'ogg'].includes(ext)) {
     ffmpegArgs.push('-b:a', bitrate);
   }
-  ffmpegArgs.push('-metadata', `title=${title}`);
-  ffmpegArgs.push('-metadata', `artist=${artist}`);
   ffmpegArgs.push(outPath);
 
   try {
-    await new Promise((/** @type {(value?: void) => void} */ resolve, reject) => {
-      const proc = spawn(ffmpegBin, ffmpegArgs, { windowsHide: true });
-      ffmpegProc = proc;
-      proc.on('close', (code) => {
-        if (code === 0) resolve();
-        else reject(new Error(`ffmpeg exited with code ${code}`));
-      });
-      proc.on('error', reject);
-    });
+    await runFfmpeg(ffmpegBin, ffmpegArgs, (p) => { ffmpegProc = p; }).finally(() => { if (tagArgs.tmp) fs.promises.unlink(tagArgs.tmp).catch(() => {}); });
 
     downloadsIndex = null;
     if (!res.writableEnded) {
@@ -7854,7 +7917,7 @@ function stopServer() {
   });
 }
 
-module.exports = { startServer, stopServer, stopChildren: () => childProcs.stopAll(), PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, setOutProxy, streamHealthStats, _test: { withYtDlpCookies, youtubeExtractTarget, fetchKugouLyrics, ytdlpTimeoutFor } };
+module.exports = { startServer, stopServer, stopChildren: () => childProcs.stopAll(), PORT, getServerToken, setDeviceSongs, rescanDeviceMusic, setYtDlpCookies, setOutProxy, streamHealthStats, _test: { withYtDlpCookies, youtubeExtractTarget, fetchKugouLyrics, ytdlpTimeoutFor, retagDownload } };
 
 if (require.main === module) {
   startServer();
