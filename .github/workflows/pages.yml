@@ -1,6 +1,6 @@
 name: Website
 
-# Publishes site/ (the download page) to GitHub Pages.
+# Publishes site/ (the download page) to GitHub Pages; a fork publishes just link.html.
 on:
   push:
     branches: [main]
@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   deploy:
-    # site/ is the original Uriel's download page (its links and counts): forks such as Uriel don't publish it
+    # site/ is the original Muriel's download page (its links and counts): forks don't publish it
     if: github.repository == 'cloverscripts/riff-muriel'
     runs-on: ubuntu-latest
     environment:
@@ -44,5 +44,24 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: site
+      - id: deployment
+        uses: actions/deploy-pages@v5
+
+  # a fork publishes only the page its Sync QR code opens (sync.js LINK_PAGE)
+  fork:
+    if: github.repository != 'cloverscripts/riff-muriel' && github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/configure-pages@v6
+      - run: mkdir _site && cp site/link.html site/icon.png _site/
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v5

@@ -10,7 +10,7 @@
   // UI language (i18n.js); without it everything stays English
   const I18n = window.UrielI18n || (() => { const f = (/** @type {unknown} */ s, /** @type {unknown[]} */ ...a) => String(s).replace(/\{(\d)\}/g, (_, i) => (a[i] != null ? String(a[i]) : '')); return { T: (/** @type {unknown} */ s) => s, Tf: f, Tm: f, Th: f, text: (/** @type {HTMLElement} */ el, /** @type {unknown} */ s, /** @type {unknown[]} */ ...a) => { if (el) el.textContent = f(s, ...a); } }; })();
 
-  const LINK_PAGE = 'https://cloverscripts.github.io/riff-muriel/link.html';
+  const LINK_PAGE = 'https://esperant0s.github.io/Uriel/link.html';
   const DAY = 864e5;
   const LINK_TTL = 5 * 60e3;
   const KEEP_TOMBSTONES = 120 * DAY;
