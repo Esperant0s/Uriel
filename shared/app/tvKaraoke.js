@@ -45,38 +45,18 @@ window.UrielApp.tvKaraoke = function ({ applyTrackBannerFx, audioEngine, el, ens
       activeTvBannerKey = '';
     }
 
-    const banner = document.getElementById('right-panel-banner');
     let bannerType = 'none';
     let bannerSrc = '';
-
-    if (banner && banner.style.display !== 'none' && banner.style.opacity !== '0') {
-      const bannerImg = /** @type {HTMLElement} */ (banner.querySelector('.banner-image'));
-      const video = banner.querySelector('video');
-      const img = banner.querySelector('img');
-      if (video && video.src) {
-        bannerType = 'video';
-        bannerSrc = video.src;
-      } else if (img && img.src) {
-        bannerType = 'img';
-        bannerSrc = img.src;
-      } else if (bannerImg && bannerImg.style.backgroundImage && bannerImg.style.backgroundImage !== 'none') {
-        bannerType = 'bg';
-        bannerSrc = bannerImg.style.backgroundImage;
-      } else if (banner.style.backgroundImage && banner.style.backgroundImage !== 'none') {
-        bannerType = 'bg';
-        bannerSrc = banner.style.backgroundImage;
-      }
-    }
 
     // the song's own banner (Track art dialog), with its own blur / opacity / fade when it has them (Riff 43)
     const songArt = state.currentTrack ? getTrackArt(state.currentTrack) : {};
     applyTrackBannerFx(songArt);
-    if (bannerType === 'none' && songArt.banner) {
+    if (songArt.banner) {
       bannerType = /\.(mp4|webm)($|\?)/i.test(songArt.banner) ? 'video' : 'img';
       bannerSrc = songArt.banner;
     }
 
-    // no banner (they're gone in Uriel): use the custom background if there is one, else the cover
+    // no song banner: use the custom background if there is one, else the cover
     const customBg = localStorage.getItem('uriel_bg_url') || '';
     if (bannerType === 'none' && customBg) {
       bannerType = /\.(mp4|webm)($|\?)/i.test(customBg) ? 'video' : 'img';

@@ -4,7 +4,7 @@
 // this once as it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps @param {UrielNowPlayingPart} out */
-window.UrielApp.nowPlaying = function ({ analyzeCover, applyVisualEffects, el, formatDuration, getAdv, getMediaArtwork, getTrackArt, getTrackCanonicalId, getTrackThumbUrl, highlightPlayingRow, m3cSetImage, nextPlayerArt, refreshMeshCover, rememberTrackArt, setCoverBg, setTrackArt, state, syncTvBanner, updateFavoriteIcon, updateMediaSession, updateThemeFromState, updateTvKaraokeMeta }, out) {
+window.UrielApp.nowPlaying = function ({ analyzeCover, applyVisualEffects, el, formatDuration, getMediaArtwork, getTrackCanonicalId, getTrackThumbUrl, highlightPlayingRow, m3cSetImage, nextPlayerArt, refreshMeshCover, rememberTrackArt, setCoverBg, state, updateFavoriteIcon, updateMediaSession, updateThemeFromState, updateTvKaraokeMeta }, out) {
   // Crossfades cover art: the old image is cloned into a ghost that fades/shrinks out
   // while the new one blurs in underneath. The new src is decoded first so it never pops.
   const artSwapTokens = new WeakMap();
@@ -103,7 +103,6 @@ window.UrielApp.nowPlaying = function ({ analyzeCover, applyVisualEffects, el, f
           if (next) {
             if (typeof m3cSetImage === 'function') m3cSetImage(next);
             if (el.rightPanelCover) el.rightPanelCover.src = next;
-            updateRightPanelBanner(next);
             updateThemeFromState();
             return;
           }
@@ -116,7 +115,7 @@ window.UrielApp.nowPlaying = function ({ analyzeCover, applyVisualEffects, el, f
         swapArtwork(el.rightPanelCover, thumb);
         el.rightPanelCover.onerror = () => {
           const next = nextPlayerArt(track, el.rightPanelCover);
-          if (next) { updateRightPanelBanner(next); return; }
+          if (next) return;
           el.rightPanelCover.style.display = 'none';
           if (el.rightPanelFallback) el.rightPanelFallback.style.display = 'flex';
         };
@@ -136,7 +135,6 @@ window.UrielApp.nowPlaying = function ({ analyzeCover, applyVisualEffects, el, f
     if (el.btnPlaybarMore) el.btnPlaybarMore.style.display = track.platform === 'local' ? 'none' : '';
     if (el.timeDuration && track && track.duration) el.timeDuration.textContent = formatDuration(track.duration);
 
-    updateRightPanelBanner(thumb);
     tintNowPlaying(thumb);
     refreshMeshCover();
     setCoverBg(thumb);
@@ -148,162 +146,7 @@ window.UrielApp.nowPlaying = function ({ analyzeCover, applyVisualEffects, el, f
     if (state.isTvKaraokeOpen) updateTvKaraokeMeta();
   }
 
-  function updateRightPanelBanner(/** @type {string} */ thumbUrl) {
-    const banner = /** @type {HTMLElement} */ (document.getElementById('right-panel-banner'));
-    if (!banner) return;
-    if (!getAdv('banners', true) || !getAdv('track_banners', true)) {
-      banner.style.display = 'none';
-      if (state.isTvKaraokeOpen) syncTvBanner();
-      return;
-    }
-    banner.style.display = '';
-    const bannerImg = /** @type {HTMLElement} */ (banner.querySelector('.banner-image') || banner);
-    const trackArt = state.currentTrack ? getTrackArt(state.currentTrack) : {};
-    const trackBanner = trackArt.banner || null;
-    const globalMedia = localStorage.getItem('uriel_banner_media');
-    const mediaToUse = trackBanner || globalMedia || thumbUrl;
-    banner._pendingMedia = mediaToUse;
-
-    if (!mediaToUse) {
-      banner.classList.add('fading-out');
-      setTimeout(() => {
-        bannerImg.style.backgroundImage = 'none';
-        const vid = banner.querySelector('video.banner-video');
-        if (vid) vid.remove();
-        banner.style.opacity = '0';
-        banner.classList.remove('fading-out');
-        if (state.isTvKaraokeOpen) syncTvBanner();
-      }, 300);
-      if (state.isTvKaraokeOpen) syncTvBanner();
-      return;
-    }
-
-    const isVideo = /\.(mp4|webm)($|\?)/i.test(mediaToUse);
-    if (isVideo) {
-      bannerImg.style.backgroundImage = 'none';
-      let vid = /** @type {HTMLVideoElement} */ (banner.querySelector('video.banner-video'));
-      if (!vid) {
-        vid = document.createElement('video');
-        vid.className = 'banner-video';
-        vid.autoplay = true;
-        vid.loop = true;
-        vid.muted = true;
-        vid.playsInline = true;
-        banner.appendChild(vid);
-      }
-      vid.onerror = () => {
-        if (trackBanner && state.currentTrack) {
-          setTrackArt(state.currentTrack, { banner: undefined });
-          updateRightPanelBanner(thumbUrl);
-        } else {
-          banner.style.opacity = '0';
-          if (state.isTvKaraokeOpen) syncTvBanner();
-        }
-      };
-      if (vid.src !== mediaToUse) {
-        vid.src = mediaToUse;
-        vid.play().catch(() => {});
-      }
-      banner.style.opacity = '1';
-      if (state.isTvKaraokeOpen) syncTvBanner();
-      return;
-    }
-
-    const vid = banner.querySelector('video.banner-video');
-    if (vid) vid.remove();
-
-    const img = new Image();
-    img.src = mediaToUse;
-    img.onload = () => {
-      if (banner._pendingMedia !== mediaToUse) return;
-      const nextBg = `url("${mediaToUse}")`;
-      const cur = /** @type {HTMLElement} */ (banner.querySelector('.banner-image'));
-      const curBg = cur ? cur.style.backgroundImage : '';
-      if (cur && curBg === nextBg) {
-        banner.style.opacity = '1';
-      } else if (!cur || !curBg || curBg === 'none' || banner.style.opacity !== '1' || document.body.classList.contains('perf')) {
-        bannerImg.style.backgroundImage = nextBg;
-        banner.style.opacity = '1';
-      } else {
-        // Crossfade: new layer goes underneath (first in DOM, so querySelector finds it), old one fades out on top.
-        banner.querySelectorAll('.banner-image.banner-leaving').forEach(n => n.remove());
-        const next = /** @type {HTMLElement} */ (cur.cloneNode(false));
-        next.style.backgroundImage = nextBg;
-        cur.before(next);
-        cur.classList.add('banner-leaving');
-        cur.addEventListener('animationend', () => cur.remove(), { once: true });
-        setTimeout(() => cur.remove(), 1200);
-      }
-      if (state.isTvKaraokeOpen) syncTvBanner();
-    };
-    img.onerror = () => {
-      if (trackBanner && state.currentTrack) {
-        setTrackArt(state.currentTrack, { banner: undefined });
-        updateRightPanelBanner(thumbUrl);
-      } else {
-        banner.style.opacity = '0';
-        if (state.isTvKaraokeOpen) syncTvBanner();
-      }
-    };
-    if (state.isTvKaraokeOpen) syncTvBanner();
-  }
-
-  function updatePlaylistDetailBanner(/** @type {string} */ thumbUrl) {
-    const banner = document.getElementById('playlist-header-banner');
-    if (!banner) return;
-    if (!getAdv('banners', true)) {
-      banner.style.display = 'none';
-      return;
-    }
-    banner.style.display = '';
-    const bannerImg = /** @type {HTMLElement} */ (banner.querySelector('.banner-image') || banner);
-    const globalMedia = localStorage.getItem('uriel_banner_media');
-    const mediaToUse = globalMedia || thumbUrl;
-
-    if (!mediaToUse) {
-      banner.style.opacity = '0';
-      bannerImg.style.backgroundImage = 'none';
-      const vid = banner.querySelector('video.banner-video');
-      if (vid) vid.remove();
-      return;
-    }
-
-    const isVideo = /\.(mp4|webm)($|\?)/i.test(mediaToUse);
-    if (isVideo) {
-      bannerImg.style.backgroundImage = 'none';
-      let vid = /** @type {HTMLVideoElement} */ (banner.querySelector('video.banner-video'));
-      if (!vid) {
-        vid = document.createElement('video');
-        vid.className = 'banner-video';
-        vid.autoplay = true;
-        vid.loop = true;
-        vid.muted = true;
-        vid.playsInline = true;
-        banner.appendChild(vid);
-      }
-      if (vid.src !== mediaToUse) {
-        vid.src = mediaToUse;
-        vid.play().catch(() => {});
-      }
-      banner.style.opacity = '1';
-      return;
-    }
-
-    const vid = banner.querySelector('video.banner-video');
-    if (vid) vid.remove();
-
-    const img = new Image();
-    img.src = mediaToUse;
-    img.onload = () => {
-      bannerImg.style.backgroundImage = `url("${mediaToUse}")`;
-      banner.style.opacity = '1';
-    };
-    img.onerror = () => {
-      banner.style.opacity = '0';
-    };
-  }
-
   /** @type {UrielNowPlayingPart} */
-  const api = { shownThumbs, updateNowPlayingUI, updateRightPanelBanner, updatePlaylistDetailBanner };
+  const api = { shownThumbs, updateNowPlayingUI };
   Object.assign(out, api);
 };

@@ -4,7 +4,7 @@
 // ticks and colours, and Show on Discord. Part of app.js, which calls this once as it starts.
 window.UrielApp = window.UrielApp || {};
 /** @param {UrielAppDeps} deps */
-window.UrielApp.effectSettings = function ({ addsElements, applyFxClip, applyReducedMotionSetting, applyShowAlbums, applyUiOpacity, DEFAULT_UI_ALPHA, discordPresenceOn, el, getAdv, getTrackThumbUrl, initHomeHero, listThumb, loadHomePage, onBackgroundChanged, redrawMesh, refreshMeshCover, refreshStacks, renderLyricsView, setAdv, setCoverBg, showToast, sidebarEl, state, switchView, syncTvBanner, systemPrefersReducedMotion, Tm, updateAlbumsCount, updateCustomBg, updateDiscordPresence, updateMeshGradient, updateNavIndicator, updateRightPanelBanner, updateThemeFromState, viz }) {
+window.UrielApp.effectSettings = function ({ addsElements, applyFxClip, applyReducedMotionSetting, applyShowAlbums, applyUiOpacity, DEFAULT_UI_ALPHA, discordPresenceOn, el, getAdv, getTrackThumbUrl, initHomeHero, listThumb, loadHomePage, onBackgroundChanged, redrawMesh, refreshMeshCover, refreshStacks, renderLyricsView, setAdv, setCoverBg, showToast, sidebarEl, state, switchView, systemPrefersReducedMotion, Tm, updateAlbumsCount, updateCustomBg, updateDiscordPresence, updateMeshGradient, updateNavIndicator, updateThemeFromState, viz }) {
   document.body.classList.toggle('no-blur', !getAdv('blur_fx', true));
 
   const sliderGlassBlur = /** @type {HTMLInputElement} */ (document.getElementById('slider-glass-blur'));
@@ -100,29 +100,6 @@ window.UrielApp.effectSettings = function ({ addsElements, applyFxClip, applyRed
         if (ambientEl) ambientEl.style.display = newVal ? '' : 'none';
         const jumpAmbient = document.getElementById('jump-ambient-light');
         if (jumpAmbient) jumpAmbient.style.display = newVal ? '' : 'none';
-      } else if (key === 'banners' || key === 'track_banners') {
-        const bannerR = document.getElementById('right-panel-banner');
-        const bannerP = document.getElementById('playlist-header-banner');
-        const showR = getAdv('banners', true) && getAdv('track_banners', true);
-        const showP = getAdv('banners', true);
-        if (bannerR) {
-          bannerR.style.display = showR ? '' : 'none';
-          if (!showR) {
-            bannerR.style.opacity = '0';
-            const vid = bannerR.querySelector('video.banner-video');
-            if (vid) vid.remove();
-          }
-        }
-        if (bannerP) {
-          bannerP.style.display = showP ? '' : 'none';
-          if (!showP) {
-            bannerP.style.opacity = '0';
-          }
-        }
-        if (showR && state.currentTrack) {
-          updateRightPanelBanner(getTrackThumbUrl(state.currentTrack));
-        }
-        if (state.isTvKaraokeOpen) syncTvBanner();
       } else if (key === 'karaoke_words') {
         renderLyricsView();
       }

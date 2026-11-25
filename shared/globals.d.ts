@@ -655,8 +655,6 @@ declare global {
   interface UrielNowPlayingPart {
     shownThumbs: Set<string | null>;
     updateNowPlayingUI(track: UrielTrack): void;
-    updateRightPanelBanner(thumbUrl: string): void;
-    updatePlaylistDetailBanner(thumbUrl: string): void;
   }
   interface UrielCoverColors { accent: string; accent2: string; luminance: number; saturation: number }
   interface UrielThemePart {

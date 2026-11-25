@@ -999,13 +999,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const savedBannerBlur = parseInt(localStorage.getItem('uriel_banner_blur') || '3', 10);
   const savedBannerOpacity = parseInt(localStorage.getItem('uriel_banner_opacity') || '100', 10);
   const savedBannerFade = parseInt(localStorage.getItem('uriel_banner_fade') || '38', 10);
-  const savedBannerFit = localStorage.getItem('uriel_banner_fit') || 'zoom';
 
   document.documentElement.style.setProperty('--banner-blur', `${savedBannerBlur}px`);
   document.documentElement.style.setProperty('--banner-opacity', `${savedBannerOpacity / 100}`);
   document.documentElement.style.setProperty('--banner-fade-base', `${savedBannerFade}%`);
-  document.documentElement.style.setProperty('--banner-fade-end', `${savedBannerFade}%`);
-  applyBannerFit(savedBannerFit);
 
   function applyUiOpacity() {
     const rawUi = parseInt(localStorage.getItem('uriel_ui_alpha') || DEFAULT_UI_ALPHA, 10);
@@ -1355,8 +1352,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const nowPlayingPart = /** @type {UrielNowPlayingPart} */ ({});
   /** @param {UrielTrack} track */
   function updateNowPlayingUI(track) { return nowPlayingPart.updateNowPlayingUI(track); }
-  window.UrielApp.nowPlaying({ analyzeCover, applyVisualEffects, el, formatDuration, getAdv, getMediaArtwork, getTrackArt, getTrackCanonicalId, getTrackThumbUrl, highlightPlayingRow, m3cSetImage, nextPlayerArt, refreshMeshCover, rememberTrackArt, setCoverBg, setTrackArt, state, syncTvBanner, updateFavoriteIcon, updateMediaSession, updateThemeFromState, updateTvKaraokeMeta }, nowPlayingPart);
-  const { updateRightPanelBanner, updatePlaylistDetailBanner } = nowPlayingPart;
+  window.UrielApp.nowPlaying({ analyzeCover, applyVisualEffects, el, formatDuration, getMediaArtwork, getTrackCanonicalId, getTrackThumbUrl, highlightPlayingRow, m3cSetImage, nextPlayerArt, refreshMeshCover, rememberTrackArt, setCoverBg, state, updateFavoriteIcon, updateMediaSession, updateThemeFromState, updateTvKaraokeMeta }, nowPlayingPart);
   const shownThumbs = nowPlayingPart.shownThumbs;
 
   function getTrackCanonicalId(/** @type {UrielTrack} */ track) {
@@ -1856,25 +1852,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ---- Settings → Interface: switches, theme mode, font, search box and sliders (app/interfaceSettings.js) ----
   window.UrielApp.interfaceSettings({ applyFont, applyScale, applySystemColors, effectiveMode, el, hslToHex, isPhoneApp, refreshCachedThemeColors, resizeCanvases, setSiteTheme, state, updateEngineWidthVar, updateThemeFromState });
 
-  // the saved banner fit, applied at start-up
-  function applyBannerFit(/** @type {string} */ fit) {
-    const root = document.documentElement;
-    const val = fit || 'zoom';
-    if (val === 'fit') {
-      root.style.setProperty('--banner-fit', 'contain');
-      root.style.setProperty('--banner-object-fit', 'contain');
-      root.style.setProperty('--banner-scale', 'none');
-    } else if (val === 'stretch') {
-      root.style.setProperty('--banner-fit', '100% 100%');
-      root.style.setProperty('--banner-object-fit', 'fill');
-      root.style.setProperty('--banner-scale', 'none');
-    } else {
-      root.style.setProperty('--banner-fit', 'cover');
-      root.style.setProperty('--banner-object-fit', 'cover');
-      root.style.setProperty('--banner-scale', 'scale(1.06)');
-    }
-  }
-
   function syncBgVideoPlayback() {
     const v = /** @type {HTMLVideoElement} */ (document.querySelector('#custom-bg video'));
     if (!v) return;
@@ -1896,7 +1873,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const addsElements = (/** @type {MutationRecord[]} */ muts) => muts.some((/** @type {MutationRecord} */ m) => Array.prototype.some.call(m.addedNodes, (n) => n.nodeType === 1));
 
   // ---- the effect and track switches in Settings (app/effectSettings.js) ----
-  window.UrielApp.effectSettings({ addsElements, applyFxClip, applyReducedMotionSetting, applyShowAlbums, applyUiOpacity, DEFAULT_UI_ALPHA, discordPresenceOn, el, getAdv, getTrackThumbUrl, initHomeHero, listThumb, loadHomePage, onBackgroundChanged, redrawMesh, refreshMeshCover, refreshStacks, renderLyricsView, setAdv, setCoverBg, showToast, sidebarEl, state, switchView, syncTvBanner, systemPrefersReducedMotion, Tm, updateAlbumsCount, updateCustomBg, updateDiscordPresence, updateMeshGradient, updateNavIndicator, updateRightPanelBanner, updateThemeFromState, viz });
+  window.UrielApp.effectSettings({ addsElements, applyFxClip, applyReducedMotionSetting, applyShowAlbums, applyUiOpacity, DEFAULT_UI_ALPHA, discordPresenceOn, el, getAdv, getTrackThumbUrl, initHomeHero, listThumb, loadHomePage, onBackgroundChanged, redrawMesh, refreshMeshCover, refreshStacks, renderLyricsView, setAdv, setCoverBg, showToast, sidebarEl, state, switchView, systemPrefersReducedMotion, Tm, updateAlbumsCount, updateCustomBg, updateDiscordPresence, updateMeshGradient, updateNavIndicator, updateThemeFromState, viz });
 
   // ---- the animated cover beside the player bar (app/m3Cover.js) ----
   const m3CoverPart = /** @type {UrielM3CoverPart} */ ({});
@@ -2183,7 +2160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const trackArtPart = /** @type {UrielTrackArtPart} */ ({});
   function openTrackArtModal(/** @type {UrielTrack} */ track, /** @type {HTMLElement | null} */ triggerEl = null) { return trackArtPart.openTrackArtModal(track, triggerEl); }
   function applyTrackBannerFx(/** @type {UrielTrackArt | null} */ art) { return trackArtPart.applyTrackBannerFx(art); }
-  window.UrielApp.trackArt({ I18N, LiquidMotion, T, Tm, YT_THUMB, analysisCache, closeModal, coverAnalysisCache, el, getTrackArt, getTrackCanonicalId, getTrackThumbUrl, isSameTrack, listThumb, m3cSetImage, nextTrackArt, setTrackArt, showToast, state, syncTvBanner, trackArtCandidates, trackYoutubeId, updateMediaSession, updateRightPanelBanner, updateThemeFromState }, trackArtPart);
+  window.UrielApp.trackArt({ I18N, LiquidMotion, T, Tm, YT_THUMB, analysisCache, closeModal, coverAnalysisCache, el, getTrackArt, getTrackCanonicalId, getTrackThumbUrl, isSameTrack, listThumb, m3cSetImage, nextTrackArt, setTrackArt, showToast, state, syncTvBanner, trackArtCandidates, trackYoutubeId, updateMediaSession, updateThemeFromState }, trackArtPart);
 
   // Search results: All / Songs / Artists / Albums (from Riff 43.1). Only shows or hides the sections, so the
   // choice stays for the next search.
