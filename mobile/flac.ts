@@ -177,9 +177,10 @@ function utf8Number(w: Bits, n: number) {
   const bytes: number[] = [];
   let lead = 0xc0;
   let room = 0x1f;
-  while (n > room) {
+  for (;;) {
     bytes.unshift(0x80 | (n & 0x3f));
     n = Math.floor(n / 64);
+    if (n <= room) break;
     lead = (lead >> 1) | 0x80;
     room >>= 1;
   }

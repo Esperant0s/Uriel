@@ -64,3 +64,16 @@ test('ffmpeg decodes it back to the exact samples, and reads its tags', { skip: 
   }
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+// frame numbers from 128 on take two bytes, from 2048 three: a real song's length, not a short clip
+test('a long song decodes back to the exact samples too', { skip: !ffmpeg && 'no ffmpeg' }, () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'uriel-flac-'));
+  const n = 4096 * 2100 + 77;
+  const { sine } = signals(n);
+  const file = path.join(dir, 'long.flac');
+  fs.writeFileSync(file, encodeFlac([sine], 44100, {}));
+  assert.equal(spawnSync(ffmpeg, ['-v', 'error', '-threads', '1', '-i', file, '-f', 'null', '-']).stderr.toString(), '');
+  const pcm = execFileSync(ffmpeg, ['-v', 'error', '-i', file, '-f', 's16le', '-'], { maxBuffer: 1 << 26 });
+  assert.ok(pcm.equals(Buffer.from(sine.buffer, sine.byteOffset, sine.byteLength)), 'samples differ');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
