@@ -7,9 +7,12 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.BridgeWebViewClient;
 
 public class MainActivity extends BridgeActivity {
     private ConnectivityManager.NetworkCallback networkCallback;
@@ -124,6 +127,14 @@ public class MainActivity extends BridgeActivity {
         }
         super.onCreate(savedInstanceState);
         current = this;
+        // song covers come from the phone once they have been seen (CoverCache)
+        getBridge().setWebViewClient(new BridgeWebViewClient(getBridge()) {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                WebResourceResponse cover = CoverCache.serve(getApplicationContext(), request);
+                return cover != null ? cover : super.shouldInterceptRequest(view, request);
+            }
+        });
         watchNetwork();
         clearResumeNotice();
     }
