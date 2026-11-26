@@ -88,6 +88,9 @@ window.UrielApp.trackRows = function ({ canReorder, checkOffline, copyText, drag
         </div>
         `;
 
+        const thumbImg = /** @type {HTMLImageElement | null} */ (row.querySelector('.track-row-thumb'));
+        if (thumbImg) thumbImg.__drawnAt = performance.now();
+
         if (canReorder(context)) row.appendChild(dragGrip());
 
         if (multiSel.active && multiSel.context === context) {

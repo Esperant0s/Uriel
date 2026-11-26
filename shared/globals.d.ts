@@ -229,6 +229,7 @@ declare global {
     _hasToggleListener?: boolean;
     __artTrack?: unknown;
     __artTried?: unknown;
+    __drawnAt?: number;
   }
 
   // A song as the app keeps it (queue, favorites, history, playlists). Services add their own fields, so the rest

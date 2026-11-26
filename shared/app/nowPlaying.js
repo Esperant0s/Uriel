@@ -8,13 +8,14 @@ window.UrielApp.nowPlaying = function ({ analyzeCover, applyVisualEffects, el, f
   // Crossfades cover art: the old image is cloned into a ghost that fades/shrinks out
   // while the new one blurs in underneath. The new src is decoded first so it never pops.
   const artSwapTokens = new WeakMap();
-  function swapArtwork(/** @type {HTMLImageElement} */ img, /** @type {string} */ src) {
+  function swapArtwork(/** @type {HTMLImageElement} */ img, /** @type {string} */ src, /** @type {(() => void) | undefined} */ onShown = undefined) {
     const token = {};
     artSwapTokens.set(img, token);
     const shown = img.style.display === 'block' && img.complete && img.naturalWidth > 0;
     if (!shown || img.getAttribute('src') === src || document.body.classList.contains('perf') || matchMedia('(prefers-reduced-motion: reduce)').matches) {
       img.src = src;
       img.style.display = 'block';
+      if (onShown) onShown();
       return;
     }
     const pre = new Image();
@@ -35,8 +36,26 @@ window.UrielApp.nowPlaying = function ({ analyzeCover, applyVisualEffects, el, f
       img.classList.remove('art-in');
       void img.offsetWidth;
       img.classList.add('art-in');
+      if (onShown) onShown();
     };
     pre.decode().then(commit, commit);
+  }
+
+  // YouTube's large cover is about six times the size of the small one and often missing (a grey stand-in that still
+  // has to come back first): show the small one straight away and put the large one in once it's there
+  const YT_MAXRES = /^(https?:\/\/i\d?\.ytimg\.com\/vi(?:_webp)?\/[\w-]{11}\/)maxresdefault\.jpg$/;
+  function quickArt(/** @type {string} */ src) {
+    return src.replace(YT_MAXRES, '$1mqdefault.jpg');
+  }
+  function showPlayerArt(/** @type {HTMLImageElement} */ img, /** @type {string} */ src) {
+    const small = quickArt(src);
+    if (small === src) return swapArtwork(img, src);
+    let shown = false, bigReady = false;
+    const upgrade = () => { if (shown && bigReady && img.getAttribute('src') === small) img.src = src; };
+    swapArtwork(img, small, () => { shown = true; upgrade(); });
+    const big = new Image();
+    big.src = src;
+    big.decode().then(() => { if (big.naturalWidth > 120) { bigReady = true; upgrade(); } }, () => {});
   }
 
   const FADE_IMG_SEL = '.track-row-thumb, .my-wave-track-cover, .quick-play-pill-img';
@@ -47,6 +66,8 @@ window.UrielApp.nowPlaying = function ({ analyzeCover, applyVisualEffects, el, f
   const markImgLoaded = (/** @type {Event} */ e) => {
     const t = /** @type {HTMLImageElement} */ (e.target);
     if (t.tagName !== 'IMG' || !t.matches(FADE_IMG_SEL)) return;
+    // a cover that turns up right after its row was drawn came from the cache: no fade for that one either
+    if (e.type === 'load' && t.__drawnAt && performance.now() - t.__drawnAt < 150) t.style.transition = 'none';
     t.classList.add('is-loaded');
     if (e.type === 'load') shownThumbs.add(t.getAttribute('src'));
   };
@@ -86,7 +107,7 @@ window.UrielApp.nowPlaying = function ({ analyzeCover, applyVisualEffects, el, f
         el.playbarArtwork.onload = () => {
           // a fallback that loaded replaces the song's dead cover for good
           const shown = el.playbarArtwork.getAttribute('src') || '';
-          if (el.playbarArtwork.__artTrack === track && shown !== thumb) rememberTrackArt(getTrackCanonicalId(track), shown);
+          if (el.playbarArtwork.__artTrack === track && shown !== thumb && shown !== quickArt(thumb)) rememberTrackArt(getTrackCanonicalId(track), shown);
           if (state.currentTrack && 'mediaSession' in navigator && navigator.mediaSession.metadata) {
             const curThumb = (typeof getTrackThumbUrl === 'function' ? getTrackThumbUrl(state.currentTrack) : '') || state.currentTrack.thumbnail || '';
             const art = getMediaArtwork(curThumb);
@@ -95,7 +116,7 @@ window.UrielApp.nowPlaying = function ({ analyzeCover, applyVisualEffects, el, f
             }
           }
         };
-        swapArtwork(el.playbarArtwork, thumb);
+        showPlayerArt(el.playbarArtwork, thumb);
         if (typeof m3cSetImage === 'function') m3cSetImage(thumb);
         el.playbarArtwork.onerror = () => {
           // a dead cover: try the song's other covers (the right panel follows) before showing the placeholder
@@ -112,7 +133,7 @@ window.UrielApp.nowPlaying = function ({ analyzeCover, applyVisualEffects, el, f
       }
       if (el.artworkFallback) el.artworkFallback.style.display = 'none';
       if (el.rightPanelCover) {
-        swapArtwork(el.rightPanelCover, thumb);
+        showPlayerArt(el.rightPanelCover, thumb);
         el.rightPanelCover.onerror = () => {
           const next = nextPlayerArt(track, el.rightPanelCover);
           if (next) return;
