@@ -14,12 +14,13 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     private ConnectivityManager.NetworkCallback networkCallback;
 
-    // ---- the page stays awake in the background while music plays ----
+    // ---- the page stays awake in the background while music plays or songs download ----
     // The page picks, fetches and starts each next song. Android's WebView freezes a page that has been out of
     // sight for about five minutes unless the page itself makes sound, and since the native player (PlayerService)
     // plays the songs, it doesn't: the music stopped at the next song change until the app was opened. So while a
     // song plays or the next one loads, the WebView is told its window is still visible; a while after the music
     // stops it is told the truth again, and may rest. Nothing is drawn meanwhile: there is no window to draw to.
+    // Downloads happen in the page too (fetching, converting, saving), and stopped the same way once Uriel was left.
     static final long PAGE_RESTS_AFTER_MS = 60_000;
     private static volatile MainActivity current;
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -42,7 +43,7 @@ public class MainActivity extends BridgeActivity {
 
     private static boolean musicActive() {
         PlayerService player = PlayerService.Companion.getInstance();
-        return MediaControlsPlugin.playing || (player != null && player.active());
+        return MediaControlsPlugin.playing || (player != null && player.active()) || DownloadService.running;
     }
 
     private void keepPageAwake() {

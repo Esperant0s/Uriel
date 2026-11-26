@@ -496,22 +496,50 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
       });
       const tracks = present ? batch.tracks.filter((/** @type {UrielTrack} */ _, /** @type {number} */ i) => !present[i]) : batch.tracks;
       const skipped = total - tracks.length;
+      // how far each song under way is (0..1), by the id its progress comes with (phones): the bar moves during
+      // each song, not only when one is done. MP3 and FLAC are half download, half converting.
+      /** @type {Map<string, number>} */
+      const underWay = new Map();
+      const converts = isPhoneApp && (format === 'mp3' || format === 'flac');
+      let last = { done: 0, failed: 0 };
       const setProgress = (/** @type {{ done: number, failed: number }} */ p) => {
+        last = p;
+        const partial = [...underWay.values()].reduce((n, v) => n + Math.min(v, 0.99), 0);
+        const fraction = tracks.length ? Math.min(1, (p.done + p.failed + partial) / tracks.length) : 0;
         const label = Tf('Downloading {0}/{1}', Math.min(tracks.length, p.done + p.failed + 1), tracks.length) + (p.failed ? ` · ${Tf('{0} failed', p.failed)}` : '');
         if (el.downloadBtnText && shown()) el.downloadBtnText.textContent = label;
-        if (shown()) setDownloadProgress({ text: label, fraction: tracks.length ? (p.done + p.failed) / tracks.length : 0 });
-        announceDownloads(true, { title: batch.name || '', done: p.done + p.failed, total: tracks.length });
+        if (shown()) setDownloadProgress({ text: label, fraction });
+        announceDownloads(true, { title: batch.name || '', done: p.done + p.failed, total: tracks.length, percent: Math.round(fraction * 100) });
         if (typeof batch.onProgress === 'function') batch.onProgress(p.done + p.failed, tracks.length);
       };
+      const onPart = (/** @type {WindowEventMap['uriel:dl-progress']} */ e) => {
+        if (batchAbort.signal.aborted || !e.detail || !e.detail.total) return;
+        const f = e.detail.done / e.detail.total;
+        underWay.set(e.detail.id, converts ? (e.detail.stage === 'convert' ? 0.5 + f / 2 : f / 2) : f);
+        setProgress(last);
+      };
+      window.addEventListener('uriel:dl-progress', onPart);
+      batchAbort.signal.addEventListener('abort', () => window.removeEventListener('uriel:dl-progress', onPart));
       setDownloadRunning(true);
       setProgress({ done: 0, failed: 0 });
-      const downloadOne = async (/** @type {UrielTrack} */ t, /** @type {{ fresh: boolean }} */ { fresh }) => {
+      const downloadOne = async (/** @type {UrielTrack} */ t, /** @type {{ fresh: boolean }} */ o) => {
+        /** @type {UrielTrack} */
+        let src = t;
+        try {
+          await downloadSong(t, o, (/** @type {UrielTrack} */ s) => { src = s; });
+        } finally {
+          // done or failed: it counts as a whole song from here (setProgress follows right after)
+          for (const k of [...underWay.keys()]) if (String(src.id || t.id || '').includes(k)) underWay.delete(k);
+        }
+      };
+      const downloadSong = async (/** @type {UrielTrack} */ t, /** @type {{ fresh: boolean }} */ { fresh }, /** @type {(s: UrielTrack) => void} */ onSource) => {
         // an album's songs are found on YouTube first (the file keeps the album's title and artist)
         let src = t;
         if (typeof batch.resolve === 'function') {
           const found = await batch.resolve(t).catch(() => null);
           if (found && found.url) src = { ...t, url: found.url, id: found.id || t.id };
         }
+        onSource(src);
         const downloadUrl = `http://127.0.0.1:${state.serverPort}/api/download?url=${encodeURIComponent(src.url || '')}&id=${encodeURIComponent(src.id || '')}&title=${encodeURIComponent(t.title || '')}&artist=${encodeURIComponent(t.artist || '')}&format=${format}&quality=${quality}&platform=${encodeURIComponent(src.platform || t.platform || 'youtube')}&duration=${encodeURIComponent(t.duration || 0)}&songId=${encodeURIComponent(t.id || '')}${tagQuery(t, batch)}${fresh ? '&fresh=1' : ''}`;
         const res = await fetch(downloadUrl, { signal: batchAbort.signal });
         const text = await res.text();
@@ -527,6 +555,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
       for (const f of result.failed) console.error('Download failed:', f.item.title || f.item.url || '', f.error instanceof Error ? f.error.message : f.error);
       const done = result.done.length;
       const failedTracks = result.failed.map((/** @type {{ item: UrielTrack }} */ f) => f.item);
+      window.removeEventListener('uriel:dl-progress', onPart);
       if (shown()) { el.btnConfirmDownload.disabled = false; setDownloadRunning(false); setDownloadProgress(null); }
       announceDownloads(false);
       if (downloadAbort === batchAbort) downloadAbort = null;
@@ -638,7 +667,7 @@ window.UrielApp.downloads = function ({ I18N, T, Tf, Tm, audioEngine, closeModal
             if (!singleAbort.signal.aborted && e.detail && e.detail.total && (!t.id || String(t.id).includes(e.detail.id))) {
               const percent = e.detail.done / e.detail.total;
               showing({ text: Tf(e.detail.stage === 'convert' ? 'Converting {0}%' : 'Downloading {0}%', Math.round(percent * 100)), fraction: percent });
-              announceDownloads(true, { title: t.title || '', total: 1, done: 0, percent: Math.round(percent * 100) });
+              announceDownloads(true, { title: t.title || '', total: 1, done: 0, percent: Math.round(percent * 100), converting: e.detail.stage === 'convert' });
             }
           };
           window.addEventListener('uriel:dl-progress', onPart);

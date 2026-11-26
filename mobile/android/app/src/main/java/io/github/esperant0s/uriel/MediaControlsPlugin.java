@@ -326,7 +326,7 @@ public class MediaControlsPlugin extends Plugin {
         Context ctx = getContext();
         try {
             if (call.getBoolean("active", false)) {
-                DownloadService.show(ctx, call.getString("title", ""), call.getInt("done", 0), call.getInt("total", 0), call.getInt("percent", -1));
+                DownloadService.show(ctx, call.getString("title", ""), call.getInt("done", 0), call.getInt("total", 0), call.getInt("percent", -1), Boolean.TRUE.equals(call.getBoolean("converting", false)));
             } else {
                 DownloadService.hide(ctx);
             }

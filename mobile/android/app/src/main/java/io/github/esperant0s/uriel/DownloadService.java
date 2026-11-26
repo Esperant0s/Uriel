@@ -28,6 +28,8 @@ public class DownloadService extends Service {
     private static final long WAKE_MS = 30 * 60 * 1000;
 
     private PowerManager.WakeLock wakeLock;
+    // while it runs MainActivity keeps the page awake with Uriel out of sight: the downloading happens there
+    static volatile boolean running = false;
 
     // Starts sent but not yet in onStartCommand. Stopping the service then crashed the app: Android insists a
     // started-in-foreground service calls startForeground() first. The page reports every song, so "done" often came
@@ -36,9 +38,10 @@ public class DownloadService extends Service {
     private static int pending = 0;
     private static boolean hideWanted = false;
 
-    static void show(Context ctx, String title, int done, int total, int percent) {
+    static void show(Context ctx, String title, int done, int total, int percent, boolean converting) {
         Intent i = new Intent(ctx, DownloadService.class)
-                .putExtra("title", title).putExtra("done", done).putExtra("total", total).putExtra("percent", percent);
+                .putExtra("title", title).putExtra("done", done).putExtra("total", total).putExtra("percent", percent)
+                .putExtra("converting", converting);
         synchronized (lock) {
             hideWanted = false;
             pending++;
@@ -87,6 +90,10 @@ public class DownloadService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
+        if (!running) {
+            running = true;
+            MainActivity.musicChanged();
+        }
         if (wakeLock == null) {
             wakeLock = getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Uriel:downloads");
             wakeLock.setReferenceCounted(false);
@@ -106,20 +113,22 @@ public class DownloadService extends Service {
         int done = intent != null ? intent.getIntExtra("done", 0) : 0;
         int total = intent != null ? intent.getIntExtra("total", 0) : 0;
         int percent = intent != null ? intent.getIntExtra("percent", -1) : -1;
+        boolean converting = intent != null && intent.getBooleanExtra("converting", false);
         Intent open = new Intent(this, MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent contentIntent = PendingIntent.getActivity(this, 40, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         PendingIntent cancel = PendingIntent.getService(this, 41, new Intent(this, DownloadService.class).setAction(ACTION_CANCEL), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
         NotificationCompat.Builder b = new NotificationCompat.Builder(this, CHANNEL)
                 .setSmallIcon(android.R.drawable.stat_sys_download)
-                .setContentTitle(total > 1 ? "Downloading " + Math.min(total, done + 1) + " of " + total : "Downloading")
+                .setContentTitle(total > 1 ? "Downloading " + Math.min(total, done + 1) + " of " + total : converting ? "Converting" : "Downloading")
                 .setContentText(title != null ? title : "")
                 .setContentIntent(contentIntent)
                 .setOnlyAlertOnce(true)
                 .setOngoing(true)
                 .setSilent(true)
                 .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Cancel", cancel);
-        if (total > 1) b.setProgress(total, done, false);
-        else if (percent >= 0) b.setProgress(100, percent, false);
+        // percent is the whole job's (a batch counts the songs under way too), so the bar moves during each song
+        if (percent >= 0) b.setProgress(100, percent, false);
+        else if (total > 1) b.setProgress(total, done, false);
         else b.setProgress(0, 0, true);
         return b.build();
     }
@@ -132,6 +141,9 @@ public class DownloadService extends Service {
 
     @Override
     public void onDestroy() {
+        running = false;
+        // the page may rest again a while after this (MainActivity)
+        MainActivity.musicChanged();
         if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE);
         super.onDestroy();

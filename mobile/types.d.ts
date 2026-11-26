@@ -153,7 +153,7 @@ declare global {
     update(o: Record<string, unknown>): Promise<void>;
     takeStartPlay(): Promise<{ start?: boolean; background?: boolean; native?: NativeHandover }>;
     moveToBack(): Promise<void>;
-    downloading(o: { active: boolean; title: string; done: number; total: number; percent: number }): Promise<void>;
+    downloading(o: { active: boolean; title: string; done: number; total: number; percent: number; converting: boolean }): Promise<void>;
     islandStatus(): Promise<IslandStatus>;
     allowIsland(o?: { settings?: boolean }): Promise<IslandStatus>;
     backgroundStatus(): Promise<{ unrestricted?: boolean }>;

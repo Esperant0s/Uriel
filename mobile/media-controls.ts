@@ -147,10 +147,30 @@ function mediaControls(): void {
     window.addEventListener('uriel:backend', update);
     ['playing', 'pause', 'seeked', 'ratechange', 'durationchange', 'ended'].forEach((ev) => c.audio.addEventListener(ev, update));
     c.audio.addEventListener('playing', askOnce, { once: true });
+    // app.js tells how the downloads are going. A percent comes for every piece of a song: the notification gets
+    // the newest at most twice a second, and a start, a finished song or the end right away.
+    type Downloads = { active?: boolean; title?: string; done?: number; total?: number; percent?: number | null; converting?: boolean };
+    let sent: Downloads = {};
+    let sentAt = 0;
+    let latest: Downloads = {};
+    let later: ReturnType<typeof setTimeout> | undefined;
+    let askedForDownloads = false;
+    const sendDownloads = () => {
+      clearTimeout(later);
+      later = undefined;
+      const d = latest;
+      sent = d;
+      sentAt = Date.now();
+      Promise.resolve().then(() => plugin.downloading({ active: !!d.active, title: d.title || '', done: d.done || 0, total: d.total || 0, percent: d.percent == null ? -1 : d.percent, converting: !!d.converting })).catch(() => {});
+    };
     window.addEventListener('uriel:downloads', (ev) => {
-      // app.js tells how the downloads are going
-      const d: { active?: boolean; title?: string; done?: number; total?: number; percent?: number | null } = (ev as CustomEvent).detail || {};
-      Promise.resolve().then(() => plugin.downloading({ active: !!d.active, title: d.title || '', done: d.done || 0, total: d.total || 0, percent: d.percent == null ? -1 : d.percent })).catch(() => {});
+      latest = (ev as CustomEvent<Downloads>).detail || {};
+      // without notifications there's no progress to see once Uriel is left: asked with the first download too,
+      // not only the first song played
+      if (latest.active && !askedForDownloads) { askedForDownloads = true; askOnce(); }
+      if (!!latest.active !== !!sent.active || latest.done !== sent.done || latest.total !== sent.total || latest.title !== sent.title) sendDownloads();
+      else if (Date.now() - sentAt >= 500) sendDownloads();
+      else if (!later) later = setTimeout(sendDownloads, 500 - (Date.now() - sentAt));
     });
     // earbuds or a headset asked for music: the last song, or from the top of favourites if there is none yet
     const startMusic = () => {
